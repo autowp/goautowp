@@ -1,0 +1,5 @@
+/cmd/goautowp/debug
+/goautowp
+/build/package/goautowp
+/build/package/migrations
+/vendor

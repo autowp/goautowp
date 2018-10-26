@@ -1,0 +1,41 @@
+sudo: required
+
+language: go
+
+services:
+  - docker
+
+go:
+  - "1.10"
+
+install: true
+
+before_script:
+  - sudo service mysql stop
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  - dep ensure
+  - go get -u github.com/kisielk/errcheck
+  - go get -u github.com/mattn/goveralls
+  - errcheck ./...
+  - docker-compose up -d
+  - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.0/waitforit-linux_amd64
+  - chmod +x ./waitforit
+  - source test.env
+  - ./waitforit -address tcp://$GOAUTOWP_RABBITMQ_HOST:$GOAUTOWP_RABBITMQ_PORT -timeout 30 || travis_terminate 1;
+
+script:
+  - go test -v -race || travis_terminate 1;
+  - goveralls -service=travis-ci || travis_terminate 1;
+
+  - go build -ldflags "-s -w" -o build/package/gowautowp cmd/gowautowp/gowautowp.go || travis_terminate 1;
+  - cp -R migrations build/package/migrations
+  - docker build build/package/ -t $DOCKER_REPO || travis_terminate 1;
+
+after_success:
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+    docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+    docker push $DOCKER_REPO;
+    fi
+
+after_failure:
+  - docker logs mysql

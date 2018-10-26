@@ -1,0 +1,19 @@
+version: '2'
+
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+    - "5672:5672"
+    - "15672:15672"
+
+  mysql:
+    image: mysql:5
+    container_name: mysql
+    environment:
+    - MYSQL_ROOT_PASSWORD=password
+    - MYSQL_DATABASE=traffic
+    ports:
+    - "3306:3306"
+
