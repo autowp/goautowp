@@ -27,7 +27,7 @@ script:
   - go test -v -race || travis_terminate 1;
   - goveralls -service=travis-ci || travis_terminate 1;
 
-  - go build -ldflags "-s -w" -o build/package/gowautowp cmd/gowautowp/gowautowp.go || travis_terminate 1;
+  - go build -ldflags "-s -w" -o build/package/goautowp cmd/goautowp/goautowp.go || travis_terminate 1;
   - cp -R migrations build/package/migrations
   - docker build build/package/ -t $DOCKER_REPO || travis_terminate 1;
 
