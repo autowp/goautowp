@@ -18,13 +18,13 @@ func copy(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer util.Close(in)
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer util.Close(out)
 
 	_, err = io.Copy(out, in)
 	if err != nil {
@@ -40,14 +40,16 @@ func addImage(t *testing.T, s *Service, filepath string) int {
 	name := strings.TrimSuffix(filename, extension)
 
 	randBytes := make([]byte, 16)
-	rand.Read(randBytes)
+	_, err := rand.Read(randBytes)
+	require.NoError(t, err)
 
 	newPath := name + hex.EncodeToString(randBytes) + extension
 	newFullpath := s.DuplicateFinder.ImagesDir() + "/" + newPath
 
-	os.MkdirAll(path.Dir(newFullpath), os.ModePerm)
+	err = os.MkdirAll(path.Dir(newFullpath), os.ModePerm)
+	require.NoError(t, err)
 
-	err := copy(filepath, newFullpath)
+	err = copy(filepath, newFullpath)
 	require.NoError(t, err)
 
 	stmt, err := s.db.Prepare(`
