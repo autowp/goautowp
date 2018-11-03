@@ -210,6 +210,7 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	insertStmt, err := s.db.Prepare(`
 		INSERT INTO df_distance (src_picture_id, dst_picture_id, distance)
 		VALUES (?, ?, ?)
+		ON DUPLICATE KEY UPDATE distance=distance;
 	`)
 	if err != nil {
 		return err
