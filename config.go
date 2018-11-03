@@ -9,26 +9,28 @@ import (
 
 // Config Application config definition
 type Config struct {
-	RabbitMQ       string             `yaml:"rabbitmq"`
-	ImageHashQueue string             `yaml:"image_hash_queue"`
-	Rollbar        util.RollbarConfig `yaml:"rollbar"`
-	DSN            string             `yaml:"dsn"`
+	RabbitMQ             string             `yaml:"rabbitmq"`
+	DuplicateFinderQueue string             `yaml:"duplicate_finder_queue"`
+	Rollbar              util.RollbarConfig `yaml:"rollbar"`
+	DSN                  string             `yaml:"dsn"`
+	ImagesDir            string             `yaml:"images_dir"`
 }
 
 // LoadConfig LoadConfig
 func LoadConfig() Config {
 
 	config := Config{
-		RabbitMQ:       "amqp://guest:guest@" + os.Getenv("TRAFFIC_RABBITMQ_HOST") + ":" + os.Getenv("TRAFFIC_RABBITMQ_PORT") + "/",
-		ImageHashQueue: os.Getenv("TRAFFIC_MONITORING_QUEUE"),
+		RabbitMQ:             "amqp://guest:guest@" + os.Getenv("AUTOWP_RABBITMQ_HOST") + ":" + os.Getenv("AUTOWP_RABBITMQ_PORT") + "/",
+		DuplicateFinderQueue: os.Getenv("AUTOWP_DUPLICATE_FINDER_QUEUE"),
 		Rollbar: util.RollbarConfig{
-			Token:       os.Getenv("TRAFFIC_ROLLBAR_TOKEN"),
-			Environment: os.Getenv("TRAFFIC_ROLLBAR_ENVIRONMENT"),
-			Period:      os.Getenv("TRAFFIC_ROLLBAR_PERIOD"),
+			Token:       os.Getenv("AUTOWP_ROLLBAR_TOKEN"),
+			Environment: os.Getenv("AUTOWP_ROLLBAR_ENVIRONMENT"),
+			Period:      os.Getenv("AUTOWP_ROLLBAR_PERIOD"),
 		},
-		DSN: os.Getenv("TRAFFIC_MYSQL_USERNAME") + ":" + os.Getenv("TRAFFIC_MYSQL_PASSWORD") +
-			"@tcp(" + os.Getenv("TRAFFIC_MYSQL_HOST") + ":" + os.Getenv("TRAFFIC_MYSQL_PORT") + ")/" +
-			os.Getenv("TRAFFIC_MYSQL_DBNAME") + "?charset=utf8mb4&parseTime=true&loc=UTC",
+		DSN: os.Getenv("AUTOWP_MYSQL_USERNAME") + ":" + os.Getenv("AUTOWP_MYSQL_PASSWORD") +
+			"@tcp(" + os.Getenv("AUTOWP_MYSQL_HOST") + ":" + os.Getenv("AUTOWP_MYSQL_PORT") + ")/" +
+			os.Getenv("AUTOWP_MYSQL_DBNAME") + "?charset=utf8mb4&parseTime=true&loc=UTC",
+		ImagesDir: os.Getenv("AUTOWP_IMAGES_DIR"),
 	}
 
 	return config
@@ -40,7 +42,7 @@ func ValidateConfig(config Config) {
 		log.Fatalln("Address not provided")
 	}
 
-	if config.ImageHashQueue == "" {
-		log.Fatalln("ImageHashQueue not provided")
+	if config.DuplicateFinderQueue == "" {
+		log.Fatalln("DuplicateFinderQueue not provided")
 	}
 }

@@ -3,3 +3,4 @@
 /build/package/goautowp
 /build/package/migrations
 /vendor
+/images/*

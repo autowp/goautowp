@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	_ "image/jpeg" // support JPEG decoding
+	_ "image/png"  // support PNG decoding
 	"os"
+	"strconv"
 	"sync"
-	"time"
 
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
@@ -19,12 +21,13 @@ const threshold = 3
 
 // DuplicateFinder Main Object
 type DuplicateFinder struct {
-	db     *sql.DB
-	loc    *time.Location
-	queue  string
-	conn   *amqp.Connection
-	quit   chan bool
-	logger *util.Logger
+	db    *sql.DB
+	queue string
+	conn  *amqp.Connection
+	quit  chan bool
+	// logger    *util.Logger
+	imagesDir string
+	logger    *util.Logger
 }
 
 // DuplicateFinderInputMessage InputMessage
@@ -33,14 +36,14 @@ type DuplicateFinderInputMessage struct {
 }
 
 // NewDuplicateFinder constructor
-func NewDuplicateFinder(wg *sync.WaitGroup, db *sql.DB, loc *time.Location, rabbitmMQ *amqp.Connection, queue string, logger *util.Logger) (*DuplicateFinder, error) {
+func NewDuplicateFinder(wg *sync.WaitGroup, db *sql.DB, rabbitmMQ *amqp.Connection, queue string, imagesDir string, logger *util.Logger) (*DuplicateFinder, error) {
 	s := &DuplicateFinder{
-		db:     db,
-		loc:    loc,
-		conn:   rabbitmMQ,
-		queue:  queue,
-		quit:   make(chan bool),
-		logger: logger,
+		db:        db,
+		conn:      rabbitmMQ,
+		queue:     queue,
+		quit:      make(chan bool),
+		logger:    logger,
+		imagesDir: imagesDir,
 	}
 
 	wg.Add(1)
@@ -104,10 +107,14 @@ func (s *DuplicateFinder) listen() error {
 	quit := false
 	for !quit {
 		select {
+		case <-s.quit:
+			quit = true
+			return nil
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
-				s.logger.Warning(fmt.Errorf("unexpected mime `%s`", d.ContentType))
-				continue
+				s.logger.Warning(fmt.Errorf("unexpected mime `%v`", d.ContentType))
+				return nil
+				// continue
 			}
 
 			var message DuplicateFinderInputMessage
@@ -121,9 +128,6 @@ func (s *DuplicateFinder) listen() error {
 			if err != nil {
 				s.logger.Warning(err)
 			}
-
-		case <-s.quit:
-			quit = true
 		}
 	}
 
@@ -132,19 +136,23 @@ func (s *DuplicateFinder) listen() error {
 
 // Index picture image
 func (s *DuplicateFinder) Index(id int) error {
+	fmt.Printf("Indexing picture %v\n", id)
+
 	var imageID int
-	err := s.db.QueryRow("SELECT image_id FROM pictures WHERE id = ?", id).Scan(imageID)
+	err := s.db.QueryRow("SELECT image_id FROM pictures WHERE id = ?", id).Scan(&imageID)
 	if err != nil {
 		return err
 	}
 
 	var filepath string
-	err = s.db.QueryRow("SELECT filepath FROM image WHERE id = ?", imageID).Scan(filepath)
+	err = s.db.QueryRow("SELECT filepath FROM image WHERE id = ?", imageID).Scan(&filepath)
 	if err != nil {
 		return err
 	}
 
-	hash, err := getFileHash(filepath)
+	fmt.Printf("Calculate hash for %v\n", filepath)
+
+	hash, err := getFileHash(s.imagesDir + "/" + filepath)
 	if err != nil {
 		return err
 	}
@@ -163,7 +171,7 @@ func (s *DuplicateFinder) Index(id int) error {
 		return err
 	}
 
-	return nil
+	return s.updateDistance(id)
 }
 
 func getFileHash(filepath string) (uint64, error) {
@@ -180,7 +188,7 @@ func getFileHash(filepath string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	hash, err := goimagehash.DifferenceHash(img)
+	hash, err := goimagehash.PerceptionHash(img)
 	if err != nil {
 		return 0, err
 	}
@@ -194,7 +202,7 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	}
 
 	var hash uint64
-	err := s.db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id).Scan(hash)
+	err := s.db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id).Scan(&hash)
 	if err != nil {
 		return err
 	}
@@ -209,12 +217,12 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	defer util.Close(insertStmt)
 
 	rows, err := s.db.Query(`
-		SELECT picture_id, BIT_COUNT(hash ^ ?) AS distance 
+		SELECT picture_id, BIT_COUNT(hash ^ `+strconv.FormatUint(hash, 10)+`) AS distance
 		FROM df_hash 
-		WHERE picture_id <> ? 
+		WHERE picture_id != ? 
 		HAVING distance <= ?
-	`, hash, id, threshold)
-	if err != nil {
+	`, id, threshold)
+	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 	defer util.Close(rows)
@@ -238,4 +246,9 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	}
 
 	return nil
+}
+
+// ImagesDir ImagesDir
+func (s *DuplicateFinder) ImagesDir() string {
+	return s.imagesDir
 }

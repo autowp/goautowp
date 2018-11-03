@@ -37,5 +37,3 @@ after_success:
     docker push $DOCKER_REPO;
     fi
 
-after_failure:
-  - docker logs mysql

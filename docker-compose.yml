@@ -3,17 +3,19 @@ version: '2'
 services:
   rabbitmq:
     image: rabbitmq:management
-    container_name: rabbitmq
+    container_name: goautowp_rabbitmq_test
     ports:
     - "5672:5672"
     - "15672:15672"
 
   mysql:
     image: mysql:5
-    container_name: mysql
+    container_name: goautowp_mysql_test
     environment:
     - MYSQL_ROOT_PASSWORD=password
-    - MYSQL_DATABASE=traffic
+    - MYSQL_DATABASE=autowp
     ports:
     - "3306:3306"
+    volumes:
+    - "./test/dump.sql:/docker-entrypoint-initdb.d/dump.sql"
 

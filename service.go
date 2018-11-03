@@ -13,13 +13,13 @@ import (
 
 // Service Main Object
 type Service struct {
-	config    Config
-	logger    *util.Logger
-	db        *sql.DB
-	Loc       *time.Location
-	rabbitMQ  *amqp.Connection
-	waitGroup *sync.WaitGroup
-	df        *DuplicateFinder
+	config          Config
+	logger          *util.Logger
+	db              *sql.DB
+	Loc             *time.Location
+	rabbitMQ        *amqp.Connection
+	waitGroup       *sync.WaitGroup
+	DuplicateFinder *DuplicateFinder
 }
 
 // NewService constructor
@@ -82,19 +82,19 @@ func NewService(config Config) (*Service, error) {
 
 	wg := &sync.WaitGroup{}
 
-	df, err := NewDuplicateFinder(wg, db, loc, rabbitMQ, config.ImageHashQueue, logger)
+	df, err := NewDuplicateFinder(wg, db, rabbitMQ, config.DuplicateFinderQueue, config.ImagesDir, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &Service{
-		config:    config,
-		logger:    logger,
-		db:        db,
-		Loc:       loc,
-		rabbitMQ:  rabbitMQ,
-		waitGroup: wg,
-		df:        df,
+		config:          config,
+		logger:          logger,
+		db:              db,
+		Loc:             loc,
+		rabbitMQ:        rabbitMQ,
+		waitGroup:       wg,
+		DuplicateFinder: df,
 	}
 
 	return s, nil
@@ -102,6 +102,9 @@ func NewService(config Config) (*Service, error) {
 
 // Close Destructor
 func (s *Service) Close() {
+	fmt.Println("Closing service")
+
+	s.DuplicateFinder.Close()
 
 	s.waitGroup.Wait()
 
@@ -118,4 +121,6 @@ func (s *Service) Close() {
 			s.logger.Warning(err)
 		}
 	}
+
+	fmt.Println("Service closed")
 }
