@@ -34,8 +34,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq -y && \
 COPY etc /etc
  
 COPY goautowp /app/goautowp
-
-COPY migrations /app/migrations
  
 COPY entrypoint.sh /entrypoint.sh
 
