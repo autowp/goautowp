@@ -21,7 +21,7 @@ before_script:
   - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.0/waitforit-linux_amd64
   - chmod +x ./waitforit
   - source test.env
-  - ./waitforit -address tcp://$GOAUTOWP_RABBITMQ_HOST:$GOAUTOWP_RABBITMQ_PORT -timeout 30 || travis_terminate 1;
+  - ./waitforit -address tcp://$AUTOWP_RABBITMQ_HOST:$AUTOWP_RABBITMQ_PORT -timeout 30 || travis_terminate 1;
 
 script:
   - go test -v -race || travis_terminate 1;
