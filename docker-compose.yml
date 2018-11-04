@@ -16,6 +16,3 @@ services:
     - MYSQL_DATABASE=autowp
     ports:
     - "3306:3306"
-    volumes:
-    - "./test/dump.sql:/docker-entrypoint-initdb.d/dump.sql"
-

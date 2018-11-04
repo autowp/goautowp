@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -19,7 +18,7 @@ func main() {
 	t, err := goautowp.NewService(config)
 
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		log.Printf("Error: %v\n", err)
 		os.Exit(1)
 		return
 	}

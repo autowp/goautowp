@@ -1,0 +1,35 @@
+CREATE TABLE `perspectives` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `position` tinyint(3) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `position_2` (`position`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `perspectives` 
+VALUES (1,'perspective/front',1),
+(2,'perspective/back',9),
+(3,'perspective/left',5),
+(4,'perspective/right',7),
+(5,'perspective/interior',14),
+(6,'perspective/front-panel',11),
+(7,'perspective/3/4-left',3),
+(8,'perspective/3/4-right',4),
+(9,'perspective/cutaway',21),
+(10,'perspective/front-strict',2),
+(11,'perspective/left-strict',6),
+(12,'perspective/right-strict',8),
+(13,'perspective/back-strict',10),
+(14,'perspective/n/a',50),
+(15,'perspective/label',17),
+(16,'perspective/upper',19),
+(17,'perspective/under-the-hood',16),
+(18,'perspective/upper-strict',20),
+(19,'perspective/bottom',18),
+(20,'perspective/dashboard',12),
+(21,'perspective/boot',15),
+(22,'perspective/logo',22),
+(23,'perspective/mascot',25),
+(24,'perspective/sketch',26),
+(25,'perspective/mixed',49),
+(26,'perspective/exterior-details',27);

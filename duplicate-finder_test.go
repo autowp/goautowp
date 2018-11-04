@@ -53,8 +53,8 @@ func addImage(t *testing.T, s *Service, filepath string) int {
 	require.NoError(t, err)
 
 	stmt, err := s.db.Prepare(`
-		INSERT INTO image (filepath)
-		VALUES (?)
+		INSERT INTO image (filepath, filesize, width, height, dir)
+		VALUES (?, 1, 1, 1, "picture")
 	`)
 	require.NoError(t, err)
 	defer util.Close(stmt)
@@ -72,14 +72,20 @@ func addPicture(t *testing.T, s *Service, filepath string) int {
 
 	imageID := addImage(t, s, filepath)
 
+	randBytes := make([]byte, 3)
+	_, err := rand.Read(randBytes)
+	require.NoError(t, err)
+
+	identity := hex.EncodeToString(randBytes)
+
 	stmt, err := s.db.Prepare(`
-		INSERT INTO pictures (image_id)
-		VALUES (?)
+		INSERT INTO pictures (image_id, identity, ip, owner_id)
+		VALUES (?, ?, INET6_ATON("127.0.0.1"), NULL)
 	`)
 	require.NoError(t, err)
 	defer util.Close(stmt)
 
-	res, err := stmt.Exec(imageID)
+	res, err := stmt.Exec(imageID, identity)
 	require.NoError(t, err)
 
 	pictureID, err := res.LastInsertId()

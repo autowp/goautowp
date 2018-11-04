@@ -8,6 +8,7 @@ import (
 	"image"
 	_ "image/jpeg" // support JPEG decoding
 	_ "image/png"  // support PNG decoding
+	"log"
 	"os"
 	"strconv"
 	"sync"
@@ -49,12 +50,12 @@ func NewDuplicateFinder(wg *sync.WaitGroup, db *sql.DB, rabbitmMQ *amqp.Connecti
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fmt.Println("DuplicateFinder listener started")
+		log.Println("DuplicateFinder listener started")
 		err := s.listen()
 		if err != nil {
 			s.logger.Fatal(err)
 		}
-		fmt.Println("DuplicateFinder listener stopped")
+		log.Println("DuplicateFinder listener stopped")
 	}()
 
 	return s, nil
@@ -136,7 +137,7 @@ func (s *DuplicateFinder) listen() error {
 
 // Index picture image
 func (s *DuplicateFinder) Index(id int) error {
-	fmt.Printf("Indexing picture %v\n", id)
+	log.Printf("Indexing picture %v\n", id)
 
 	var imageID int
 	err := s.db.QueryRow("SELECT image_id FROM pictures WHERE id = ?", id).Scan(&imageID)
@@ -150,7 +151,7 @@ func (s *DuplicateFinder) Index(id int) error {
 		return err
 	}
 
-	fmt.Printf("Calculate hash for %v\n", filepath)
+	log.Printf("Calculate hash for %v\n", filepath)
 
 	hash, err := getFileHash(s.imagesDir + "/" + filepath)
 	if err != nil {
