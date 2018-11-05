@@ -254,7 +254,7 @@ INSERT INTO `attrs_attributes` VALUES
     (163,'specs/attrs/84/86/163',3,86,0000000001,'',NULL,95,0),
   (164,'specs/attrs/84/164',1,84,NULL,'',NULL,87,0),
   (165,'specs/attrs/84/165',6,84,NULL,'',NULL,88,0),
-  (229,'specs/attrs/wheels/auto-pumping-tires',5,84,NULL,'',NULL,89,0)
+  (229,'specs/attrs/wheels/auto-pumping-tires',5,84,NULL,'',NULL,89,0),
 (95,'specs/attrs/95',NULL,NULL,NULL,NULL,NULL,14,0),
   (96,'specs/attrs/95/96',2,95,0000000016,'',NULL,96,0),
   (97,'specs/attrs/95/97',2,95,0000000016,'',NULL,97,0),
