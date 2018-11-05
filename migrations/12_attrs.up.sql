@@ -529,7 +529,7 @@ INSERT INTO `attrs_list_options` VALUES
 
 CREATE TABLE `attrs_user_values` (
   `attribute_id` int(10) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `user_id` int(10) unsigned NOT NULL,
   `add_date` timestamp NOT NULL,
   `update_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -547,7 +547,7 @@ CREATE TABLE `attrs_user_values` (
 
 CREATE TABLE `attrs_user_values_float` (
   `attribute_id` int(10) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `value` double DEFAULT NULL,
   `user_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`attribute_id`,`item_id`,`user_id`),
@@ -560,7 +560,7 @@ CREATE TABLE `attrs_user_values_float` (
 
 CREATE TABLE `attrs_user_values_int` (
   `attribute_id` int(10) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `value` int(11) DEFAULT NULL,
   `user_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`attribute_id`,`item_id`,`user_id`),
@@ -572,9 +572,9 @@ CREATE TABLE `attrs_user_values_int` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `attrs_user_values_list` (
-  `attribute_id` int(11) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
-  `user_id` int(11) unsigned NOT NULL,
+  `attribute_id` int(10) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
+  `user_id` int(10) unsigned NOT NULL,
   `value` int(11) unsigned DEFAULT NULL,
   `ordering` int(11) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`attribute_id`,`item_id`,`user_id`,`ordering`),
@@ -589,7 +589,7 @@ CREATE TABLE `attrs_user_values_list` (
 
 CREATE TABLE `attrs_user_values_string` (
   `attribute_id` int(10) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `value` varchar(255) DEFAULT NULL,
   `user_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`attribute_id`,`item_id`,`user_id`),
@@ -603,7 +603,7 @@ CREATE TABLE `attrs_user_values_string` (
 
 CREATE TABLE `attrs_values` (
   `attribute_id` int(10) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `conflict` tinyint(4) NOT NULL DEFAULT '0',
   `update_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`attribute_id`,`item_id`),
@@ -615,7 +615,7 @@ CREATE TABLE `attrs_values` (
 
 CREATE TABLE `attrs_values_float` (
   `attribute_id` int(10) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `value` double DEFAULT NULL,
   PRIMARY KEY (`attribute_id`,`item_id`),
   KEY `attribute_id` (`attribute_id`),
@@ -627,7 +627,7 @@ CREATE TABLE `attrs_values_float` (
 
 CREATE TABLE `attrs_values_int` (
   `attribute_id` int(10) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `value` int(11) DEFAULT NULL,
   PRIMARY KEY (`attribute_id`,`item_id`),
   KEY `attribute_id` (`attribute_id`),
@@ -637,8 +637,8 @@ CREATE TABLE `attrs_values_int` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `attrs_values_list` (
-  `attribute_id` int(11) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `attribute_id` int(10) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `value` int(11) unsigned DEFAULT NULL,
   `ordering` int(11) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`attribute_id`,`item_id`,`ordering`),
@@ -651,7 +651,7 @@ CREATE TABLE `attrs_values_list` (
 
 CREATE TABLE `attrs_values_string` (
   `attribute_id` int(10) unsigned NOT NULL,
-  `item_id` int(11) unsigned NOT NULL,
+  `item_id` int(10) unsigned NOT NULL,
   `value` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`attribute_id`,`item_id`),
   KEY `attribute_id` (`attribute_id`),
