@@ -55,3 +55,31 @@ CREATE TABLE `pictures` (
   CONSTRAINT `pictures_fk7` FOREIGN KEY (`image_id`) REFERENCES `image` (`id`),
   CONSTRAINT `pictures_ibfk_2` FOREIGN KEY (`copyrights_text_id`) REFERENCES `textstorage_text` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `picture_view` (
+  `picture_id` int(10) unsigned NOT NULL,
+  `views` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`picture_id`),
+  CONSTRAINT `picture_view_ibfk_1` FOREIGN KEY (`picture_id`) REFERENCES `pictures` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `pictures_moder_votes` (
+  `user_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `picture_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `day_date` timestamp NOT NULL,
+  `reason` varchar(80) NOT NULL,
+  `vote` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`user_id`,`picture_id`),
+  KEY `picture_id` (`picture_id`),
+  CONSTRAINT `picture_id_ref` FOREIGN KEY (`picture_id`) REFERENCES `pictures` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `pictures_moder_votes_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `picture_moder_vote_template` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL,
+  `reason` varchar(80) NOT NULL,
+  `vote` tinyint(4) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

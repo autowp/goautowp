@@ -49,3 +49,86 @@ CREATE TABLE `users` (
   KEY `pictures_total` (`pictures_total`),
   CONSTRAINT `users_ibfk_1` FOREIGN KEY (`language`) REFERENCES `language` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `contact` (
+  `user_id` int(10) unsigned NOT NULL,
+  `contact_user_id` int(10) unsigned NOT NULL,
+  `timestamp` timestamp NOT NULL,
+  PRIMARY KEY (`user_id`,`contact_user_id`),
+  KEY `contact_user_id` (`contact_user_id`),
+  CONSTRAINT `contact_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `contact_ibfk_2` FOREIGN KEY (`contact_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `login_state` (
+  `state` varchar(50) NOT NULL,
+  `url` varchar(255) NOT NULL,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `language` varchar(5) NOT NULL,
+  `time` timestamp NOT NULL,
+  `service` varchar(50) NOT NULL,
+  PRIMARY KEY (`state`),
+  KEY `time` (`time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `personal_messages` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `from_user_id` int(10) unsigned DEFAULT NULL,
+  `to_user_id` int(10) unsigned NOT NULL,
+  `contents` mediumtext NOT NULL,
+  `add_datetime` timestamp NOT NULL,
+  `readen` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `deleted_by_from` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `deleted_by_to` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `from_user_id` (`from_user_id`),
+  KEY `to_user_id` (`to_user_id`,`readen`),
+  KEY `IX_personal_messages` (`from_user_id`,`to_user_id`,`readen`,`deleted_by_to`),
+  KEY `IX_personal_messages2` (`to_user_id`,`from_user_id`,`deleted_by_to`),
+  CONSTRAINT `personal_messages_fk` FOREIGN KEY (`from_user_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `personal_messages_fk1` FOREIGN KEY (`to_user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `user_account` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL,
+  `external_id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `link` varchar(255) NOT NULL,
+  `used_for_reg` tinyint(3) unsigned NOT NULL,
+  `service_id` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `service_id` (`service_id`,`external_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `user_account_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `user_password_remind` (
+  `hash` varchar(255) NOT NULL,
+  `user_id` int(11) unsigned NOT NULL,
+  `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`hash`),
+  KEY `FK_user_password_remind_users_id` (`user_id`),
+  CONSTRAINT `FK_user_password_remind_users_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `user_remember` (
+  `user_id` int(10) unsigned NOT NULL,
+  `token` varchar(255) NOT NULL,
+  `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`token`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `user_remember_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `user_renames` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL,
+  `old_name` varchar(255) NOT NULL,
+  `new_name` varchar(255) NOT NULL,
+  `date` timestamp NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `date` (`date`),
+  CONSTRAINT `user_renames_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
