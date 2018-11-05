@@ -1,3 +1,15 @@
+CREATE TABLE `attrs_item_types` (
+  `id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `attrs_item_types` VALUES 
+(1,'Автомобиль'),
+(3,'Двигатель'),
+(2,'Модификация автомобиля');
+
 CREATE TABLE `attrs_types` (
   `id` smallint(6) unsigned zerofill NOT NULL AUTO_INCREMENT,
   `name` varchar(50) NOT NULL,
