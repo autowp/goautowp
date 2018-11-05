@@ -532,7 +532,7 @@ CREATE TABLE `attrs_user_values` (
   `item_id` int(11) unsigned NOT NULL,
   `user_id` int(10) unsigned NOT NULL,
   `add_date` timestamp NOT NULL,
-  `update_date` timestamp NOT NULL,
+  `update_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `conflict` tinyint(4) NOT NULL DEFAULT '0',
   `weight` double DEFAULT '0',
   PRIMARY KEY (`attribute_id`,`item_id`,`user_id`),
