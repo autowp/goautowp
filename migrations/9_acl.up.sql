@@ -117,7 +117,7 @@ CREATE TABLE `acl_roles_parents` (
 
 INSERT INTO `acl_roles_parents` 
 VALUES (6,1),(7,1),(5,6),(49,6),(6,8),(5,9),(5,10),(5,11),(5,12),(5,13),(9,14),(10,14),(11,14),(12,14),(13,14),(16,14),(17,14),(50,14),(58,14),
-(5,16),(5,17),(5,49),(14,49),(5,58),(18,58);
+(5,16),(5,17),(5,49),(14,49),(5,58);
 
 CREATE TABLE `acl_roles_privileges_allowed` (
   `role_id` int(10) unsigned NOT NULL,
