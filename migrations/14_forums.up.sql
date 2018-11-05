@@ -16,6 +16,23 @@ CREATE TABLE `forums_themes` (
   CONSTRAINT `FK_forums_themes_forums_themes_id` FOREIGN KEY (`parent_id`) REFERENCES `forums_themes` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+INSERT INTO `forums_themes` (`id`, `parent_id`, `folder`, `name`, `position`, `description`, `topics`, `messages`, `is_moderator`, `disable_topics`) VALUES 
+(2,NULL,'all_other','forums/theme/all-other',5,'forums/theme/all-other/description',425,13955,0,0),
+(3,NULL,'wallpapers','forums/theme/photos',3,'',36,6769,0,0),
+(5,NULL,'this_cite','forums/theme/this-cite',2,'',184,13895,0,0),
+  (4,5,'classifier','forums/theme/classifier',4,'',57,7061,0,0),
+(16,NULL,'cars','forums/theme/cars',4,'',686,7349,0,1),
+  (6,16,'germany','forums/theme/german-cars',7,'forums/theme/german-cars/description',157,1767,0,0),
+  (7,16,'italy','forums/theme/italian-cars',8,'forums/theme/italian-cars/description',38,295,0,0),
+  (8,16,'france','forums/theme/french-cars',13,'forums/theme/french-cars/description',19,181,0,0),
+  (9,16,'japan','forums/theme/japan-cars',10,'forums/theme/japan-cars/description',167,1135,0,0),
+  (10,16,'korea','forums/theme/korean-cars',12,'forums/theme/korean-cars/description',11,124,0,0),
+  (11,16,'china','forums/theme/chinese-cars',15,'forums/theme/chinese-cars/description',23,305,0,0),
+  (12,16,'russian','forums/theme/russian-cars',14,'forums/theme/russian-cars/description',127,2162,0,0),
+  (13,16,'usa','forums/theme/american-cars',9,'forums/theme/american-cars/description',161,1176,0,0),
+  (14,16,'english','forums/theme/british-cars',11,'forums/theme/british-cars/description',24,212,0,0),
+(15,NULL,'moder','forums/theme/moderators',1,'',81,4084,1,0);
+
 CREATE TABLE `forums_theme_parent` (
   `forum_theme_id` int(11) unsigned NOT NULL,
   `parent_id` int(11) unsigned NOT NULL,
