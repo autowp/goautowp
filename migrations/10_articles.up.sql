@@ -12,7 +12,7 @@ CREATE TABLE `articles` (
   `catname` varchar(100) NOT NULL,
   `last_editor_id` int(10) unsigned DEFAULT NULL,
   `last_edit_date` timestamp NULL DEFAULT NULL,
-  `add_date` timestamp NOT NULL,
+  `add_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `author_id` int(10) unsigned DEFAULT NULL,
   `enabled` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `first_enabled_datetime` timestamp NULL DEFAULT NULL,
