@@ -4,4 +4,4 @@ CREATE TABLE `language` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO language (code) 
-VALUES ("br"), ("de"), ("en"), ("es"), ("fr"), ("it"), ("pt"), ("pt-br"), ("ru"), ("uk"), ("xx"), ("zh");
+VALUES ("be"), ("de"), ("en"), ("es"), ("fr"), ("it"), ("pt"), ("pt-br"), ("ru"), ("uk"), ("xx"), ("zh");
