@@ -24,7 +24,7 @@ before_script:
 
 script:
   - gometalinter --deadline 2m -D gocyclo
-  - go-critic .
+  - gocritic check-project .
 
   - docker-compose up -d
   - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.0/waitforit-linux_amd64
