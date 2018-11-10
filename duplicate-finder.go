@@ -10,6 +10,7 @@ import (
 	_ "image/png"  // support PNG decoding
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -175,12 +176,12 @@ func (s *DuplicateFinder) Index(id int) error {
 	return s.updateDistance(id)
 }
 
-func getFileHash(filepath string) (uint64, error) {
-	if filepath == "" {
+func getFileHash(fp string) (uint64, error) {
+	if fp == "" {
 		return 0, errors.New("Invalid filepath")
 	}
 
-	file, err := os.Open(filepath)
+	file, err := os.Open(filepath.Clean(fp))
 	if err != nil {
 		return 0, err
 	}
@@ -232,18 +233,18 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	for rows.Next() {
 		var pictureID int
 		var distance int
-		if err := rows.Scan(&pictureID, &distance); err != nil {
-			return err
+		if serr := rows.Scan(&pictureID, &distance); serr != nil {
+			return serr
 		}
 
-		_, err = insertStmt.Exec(id, pictureID, distance)
-		if err != nil {
-			return err
+		_, serr := insertStmt.Exec(id, pictureID, distance)
+		if serr != nil {
+			return serr
 		}
 
-		_, err = insertStmt.Exec(pictureID, id, distance)
-		if err != nil {
-			return err
+		_, serr = insertStmt.Exec(pictureID, id, distance)
+		if serr != nil {
+			return serr
 		}
 	}
 

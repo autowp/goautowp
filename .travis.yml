@@ -14,16 +14,23 @@ before_script:
   - sudo service mysql stop
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
   - dep ensure
-  - go get -u github.com/kisielk/errcheck
+
+  - curl -L https://raw.githubusercontent.com/alecthomas/gometalinter/master/scripts/install.sh > gometalinter-install.sh
+  - chmod +x ./gometalinter-install.sh
+  - ./gometalinter-install.sh -b $GOPATH/bin
+
   - go get -u github.com/mattn/goveralls
-  - errcheck ./...
+  - go get -u github.com/go-critic/go-critic/...
+
+script:
+  - gometalinter --deadline 2m -D gocyclo
+  - go-critic .
+
   - docker-compose up -d
   - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.0/waitforit-linux_amd64
   - chmod +x ./waitforit
   - source test.env
   - ./waitforit -address tcp://$AUTOWP_RABBITMQ_HOST:$AUTOWP_RABBITMQ_PORT -timeout 30 || travis_terminate 1;
-
-script:
   - go test -v -race || travis_terminate 1;
   - goveralls -service=travis-ci || travis_terminate 1;
 

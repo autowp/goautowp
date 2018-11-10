@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -40,33 +41,15 @@ func NewService(config Config) (*Service, error) {
 
 	logger := util.NewLogger(config.Rollbar)
 
-	loc, _ := time.LoadLocation("UTC")
+	loc, err := time.LoadLocation("UTC")
+	if err != nil {
+		return nil, err
+	}
 
-	start := time.Now()
-	timeout := 60 * time.Second
-
-	log.Println("Waiting for mysql")
-
-	var db *sql.DB
-	for {
-		db, err = sql.Open("mysql", config.DSN)
-		if err != nil {
-			return nil, err
-		}
-
-		err = db.Ping()
-		if err == nil {
-			log.Println("Started.")
-			break
-		}
-
-		if time.Since(start) > timeout {
-			logger.Fatal(err)
-			return nil, err
-		}
-
-		fmt.Print(".")
-		time.Sleep(100 * time.Millisecond)
+	db, err := connectDb(config.DSN)
+	if err != nil {
+		logger.Fatal(err)
+		return nil, err
 	}
 
 	err = applyMigrations(config.Migrations)
@@ -75,26 +58,10 @@ func NewService(config Config) (*Service, error) {
 		return nil, err
 	}
 
-	start = time.Now()
-	timeout = 60 * time.Second
-
-	log.Println("Waiting for rabbitMQ")
-
-	var rabbitMQ *amqp.Connection
-	for {
-		rabbitMQ, err = amqp.Dial(config.RabbitMQ)
-		if err == nil {
-			log.Println("Started.")
-			break
-		}
-
-		if time.Since(start) > timeout {
-			logger.Fatal(err)
-			return nil, err
-		}
-
-		fmt.Print(".")
-		time.Sleep(100 * time.Millisecond)
+	rabbitMQ, err := connectRabbitMQ(config.RabbitMQ)
+	if err != nil {
+		logger.Fatal(err)
+		return nil, err
 	}
 
 	wg := &sync.WaitGroup{}
@@ -121,6 +88,63 @@ func NewService(config Config) (*Service, error) {
 	return s, nil
 }
 
+func connectRabbitMQ(config string) (*amqp.Connection, error) {
+	start := time.Now()
+	timeout := 60 * time.Second
+
+	log.Println("Waiting for rabbitMQ")
+
+	var rabbitMQ *amqp.Connection
+	var err error
+	for {
+		rabbitMQ, err = amqp.Dial(config)
+		if err == nil {
+			log.Println("Started.")
+			break
+		}
+
+		if time.Since(start) > timeout {
+			return nil, err
+		}
+
+		fmt.Print(".")
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return rabbitMQ, nil
+}
+
+func connectDb(dsn string) (*sql.DB, error) {
+	start := time.Now()
+	timeout := 60 * time.Second
+
+	log.Println("Waiting for mysql")
+
+	var db *sql.DB
+	var err error
+	for {
+		db, err = sql.Open("mysql", dsn)
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.Ping()
+		if err == nil {
+			log.Println("Started.")
+			break
+		}
+
+		if time.Since(start) > timeout {
+			return nil, err
+		}
+
+		fmt.Print(".")
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return db, nil
+}
+
 // Close Destructor
 func (s *Service) Close() {
 	log.Println("Closing service")
@@ -128,7 +152,7 @@ func (s *Service) Close() {
 	s.DuplicateFinder.Close()
 
 	if s.httpServer != nil {
-		err := s.httpServer.Shutdown(nil)
+		err := s.httpServer.Shutdown(context.Background())
 		if err != nil {
 			panic(err) // failure/timeout shutting down the server gracefully
 		}
