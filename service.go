@@ -179,12 +179,14 @@ func (s *Service) Close() {
 
 // ListenHTTP HTTP thread
 func (s *Service) ListenHTTP() {
+
+	s.httpServer = &http.Server{Addr: ":80", Handler: s.router}
+
 	s.waitGroup.Add(1)
 	go func() {
 		defer s.waitGroup.Done()
 		log.Println("HTTP listener started")
 
-		s.httpServer = &http.Server{Addr: ":80", Handler: s.router}
 		err := s.httpServer.ListenAndServe()
 		if err != nil {
 			// cannot panic, because this probably is an intentional close
