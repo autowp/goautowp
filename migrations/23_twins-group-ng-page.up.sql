@@ -1,1 +1,1 @@
-UPDATE pages SET url="/ng/twins/group/%TWINS_GROUP_ID%" WHERE id=26;
+UPDATE pages SET url="/ng/twins/group/%TWINS_GROUP_ID%/pictures" WHERE id=28;
