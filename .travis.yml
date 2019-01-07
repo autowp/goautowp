@@ -23,8 +23,8 @@ before_script:
   - go get -u github.com/go-critic/go-critic/...
 
 script:
-  - gometalinter --deadline 2m -D gocyclo
-  - gocritic check-project .
+  - gometalinter --deadline 2m -D gocyclo || travis_terminate 1;
+  - gocritic check-project . || travis_terminate 1;
 
   - docker-compose up -d
   - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.0/waitforit-linux_amd64
