@@ -219,6 +219,7 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	}
 	defer util.Close(insertStmt)
 
+	// nolint: gosec
 	rows, err := s.db.Query(`
 		SELECT picture_id, BIT_COUNT(hash ^ `+strconv.FormatUint(hash, 10)+`) AS distance
 		FROM df_hash 
