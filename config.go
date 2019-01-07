@@ -26,8 +26,10 @@ type Config struct {
 // LoadConfig LoadConfig
 func LoadConfig() Config {
 
+	rabbitMQ := "amqp://guest:guest@" + os.Getenv("AUTOWP_RABBITMQ_HOST") + ":" + os.Getenv("AUTOWP_RABBITMQ_PORT") + "/"
+
 	config := Config{
-		RabbitMQ:             "amqp://guest:guest@" + os.Getenv("AUTOWP_RABBITMQ_HOST") + ":" + os.Getenv("AUTOWP_RABBITMQ_PORT") + "/",
+		RabbitMQ:             rabbitMQ,
 		DuplicateFinderQueue: os.Getenv("AUTOWP_DUPLICATE_FINDER_QUEUE"),
 		Rollbar: util.RollbarConfig{
 			Token:       os.Getenv("AUTOWP_ROLLBAR_TOKEN"),

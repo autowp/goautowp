@@ -60,7 +60,7 @@ func (r *Rollbar) Log(level string, interfaces ...interface{}) bool {
 	return false
 }
 
-// Wait untill reports sent
+// Wait until reports sent
 func (r *Rollbar) Wait() {
 	lib.Wait()
 }
