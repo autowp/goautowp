@@ -41,14 +41,14 @@ type DuplicateFinderInputMessage struct {
 func NewDuplicateFinder(
 	wg *sync.WaitGroup,
 	db *sql.DB,
-	rabbitmMQ *amqp.Connection,
+	rabbitMQ *amqp.Connection,
 	queue string,
 	imagesDir string,
 	logger *util.Logger,
 ) (*DuplicateFinder, error) {
 	s := &DuplicateFinder{
 		db:        db,
-		conn:      rabbitmMQ,
+		conn:      rabbitMQ,
 		queue:     queue,
 		quit:      make(chan bool),
 		logger:    logger,
