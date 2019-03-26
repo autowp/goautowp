@@ -185,7 +185,7 @@ func (s *DuplicateFinder) Index(id int) error {
 
 func getFileHash(fp string) (uint64, error) {
 	if fp == "" {
-		return 0, errors.New("Invalid filepath")
+		return 0, errors.New("invalid filepath")
 	}
 
 	file, err := os.Open(filepath.Clean(fp))
@@ -207,7 +207,7 @@ func getFileHash(fp string) (uint64, error) {
 
 func (s *DuplicateFinder) updateDistance(id int) error {
 	if id <= 0 {
-		return errors.New("Invalid id provided")
+		return errors.New("invalid id provided")
 	}
 
 	var hash uint64
