@@ -8,9 +8,9 @@ import (
 	"image"
 	_ "image/jpeg" // support JPEG decoding
 	_ "image/png"  // support PNG decoding
+	"io"
 	"log"
-	"os"
-	"path/filepath"
+	"net/http"
 	"strconv"
 	"sync"
 
@@ -28,13 +28,13 @@ type DuplicateFinder struct {
 	conn  *amqp.Connection
 	quit  chan bool
 	// logger    *util.Logger
-	imagesDir string
-	logger    *util.Logger
+	logger *util.Logger
 }
 
 // DuplicateFinderInputMessage InputMessage
 type DuplicateFinderInputMessage struct {
-	PictureID int `json:"picture_id"`
+	PictureID int    `json:"picture_id"`
+	URL       string `json:"url"`
 }
 
 // NewDuplicateFinder constructor
@@ -43,16 +43,15 @@ func NewDuplicateFinder(
 	db *sql.DB,
 	rabbitMQ *amqp.Connection,
 	queue string,
-	imagesDir string,
 	logger *util.Logger,
 ) (*DuplicateFinder, error) {
+
 	s := &DuplicateFinder{
-		db:        db,
-		conn:      rabbitMQ,
-		queue:     queue,
-		quit:      make(chan bool),
-		logger:    logger,
-		imagesDir: imagesDir,
+		db:     db,
+		conn:   rabbitMQ,
+		queue:  queue,
+		quit:   make(chan bool),
+		logger: logger,
 	}
 
 	wg.Add(1)
@@ -133,7 +132,7 @@ func (s *DuplicateFinder) listen() error {
 				continue
 			}
 
-			err = s.Index(message.PictureID)
+			err = s.Index(message.PictureID, message.URL)
 			if err != nil {
 				s.logger.Warning(err)
 			}
@@ -144,24 +143,18 @@ func (s *DuplicateFinder) listen() error {
 }
 
 // Index picture image
-func (s *DuplicateFinder) Index(id int) error {
+func (s *DuplicateFinder) Index(id int, url string) error {
 	log.Printf("Indexing picture %v\n", id)
 
-	var imageID int
-	err := s.db.QueryRow("SELECT image_id FROM pictures WHERE id = ?", id).Scan(&imageID)
+	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	var filepath string
-	err = s.db.QueryRow("SELECT filepath FROM image WHERE id = ?", imageID).Scan(&filepath)
-	if err != nil {
-		return err
-	}
+	log.Printf("Calculate hash for %v\n", url)
 
-	log.Printf("Calculate hash for %v\n", filepath)
-
-	hash, err := getFileHash(s.imagesDir + "/" + filepath)
+	hash, err := getFileHash(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -183,17 +176,8 @@ func (s *DuplicateFinder) Index(id int) error {
 	return s.updateDistance(id)
 }
 
-func getFileHash(fp string) (uint64, error) {
-	if fp == "" {
-		return 0, errors.New("invalid filepath")
-	}
-
-	file, err := os.Open(filepath.Clean(fp))
-	if err != nil {
-		return 0, err
-	}
-	defer util.Close(file)
-	img, _, err := image.Decode(file)
+func getFileHash(reader io.Reader) (uint64, error) {
+	img, _, err := image.Decode(reader)
 	if err != nil {
 		return 0, err
 	}
@@ -257,9 +241,4 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	}
 
 	return nil
-}
-
-// ImagesDir ImagesDir
-func (s *DuplicateFinder) ImagesDir() string {
-	return s.imagesDir
 }

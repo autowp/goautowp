@@ -66,7 +66,7 @@ func NewService(config Config) (*Service, error) {
 
 	wg := &sync.WaitGroup{}
 
-	df, err := NewDuplicateFinder(wg, db, rabbitMQ, config.DuplicateFinderQueue, config.ImagesDir, logger)
+	df, err := NewDuplicateFinder(wg, db, rabbitMQ, config.DuplicateFinderQueue, logger)
 	if err != nil {
 		return nil, err
 	}

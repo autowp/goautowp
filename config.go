@@ -20,7 +20,6 @@ type Config struct {
 	Rollbar              util.RollbarConfig `yaml:"rollbar"`
 	DSN                  string             `yaml:"dsn"`
 	Migrations           MigrationsConfig   `yaml:"migrations"`
-	ImagesDir            string             `yaml:"images_dir"`
 }
 
 // LoadConfig LoadConfig
@@ -39,7 +38,6 @@ func LoadConfig() Config {
 		DSN: os.Getenv("AUTOWP_MYSQL_USERNAME") + ":" + os.Getenv("AUTOWP_MYSQL_PASSWORD") +
 			"@tcp(" + os.Getenv("AUTOWP_MYSQL_HOST") + ":" + os.Getenv("AUTOWP_MYSQL_PORT") + ")/" +
 			os.Getenv("AUTOWP_MYSQL_DBNAME") + "?charset=utf8mb4&parseTime=true&loc=UTC",
-		ImagesDir: os.Getenv("AUTOWP_IMAGES_DIR"),
 		Migrations: MigrationsConfig{
 			DSN: "mysql://" + os.Getenv("AUTOWP_MYSQL_USERNAME") + ":" + os.Getenv("AUTOWP_MYSQL_PASSWORD") +
 				"@tcp(" + os.Getenv("AUTOWP_MYSQL_HOST") + ":" + os.Getenv("AUTOWP_MYSQL_PORT") + ")/" +
