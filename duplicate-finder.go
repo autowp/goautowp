@@ -63,6 +63,7 @@ func (s *DuplicateFinder) Close() {
 	close(s.quit)
 }
 
+// Listen starts to listen messages from rabbitmq
 func (s *DuplicateFinder) Listen(wg *sync.WaitGroup) {
 	log.Println("DuplicateFinder listener started")
 	wg.Add(1)
@@ -145,6 +146,7 @@ func (s *DuplicateFinder) listen() error {
 }
 
 // Index picture image
+// #nosec G107
 func (s *DuplicateFinder) Index(id int, url string) error {
 	log.Printf("Indexing picture %v\n", id)
 
