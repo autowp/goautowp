@@ -150,7 +150,7 @@ func (s *DuplicateFinder) Index(id int, url string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer util.Close(resp.Body)
 
 	log.Printf("Calculate hash for %v\n", url)
 
