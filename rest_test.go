@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,9 +15,13 @@ import (
 func TestGetSpecs(t *testing.T) {
 	config := LoadConfig()
 
-	s, err := NewService(config)
+	wg := &sync.WaitGroup{}
+	s, err := NewService(wg, config)
 	require.NoError(t, err)
-	defer s.Close()
+	defer func() {
+		s.Close()
+		wg.Wait()
+	}()
 	router := s.GetRouter()
 
 	req, err := http.NewRequest("GET", "/go-api/spec", nil)
@@ -40,9 +45,13 @@ func TestGetSpecs(t *testing.T) {
 func TestGetPerspectives(t *testing.T) {
 	config := LoadConfig()
 
-	s, err := NewService(config)
+	wg := &sync.WaitGroup{}
+	s, err := NewService(wg, config)
 	require.NoError(t, err)
-	defer s.Close()
+	defer func() {
+		s.Close()
+		wg.Wait()
+	}()
 	router := s.GetRouter()
 
 	req, err := http.NewRequest("GET", "/go-api/perspective", nil)

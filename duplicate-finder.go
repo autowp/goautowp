@@ -39,7 +39,6 @@ type DuplicateFinderInputMessage struct {
 
 // NewDuplicateFinder constructor
 func NewDuplicateFinder(
-	wg *sync.WaitGroup,
 	db *sql.DB,
 	rabbitMQ *amqp.Connection,
 	queue string,
@@ -54,17 +53,6 @@ func NewDuplicateFinder(
 		logger: logger,
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		log.Println("DuplicateFinder listener started")
-		err := s.listen()
-		if err != nil {
-			s.logger.Fatal(err)
-		}
-		log.Println("DuplicateFinder listener stopped")
-	}()
-
 	return s, nil
 }
 
@@ -73,6 +61,19 @@ func (s *DuplicateFinder) Close() {
 
 	s.quit <- true
 	close(s.quit)
+}
+
+func (s *DuplicateFinder) Listen(wg *sync.WaitGroup) {
+	log.Println("DuplicateFinder listener started")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := s.listen()
+		if err != nil {
+			s.logger.Fatal(err)
+		}
+		log.Println("DuplicateFinder listener stopped")
+	}()
 }
 
 // Listen for incoming messages
@@ -117,6 +118,7 @@ func (s *DuplicateFinder) listen() error {
 		select {
 		case <-s.quit:
 			quit = true
+			log.Println("DuplicateFinder got quit signal")
 			return nil
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
@@ -217,19 +219,24 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 		WHERE picture_id != ? 
 		HAVING distance <= ?
 	`, id, threshold)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return err
 	}
+	if err == sql.ErrNoRows {
+		return nil
+	}
+
 	defer util.Close(rows)
 
 	for rows.Next() {
 		var pictureID int
 		var distance int
-		if serr := rows.Scan(&pictureID, &distance); serr != nil {
+		serr := rows.Scan(&pictureID, &distance)
+		if serr != nil {
 			return serr
 		}
 
-		_, serr := insertStmt.Exec(id, pictureID, distance)
+		_, serr = insertStmt.Exec(id, pictureID, distance)
 		if serr != nil {
 			return serr
 		}

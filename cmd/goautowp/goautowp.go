@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/autowp/goautowp"
@@ -14,8 +15,8 @@ func main() {
 	config := goautowp.LoadConfig()
 
 	goautowp.ValidateConfig(config)
-
-	t, err := goautowp.NewService(config)
+	wg := &sync.WaitGroup{}
+	t, err := goautowp.NewService(wg, config)
 
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -29,9 +30,11 @@ func main() {
 		log.Printf("captured %v, stopping and exiting.", sig)
 
 		t.Close()
-		os.Exit(1)
+		wg.Wait()
+		os.Exit(0)
 	}
 
 	t.Close()
+	wg.Wait()
 	os.Exit(0)
 }
