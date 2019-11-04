@@ -11,6 +11,7 @@ type MigrationsConfig struct {
 	Dir string `yaml:"dir"`
 }
 
+// SentryConfig SentryConfig
 type SentryConfig struct {
 	DSN         string `yaml:"dsn"`
 	Environment string `yaml:"environment"`
