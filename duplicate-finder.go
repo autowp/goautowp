@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/getsentry/sentry-go"
+	sentry "github.com/getsentry/sentry-go"
 
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"

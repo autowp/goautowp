@@ -15,7 +15,7 @@
   packages = [
     ".",
     "etcs",
-    "transforms",
+    "transforms"
   ]
   pruneopts = ""
   revision = "190331714558be423e622b2c2fcdca9ec2882637"
@@ -52,7 +52,7 @@
     ".",
     "binding",
     "json",
-    "render",
+    "render"
   ]
   pruneopts = ""
   revision = "b869fe1415e4b9eb52f247441830d502aece2d4d"
@@ -74,7 +74,7 @@
     "database",
     "database/mysql",
     "source",
-    "source/file",
+    "source/file"
   ]
   pruneopts = ""
   revision = "4937cd088f7c7193ee59b319c1c2caa7482aae8e"
@@ -165,7 +165,7 @@
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "require",
+    "require"
   ]
   pruneopts = ""
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
@@ -225,7 +225,7 @@
     "github.com/golang-migrate/migrate/source/file",
     "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/require",
+    "github.com/stretchr/testify/require"
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

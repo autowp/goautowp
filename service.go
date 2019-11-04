@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/getsentry/sentry-go"
+	sentry "github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
 	"github.com/streadway/amqp"

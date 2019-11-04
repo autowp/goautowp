@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp"
-	"github.com/getsentry/sentry-go"
+	sentry "github.com/getsentry/sentry-go"
 )
 
 func main() {
