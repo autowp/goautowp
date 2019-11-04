@@ -9,10 +9,18 @@ services:
     - "15672:15672"
 
   mysql:
-    image: mysql:5
+    image: mysql:8
     container_name: goautowp_mysql_test
     environment:
     - MYSQL_ROOT_PASSWORD=password
     - MYSQL_DATABASE=autowp
     ports:
     - "3306:3306"
+
+  nginx:
+    image: nginx
+    container_name: goautowp_nginx_test
+    ports:
+    - "8080:80"
+    volumes:
+    - "./test:/usr/share/nginx/html:ro"

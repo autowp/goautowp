@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/getsentry/sentry-go"
 	"image"
 	_ "image/jpeg" // support JPEG decoding
 	_ "image/png"  // support PNG decoding
+	"io"
 	"log"
-	"os"
-	"path/filepath"
+	"net/http"
 	"strconv"
 	"sync"
+
+	"github.com/getsentry/sentry-go"
 
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
@@ -28,41 +29,27 @@ type DuplicateFinder struct {
 	queue string
 	conn  *amqp.Connection
 	quit  chan bool
-	// logger    *util.Logger
-	imagesDir string
 }
 
 // DuplicateFinderInputMessage InputMessage
 type DuplicateFinderInputMessage struct {
-	PictureID int `json:"picture_id"`
+	PictureID int    `json:"picture_id"`
+	URL       string `json:"url"`
 }
 
 // NewDuplicateFinder constructor
 func NewDuplicateFinder(
-	wg *sync.WaitGroup,
 	db *sql.DB,
 	rabbitMQ *amqp.Connection,
 	queue string,
-	imagesDir string,
 ) (*DuplicateFinder, error) {
-	s := &DuplicateFinder{
-		db:        db,
-		conn:      rabbitMQ,
-		queue:     queue,
-		quit:      make(chan bool),
-		imagesDir: imagesDir,
-	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		log.Println("DuplicateFinder listener started")
-		err := s.listen()
-		if err != nil {
-			sentry.CaptureException(err)
-		}
-		log.Println("DuplicateFinder listener stopped")
-	}()
+	s := &DuplicateFinder{
+		db:    db,
+		conn:  rabbitMQ,
+		queue: queue,
+		quit:  make(chan bool),
+	}
 
 	return s, nil
 }
@@ -72,6 +59,20 @@ func (s *DuplicateFinder) Close() {
 
 	s.quit <- true
 	close(s.quit)
+}
+
+// Listen starts to listen messages from rabbitmq
+func (s *DuplicateFinder) Listen(wg *sync.WaitGroup) {
+	log.Println("DuplicateFinder listener started")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := s.listen()
+		if err != nil {
+			sentry.CaptureException(err)
+		}
+		log.Println("DuplicateFinder listener stopped")
+	}()
 }
 
 // Listen for incoming messages
@@ -116,6 +117,7 @@ func (s *DuplicateFinder) listen() error {
 		select {
 		case <-s.quit:
 			quit = true
+			log.Println("DuplicateFinder got quit signal")
 			return nil
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
@@ -131,7 +133,7 @@ func (s *DuplicateFinder) listen() error {
 				continue
 			}
 
-			err = s.Index(message.PictureID)
+			err = s.Index(message.PictureID, message.URL)
 			if err != nil {
 				sentry.CaptureException(err)
 			}
@@ -142,24 +144,19 @@ func (s *DuplicateFinder) listen() error {
 }
 
 // Index picture image
-func (s *DuplicateFinder) Index(id int) error {
+// #nosec G107
+func (s *DuplicateFinder) Index(id int, url string) error {
 	log.Printf("Indexing picture %v\n", id)
 
-	var imageID int
-	err := s.db.QueryRow("SELECT image_id FROM pictures WHERE id = ?", id).Scan(&imageID)
+	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
+	defer util.Close(resp.Body)
 
-	var filepath string
-	err = s.db.QueryRow("SELECT filepath FROM image WHERE id = ?", imageID).Scan(&filepath)
-	if err != nil {
-		return err
-	}
+	log.Printf("Calculate hash for %v\n", url)
 
-	log.Printf("Calculate hash for %v\n", filepath)
-
-	hash, err := getFileHash(s.imagesDir + "/" + filepath)
+	hash, err := getFileHash(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -181,17 +178,8 @@ func (s *DuplicateFinder) Index(id int) error {
 	return s.updateDistance(id)
 }
 
-func getFileHash(fp string) (uint64, error) {
-	if fp == "" {
-		return 0, errors.New("invalid filepath")
-	}
-
-	file, err := os.Open(filepath.Clean(fp))
-	if err != nil {
-		return 0, err
-	}
-	defer util.Close(file)
-	img, _, err := image.Decode(file)
+func getFileHash(reader io.Reader) (uint64, error) {
+	img, _, err := image.Decode(reader)
 	if err != nil {
 		return 0, err
 	}
@@ -231,19 +219,24 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 		WHERE picture_id != ? 
 		HAVING distance <= ?
 	`, id, threshold)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return err
 	}
+	if err == sql.ErrNoRows {
+		return nil
+	}
+
 	defer util.Close(rows)
 
 	for rows.Next() {
 		var pictureID int
 		var distance int
-		if serr := rows.Scan(&pictureID, &distance); serr != nil {
+		serr := rows.Scan(&pictureID, &distance)
+		if serr != nil {
 			return serr
 		}
 
-		_, serr := insertStmt.Exec(id, pictureID, distance)
+		_, serr = insertStmt.Exec(id, pictureID, distance)
 		if serr != nil {
 			return serr
 		}
@@ -255,9 +248,4 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	}
 
 	return nil
-}
-
-// ImagesDir ImagesDir
-func (s *DuplicateFinder) ImagesDir() string {
-	return s.imagesDir
 }

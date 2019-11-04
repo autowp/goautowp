@@ -22,7 +22,6 @@ type Config struct {
 	DuplicateFinderQueue string           `yaml:"duplicate_finder_queue"`
 	DSN                  string           `yaml:"dsn"`
 	Migrations           MigrationsConfig `yaml:"migrations"`
-	ImagesDir            string           `yaml:"images_dir"`
 	Sentry               SentryConfig     `yaml:"sentry"`
 }
 
@@ -37,7 +36,6 @@ func LoadConfig() Config {
 		DSN: os.Getenv("AUTOWP_MYSQL_USERNAME") + ":" + os.Getenv("AUTOWP_MYSQL_PASSWORD") +
 			"@tcp(" + os.Getenv("AUTOWP_MYSQL_HOST") + ":" + os.Getenv("AUTOWP_MYSQL_PORT") + ")/" +
 			os.Getenv("AUTOWP_MYSQL_DBNAME") + "?charset=utf8mb4&parseTime=true&loc=UTC",
-		ImagesDir: os.Getenv("AUTOWP_IMAGES_DIR"),
 		Migrations: MigrationsConfig{
 			DSN: "mysql://" + os.Getenv("AUTOWP_MYSQL_USERNAME") + ":" + os.Getenv("AUTOWP_MYSQL_PASSWORD") +
 				"@tcp(" + os.Getenv("AUTOWP_MYSQL_HOST") + ":" + os.Getenv("AUTOWP_MYSQL_PORT") + ")/" +

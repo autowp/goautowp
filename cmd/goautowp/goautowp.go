@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -28,7 +29,8 @@ func main() {
 		return
 	}
 
-	t, err := goautowp.NewService(config)
+	wg := &sync.WaitGroup{}
+	t, err := goautowp.NewService(wg, config)
 
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -44,11 +46,13 @@ func main() {
 		sentry.Flush(time.Second * 5)
 
 		t.Close()
+		wg.Wait()
 		os.Exit(0)
 	}
 
 	sentry.Flush(time.Second * 5)
 
 	t.Close()
+	wg.Wait()
 	os.Exit(0)
 }

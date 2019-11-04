@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/autowp/goautowp/util"
@@ -30,7 +31,7 @@ func copy(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return out.Close()
+	return nil
 }
 
 func addImage(t *testing.T, s *Service, filepath string) int {
@@ -44,7 +45,7 @@ func addImage(t *testing.T, s *Service, filepath string) int {
 	require.NoError(t, err)
 
 	newPath := name + hex.EncodeToString(randBytes) + extension
-	newFullpath := s.DuplicateFinder.ImagesDir() + "/" + newPath
+	newFullpath := os.Getenv("AUTOWP_IMAGES_DIR") + "/" + newPath
 
 	err = os.MkdirAll(path.Dir(newFullpath), os.ModePerm)
 	require.NoError(t, err)
@@ -98,16 +99,20 @@ func TestDuplicateFinder(t *testing.T) {
 
 	config := LoadConfig()
 
-	s, err := NewService(config)
+	wg := &sync.WaitGroup{}
+	s, err := NewService(wg, config)
 	require.NoError(t, err)
-	defer s.Close()
+	defer func() {
+		s.Close()
+		wg.Wait()
+	}()
 
 	id1 := addPicture(t, s, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")
-	err = s.DuplicateFinder.Index(id1)
+	err = s.DuplicateFinder.Index(id1, "http://localhost:8080/large.jpg")
 	require.NoError(t, err)
 
 	id2 := addPicture(t, s, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/small.jpg")
-	err = s.DuplicateFinder.Index(id2)
+	err = s.DuplicateFinder.Index(id2, "http://localhost:8080/small.jpg")
 	require.NoError(t, err)
 
 	var hash1 uint64

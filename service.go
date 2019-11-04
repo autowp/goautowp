@@ -34,7 +34,7 @@ type Service struct {
 }
 
 // NewService constructor
-func NewService(config Config) (*Service, error) {
+func NewService(wg *sync.WaitGroup, config Config) (*Service, error) {
 
 	var err error
 
@@ -45,28 +45,31 @@ func NewService(config Config) (*Service, error) {
 
 	db, err := connectDb(config.DSN)
 	if err != nil {
+		fmt.Println(err)
 		sentry.CaptureException(err)
 		return nil, err
 	}
 
 	err = applyMigrations(config.Migrations)
 	if err != nil && err != migrate.ErrNoChange {
+		fmt.Println(err)
 		sentry.CaptureException(err)
 		return nil, err
 	}
 
 	rabbitMQ, err := connectRabbitMQ(config.RabbitMQ)
 	if err != nil {
+		fmt.Println(err)
 		sentry.CaptureException(err)
 		return nil, err
 	}
 
-	wg := &sync.WaitGroup{}
-
-	df, err := NewDuplicateFinder(wg, db, rabbitMQ, config.DuplicateFinderQueue, config.ImagesDir)
+	df, err := NewDuplicateFinder(db, rabbitMQ, config.DuplicateFinderQueue)
 	if err != nil {
 		return nil, err
 	}
+
+	df.Listen(wg)
 
 	s := &Service{
 		config:          config,
@@ -150,12 +153,13 @@ func (s *Service) Close() {
 	if s.httpServer != nil {
 		err := s.httpServer.Shutdown(context.Background())
 		if err != nil {
+			log.Println(err)
 			panic(err) // failure/timeout shutting down the server gracefully
 		}
 	}
-
+	log.Println("Closing service wait")
 	s.waitGroup.Wait()
-
+	log.Println("Disconnecting DB")
 	if s.db != nil {
 		err := s.db.Close()
 		if err != nil {
@@ -163,6 +167,7 @@ func (s *Service) Close() {
 		}
 	}
 
+	log.Println("Disconnecting RabbitMQ")
 	if s.rabbitMQ != nil {
 		err := s.rabbitMQ.Close()
 		if err != nil {
