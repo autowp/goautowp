@@ -11,9 +11,8 @@ ENV GOAUTOWP_MYSQL_PORT "3306"
 ENV GOAUTOWP_MYSQL_USERNAME "root"
 ENV GOAUTOWP_MYSQL_PASSWORD "root"
 ENV GOAUTOWP_MYSQL_DBNAME "autowp"
-ENV GOAUTOWP_ROLLBAR_TOKEN ""
-ENV GOAUTOWP_ROLLBAR_ENVIRONMENT "production"
-ENV GOAUTOWP_ROLLBAR_PERIOD "1m"
+ENV GOAUTOWP_SENTRY_DSN ""
+ENV GOAUTOWP_SENTRY_ENVIRONMENT "production"
 
 EXPOSE 80
 
@@ -35,9 +34,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq -y && \
  
 COPY etc /etc
  
-COPY goautowp /app/goautowp
-
-COPY migrations /app/migrations
+COPY goautowp migrations /app/
  
 COPY entrypoint.sh /entrypoint.sh
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/getsentry/sentry-go"
 	"image"
 	_ "image/jpeg" // support JPEG decoding
 	_ "image/png"  // support PNG decoding
@@ -29,7 +30,6 @@ type DuplicateFinder struct {
 	quit  chan bool
 	// logger    *util.Logger
 	imagesDir string
-	logger    *util.Logger
 }
 
 // DuplicateFinderInputMessage InputMessage
@@ -44,14 +44,12 @@ func NewDuplicateFinder(
 	rabbitMQ *amqp.Connection,
 	queue string,
 	imagesDir string,
-	logger *util.Logger,
 ) (*DuplicateFinder, error) {
 	s := &DuplicateFinder{
 		db:        db,
 		conn:      rabbitMQ,
 		queue:     queue,
 		quit:      make(chan bool),
-		logger:    logger,
 		imagesDir: imagesDir,
 	}
 
@@ -61,7 +59,7 @@ func NewDuplicateFinder(
 		log.Println("DuplicateFinder listener started")
 		err := s.listen()
 		if err != nil {
-			s.logger.Fatal(err)
+			sentry.CaptureException(err)
 		}
 		log.Println("DuplicateFinder listener stopped")
 	}()
@@ -121,7 +119,7 @@ func (s *DuplicateFinder) listen() error {
 			return nil
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
-				s.logger.Warning(fmt.Errorf("unexpected mime `%v`", d.ContentType))
+				sentry.CaptureException(fmt.Errorf("unexpected mime `%v`", d.ContentType))
 				return nil
 				// continue
 			}
@@ -129,13 +127,13 @@ func (s *DuplicateFinder) listen() error {
 			var message DuplicateFinderInputMessage
 			err := json.Unmarshal(d.Body, &message)
 			if err != nil {
-				s.logger.Warning(fmt.Errorf("failed to parse json `%v`: %s", err, d.Body))
+				sentry.CaptureException(fmt.Errorf("failed to parse json `%v`: %s", err, d.Body))
 				continue
 			}
 
 			err = s.Index(message.PictureID)
 			if err != nil {
-				s.logger.Warning(err)
+				sentry.CaptureException(err)
 			}
 		}
 	}

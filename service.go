@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/autowp/goautowp/util"
+	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
 	"github.com/streadway/amqp"
@@ -24,7 +24,6 @@ import (
 // Service Main Object
 type Service struct {
 	config          Config
-	logger          *util.Logger
 	db              *sql.DB
 	Loc             *time.Location
 	rabbitMQ        *amqp.Connection
@@ -39,8 +38,6 @@ func NewService(config Config) (*Service, error) {
 
 	var err error
 
-	logger := util.NewLogger(config.Rollbar)
-
 	loc, err := time.LoadLocation("UTC")
 	if err != nil {
 		return nil, err
@@ -48,32 +45,31 @@ func NewService(config Config) (*Service, error) {
 
 	db, err := connectDb(config.DSN)
 	if err != nil {
-		logger.Fatal(err)
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
 	err = applyMigrations(config.Migrations)
 	if err != nil && err != migrate.ErrNoChange {
-		logger.Fatal(err)
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
 	rabbitMQ, err := connectRabbitMQ(config.RabbitMQ)
 	if err != nil {
-		logger.Fatal(err)
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
 	wg := &sync.WaitGroup{}
 
-	df, err := NewDuplicateFinder(wg, db, rabbitMQ, config.DuplicateFinderQueue, config.ImagesDir, logger)
+	df, err := NewDuplicateFinder(wg, db, rabbitMQ, config.DuplicateFinderQueue, config.ImagesDir)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &Service{
 		config:          config,
-		logger:          logger,
 		db:              db,
 		Loc:             loc,
 		rabbitMQ:        rabbitMQ,
@@ -163,14 +159,14 @@ func (s *Service) Close() {
 	if s.db != nil {
 		err := s.db.Close()
 		if err != nil {
-			s.logger.Warning(err)
+			sentry.CaptureException(err)
 		}
 	}
 
 	if s.rabbitMQ != nil {
 		err := s.rabbitMQ.Close()
 		if err != nil {
-			s.logger.Warning(err)
+			sentry.CaptureException(err)
 		}
 	}
 
