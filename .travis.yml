@@ -8,12 +8,18 @@ services:
 go:
   - "1.10"
 
+addons:
+  sonarcloud:
+    organization: "autowp-github"
+    token:
+      secure: $SONARCLOUD_TOKEN
+
 install: true
 
 before_script:
   - sudo service mysql stop
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-  - dep ensure
+  - go mod verify
 
   - curl -L https://raw.githubusercontent.com/alecthomas/gometalinter/master/scripts/install.sh > gometalinter-install.sh
   - chmod +x ./gometalinter-install.sh
@@ -27,11 +33,12 @@ script:
   - golangci-lint run --enable-all || travis_terminate 1;
 
   - docker-compose up -d
-  - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.0/waitforit-linux_amd64
+  - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64
   - chmod +x ./waitforit
   - source test.env
   - ./waitforit -address tcp://$AUTOWP_RABBITMQ_HOST:$AUTOWP_RABBITMQ_PORT -timeout 30 || travis_terminate 1;
-  - go test -v -race || travis_terminate 1;
+  - go test -v -race -coverprofile=cov.out || travis_terminate 1;
+  - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN || true;
   - goveralls -service=travis-ci || travis_terminate 1;
 
   - go build -ldflags "-s -w" -o build/package/goautowp cmd/goautowp/goautowp.go || travis_terminate 1;

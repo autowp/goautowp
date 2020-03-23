@@ -34,13 +34,9 @@ func LoadConfig() Config {
 	config := Config{
 		RabbitMQ:             rabbitMQ,
 		DuplicateFinderQueue: os.Getenv("AUTOWP_DUPLICATE_FINDER_QUEUE"),
-		DSN: os.Getenv("AUTOWP_MYSQL_USERNAME") + ":" + os.Getenv("AUTOWP_MYSQL_PASSWORD") +
-			"@tcp(" + os.Getenv("AUTOWP_MYSQL_HOST") + ":" + os.Getenv("AUTOWP_MYSQL_PORT") + ")/" +
-			os.Getenv("AUTOWP_MYSQL_DBNAME") + "?charset=utf8mb4&parseTime=true&loc=UTC",
+		DSN:                  os.Getenv("AUTOWP_MYSQL_DSN"),
 		Migrations: MigrationsConfig{
-			DSN: "mysql://" + os.Getenv("AUTOWP_MYSQL_USERNAME") + ":" + os.Getenv("AUTOWP_MYSQL_PASSWORD") +
-				"@tcp(" + os.Getenv("AUTOWP_MYSQL_HOST") + ":" + os.Getenv("AUTOWP_MYSQL_PORT") + ")/" +
-				os.Getenv("AUTOWP_MYSQL_DBNAME") + "?charset=utf8mb4&parseTime=true&loc=UTC",
+			DSN: os.Getenv("AUTOWP_MIGRATIONS_DSN"),
 			Dir: os.Getenv("AUTOWP_MIGRATIONS_DIR"),
 		},
 		Sentry: SentryConfig{
