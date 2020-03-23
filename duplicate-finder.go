@@ -111,11 +111,9 @@ func (s *DuplicateFinder) listen() error {
 		return err
 	}
 
-	quit := false
-	for !quit {
+	for {
 		select {
 		case <-s.quit:
-			quit = true
 			log.Println("DuplicateFinder got quit signal")
 			return nil
 		case d := <-msgs:
@@ -138,8 +136,6 @@ func (s *DuplicateFinder) listen() error {
 			}
 		}
 	}
-
-	return nil
 }
 
 // Index picture image
