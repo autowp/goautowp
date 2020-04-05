@@ -11,11 +11,11 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/getsentry/sentry-go v0.5.1
-	github.com/gin-gonic/gin v1.6.1
+	github.com/gin-gonic/gin v1.6.2
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
-	github.com/streadway/amqp v0.0.0-20180806233856-70e15c650864
+	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
 	github.com/stretchr/testify v1.5.1
 )
