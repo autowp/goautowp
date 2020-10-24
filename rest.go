@@ -1,6 +1,12 @@
 package goautowp
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	"math/rand"
+	"net/http"
+	"net/url"
+	"time"
+)
 import sq "github.com/Masterminds/squirrel"
 
 type perspective struct {
@@ -73,22 +79,73 @@ func (s *Service) getPerspectives() []perspective {
 }
 
 func (s *Service) setupRouter() {
+
+	gin.SetMode(s.config.Rest.Mode)
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	apiGroup := r.Group("/go-api")
+	goapiGroup := r.Group("/go-api")
 	{
 		perspectives := s.getPerspectives()
 
-		apiGroup.GET("/perspective", func(c *gin.Context) {
+		goapiGroup.GET("/perspective", func(c *gin.Context) {
 			c.JSON(200, perspectiveResult{perspectives})
 		})
 
 		specs := s.getSpecs(0)
 
-		apiGroup.GET("/spec", func(c *gin.Context) {
+		goapiGroup.GET("/spec", func(c *gin.Context) {
 
 			c.JSON(200, specResult{specs})
+		})
+	}
+
+	apiGroup := r.Group("/api")
+	{
+		/*creds := credentials.NewStaticCredentials(
+			s.config.FileStorage.S3.Credentials.Key,
+			s.config.FileStorage.S3.Credentials.Secret,
+		"",
+		)
+
+		sess := session.Must(session.NewSession(&aws.Config{
+			Credentials: creds,
+			Endpoint: &s.config.FileStorage.S3.Endpoints,
+			Region: &s.config.FileStorage.S3.Region,
+			S3ForcePathStyle: &s.config.FileStorage.S3.S3ForcePathStyle,
+		}))
+
+		svc := s3.New(sess)*/
+
+		rand.Seed(time.Now().Unix())
+
+		apiGroup.GET("/brands/icons", func(c *gin.Context) {
+
+			if len(s.config.FileStorage.S3.Endpoints) <= 0 {
+				c.String(http.StatusInternalServerError, "No enpoints provided")
+				return
+			}
+
+			endpoint := s.config.FileStorage.S3.Endpoints[rand.Intn(len(s.config.FileStorage.S3.Endpoints))]
+
+			parsedUrl, err := url.Parse(endpoint)
+
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			parsedUrl.Path = "/" + url.PathEscape(s.config.FileStorage.Bucket) + "/brands.png"
+			imageUrl := parsedUrl.String()
+
+			parsedUrl.Path = "/" + url.PathEscape(s.config.FileStorage.Bucket) + "/brands.css"
+			cssUrl := parsedUrl.String()
+
+			c.JSON(200, gin.H{
+				"image": imageUrl,
+				"css":   cssUrl,
+			})
 		})
 	}
 

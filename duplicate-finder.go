@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
@@ -24,10 +25,9 @@ const threshold = 3
 
 // DuplicateFinder Main Object
 type DuplicateFinder struct {
-	db    *sql.DB
-	queue string
-	conn  *amqp.Connection
-	quit  chan bool
+	db     *sql.DB
+	config DuplicateFinderConfig
+	quit   chan bool
 }
 
 // DuplicateFinderInputMessage InputMessage
@@ -39,15 +39,13 @@ type DuplicateFinderInputMessage struct {
 // NewDuplicateFinder constructor
 func NewDuplicateFinder(
 	db *sql.DB,
-	rabbitMQ *amqp.Connection,
-	queue string,
+	config DuplicateFinderConfig,
 ) (*DuplicateFinder, error) {
 
 	s := &DuplicateFinder{
-		db:    db,
-		conn:  rabbitMQ,
-		queue: queue,
-		quit:  make(chan bool),
+		db:     db,
+		config: config,
+		quit:   make(chan bool),
 	}
 
 	return s, nil
@@ -74,25 +72,55 @@ func (s *DuplicateFinder) Listen(wg *sync.WaitGroup) {
 	}()
 }
 
-// Listen for incoming messages
-func (s *DuplicateFinder) listen() error {
-	if s.conn == nil {
-		return fmt.Errorf("RabbitMQ connection not initialized")
+func connectRabbitMQ(config string) (*amqp.Connection, error) {
+	start := time.Now()
+	timeout := 60 * time.Second
+
+	log.Println("Waiting for rabbitMQ")
+
+	var rabbitMQ *amqp.Connection
+	var err error
+	for {
+		rabbitMQ, err = amqp.Dial(config)
+		if err == nil {
+			log.Println("Started.")
+			break
+		}
+
+		if time.Since(start) > timeout {
+			return nil, err
+		}
+
+		fmt.Print(".")
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	ch, err := s.conn.Channel()
+	return rabbitMQ, nil
+}
+
+// Listen for incoming messages
+func (s *DuplicateFinder) listen() error {
+
+	rabbitMQ, err := connectRabbitMQ(s.config.RabbitMQ)
+	if err != nil {
+		fmt.Println(err)
+		sentry.CaptureException(err)
+		return err
+	}
+
+	ch, err := rabbitMQ.Channel()
 	if err != nil {
 		return err
 	}
 	defer util.Close(ch)
 
 	inQ, err := ch.QueueDeclare(
-		s.queue, // name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		s.config.Queue, // name
+		false,          // durable
+		false,          // delete when unused
+		false,          // exclusive
+		false,          // no-wait
+		nil,            // arguments
 	)
 	if err != nil {
 		return err
@@ -111,16 +139,17 @@ func (s *DuplicateFinder) listen() error {
 		return err
 	}
 
-	for {
+	done := false
+	for !done {
 		select {
 		case <-s.quit:
 			log.Println("DuplicateFinder got quit signal")
-			return nil
+			done = true
+			break
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
 				sentry.CaptureException(fmt.Errorf("unexpected mime `%v`", d.ContentType))
-				return nil
-				// continue
+				continue
 			}
 
 			var message DuplicateFinderInputMessage
@@ -136,6 +165,14 @@ func (s *DuplicateFinder) listen() error {
 			}
 		}
 	}
+
+	log.Println("Disconnecting RabbitMQ")
+	err = rabbitMQ.Close()
+	if err != nil {
+		sentry.CaptureException(err)
+	}
+
+	return nil
 }
 
 // Index picture image

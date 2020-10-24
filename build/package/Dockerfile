@@ -1,37 +1,43 @@
-FROM ubuntu
+FROM golang:1.15.3-alpine as builder
 
-LABEL app_name="autowp.goautowp"
-LABEL maintainer="dmitry@pereslegin.ru"
+RUN apk update && apk add --no-cache git ca-certificates && update-ca-certificates
 
-ENV GOAUTOWP_INPUT_HOST="localhost" \
-    GOAUTOWP_INPUT_PORT="5672" \
-    GOAUTOWP_INPUT_QUEUE="input" \
-    GOAUTOWP_MYSQL_DSN="root:password@tcp(localhost:3306)/autowp?charset=utf8mb4&parseTime=true&loc=UTC" \
-    GOAUTOWP_MIGRATIONS_DSN="mysql://root:password@tcp(localhost)/autowp?charset=utf8mb4&parseTime=true&loc=UTC" \
-    GOAUTOWP_SENTRY_DSN="" \
-    GOAUTOWP_SENTRY_ENVIRONMENT="production"
+ENV USER=appuser
+ENV UID=10001
+
+# See https://stackoverflow.com/a/55757473/12429735RUN
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
+    "${USER}"
+WORKDIR $GOPATH/src/github.com/autowp/goautowp/
+COPY . $GOPATH/src/github.com/autowp/goautowp/
+
+RUN cd $GOPATH/src/github.com/autowp/goautowp/ && \
+    go mod download && \
+    go mod verify && \
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
+
+############################
+FROM scratch
+
+LABEL app_name="autowp.goautowp" \
+      maintainer="dmitry@pereslegin.ru"
 
 EXPOSE 80
 
-VOLUME /var/log
-  
-WORKDIR /app
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
 
-ENTRYPOINT ["sh", "/entrypoint.sh"]
+COPY --from=builder /app /app
+COPY migrations /migrations
+COPY defaults.yaml /defaults.yaml
 
-COPY entrypoint.sh /entrypoint.sh
+USER appuser:appuser
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -qq -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y \
-        ca-certificates \
-        wget && \
-    DEBIAN_FRONTEND=noninteractive apt-get autoremove -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get autoclean -y && \
-    \
-    wget -q -O /usr/local/bin/waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64 && \
-    chmod +x /usr/local/bin/waitforit
- 
-COPY goautowp /app/goautowp
-COPY migrations /app/migrations
- 
+ENTRYPOINT ["/app"]

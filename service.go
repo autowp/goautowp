@@ -14,8 +14,6 @@ import (
 	sentry "github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
-	"github.com/streadway/amqp"
-
 	"github.com/golang-migrate/migrate"
 	_ "github.com/golang-migrate/migrate/database/mysql" // enable mysql migrations
 	_ "github.com/golang-migrate/migrate/source/file"    // enable file migration source
@@ -26,7 +24,6 @@ type Service struct {
 	config          Config
 	db              *sql.DB
 	Loc             *time.Location
-	rabbitMQ        *amqp.Connection
 	waitGroup       *sync.WaitGroup
 	DuplicateFinder *DuplicateFinder
 	httpServer      *http.Server
@@ -57,14 +54,7 @@ func NewService(wg *sync.WaitGroup, config Config) (*Service, error) {
 		return nil, err
 	}
 
-	rabbitMQ, err := connectRabbitMQ(config.RabbitMQ)
-	if err != nil {
-		fmt.Println(err)
-		sentry.CaptureException(err)
-		return nil, err
-	}
-
-	df, err := NewDuplicateFinder(db, rabbitMQ, config.DuplicateFinderQueue)
+	df, err := NewDuplicateFinder(db, config.DuplicateFinder)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +65,6 @@ func NewService(wg *sync.WaitGroup, config Config) (*Service, error) {
 		config:          config,
 		db:              db,
 		Loc:             loc,
-		rabbitMQ:        rabbitMQ,
 		waitGroup:       wg,
 		DuplicateFinder: df,
 	}
@@ -85,32 +74,6 @@ func NewService(wg *sync.WaitGroup, config Config) (*Service, error) {
 	s.ListenHTTP()
 
 	return s, nil
-}
-
-func connectRabbitMQ(config string) (*amqp.Connection, error) {
-	start := time.Now()
-	timeout := 60 * time.Second
-
-	log.Println("Waiting for rabbitMQ")
-
-	var rabbitMQ *amqp.Connection
-	var err error
-	for {
-		rabbitMQ, err = amqp.Dial(config)
-		if err == nil {
-			log.Println("Started.")
-			break
-		}
-
-		if time.Since(start) > timeout {
-			return nil, err
-		}
-
-		fmt.Print(".")
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	return rabbitMQ, nil
 }
 
 func connectDb(dsn string) (*sql.DB, error) {
@@ -167,21 +130,13 @@ func (s *Service) Close() {
 		}
 	}
 
-	log.Println("Disconnecting RabbitMQ")
-	if s.rabbitMQ != nil {
-		err := s.rabbitMQ.Close()
-		if err != nil {
-			sentry.CaptureException(err)
-		}
-	}
-
 	log.Println("Service closed")
 }
 
 // ListenHTTP HTTP thread
 func (s *Service) ListenHTTP() {
 
-	s.httpServer = &http.Server{Addr: ":80", Handler: s.router}
+	s.httpServer = &http.Server{Addr: s.config.Rest.Listen, Handler: s.router}
 
 	s.waitGroup.Add(1)
 	go func() {

@@ -21,6 +21,6 @@ services:
     image: nginx
     container_name: goautowp_nginx_test
     ports:
-    - "8080:80"
+    - "80:80"
     volumes:
     - "./test:/usr/share/nginx/html:ro"

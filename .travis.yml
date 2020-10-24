@@ -31,7 +31,7 @@ script:
   - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64
   - chmod +x ./waitforit
   - source test.env
-  - ./waitforit -address tcp://$AUTOWP_RABBITMQ_HOST:$AUTOWP_RABBITMQ_PORT -timeout 30 || travis_terminate 1;
+  - ./waitforit -address tcp://localhost:5672 -timeout 30 || travis_terminate 1;
   - go test -v -race -coverprofile=cov.out || travis_terminate 1;
   - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN || true;
   - goveralls -service=travis-ci || travis_terminate 1;

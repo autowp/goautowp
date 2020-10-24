@@ -1,48 +1,83 @@
 package goautowp
 
 import (
+	"fmt"
+	"github.com/spf13/viper"
 	"log"
-	"os"
 )
 
 // MigrationsConfig MigrationsConfig
 type MigrationsConfig struct {
-	DSN string `yaml:"dsn"`
-	Dir string `yaml:"dir"`
+	DSN string `yaml:"dsn" mapstructure:"dsn"`
+	Dir string `yaml:"dir" mapstructure:"dir"`
 }
 
 // SentryConfig SentryConfig
 type SentryConfig struct {
-	DSN         string `yaml:"dsn"`
-	Environment string `yaml:"environment"`
+	DSN         string `yaml:"dsn"         mapstructure:"dsn"`
+	Environment string `yaml:"environment" mapstructure:"environment"`
+}
+
+type FileStorageConfig struct {
+	S3     S3Config `yaml:"s3"     mapstructure:"s3"`
+	Bucket string   `yaml:"bucket" mapstructure:"bucket"`
+}
+
+type S3Config struct {
+	Credentials      S3CredentialsConfig `yaml:"credentials"         mapstructure:"credentials"`
+	Region           string              `yaml:"region"              mapstructure:"region"`
+	Endpoints        []string            `yaml:"endpoints"           mapstructure:"endpoints"`
+	S3ForcePathStyle bool                `yaml:"s3_force_path_style" mapstructure:"s3_force_path_style"`
+}
+
+type S3CredentialsConfig struct {
+	Key    string `yaml:"key"    mapstructure:"key"`
+	Secret string `yaml:"secret" mapstructure:"secret"`
+}
+
+type DuplicateFinderConfig struct {
+	RabbitMQ string `yaml:"rabbitmq" mapstructure:"rabbitmq"`
+	Queue    string `yaml:"queue"    mapstructure:"queue"`
+}
+
+type RestConfig struct {
+	Listen string `mapstructure:"listen"`
+	Mode   string `mapstructure:"mode"`
 }
 
 // Config Application config definition
 type Config struct {
-	RabbitMQ             string           `yaml:"rabbitmq"`
-	DuplicateFinderQueue string           `yaml:"duplicate_finder_queue"`
-	DSN                  string           `yaml:"dsn"`
-	Migrations           MigrationsConfig `yaml:"migrations"`
-	Sentry               SentryConfig     `yaml:"sentry"`
+	Rest            RestConfig            `yaml:"rest"             mapstructure:"rest"`
+	DuplicateFinder DuplicateFinderConfig `yaml:"duplicate_finder" mapstructure:"duplicate_finder"`
+	DSN             string                `yaml:"dsn"              mapstructure:"dsn"`
+	Migrations      MigrationsConfig      `yaml:"migrations"       mapstructure:"migrations"`
+	Sentry          SentryConfig          `yaml:"sentry"           mapstructure:"sentry"`
+	FileStorage     FileStorageConfig     `yaml:"file_storage"     mapstructure:"file_storage"`
 }
 
 // LoadConfig LoadConfig
 func LoadConfig() Config {
 
-	rabbitMQ := "amqp://guest:guest@" + os.Getenv("AUTOWP_RABBITMQ_HOST") + ":" + os.Getenv("AUTOWP_RABBITMQ_PORT") + "/"
+	config := Config{}
 
-	config := Config{
-		RabbitMQ:             rabbitMQ,
-		DuplicateFinderQueue: os.Getenv("AUTOWP_DUPLICATE_FINDER_QUEUE"),
-		DSN:                  os.Getenv("AUTOWP_MYSQL_DSN"),
-		Migrations: MigrationsConfig{
-			DSN: os.Getenv("AUTOWP_MIGRATIONS_DSN"),
-			Dir: os.Getenv("AUTOWP_MIGRATIONS_DIR"),
-		},
-		Sentry: SentryConfig{
-			DSN:         os.Getenv("AUTOWP_SENTRY_DSN"),
-			Environment: os.Getenv("AUTOWP_SENTRY_ENVIRONMENT"),
-		},
+	viper.SetConfigName("defaults")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	viper.SetConfigName("config")
+	err = viper.MergeInConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	err = viper.Unmarshal(&config)
+	if err != nil {
+		panic(fmt.Errorf("fatal error unmarshal config: %s", err))
 	}
 
 	return config
@@ -50,11 +85,11 @@ func LoadConfig() Config {
 
 // ValidateConfig ValidateConfig
 func ValidateConfig(config Config) {
-	if config.RabbitMQ == "" {
+	if config.DuplicateFinder.RabbitMQ == "" {
 		log.Fatalln("Address not provided")
 	}
 
-	if config.DuplicateFinderQueue == "" {
+	if config.DuplicateFinder.Queue == "" {
 		log.Fatalln("DuplicateFinderQueue not provided")
 	}
 }

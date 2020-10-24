@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func copy(src, dst string) error {
+func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func addImage(t *testing.T, s *Service, filepath string) int {
 	err = os.MkdirAll(path.Dir(newFullpath), os.ModePerm)
 	require.NoError(t, err)
 
-	err = copy(filepath, newFullpath)
+	err = copyFile(filepath, newFullpath)
 	require.NoError(t, err)
 
 	stmt, err := s.db.Prepare(`
@@ -108,11 +108,11 @@ func TestDuplicateFinder(t *testing.T) {
 	}()
 
 	id1 := addPicture(t, s, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")
-	err = s.DuplicateFinder.Index(id1, "http://localhost:8080/large.jpg")
+	err = s.DuplicateFinder.Index(id1, "http://localhost:80/large.jpg")
 	require.NoError(t, err)
 
 	id2 := addPicture(t, s, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/small.jpg")
-	err = s.DuplicateFinder.Index(id2, "http://localhost:8080/small.jpg")
+	err = s.DuplicateFinder.Index(id2, "http://localhost:80/small.jpg")
 	require.NoError(t, err)
 
 	var hash1 uint64
