@@ -1,6 +1,7 @@
 FROM golang:1.15.3-alpine as builder
 
 RUN apk update && apk add --no-cache git ca-certificates && update-ca-certificates
+RUN go get -u golang.org/x/vgo
 
 ENV USER=appuser
 ENV UID=10001
@@ -15,6 +16,12 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
+
+# Populate the module cache based on the go.{mod,sum} files.
+COPY go.mod .
+COPY go.sum .
+RUN vgo list -e $(vgo list -f '{{.Path}}' -m all)
+
 COPY . $GOPATH/src/github.com/autowp/goautowp/
 
 RUN cd $GOPATH/src/github.com/autowp/goautowp/ && \
