@@ -36,9 +36,7 @@ script:
   - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN || true;
   - goveralls -service=travis-ci || travis_terminate 1;
 
-  - go build -ldflags "-s -w" -o build/package/goautowp cmd/goautowp/goautowp.go || travis_terminate 1;
-  - cp -R migrations build/package/migrations
-  - docker build build/package/ -t $DOCKER_REPO || travis_terminate 1;
+  - docker build -f build/package/Dockerfile . -t $DOCKER_REPO || travis_terminate 1;
 
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
