@@ -179,7 +179,7 @@ func (s *Service) setupRouter() {
 			c.JSON(200, BrandsIconsResult{imageUrl, cssUrl})
 		})
 
-		apiGroup.GET("/vehicle-type", func(c *gin.Context) {
+		apiGroup.GET("/vehicle-types", func(c *gin.Context) {
 			items, err := s.getVehicleTypesTree(0)
 
 			if err != nil {

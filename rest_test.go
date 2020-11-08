@@ -70,7 +70,7 @@ func TestGetBrandIcons(t *testing.T) {
 }
 
 func TestGetVehicleTypes(t *testing.T) {
-	bodyBytes := testRequest(t, "/api/vehicle-type")
+	bodyBytes := testRequest(t, "/api/vehicle-types")
 
 	var response VehicleTypeResult
 	err := json.Unmarshal(bodyBytes, &response)
