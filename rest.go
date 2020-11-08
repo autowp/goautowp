@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"github.com/autowp/goautowp/util"
 	"github.com/gin-gonic/gin"
 	"math/rand"
 	"net/http"
@@ -29,6 +30,21 @@ type specResult struct {
 	Items []spec `json:"items"`
 }
 
+type VehicleType struct {
+	ID     int           `json:"id"`
+	Name   string        `json:"name"`
+	Childs []VehicleType `json:"childs"`
+}
+
+type VehicleTypeResult struct {
+	Items []VehicleType `json:"items"`
+}
+
+type BrandsIconsResult struct {
+	Image string `json:"image"`
+	Css   string `json:"css"`
+}
+
 func (s *Service) getSpecs(parentID int) []spec {
 	sqSelect := sq.Select("id, name, short_name").From("spec").OrderBy("name")
 
@@ -43,7 +59,7 @@ func (s *Service) getSpecs(parentID int) []spec {
 		panic(err.Error())
 	}
 
-	specs := []spec{}
+	var specs []spec
 	for rows.Next() {
 		var r spec
 		err = rows.Scan(&r.ID, &r.Name, &r.ShortName)
@@ -65,7 +81,7 @@ func (s *Service) getPerspectives() []perspective {
 		panic(err.Error())
 	}
 
-	perspectives := []perspective{}
+	var perspectives []perspective
 	for rows.Next() {
 		var r perspective
 		err = rows.Scan(&r.ID, &r.Name)
@@ -76,6 +92,39 @@ func (s *Service) getPerspectives() []perspective {
 	}
 
 	return perspectives
+}
+
+func (s *Service) getVehicleTypesTree(parentID int) ([]VehicleType, error) {
+
+	sqSelect := sq.Select("id, name").From("car_types").OrderBy("position")
+
+	if parentID != 0 {
+		sqSelect = sqSelect.Where(sq.Eq{"parent_id": parentID})
+	} else {
+		sqSelect = sqSelect.Where("parent_id is null")
+	}
+
+	rows, err := sqSelect.RunWith(s.db).Query()
+	defer util.Close(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []VehicleType{}
+	for rows.Next() {
+		var r VehicleType
+		err = rows.Scan(&r.ID, &r.Name)
+		if err != nil {
+			return nil, err
+		}
+		r.Childs, err = s.getVehicleTypesTree(r.ID)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, r)
+	}
+
+	return result, nil
 }
 
 func (s *Service) setupRouter() {
@@ -103,21 +152,6 @@ func (s *Service) setupRouter() {
 
 	apiGroup := r.Group("/api")
 	{
-		/*creds := credentials.NewStaticCredentials(
-			s.config.FileStorage.S3.Credentials.Key,
-			s.config.FileStorage.S3.Credentials.Secret,
-		"",
-		)
-
-		sess := session.Must(session.NewSession(&aws.Config{
-			Credentials: creds,
-			Endpoint: &s.config.FileStorage.S3.Endpoints,
-			Region: &s.config.FileStorage.S3.Region,
-			S3ForcePathStyle: &s.config.FileStorage.S3.S3ForcePathStyle,
-		}))
-
-		svc := s3.New(sess)*/
-
 		rand.Seed(time.Now().Unix())
 
 		apiGroup.GET("/brands/icons", func(c *gin.Context) {
@@ -142,10 +176,18 @@ func (s *Service) setupRouter() {
 			parsedUrl.Path = "/" + url.PathEscape(s.config.FileStorage.Bucket) + "/brands.css"
 			cssUrl := parsedUrl.String()
 
-			c.JSON(200, gin.H{
-				"image": imageUrl,
-				"css":   cssUrl,
-			})
+			c.JSON(200, BrandsIconsResult{imageUrl, cssUrl})
+		})
+
+		apiGroup.GET("/vehicle-type", func(c *gin.Context) {
+			items, err := s.getVehicleTypesTree(0)
+
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			c.JSON(200, VehicleTypeResult{items})
 		})
 	}
 

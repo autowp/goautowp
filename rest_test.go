@@ -57,3 +57,24 @@ func TestGetPerspectives(t *testing.T) {
 
 	assert.True(t, len(response.Items) > 0)
 }
+
+func TestGetBrandIcons(t *testing.T) {
+	bodyBytes := testRequest(t, "/api/brands/icons")
+
+	var response BrandsIconsResult
+	err := json.Unmarshal(bodyBytes, &response)
+	require.NoError(t, err)
+
+	assert.Contains(t, response.Image, "png")
+	assert.Contains(t, response.Css, "css")
+}
+
+func TestGetVehicleTypes(t *testing.T) {
+	bodyBytes := testRequest(t, "/api/vehicle-type")
+
+	var response VehicleTypeResult
+	err := json.Unmarshal(bodyBytes, &response)
+	require.NoError(t, err)
+
+	assert.True(t, len(response.Items) > 0)
+}
