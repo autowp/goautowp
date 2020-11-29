@@ -16,6 +16,8 @@ services:
     - MYSQL_DATABASE=autowp
     ports:
     - "3306:3306"
+    volumes:
+    - "./test/dump.sql:/dump.sql:ro"
 
   nginx:
     image: nginx

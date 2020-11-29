@@ -32,12 +32,24 @@ func main() {
 
 	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
 
+	command := "start"
+	if len(os.Args) > 1 {
+		command = os.Args[1]
+	}
+
 	wg := &sync.WaitGroup{}
 	t, err := goautowp.NewService(wg, config, enforcer)
 
 	if err != nil {
 		log.Printf("Error: %v\n", err)
 		os.Exit(1)
+		return
+	}
+
+	if command == "migrate" {
+		t.Close()
+		wg.Wait()
+		os.Exit(0)
 		return
 	}
 
