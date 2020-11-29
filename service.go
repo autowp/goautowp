@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/casbin/casbin"
 	"log"
 	"net/http"
 	"os"
@@ -28,10 +29,11 @@ type Service struct {
 	DuplicateFinder *DuplicateFinder
 	httpServer      *http.Server
 	router          *gin.Engine
+	enforcer        *casbin.Enforcer
 }
 
 // NewService constructor
-func NewService(wg *sync.WaitGroup, config Config) (*Service, error) {
+func NewService(wg *sync.WaitGroup, config Config, enforcer *casbin.Enforcer) (*Service, error) {
 
 	var err error
 
@@ -67,6 +69,7 @@ func NewService(wg *sync.WaitGroup, config Config) (*Service, error) {
 		Loc:             loc,
 		waitGroup:       wg,
 		DuplicateFinder: df,
+		enforcer:        enforcer,
 	}
 
 	s.setupRouter()

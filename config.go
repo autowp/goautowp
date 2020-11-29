@@ -2,8 +2,9 @@ package goautowp
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"log"
+
+	"github.com/spf13/viper"
 )
 
 // MigrationsConfig MigrationsConfig
@@ -45,6 +46,11 @@ type RestConfig struct {
 	Mode   string `mapstructure:"mode"`
 }
 
+// OAuthConfig OAuthConfig
+type OAuthConfig struct {
+	Secret string `yaml:"secret" mapstructure:"secret"`
+}
+
 // Config Application config definition
 type Config struct {
 	Rest            RestConfig            `yaml:"rest"             mapstructure:"rest"`
@@ -53,6 +59,7 @@ type Config struct {
 	Migrations      MigrationsConfig      `yaml:"migrations"       mapstructure:"migrations"`
 	Sentry          SentryConfig          `yaml:"sentry"           mapstructure:"sentry"`
 	FileStorage     FileStorageConfig     `yaml:"file_storage"     mapstructure:"file_storage"`
+	OAuth           OAuthConfig           `yaml:"oauth"            mapstructure:"oauth"`
 }
 
 // LoadConfig LoadConfig

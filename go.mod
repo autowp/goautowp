@@ -5,7 +5,9 @@ go 1.15
 require (
 	github.com/Masterminds/squirrel v1.4.0
 	github.com/Microsoft/go-winio v0.4.14 // indirect
+	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.0.3
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect

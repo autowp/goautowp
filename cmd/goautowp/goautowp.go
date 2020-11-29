@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/casbin/casbin"
 	"log"
 	"os"
 	"os/signal"
@@ -29,8 +30,10 @@ func main() {
 		return
 	}
 
+	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
+
 	wg := &sync.WaitGroup{}
-	t, err := goautowp.NewService(wg, config)
+	t, err := goautowp.NewService(wg, config, enforcer)
 
 	if err != nil {
 		log.Printf("Error: %v\n", err)

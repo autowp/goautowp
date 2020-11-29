@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/util"
+	"github.com/casbin/casbin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -99,8 +100,9 @@ func TestDuplicateFinder(t *testing.T) {
 
 	config := LoadConfig()
 
+	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
 	wg := &sync.WaitGroup{}
-	s, err := NewService(wg, config)
+	s, err := NewService(wg, config, enforcer)
 	require.NoError(t, err)
 	defer func() {
 		s.Close()

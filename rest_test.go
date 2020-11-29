@@ -8,15 +8,16 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/casbin/casbin"
 	"github.com/stretchr/testify/require"
 )
 
-func testRequest(t *testing.T, url string) []byte {
+func testRequest(t *testing.T, req *http.Request) *httptest.ResponseRecorder {
 	config := LoadConfig()
 
+	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
 	wg := &sync.WaitGroup{}
-	s, err := NewService(wg, config)
+	s, err := NewService(wg, config, enforcer)
 	require.NoError(t, err)
 	defer func() {
 		s.Close()
@@ -24,11 +25,22 @@ func testRequest(t *testing.T, url string) []byte {
 	}()
 	router := s.GetRouter()
 
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	return w
+}
+
+func testRequestURL(t *testing.T, url string) *httptest.ResponseRecorder {
 	req, err := http.NewRequest("GET", url, nil)
 	require.NoError(t, err)
 
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	return testRequest(t, req)
+}
+
+func testRequestBody(t *testing.T, url string) []byte {
+
+	w := testRequestURL(t, url)
 
 	require.Equal(t, http.StatusOK, w.Code)
 
@@ -39,42 +51,102 @@ func testRequest(t *testing.T, url string) []byte {
 }
 
 func TestGetSpecs(t *testing.T) {
-	bodyBytes := testRequest(t, "/go-api/spec")
+	bodyBytes := testRequestBody(t, "/go-api/spec")
 
 	var response specResult
 	err := json.Unmarshal(bodyBytes, &response)
 	require.NoError(t, err)
 
-	assert.True(t, len(response.Items) > 0)
+	require.True(t, len(response.Items) > 0)
 }
 
 func TestGetPerspectives(t *testing.T) {
-	bodyBytes := testRequest(t, "/go-api/perspective")
+	bodyBytes := testRequestBody(t, "/go-api/perspective")
 
 	var response perspectiveResult
 	err := json.Unmarshal(bodyBytes, &response)
 	require.NoError(t, err)
 
-	assert.True(t, len(response.Items) > 0)
+	require.True(t, len(response.Items) > 0)
 }
 
 func TestGetBrandIcons(t *testing.T) {
-	bodyBytes := testRequest(t, "/api/brands/icons")
+	bodyBytes := testRequestBody(t, "/api/brands/icons")
 
 	var response BrandsIconsResult
 	err := json.Unmarshal(bodyBytes, &response)
 	require.NoError(t, err)
 
-	assert.Contains(t, response.Image, "png")
-	assert.Contains(t, response.Css, "css")
+	require.Contains(t, response.Image, "png")
+	require.Contains(t, response.CSS, "css")
+}
+
+func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
+	response := testRequestURL(t, "/api/vehicle-types")
+
+	require.Equal(t, http.StatusForbidden, response.Code)
+}
+
+func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
+	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	require.NoError(t, err)
+
+	req.Header.Add("Authorization", "")
+
+	response := testRequest(t, req)
+
+	require.Equal(t, http.StatusForbidden, response.Code)
+}
+
+func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
+	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	require.NoError(t, err)
+
+	req.Header.Add("Authorization", "abc")
+
+	response := testRequest(t, req)
+
+	require.Equal(t, http.StatusForbidden, response.Code)
+}
+
+func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
+	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	require.NoError(t, err)
+
+	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ")
+
+	response := testRequest(t, req)
+
+	require.Equal(t, http.StatusForbidden, response.Code)
+}
+
+func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
+	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	require.NoError(t, err)
+
+	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ")
+
+	response := testRequest(t, req)
+
+	require.Equal(t, http.StatusForbidden, response.Code)
 }
 
 func TestGetVehicleTypes(t *testing.T) {
-	bodyBytes := testRequest(t, "/api/vehicle-types")
-
-	var response VehicleTypeResult
-	err := json.Unmarshal(bodyBytes, &response)
+	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
 	require.NoError(t, err)
 
-	assert.True(t, len(response.Items) > 0)
+	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMyJ9.tI-wPZ4BSqmpsZN0-SgWXaokzvB8T-uYWLR9OQurxPFNoPC56U3op1gSE5n2H02GYfDGig0Eyp6U0NbDpsQaAg")
+
+	response := testRequest(t, req)
+
+	require.Equal(t, http.StatusOK, response.Code)
+
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	require.NoError(t, err)
+
+	var result VehicleTypeResult
+	err = json.Unmarshal(bodyBytes, &result)
+	require.NoError(t, err)
+
+	require.Greater(t, len(result.Items), 0)
 }

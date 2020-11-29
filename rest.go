@@ -1,14 +1,20 @@
 package goautowp
 
 import (
-	"github.com/autowp/goautowp/util"
-	"github.com/gin-gonic/gin"
+	"database/sql"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
+
+	"github.com/autowp/goautowp/util"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
+
+	sq "github.com/Masterminds/squirrel"
 )
-import sq "github.com/Masterminds/squirrel"
 
 type perspective struct {
 	ID   int    `json:"id"`
@@ -42,7 +48,7 @@ type VehicleTypeResult struct {
 
 type BrandsIconsResult struct {
 	Image string `json:"image"`
-	Css   string `json:"css"`
+	CSS   string `json:"css"`
 }
 
 func (s *Service) getSpecs(parentID int) []spec {
@@ -127,6 +133,66 @@ func (s *Service) getVehicleTypesTree(parentID int) ([]VehicleType, error) {
 	return result, nil
 }
 
+func (s *Service) validateAuthorization(c *gin.Context) (string, error) {
+	const bearerSchema = "Bearer"
+	authHeader := c.GetHeader("Authorization")
+	if len(authHeader) <= len(bearerSchema) {
+		return "", fmt.Errorf("authorization header is required")
+	}
+	tokenString := authHeader[len(bearerSchema)+1:]
+
+	if len(tokenString) <= 0 {
+		return "", fmt.Errorf("authorization header is invalid")
+	}
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, isvalid := token.Method.(*jwt.SigningMethodHMAC); !isvalid {
+			return nil, fmt.Errorf("invalid token alg %v", token.Header["alg"])
+
+		}
+		return []byte(s.config.OAuth.Secret), nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+	idStr := claims["sub"].(string)
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return "", err
+	}
+
+	sqSelect := sq.Select("role").From("users").Where(sq.Eq{"id": id})
+
+	rows, err := sqSelect.RunWith(s.db).Query()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if !rows.Next() {
+		return "", fmt.Errorf("user `%v` not found", id)
+	}
+
+	role := ""
+	err = rows.Scan(&role)
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("user `%v` not found", id)
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	if role == "" {
+		return "", fmt.Errorf("failed role detection for `%v`", id)
+	}
+
+	return role, nil
+}
+
 func (s *Service) setupRouter() {
 
 	gin.SetMode(s.config.Rest.Mode)
@@ -163,23 +229,31 @@ func (s *Service) setupRouter() {
 
 			endpoint := s.config.FileStorage.S3.Endpoints[rand.Intn(len(s.config.FileStorage.S3.Endpoints))]
 
-			parsedUrl, err := url.Parse(endpoint)
+			parsedURL, err := url.Parse(endpoint)
 
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
 			}
 
-			parsedUrl.Path = "/" + url.PathEscape(s.config.FileStorage.Bucket) + "/brands.png"
-			imageUrl := parsedUrl.String()
+			parsedURL.Path = "/" + url.PathEscape(s.config.FileStorage.Bucket) + "/brands.png"
+			imageURL := parsedURL.String()
 
-			parsedUrl.Path = "/" + url.PathEscape(s.config.FileStorage.Bucket) + "/brands.css"
-			cssUrl := parsedUrl.String()
+			parsedURL.Path = "/" + url.PathEscape(s.config.FileStorage.Bucket) + "/brands.css"
+			cssURL := parsedURL.String()
 
-			c.JSON(200, BrandsIconsResult{imageUrl, cssUrl})
+			c.JSON(200, BrandsIconsResult{imageURL, cssURL})
 		})
 
 		apiGroup.GET("/vehicle-types", func(c *gin.Context) {
+
+			role, err := s.validateAuthorization(c)
+
+			if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+				c.Status(http.StatusForbidden)
+				return
+			}
+
 			items, err := s.getVehicleTypesTree(0)
 
 			if err != nil {
