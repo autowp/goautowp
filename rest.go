@@ -248,6 +248,10 @@ func (s *Service) setupRouter() {
 		apiGroup.GET("/vehicle-types", func(c *gin.Context) {
 
 			role, err := s.validateAuthorization(c)
+			if err != nil {
+				c.String(http.StatusForbidden, err.Error())
+				return
+			}
 
 			if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
 				c.Status(http.StatusForbidden)
