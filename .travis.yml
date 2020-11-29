@@ -34,6 +34,7 @@ script:
   - ./waitforit -address tcp://localhost:5672 -timeout 30 || travis_terminate 1;
   - ./waitforit -address tcp://localhost:3306 -timeout 30 || travis_terminate 1;
   - sleep 5
+  - docker logs goautowp_mysql_test
   - ./install-dev-db.sh || travis_terminate 1;
   - go test -v -race -coverprofile=cov.out || travis_terminate 1;
   - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN || true;
