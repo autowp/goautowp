@@ -1,0 +1,21 @@
+version: '2'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: goautowp_mysql_test
+    environment:
+    - MYSQL_ROOT_PASSWORD=password
+    - MYSQL_DATABASE=autowp
+    ports:
+    - "3306:3306"
+    volumes:
+    - "./test/dump.sql:/dump.sql:ro"
+
+  nginx:
+    image: nginx
+    container_name: goautowp_nginx_test
+    ports:
+    - "80:80"
+    volumes:
+    - "./test:/usr/share/nginx/html:ro"

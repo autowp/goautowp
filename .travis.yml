@@ -4,6 +4,7 @@ language: go
 
 services:
   - docker
+  - rabbitmq
 
 go:
   - "1.15"
@@ -27,8 +28,8 @@ before_script:
 script:
   - golangci-lint run ./... || travis_terminate 1;
 
-  - docker-compose up -d
-  - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64
+  - docker-compose -f docker-compose-travis.yml up -d || travis_terminate 1;
+  - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64 || travis_terminate 1;
   - chmod +x ./waitforit
   - source test.env
   - ./waitforit -address tcp://localhost:5672 -timeout 30 || travis_terminate 1;
