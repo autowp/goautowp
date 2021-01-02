@@ -36,16 +36,19 @@ type specResult struct {
 	Items []spec `json:"items"`
 }
 
+// VehicleType VehicleType
 type VehicleType struct {
 	ID     int           `json:"id"`
 	Name   string        `json:"name"`
 	Childs []VehicleType `json:"childs"`
 }
 
+// VehicleTypeResult VehicleTypeResult
 type VehicleTypeResult struct {
 	Items []VehicleType `json:"items"`
 }
 
+// BrandsIconsResult BrandsIconsResult
 type BrandsIconsResult struct {
 	Image string `json:"image"`
 	CSS   string `json:"css"`
@@ -223,7 +226,7 @@ func (s *Service) setupRouter() {
 		apiGroup.GET("/brands/icons", func(c *gin.Context) {
 
 			if len(s.config.FileStorage.S3.Endpoints) <= 0 {
-				c.String(http.StatusInternalServerError, "No enpoints provided")
+				c.String(http.StatusInternalServerError, "No endpoints provided")
 				return
 			}
 
@@ -266,6 +269,19 @@ func (s *Service) setupRouter() {
 			}
 
 			c.JSON(200, VehicleTypeResult{items})
+		})
+
+		apiGroup.GET("/acl/is-allowed", func(c *gin.Context) {
+
+			role, err := s.validateAuthorization(c)
+			if err != nil {
+				c.String(http.StatusForbidden, err.Error())
+				return
+			}
+
+			c.JSON(200, gin.H{
+				"result": s.enforcer.Enforce(role, c.Query("resource"), c.Query("privilege")),
+			})
 		})
 	}
 

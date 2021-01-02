@@ -19,11 +19,13 @@ type SentryConfig struct {
 	Environment string `yaml:"environment" mapstructure:"environment"`
 }
 
+// FileStorageConfig FileStorageConfig
 type FileStorageConfig struct {
 	S3     S3Config `yaml:"s3"     mapstructure:"s3"`
 	Bucket string   `yaml:"bucket" mapstructure:"bucket"`
 }
 
+// S3Config S3Config
 type S3Config struct {
 	Credentials      S3CredentialsConfig `yaml:"credentials"         mapstructure:"credentials"`
 	Region           string              `yaml:"region"              mapstructure:"region"`
@@ -31,16 +33,19 @@ type S3Config struct {
 	S3ForcePathStyle bool                `yaml:"s3_force_path_style" mapstructure:"s3_force_path_style"`
 }
 
+// S3CredentialsConfig S3CredentialsConfig
 type S3CredentialsConfig struct {
 	Key    string `yaml:"key"    mapstructure:"key"`
 	Secret string `yaml:"secret" mapstructure:"secret"`
 }
 
+// DuplicateFinderConfig DuplicateFinderConfig
 type DuplicateFinderConfig struct {
 	RabbitMQ string `yaml:"rabbitmq" mapstructure:"rabbitmq"`
 	Queue    string `yaml:"queue"    mapstructure:"queue"`
 }
 
+// RestConfig RestConfig
 type RestConfig struct {
 	Listen string `mapstructure:"listen"`
 	Mode   string `mapstructure:"mode"`
