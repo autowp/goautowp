@@ -1,10 +1,13 @@
 sudo: required
 
+dist: focal
+
 language: go
 
 services:
   - docker
   - rabbitmq
+  - mysql
 
 go:
   - "1.15"
@@ -31,6 +34,7 @@ before_script:
 script:
   - golangci-lint run ./... || travis_terminate 1;
 
+  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
   - docker-compose -f docker-compose-travis.yml up -d || travis_terminate 1;
   - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64 || travis_terminate 1;
   - chmod +x ./waitforit
@@ -38,7 +42,6 @@ script:
   - ./waitforit -address tcp://localhost:5672 -timeout 30 || travis_terminate 1;
   - ./waitforit -address tcp://localhost:3306 -timeout 30 || travis_terminate 1;
   - sleep 5
-  - docker logs goautowp_mysql_test
   - go build -o app cmd/goautowp/goautowp.go
   - ./app migrate
   - docker exec -it goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql" || travis_terminate 1;
@@ -46,11 +49,9 @@ script:
   - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN || true;
   - goveralls -service=travis-ci || travis_terminate 1;
 
-  - docker build -f build/package/Dockerfile . -t $DOCKER_REPO || travis_terminate 1;
-
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
-    docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+    docker build -f build/package/Dockerfile . -t $DOCKER_REPO || travis_terminate 1;
     docker push $DOCKER_REPO;
     fi
 
