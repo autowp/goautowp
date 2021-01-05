@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	util "github.com/autowp/goautowp/util"
 	"log"
 	"net/http"
 	"os"
@@ -231,6 +232,7 @@ func validateAuthorization(c *gin.Context, db *sql.DB, config OAuthConfig) (stri
 	if err != nil {
 		panic(err.Error())
 	}
+	defer util.Close(rows)
 
 	if !rows.Next() {
 		return "", fmt.Errorf("user `%v` not found", id)
