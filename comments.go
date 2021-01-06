@@ -68,12 +68,12 @@ func (s *Comments) getVotes(id int) (*getVotesResult, error) {
 	negativeVotes := make([]DBUser, 0)
 	for rows.Next() {
 		var r DBUser
-		var vote bool
+		var vote int
 		err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &vote)
 		if err != nil {
 			return nil, err
 		}
-		if vote {
+		if vote > 0 {
 			positiveVotes = append(positiveVotes, r)
 		} else {
 			negativeVotes = append(negativeVotes, r)
