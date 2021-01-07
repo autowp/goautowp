@@ -12,12 +12,11 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
-	sentry "github.com/getsentry/sentry-go"
+	"github.com/getsentry/sentry-go"
 	"github.com/streadway/amqp"
 )
 
@@ -25,9 +24,7 @@ const threshold = 3
 
 // DuplicateFinder Main Object
 type DuplicateFinder struct {
-	db     *sql.DB
-	config DuplicateFinderConfig
-	quit   chan bool
+	db *sql.DB
 }
 
 // DuplicateFinderInputMessage InputMessage
@@ -37,39 +34,13 @@ type DuplicateFinderInputMessage struct {
 }
 
 // NewDuplicateFinder constructor
-func NewDuplicateFinder(
-	db *sql.DB,
-	config DuplicateFinderConfig,
-) (*DuplicateFinder, error) {
+func NewDuplicateFinder(db *sql.DB) (*DuplicateFinder, error) {
 
 	s := &DuplicateFinder{
-		db:     db,
-		config: config,
-		quit:   make(chan bool),
+		db: db,
 	}
 
 	return s, nil
-}
-
-// Close all connections
-func (s *DuplicateFinder) Close() {
-
-	s.quit <- true
-	close(s.quit)
-}
-
-// Listen starts to listen messages from rabbitmq
-func (s *DuplicateFinder) Listen(wg *sync.WaitGroup) {
-	log.Println("DuplicateFinder listener started")
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := s.listen()
-		if err != nil {
-			sentry.CaptureException(err)
-		}
-		log.Println("DuplicateFinder listener stopped")
-	}()
 }
 
 func connectRabbitMQ(config string) (*amqp.Connection, error) {
@@ -99,9 +70,9 @@ func connectRabbitMQ(config string) (*amqp.Connection, error) {
 }
 
 // Listen for incoming messages
-func (s *DuplicateFinder) listen() error {
+func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan bool) error {
 
-	rabbitMQ, err := connectRabbitMQ(s.config.RabbitMQ)
+	rabbitMQ, err := connectRabbitMQ(url)
 	if err != nil {
 		fmt.Println(err)
 		sentry.CaptureException(err)
@@ -115,12 +86,12 @@ func (s *DuplicateFinder) listen() error {
 	defer util.Close(ch)
 
 	inQ, err := ch.QueueDeclare(
-		s.config.Queue, // name
-		false,          // durable
-		false,          // delete when unused
-		false,          // exclusive
-		false,          // no-wait
-		nil,            // arguments
+		queue, // name
+		false, // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
 		return err
@@ -142,7 +113,7 @@ func (s *DuplicateFinder) listen() error {
 	done := false
 	for !done {
 		select {
-		case <-s.quit:
+		case <-quitChan:
 			log.Println("DuplicateFinder got quit signal")
 			done = true
 			break

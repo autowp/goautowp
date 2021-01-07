@@ -8,22 +8,22 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/casbin/casbin"
 	"github.com/stretchr/testify/require"
 )
 
 func testRequest(t *testing.T, req *http.Request) *httptest.ResponseRecorder {
 	config := LoadConfig()
 
-	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
 	wg := &sync.WaitGroup{}
-	s, err := NewService(wg, config, enforcer)
+	s, err := NewService(wg, config)
 	require.NoError(t, err)
 	defer func() {
 		s.Close()
 		wg.Wait()
 	}()
-	router := s.GetRouter()
+
+	router, err := s.GetPublicRouter()
+	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)

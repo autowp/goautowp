@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"database/sql"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -60,7 +61,11 @@ type BrandsIconsResult struct {
 }
 
 // NewCatalogue constructor
-func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, fileStorageConfig FileStorageConfig, oauthConfig OAuthConfig) *Catalogue {
+func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, fileStorageConfig FileStorageConfig, oauthConfig OAuthConfig) (*Catalogue, error) {
+
+	if db == nil {
+		return nil, fmt.Errorf("database connection is nil")
+	}
 
 	rand.Seed(time.Now().Unix())
 
@@ -69,7 +74,7 @@ func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, fileStorageConfig FileS
 		enforcer:          enforcer,
 		fileStorageConfig: fileStorageConfig,
 		oauthConfig:       oauthConfig,
-	}
+	}, nil
 }
 
 func (s *Catalogue) getVehicleTypesTree(parentID int) ([]VehicleType, error) {
@@ -118,6 +123,7 @@ func (s *Catalogue) getSpecs(parentID int) []spec {
 	if err != nil {
 		panic(err.Error())
 	}
+	defer util.Close(rows)
 
 	var specs []spec
 	for rows.Next() {
@@ -140,6 +146,7 @@ func (s *Catalogue) getPerspectives() []perspective {
 	if err != nil {
 		panic(err.Error())
 	}
+	defer util.Close(rows)
 
 	var perspectives []perspective
 	for rows.Next() {
@@ -156,16 +163,13 @@ func (s *Catalogue) getPerspectives() []perspective {
 
 // Routes adds routes
 func (s *Catalogue) Routes(apiGroup *gin.RouterGroup) {
-	perspectives := s.getPerspectives()
-
 	apiGroup.GET("/perspective", func(c *gin.Context) {
+		perspectives := s.getPerspectives()
 		c.JSON(http.StatusOK, perspectiveResult{perspectives})
 	})
 
-	specs := s.getSpecs(0)
-
 	apiGroup.GET("/spec", func(c *gin.Context) {
-
+		specs := s.getSpecs(0)
 		c.JSON(http.StatusOK, specResult{specs})
 	})
 

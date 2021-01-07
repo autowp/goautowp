@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/casbin/casbin"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -30,15 +30,13 @@ func main() {
 		return
 	}
 
-	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
-
-	command := "start"
+	command := "serve"
 	if len(os.Args) > 1 {
 		command = os.Args[1]
 	}
 
 	wg := &sync.WaitGroup{}
-	t, err := goautowp.NewService(wg, config, enforcer)
+	t, err := goautowp.NewService(wg, config)
 
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -46,23 +44,57 @@ func main() {
 		return
 	}
 
-	if command == "migrate" {
+	switch command {
+	case "migrate-autowp":
+		err = t.MigrateAutowp()
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+			return
+		}
 		t.Close()
 		wg.Wait()
 		os.Exit(0)
 		return
-	}
+	case "serve-public":
+		err = t.ServePublic()
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+			return
+		}
 
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	for sig := range c {
-		log.Printf("captured %v, stopping and exiting.", sig)
+		c := make(chan os.Signal, 2)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		for sig := range c {
+			log.Printf("captured %v, stopping and exiting.", sig)
 
-		sentry.Flush(time.Second * 5)
+			sentry.Flush(time.Second * 5)
 
-		t.Close()
-		wg.Wait()
-		os.Exit(0)
+			t.Close()
+			wg.Wait()
+			os.Exit(0)
+		}
+	case "df-listen-amqp":
+		quit := make(chan bool)
+		err = t.ListenDuplicateFinderAMQP(quit)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+			return
+		}
+
+		c := make(chan os.Signal, 2)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		for sig := range c {
+			log.Printf("captured %v, stopping and exiting.", sig)
+
+			quit <- true
+			close(quit)
+			t.Close()
+			os.Exit(1)
+		}
+		return
 	}
 
 	sentry.Flush(time.Second * 5)

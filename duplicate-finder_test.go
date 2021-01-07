@@ -2,16 +2,15 @@ package goautowp
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"io"
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/autowp/goautowp/util"
-	"github.com/casbin/casbin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,7 +34,7 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
-func addImage(t *testing.T, s *Service, filepath string) int {
+func addImage(t *testing.T, db *sql.DB, filepath string) int {
 
 	_, filename := path.Split(filepath)
 	extension := path.Ext(filename)
@@ -54,7 +53,7 @@ func addImage(t *testing.T, s *Service, filepath string) int {
 	err = copyFile(filepath, newFullpath)
 	require.NoError(t, err)
 
-	stmt, err := s.db.Prepare(`
+	stmt, err := db.Prepare(`
 		INSERT INTO image (filepath, filesize, width, height, dir)
 		VALUES (?, 1, 1, 1, "picture")
 	`)
@@ -70,9 +69,9 @@ func addImage(t *testing.T, s *Service, filepath string) int {
 	return int(imageID)
 }
 
-func addPicture(t *testing.T, s *Service, filepath string) int {
+func addPicture(t *testing.T, db *sql.DB, filepath string) int {
 
-	imageID := addImage(t, s, filepath)
+	imageID := addImage(t, db, filepath)
 
 	randBytes := make([]byte, 3)
 	_, err := rand.Read(randBytes)
@@ -80,7 +79,7 @@ func addPicture(t *testing.T, s *Service, filepath string) int {
 
 	identity := hex.EncodeToString(randBytes)
 
-	stmt, err := s.db.Prepare(`
+	stmt, err := db.Prepare(`
 		INSERT INTO pictures (image_id, identity, ip, owner_id)
 		VALUES (?, ?, INET6_ATON("127.0.0.1"), NULL)
 	`)
@@ -100,33 +99,30 @@ func TestDuplicateFinder(t *testing.T) {
 
 	config := LoadConfig()
 
-	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
-	wg := &sync.WaitGroup{}
-	s, err := NewService(wg, config, enforcer)
-	require.NoError(t, err)
-	defer func() {
-		s.Close()
-		wg.Wait()
-	}()
-
-	id1 := addPicture(t, s, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")
-	err = s.DuplicateFinder.Index(id1, "http://localhost:80/large.jpg")
+	db, err := sql.Open("mysql", config.DSN)
 	require.NoError(t, err)
 
-	id2 := addPicture(t, s, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/small.jpg")
-	err = s.DuplicateFinder.Index(id2, "http://localhost:80/small.jpg")
+	df, err := NewDuplicateFinder(db)
+	require.NoError(t, err)
+
+	id1 := addPicture(t, db, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")
+	err = df.Index(id1, "http://localhost:80/large.jpg")
+	require.NoError(t, err)
+
+	id2 := addPicture(t, db, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/small.jpg")
+	err = df.Index(id2, "http://localhost:80/small.jpg")
 	require.NoError(t, err)
 
 	var hash1 uint64
-	err = s.db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id1).Scan(&hash1)
+	err = db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id1).Scan(&hash1)
 	require.NoError(t, err)
 
 	var hash2 uint64
-	err = s.db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id2).Scan(&hash2)
+	err = db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id2).Scan(&hash2)
 	require.NoError(t, err)
 
 	var distance int
-	err = s.db.QueryRow(`
+	err = db.QueryRow(`
 		SELECT distance FROM df_distance 
 		WHERE src_picture_id = ? AND dst_picture_id = ?
 	`, id1, id2).Scan(&distance)
