@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/autowp/goautowp/util"
+	sentrygin "github.com/getsentry/sentry-go/gin"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"log"
 	"net/http"
 	"os"
@@ -21,22 +23,27 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/mysql" // enable mysql migrations
-	_ "github.com/golang-migrate/migrate/v4/source/file"    // enable file migration source
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"    // enable mysql migrations
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" // enable postgres migrations
+	_ "github.com/golang-migrate/migrate/v4/source/file"       // enable file migration source
 )
 
 // Service Main Object
 type Service struct {
-	config           Config
-	autowpDB         *sql.DB
-	Loc              *time.Location
-	waitGroup        *sync.WaitGroup
-	publicHttpServer *http.Server
-	publicRouter     *gin.Engine
-	enforcer         *casbin.Enforcer
-	comments         *Comments
-	catalogue        *Catalogue
-	acl              *ACL
+	config            Config
+	autowpDB          *sql.DB
+	Loc               *time.Location
+	waitGroup         *sync.WaitGroup
+	publicHttpServer  *http.Server
+	publicRouter      *gin.Engine
+	enforcer          *casbin.Enforcer
+	comments          *Comments
+	catalogue         *Catalogue
+	acl               *ACL
+	privateRouter     *gin.Engine
+	privateHttpServer *http.Server
+	Traffic           *Traffic
+	trafficDB         *pgxpool.Pool
 }
 
 // NewService constructor
@@ -149,7 +156,7 @@ func (s *Service) getAutowpDB() (*sql.DB, error) {
 	var db *sql.DB
 	var err error
 	for {
-		db, err = sql.Open("mysql", s.config.DSN)
+		db, err = sql.Open("mysql", s.config.AutowpDSN)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +186,7 @@ func (s *Service) MigrateAutowp() error {
 		return err
 	}
 
-	err = applyAutowpMigrations(s.config.Migrations)
+	err = applyAutowpMigrations(s.config.AutowpMigrations)
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
@@ -188,7 +195,7 @@ func (s *Service) MigrateAutowp() error {
 }
 
 func (s *Service) ServePublic() error {
-	gin.SetMode(s.config.Rest.Mode)
+	gin.SetMode(s.config.PublicRest.Mode)
 
 	r, err := s.GetPublicRouter()
 	if err != nil {
@@ -197,7 +204,7 @@ func (s *Service) ServePublic() error {
 
 	s.publicRouter = r
 
-	s.publicHttpServer = &http.Server{Addr: s.config.Rest.Listen, Handler: s.publicRouter}
+	s.publicHttpServer = &http.Server{Addr: s.config.PublicRest.Listen, Handler: s.publicRouter}
 
 	s.waitGroup.Add(1)
 	go func() {
@@ -262,6 +269,51 @@ func (s *Service) Close() {
 	log.Println("Service closed")
 }
 
+func (s *Service) getTrafficDB() (*pgxpool.Pool, error) {
+
+	if s.trafficDB != nil {
+		return s.trafficDB, nil
+	}
+
+	start := time.Now()
+	timeout := 60 * time.Second
+
+	fmt.Println("Waiting for postgres")
+
+	var pool *pgxpool.Pool
+	var err error
+	for {
+		pool, err = pgxpool.Connect(context.Background(), s.config.TrafficDSN)
+		if err != nil {
+			return nil, err
+		}
+
+		db, err := pool.Acquire(context.Background())
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.Conn().Ping(context.Background())
+		db.Release()
+		if err == nil {
+			fmt.Println("Started.")
+			break
+		}
+
+		if time.Since(start) > timeout {
+			return nil, err
+		}
+
+		fmt.Println(err)
+		fmt.Print(".")
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	s.trafficDB = pool
+
+	return pool, nil
+}
+
 func applyAutowpMigrations(config MigrationsConfig) error {
 	log.Println("Apply migrations")
 
@@ -289,16 +341,16 @@ func applyAutowpMigrations(config MigrationsConfig) error {
 	return nil
 }
 
-func validateAuthorization(c *gin.Context, db *sql.DB, config OAuthConfig) (string, error) {
+func validateAuthorization(c *gin.Context, db *sql.DB, config OAuthConfig) (int, string, error) {
 	const bearerSchema = "Bearer"
 	authHeader := c.GetHeader("Authorization")
 	if len(authHeader) <= len(bearerSchema) {
-		return "", fmt.Errorf("authorization header is required")
+		return 0, "", fmt.Errorf("authorization header is required")
 	}
 	tokenString := authHeader[len(bearerSchema)+1:]
 
 	if len(tokenString) <= 0 {
-		return "", fmt.Errorf("authorization header is invalid")
+		return 0, "", fmt.Errorf("authorization header is invalid")
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -310,7 +362,7 @@ func validateAuthorization(c *gin.Context, db *sql.DB, config OAuthConfig) (stri
 	})
 
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
@@ -318,7 +370,7 @@ func validateAuthorization(c *gin.Context, db *sql.DB, config OAuthConfig) (stri
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	sqSelect := sq.Select("role").From("users").Where(sq.Eq{"id": id})
@@ -330,24 +382,24 @@ func validateAuthorization(c *gin.Context, db *sql.DB, config OAuthConfig) (stri
 	defer util.Close(rows)
 
 	if !rows.Next() {
-		return "", fmt.Errorf("user `%v` not found", id)
+		return 0, "", fmt.Errorf("user `%v` not found", id)
 	}
 
 	role := ""
 	err = rows.Scan(&role)
 	if err == sql.ErrNoRows {
-		return "", fmt.Errorf("user `%v` not found", id)
+		return 0, "", fmt.Errorf("user `%v` not found", id)
 	}
 
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	if role == "" {
-		return "", fmt.Errorf("failed role detection for `%v`", id)
+		return 0, "", fmt.Errorf("failed role detection for `%v`", id)
 	}
 
-	return role, nil
+	return id, role, nil
 }
 
 func (s *Service) GetPublicRouter() (*gin.Engine, error) {
@@ -385,4 +437,187 @@ func (s *Service) GetPublicRouter() (*gin.Engine, error) {
 	}
 
 	return r, nil
+}
+
+func applyTrafficMigrations(config MigrationsConfig) error {
+	fmt.Println("Apply migrations")
+
+	dir := config.Dir
+	if dir == "" {
+		ex, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		exPath := filepath.Dir(ex)
+		dir = exPath + "/migrations"
+	}
+
+	m, err := migrate.New("file://"+dir, config.DSN)
+	if err != nil {
+		return err
+	}
+
+	err = m.Up()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Migrations applied")
+
+	return nil
+}
+
+func (s *Service) MigrateTraffic() error {
+	_, err := s.getTrafficDB()
+	if err != nil {
+		return err
+	}
+
+	err = applyTrafficMigrations(s.config.TrafficMigrations)
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) ServePrivate() error {
+
+	traffic, err := s.getTraffic()
+	if err != nil {
+		return err
+	}
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	r.Use(sentrygin.New(sentrygin.Options{}))
+
+	traffic.SetupPrivateRouter(r)
+
+	s.privateRouter = r
+
+	s.privateHttpServer = &http.Server{Addr: s.config.PrivateRest.Listen, Handler: s.privateRouter}
+	s.waitGroup.Add(1)
+	go func() {
+		defer s.waitGroup.Done()
+		fmt.Println("HTTP server started")
+		err := s.privateHttpServer.ListenAndServe()
+		if err != nil {
+			// cannot panic, because this probably is an intentional close
+			log.Printf("Httpserver: ListenAndServe() error: %s", err)
+		}
+		fmt.Println("HTTP server stopped")
+	}()
+
+	return nil
+}
+
+func (s *Service) SchedulerHourly() error {
+	traffic, err := s.getTraffic()
+	if err != nil {
+		return err
+	}
+
+	deleted, err := traffic.Monitoring.GC()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	fmt.Printf("`%v` items of monitoring deleted\n", deleted)
+
+	deleted, err = traffic.Ban.GC()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	fmt.Printf("`%v` items of ban deleted\n", deleted)
+
+	err = s.Traffic.AutoWhitelist()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) Autoban(quit chan bool) error {
+
+	traffic, err := s.getTraffic()
+	if err != nil {
+		return err
+	}
+
+	banTicker := time.NewTicker(time.Minute)
+	s.waitGroup.Add(1)
+	go func() {
+		defer s.waitGroup.Done()
+		fmt.Println("AutoBan scheduler started")
+	loop:
+		for {
+			select {
+			case <-banTicker.C:
+				err := traffic.AutoBan()
+				if err != nil {
+					log.Println(err.Error())
+				}
+			case <-quit:
+				banTicker.Stop()
+				break loop
+			}
+		}
+
+		fmt.Println("AutoBan scheduler stopped")
+	}()
+
+	return nil
+}
+
+func (s *Service) ListenMonitoringAMQP(quit chan bool) error {
+	traffic, err := s.getTraffic()
+	if err != nil {
+		return err
+	}
+
+	s.waitGroup.Add(1)
+	go func() {
+		defer s.waitGroup.Done()
+		fmt.Println("Monitoring listener started")
+		err := traffic.Monitoring.Listen(s.config.RabbitMQ, s.config.MonitoringQueue, quit)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		fmt.Println("Monitoring listener stopped")
+	}()
+
+	return nil
+}
+
+func (s *Service) getTraffic() (*Traffic, error) {
+	if s.Traffic == nil {
+		db, err := s.getTrafficDB()
+		if err != nil {
+			return nil, err
+		}
+
+		autowpDB, err := s.getAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		enforcer, err := s.getEnforcer()
+		if err != nil {
+			return nil, err
+		}
+
+		traffic, err := NewTraffic(db, autowpDB, enforcer, s.config.OAuth)
+		if err != nil {
+			log.Println(err.Error())
+			return nil, err
+		}
+
+		s.Traffic = traffic
+	}
+
+	return s.Traffic, nil
 }

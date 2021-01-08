@@ -3,6 +3,7 @@ package goautowp
 import (
 	"database/sql"
 	"fmt"
+	"github.com/autowp/goautowp/util"
 	"net/http"
 	"strconv"
 	"time"
@@ -63,6 +64,7 @@ func (s *Comments) getVotes(id int) (*getVotesResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer util.Close(rows)
 
 	positiveVotes := make([]DBUser, 0)
 	negativeVotes := make([]DBUser, 0)

@@ -58,13 +58,18 @@ type OAuthConfig struct {
 
 // Config Application config definition
 type Config struct {
-	Rest            RestConfig            `yaml:"rest"             mapstructure:"rest"`
-	DuplicateFinder DuplicateFinderConfig `yaml:"duplicate_finder" mapstructure:"duplicate_finder"`
-	DSN             string                `yaml:"dsn"              mapstructure:"dsn"`
-	Migrations      MigrationsConfig      `yaml:"migrations"       mapstructure:"migrations"`
-	Sentry          SentryConfig          `yaml:"sentry"           mapstructure:"sentry"`
-	FileStorage     FileStorageConfig     `yaml:"file_storage"     mapstructure:"file_storage"`
-	OAuth           OAuthConfig           `yaml:"oauth"            mapstructure:"oauth"`
+	PublicRest        RestConfig            `yaml:"public-rest"        mapstructure:"public-rest"`
+	DuplicateFinder   DuplicateFinderConfig `yaml:"duplicate_finder"   mapstructure:"duplicate_finder"`
+	AutowpDSN         string                `yaml:"autowp-dsn"         mapstructure:"autowp-dsn"`
+	AutowpMigrations  MigrationsConfig      `yaml:"autowp-migrations"  mapstructure:"autowp-migrations"`
+	Sentry            SentryConfig          `yaml:"sentry"             mapstructure:"sentry"`
+	FileStorage       FileStorageConfig     `yaml:"file_storage"       mapstructure:"file_storage"`
+	OAuth             OAuthConfig           `yaml:"oauth"              mapstructure:"oauth"`
+	RabbitMQ          string                `yaml:"rabbitmq"           mapstructure:"rabbitmq"`
+	MonitoringQueue   string                `yaml:"monitoring_queue"   mapstructure:"monitoring_queue"`
+	PrivateRest       RestConfig            `yaml:"private-rest"       mapstructure:"private-rest"`
+	TrafficDSN        string                `yaml:"traffic-dsn"        mapstructure:"traffic-dsn"`
+	TrafficMigrations MigrationsConfig      `yaml:"traffic-migrations" mapstructure:"traffic-migrations"`
 }
 
 // LoadConfig LoadConfig
@@ -103,5 +108,13 @@ func ValidateConfig(config Config) {
 
 	if config.DuplicateFinder.Queue == "" {
 		log.Fatalln("DuplicateFinderQueue not provided")
+	}
+
+	if config.RabbitMQ == "" {
+		log.Fatalln("Address not provided")
+	}
+
+	if config.MonitoringQueue == "" {
+		log.Fatalln("MonitoringQueue not provided")
 	}
 }

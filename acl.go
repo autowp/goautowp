@@ -29,7 +29,7 @@ func NewACL(db *sql.DB, enforcer *casbin.Enforcer, oauthConfig OAuthConfig) *ACL
 func (s *ACL) Routes(apiGroup *gin.RouterGroup) {
 	apiGroup.GET("/acl/is-allowed", func(c *gin.Context) {
 
-		role, err := validateAuthorization(c, s.db, s.oauthConfig)
+		_, role, err := validateAuthorization(c, s.db, s.oauthConfig)
 		if err != nil {
 			c.String(http.StatusForbidden, err.Error())
 			return

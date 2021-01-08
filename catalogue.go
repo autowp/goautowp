@@ -200,7 +200,7 @@ func (s *Catalogue) Routes(apiGroup *gin.RouterGroup) {
 
 	apiGroup.GET("/vehicle-types", func(c *gin.Context) {
 
-		role, err := validateAuthorization(c, s.db, s.oauthConfig)
+		_, role, err := validateAuthorization(c, s.db, s.oauthConfig)
 		if err != nil {
 			c.String(http.StatusForbidden, err.Error())
 			return

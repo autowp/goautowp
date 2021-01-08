@@ -26,3 +26,13 @@ services:
     - "80:80"
     volumes:
     - "./test:/usr/share/nginx/html:ro"
+
+  postgres:
+    image: postgres:13
+    container_name: goautowp_postgres_test
+    environment:
+      - POSTGRES_DB=traffic
+      - POSTGRES_USER=traffic
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"

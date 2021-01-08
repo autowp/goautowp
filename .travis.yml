@@ -8,6 +8,7 @@ services:
   - docker
   - rabbitmq
   - mysql
+  - postgresql
 
 go:
   - "1.15"
@@ -20,6 +21,7 @@ addons:
   apt:
     packages:
     - rabbitmq-server
+  postgresql: "13"
 
 install: true
 
@@ -31,19 +33,29 @@ before_script:
   - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
   - go get -u github.com/mattn/goveralls
 
+  - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64 || travis_terminate 1;
+  - chmod +x ./waitforit
+
 script:
   - golangci-lint run ./... || travis_terminate 1;
 
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
   - docker-compose -f docker-compose-travis.yml up -d || travis_terminate 1;
-  - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64 || travis_terminate 1;
-  - chmod +x ./waitforit
-  - source test.env
+
   - ./waitforit -address tcp://localhost:5672 -timeout 30 || travis_terminate 1;
   - ./waitforit -address tcp://localhost:3306 -timeout 30 || travis_terminate 1;
+  - ./waitforit -address tcp://localhost:5432 -timeout 30 || travis_terminate 1;
+
+  - psql -c 'CREATE DATABASE traffic;' -U postgres || travis_terminate 1;
+  - psql -c "CREATE USER traffic WITH PASSWORD 'password';" -U postgres || travis_terminate 1;
+  - psql -c 'GRANT ALL PRIVILEGES ON DATABASE traffic TO traffic;' -U postgres || travis_terminate 1;
+  - psql -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO traffic;' -U postgres traffic || travis_terminate 1;
+
   - sleep 5
-  - go build -o app cmd/goautowp/goautowp.go
-  - ./app migrate
+
+  - source test.env
+  - go test -run TestAutowpMigrations || travis_terminate 1;
+  - go test -run TestTrafficMigrations || travis_terminate 1;
   - docker exec -it goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql" || travis_terminate 1;
   - go test -v -race -coverprofile=cov.out || travis_terminate 1;
   - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN || true;

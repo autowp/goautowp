@@ -18,8 +18,11 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/iris-contrib/i18n v0.0.0-20171121225848-987a633949d0 // indirect
+	github.com/jackc/pgproto3/v2 v2.0.7 // indirect
+	github.com/jackc/pgx/v4 v4.10.1
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/lib/pq v1.9.0 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mediocregopher/mediocre-go-lib v0.0.0-20181029021733-cb65787f37ed // indirect
 	github.com/mitchellh/mapstructure v1.4.0 // indirect

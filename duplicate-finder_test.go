@@ -99,7 +99,7 @@ func TestDuplicateFinder(t *testing.T) {
 
 	config := LoadConfig()
 
-	db, err := sql.Open("mysql", config.DSN)
+	db, err := sql.Open("mysql", config.AutowpDSN)
 	require.NoError(t, err)
 
 	df, err := NewDuplicateFinder(db)
