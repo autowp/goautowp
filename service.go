@@ -236,7 +236,7 @@ func (s *Service) ListenDuplicateFinderAMQP(quit chan bool) error {
 		fmt.Println("DuplicateFinder listener started")
 		err := df.ListenAMQP(s.config.DuplicateFinder.RabbitMQ, s.config.DuplicateFinder.Queue, quit)
 		if err != nil {
-			log.Printf(err.Error())
+			log.Println(err.Error())
 			sentry.CaptureException(err)
 		}
 		fmt.Println("DuplicateFinder listener stopped")
