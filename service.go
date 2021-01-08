@@ -422,6 +422,11 @@ func (s *Service) GetPublicRouter() (*gin.Engine, error) {
 		return nil, err
 	}
 
+	traffic, err := s.getTraffic()
+	if err != nil {
+		return nil, err
+	}
+
 	goapiGroup := r.Group("/go-api")
 	{
 		catalogue.Routes(goapiGroup)
@@ -434,6 +439,8 @@ func (s *Service) GetPublicRouter() (*gin.Engine, error) {
 		acl.Routes(apiGroup)
 
 		comments.Routes(apiGroup)
+
+		traffic.SetupPublicRouter(apiGroup)
 	}
 
 	return r, nil
