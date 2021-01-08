@@ -219,5 +219,6 @@ func TestTop(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	body, err := ioutil.ReadAll(w.Body)
+	require.NoError(t, err)
 	require.Equal(t, `{"items":[{"ip":"::1","count":10,"ban":null,"in_whitelist":false,"whois_url":"http://nic.ru/whois/?query=%3A%3A1"},{"ip":"192.168.0.1","count":1,"ban":null,"in_whitelist":false,"whois_url":"http://nic.ru/whois/?query=192.168.0.1"}]}`, string(body))
 }
