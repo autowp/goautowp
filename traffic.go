@@ -73,20 +73,6 @@ type TrafficWhitelistPostRequestBody struct {
 	IP net.IP `json:"ip"`
 }
 
-// BanPOSTRequest BanPOSTRequest
-type BanPOSTRequest struct {
-	IP       net.IP        `json:"ip"`
-	Duration time.Duration `json:"duration"`
-	ByUserID int           `json:"by_user_id"`
-	Reason   string        `json:"reason"`
-}
-
-// WhitelistPOSTRequest WhitelistPOSTRequest
-type WhitelistPOSTRequest struct {
-	IP          net.IP `json:"ip"`
-	Description string `json:"description"`
-}
-
 // TopItemBan TopItemBan
 type TopItemBan struct {
 	Until    time.Time `json:"up_to"`
@@ -460,11 +446,18 @@ func (s *Traffic) getUser(id int) (*DBUser, error) {
 		FROM users
 		WHERE id = ?
 	`, id)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	defer util.Close(rows)
+
+	if !rows.Next() {
+		return nil, nil
+	}
 
 	var r DBUser
 	err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role)
