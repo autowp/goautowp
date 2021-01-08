@@ -2,7 +2,7 @@ public-rest:
   mode: "debug"
   listen: ":8080"
 sentry:
-  dsn:
+  dsn: ""
   environment: development
 autowp-migrations:
   dir: ./migrations
