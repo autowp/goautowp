@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-func createBanService(t *testing.T) *Ban {
+func createBanService(t *testing.T) *BanRepository {
 	config := LoadConfig()
 
 	pool, err := pgxpool.Connect(context.Background(), config.TrafficDSN)
 	require.NoError(t, err)
 
-	s, err := NewBan(pool)
+	s, err := NewBanRepository(pool)
 	require.NoError(t, err)
 
 	return s

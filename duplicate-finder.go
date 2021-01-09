@@ -74,8 +74,7 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 
 	rabbitMQ, err := connectRabbitMQ(url)
 	if err != nil {
-		fmt.Println(err)
-		sentry.CaptureException(err)
+		log.Println(err)
 		return err
 	}
 
@@ -138,12 +137,7 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 	}
 
 	log.Println("Disconnecting RabbitMQ")
-	err = rabbitMQ.Close()
-	if err != nil {
-		sentry.CaptureException(err)
-	}
-
-	return nil
+	return rabbitMQ.Close()
 }
 
 // Index picture image

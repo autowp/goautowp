@@ -7,6 +7,7 @@ require (
 	github.com/Joker/jade v1.0.1-0.20190614124447-d475f43051e7 // indirect
 	github.com/Masterminds/squirrel v1.5.0
 	github.com/casbin/casbin v1.9.1
+	github.com/containerd/continuity v0.0.0-20201208142359-180525291bb7 // indirect
 	github.com/corona10/goimagehash v1.0.3
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/flosch/pongo2 v0.0.0-20190707114632-bbf5a6c351f4 // indirect
@@ -26,6 +27,7 @@ require (
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mediocregopher/mediocre-go-lib v0.0.0-20181029021733-cb65787f37ed // indirect
 	github.com/mitchellh/mapstructure v1.4.0 // indirect
+	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/spf13/afero v1.5.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
@@ -36,8 +38,8 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/ugorji/go v1.2.2 // indirect
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
-	golang.org/x/sys v0.0.0-20210105210732-16f7687f5001 // indirect
-	golang.org/x/text v0.3.4 // indirect
+	golang.org/x/sys v0.0.0-20210108172913-0df2131ae363 // indirect
+	golang.org/x/text v0.3.5 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

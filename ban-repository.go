@@ -19,19 +19,19 @@ type BanItem struct {
 	Reason   string    `json:"reason"`
 }
 
-// Ban Main Object
-type Ban struct {
+// BanRepository Main Object
+type BanRepository struct {
 	db *pgxpool.Pool
 }
 
-// NewBan constructor
-func NewBan(db *pgxpool.Pool) (*Ban, error) {
+// NewBanRepository constructor
+func NewBanRepository(db *pgxpool.Pool) (*BanRepository, error) {
 
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
 	}
 
-	s := &Ban{
+	s := &BanRepository{
 		db: db,
 	}
 
@@ -39,7 +39,7 @@ func NewBan(db *pgxpool.Pool) (*Ban, error) {
 }
 
 // Add IP to list of banned
-func (s *Ban) Add(ip net.IP, duration time.Duration, byUserID int, reason string) error {
+func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int, reason string) error {
 	reason = strings.TrimSpace(reason)
 	upTo := time.Now().Add(duration)
 
@@ -62,7 +62,7 @@ func (s *Ban) Add(ip net.IP, duration time.Duration, byUserID int, reason string
 }
 
 // Remove IP from list of banned
-func (s *Ban) Remove(ip net.IP) error {
+func (s *BanRepository) Remove(ip net.IP) error {
 
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE ip = $1", ip)
 
@@ -70,7 +70,7 @@ func (s *Ban) Remove(ip net.IP) error {
 }
 
 // Exists ban list already contains IP
-func (s *Ban) Exists(ip net.IP) (bool, error) {
+func (s *BanRepository) Exists(ip net.IP) (bool, error) {
 
 	var exists bool
 	err := s.db.QueryRow(context.Background(), `
@@ -90,7 +90,7 @@ func (s *Ban) Exists(ip net.IP) (bool, error) {
 }
 
 // Get ban info
-func (s *Ban) Get(ip net.IP) (*BanItem, error) {
+func (s *BanRepository) Get(ip net.IP) (*BanItem, error) {
 
 	item := BanItem{}
 	err := s.db.QueryRow(context.Background(), `
@@ -110,7 +110,7 @@ func (s *Ban) Get(ip net.IP) (*BanItem, error) {
 }
 
 // GC Garbage Collect
-func (s *Ban) GC() (int64, error) {
+func (s *BanRepository) GC() (int64, error) {
 	ct, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE until < NOW()")
 	if err != nil {
 		return 0, err
@@ -122,7 +122,7 @@ func (s *Ban) GC() (int64, error) {
 }
 
 // Clear removes all collected data
-func (s *Ban) Clear() error {
+func (s *BanRepository) Clear() error {
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban")
 
 	return err

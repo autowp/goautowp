@@ -3,8 +3,6 @@ package goautowp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/getsentry/sentry-go"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"log"
@@ -46,8 +44,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 
 	conn, err := connectRabbitMQ(url)
 	if err != nil {
-		fmt.Println(err)
-		sentry.CaptureException(err)
+		log.Println(err)
 		return err
 	}
 
@@ -108,7 +105,9 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 		}
 	}
 
-	return nil
+	log.Println("Disconnecting RabbitMQ")
+	return conn.Close()
+
 }
 
 // Add item to Monitoring

@@ -1,16 +1,31 @@
 package main
 
 import (
+	"github.com/autowp/goautowp"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
-
-	"github.com/autowp/goautowp"
-	"github.com/getsentry/sentry-go"
 )
+
+func captureOsInterrupt() chan bool {
+	quit := make(chan bool)
+	go func() {
+		c := make(chan os.Signal, 2)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		for sig := range c {
+			log.Printf("captured %v, stopping and exiting.", sig)
+
+			quit <- true
+			close(quit)
+			break
+		}
+	}()
+
+	return quit
+}
 
 func main() {
 
@@ -34,8 +49,7 @@ func main() {
 		command = os.Args[1]
 	}
 
-	wg := &sync.WaitGroup{}
-	t, err := goautowp.NewService(wg, config)
+	app, err := goautowp.NewApplication(config)
 
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -45,150 +59,53 @@ func main() {
 
 	log.Printf("Run %s\n", command)
 
+	var cmdErr error
+
 	switch command {
-	case "migrate-autowp":
-		err = t.MigrateAutowp()
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-		t.Close()
-		wg.Wait()
-		os.Exit(0)
-		return
-	case "serve-public":
-		err = t.MigrateAutowp()
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-		err = t.MigrateTraffic()
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-		err = t.ServePublic()
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-
-		c := make(chan os.Signal, 2)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		for sig := range c {
-			log.Printf("captured %v, stopping and exiting.", sig)
-
-			sentry.Flush(time.Second * 5)
-
-			t.Close()
-			wg.Wait()
-			os.Exit(0)
-		}
-	case "listen-df-amqp":
-		quit := make(chan bool)
-		err = t.ListenDuplicateFinderAMQP(quit)
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-
-		c := make(chan os.Signal, 2)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		for sig := range c {
-			log.Printf("captured %v, stopping and exiting.", sig)
-
-			quit <- true
-			close(quit)
-			t.Close()
-			os.Exit(1)
-		}
-		return
-	case "migrate-traffic":
-		err = t.MigrateTraffic()
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-		t.Close()
-		os.Exit(0)
-		return
-	case "scheduler-hourly":
-		err = t.SchedulerHourly()
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-		t.Close()
-		os.Exit(0)
-		return
 	case "autoban":
-		quit := make(chan bool)
-		err = t.Autoban(quit)
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-		c := make(chan os.Signal, 2)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		for sig := range c {
-			log.Printf("captured %v, stopping and exiting.", sig)
-
-			quit <- true
-			close(quit)
-			t.Close()
-			os.Exit(1)
-		}
-		return
-	case "serve-private":
-		err = t.ServePrivate()
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
-		}
-
-		c := make(chan os.Signal, 2)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		for sig := range c {
-			log.Printf("captured %v, stopping and exiting.", sig)
-
-			t.Close()
-			os.Exit(1)
-		}
-		return
+		quit := captureOsInterrupt()
+		cmdErr = app.Autoban(quit)
+	case "listen-df-amqp":
+		quit := captureOsInterrupt()
+		cmdErr = app.ListenDuplicateFinderAMQP(quit)
 	case "listen-monitoring-amqp":
-		quit := make(chan bool)
-		err = t.ListenMonitoringAMQP(quit)
+		quit := captureOsInterrupt()
+		cmdErr = app.ListenMonitoringAMQP(quit)
+	case "migrate-autowp":
+		cmdErr = app.MigrateAutowp()
+	case "migrate-traffic":
+		cmdErr = app.MigrateTraffic()
+	case "scheduler-hourly":
+		cmdErr = app.SchedulerHourly()
+	case "serve-public":
+		cmdErr = app.MigrateAutowp()
 		if err != nil {
-			log.Printf("Error: %v\n", err)
-			os.Exit(1)
-			return
+			break
 		}
-
-		c := make(chan os.Signal, 2)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		for sig := range c {
-			log.Printf("captured %v, stopping and exiting.", sig)
-
-			quit <- true
-			close(quit)
-			t.Close()
-			os.Exit(1)
+		cmdErr = app.MigrateTraffic()
+		if err != nil {
+			break
 		}
+		quit := captureOsInterrupt()
+		cmdErr = app.ServePublic(quit)
+	case "serve-private":
+		quit := captureOsInterrupt()
+		cmdErr = app.ServePrivate(quit)
+	}
+
+	exitCode := 0
+	if cmdErr != nil {
+		log.Printf("Error: %s\n", cmdErr.Error())
+		sentry.CaptureException(cmdErr)
+		exitCode = 1
 		return
 	}
 
-	sentry.Flush(time.Second * 5)
+	err = app.Close()
+	if err != nil {
+		log.Println(err.Error())
+	}
 
-	t.Close()
-	wg.Wait()
-	os.Exit(0)
+	sentry.Flush(time.Second * 5)
+	os.Exit(exitCode)
 }

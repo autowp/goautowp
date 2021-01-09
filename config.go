@@ -48,7 +48,6 @@ type DuplicateFinderConfig struct {
 // RestConfig RestConfig
 type RestConfig struct {
 	Listen string `mapstructure:"listen"`
-	Mode   string `mapstructure:"mode"`
 }
 
 // OAuthConfig OAuthConfig
@@ -58,6 +57,7 @@ type OAuthConfig struct {
 
 // Config Application config definition
 type Config struct {
+	GinMode           string                `yaml:"gin-mode" mapstructure:"gin-mode"`
 	PublicRest        RestConfig            `yaml:"public-rest"        mapstructure:"public-rest"`
 	DuplicateFinder   DuplicateFinderConfig `yaml:"duplicate_finder"   mapstructure:"duplicate_finder"`
 	AutowpDSN         string                `yaml:"autowp-dsn"         mapstructure:"autowp-dsn"`

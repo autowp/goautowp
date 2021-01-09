@@ -1,5 +1,5 @@
+gin-mode: "debug"
 public-rest:
-  mode: "debug"
   listen: ":8080"
 sentry:
   dsn: ""
@@ -30,7 +30,6 @@ rabbitmq: amqp://guest:guest@127.0.0.1:5672/
 monitoring_queue: input
 traffic-dsn: postgres://traffic:password@127.0.0.1:5432/traffic?sslmode=disable
 private-rest:
-  mode: "debug"
   listen: ":8081"
 traffic-migrations:
   dsn: postgres://traffic:password@127.0.0.1/traffic?sslmode=disable

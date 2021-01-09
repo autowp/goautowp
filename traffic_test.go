@@ -2,12 +2,8 @@ package goautowp
 
 import (
 	"bytes"
-	"context"
-	"database/sql"
 	"encoding/json"
-	"github.com/casbin/casbin"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -23,15 +19,9 @@ const adminAuthorizationHeader = "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.ey
 func createTrafficService(t *testing.T) *Traffic {
 	config := LoadConfig()
 
-	pool, err := pgxpool.Connect(context.Background(), config.TrafficDSN)
-	require.NoError(t, err)
+	container := NewContainer(config)
 
-	autowpDB, err := sql.Open("mysql", config.AutowpDSN)
-	require.NoError(t, err)
-
-	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
-
-	s, err := NewTraffic(pool, autowpDB, enforcer, config.OAuth)
+	s, err := container.GetTraffic()
 	require.NoError(t, err)
 
 	return s

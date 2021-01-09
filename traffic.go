@@ -18,12 +18,13 @@ const banByUserID = 9
 
 // Traffic Traffic
 type Traffic struct {
-	Monitoring  *Monitoring
-	Whitelist   *Whitelist
-	Ban         *Ban
-	autowpDB    *sql.DB
-	enforcer    *casbin.Enforcer
-	oauthConfig OAuthConfig
+	Monitoring    *Monitoring
+	Whitelist     *Whitelist
+	Ban           *BanRepository
+	autowpDB      *sql.DB
+	enforcer      *casbin.Enforcer
+	oauthConfig   OAuthConfig
+	userExtractor *UserExtractor
 }
 
 // AutobanProfile AutobanProfile
@@ -62,42 +63,36 @@ var AutobanProfiles = []AutobanProfile{
 	},
 }
 
-// TrafficBlacklistPostRequestBody TrafficBlacklistPostRequestBody
-type TrafficBlacklistPostRequestBody struct {
+// APITrafficBlacklistPostRequestBody APITrafficBlacklistPostRequestBody
+type APITrafficBlacklistPostRequestBody struct {
 	IP     net.IP `json:"ip"`
 	Period int    `json:"period"`
 	Reason string `json:"reason"`
 }
 
-type TrafficWhitelistPostRequestBody struct {
+type APITrafficWhitelistPostRequestBody struct {
 	IP net.IP `json:"ip"`
 }
 
-// TopItemBan TopItemBan
-type TopItemBan struct {
+// APITrafficTopItemBan APITrafficTopItemBan
+type APITrafficTopItemBan struct {
 	Until    time.Time `json:"up_to"`
 	ByUserID int       `json:"by_user_id"`
-	User     APIUser   `json:"user"`
+	User     *APIUser  `json:"user"`
 	Reason   string    `json:"reason"`
 }
 
-// TopItem TopItem
-type TopItem struct {
-	IP          net.IP      `json:"ip"`
-	Count       int         `json:"count"`
-	Ban         *TopItemBan `json:"ban"`
-	InWhitelist bool        `json:"in_whitelist"`
-	WhoisUrl    string      `json:"whois_url"`
+// APITrafficTopItem APITrafficTopItem
+type APITrafficTopItem struct {
+	IP          net.IP                `json:"ip"`
+	Count       int                   `json:"count"`
+	Ban         *APITrafficTopItemBan `json:"ban"`
+	InWhitelist bool                  `json:"in_whitelist"`
+	WhoisUrl    string                `json:"whois_url"`
 }
 
 // NewTraffic constructor
-func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer, oauthConfig OAuthConfig) (*Traffic, error) {
-
-	ban, err := NewBan(pool)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
+func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer, ban *BanRepository, userExtractor *UserExtractor, oauthConfig OAuthConfig) (*Traffic, error) {
 
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
@@ -112,12 +107,13 @@ func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer,
 	}
 
 	s := &Traffic{
-		Monitoring:  monitoring,
-		Whitelist:   whitelist,
-		Ban:         ban,
-		autowpDB:    autowpDB,
-		enforcer:    enforcer,
-		oauthConfig: oauthConfig,
+		Monitoring:    monitoring,
+		Whitelist:     whitelist,
+		Ban:           ban,
+		autowpDB:      autowpDB,
+		enforcer:      enforcer,
+		oauthConfig:   oauthConfig,
+		userExtractor: userExtractor,
 	}
 
 	return s, nil
@@ -139,7 +135,7 @@ func (s *Traffic) AutoBanByProfile(profile AutobanProfile) error {
 			continue
 		}
 
-		fmt.Printf("%s %v\n", profile.Reason, ip)
+		log.Printf("%s %v\n", profile.Reason, ip)
 
 		if err := s.Ban.Add(ip, profile.Time, banByUserID, profile.Reason); err != nil {
 			return err
@@ -167,7 +163,7 @@ func (s *Traffic) AutoWhitelist() error {
 	}
 
 	for _, item := range items {
-		fmt.Printf("Check IP %v\n", item.IP)
+		log.Printf("Check IP %v\n", item.IP)
 		if err := s.AutoWhitelistIP(item.IP); err != nil {
 			return err
 		}
@@ -252,11 +248,11 @@ func (s *Traffic) SetupPublicRouter(apiGroup *gin.RouterGroup) {
 			return
 		}
 
-		request := TrafficBlacklistPostRequestBody{}
+		request := APITrafficBlacklistPostRequestBody{}
 		err = c.BindJSON(&request)
 
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err.Error())
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -334,7 +330,7 @@ func (s *Traffic) SetupPublicRouter(apiGroup *gin.RouterGroup) {
 			return
 		}
 
-		request := TrafficWhitelistPostRequestBody{}
+		request := APITrafficWhitelistPostRequestBody{}
 		err = c.BindJSON(&request)
 
 		if err != nil {
@@ -392,7 +388,7 @@ func (s *Traffic) SetupPublicRouter(apiGroup *gin.RouterGroup) {
 			return
 		}
 
-		result := make([]TopItem, len(items))
+		result := make([]APITrafficTopItem, len(items))
 		for idx, item := range items {
 
 			ban, err := s.Ban.Get(item.IP)
@@ -408,7 +404,7 @@ func (s *Traffic) SetupPublicRouter(apiGroup *gin.RouterGroup) {
 			}
 
 			var user *DBUser
-			var topItemBan *TopItemBan
+			var topItemBan *APITrafficTopItemBan
 
 			if ban != nil {
 				user, err = s.getUser(ban.ByUserID)
@@ -417,15 +413,21 @@ func (s *Traffic) SetupPublicRouter(apiGroup *gin.RouterGroup) {
 					return
 				}
 
-				topItemBan = &TopItemBan{
+				extractedUser, err := s.userExtractor.Extract(user)
+				if err != nil {
+					c.String(http.StatusInternalServerError, err.Error())
+					return
+				}
+
+				topItemBan = &APITrafficTopItemBan{
 					Until:    ban.Until,
 					ByUserID: ban.ByUserID,
-					User:     ExtractUser(*user, s.enforcer),
+					User:     extractedUser,
 					Reason:   ban.Reason,
 				}
 			}
 
-			result[idx] = TopItem{
+			result[idx] = APITrafficTopItem{
 				IP:          item.IP,
 				Count:       item.Count,
 				Ban:         topItemBan,

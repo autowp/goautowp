@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,15 +13,9 @@ import (
 func testRequest(t *testing.T, req *http.Request) *httptest.ResponseRecorder {
 	config := LoadConfig()
 
-	wg := &sync.WaitGroup{}
-	s, err := NewService(wg, config)
-	require.NoError(t, err)
-	defer func() {
-		s.Close()
-		wg.Wait()
-	}()
+	container := NewContainer(config)
 
-	router, err := s.GetPublicRouter()
+	router, err := container.GetPublicRouter()
 	require.NoError(t, err)
 
 	w := httptest.NewRecorder()

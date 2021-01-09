@@ -2,20 +2,18 @@ package goautowp
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/autowp/goautowp/util"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/casbin/casbin"
 	"github.com/gin-gonic/gin"
 )
 
 // Comments service
 type Comments struct {
-	db       *sql.DB
-	enforcer *casbin.Enforcer
+	db            *sql.DB
+	userExtractor *UserExtractor
 }
 
 // APIUser APIUser
@@ -45,11 +43,11 @@ type getVotesResult struct {
 }
 
 // NewComments constructor
-func NewComments(db *sql.DB, enforcer *casbin.Enforcer) *Comments {
+func NewComments(db *sql.DB, userExtractor *UserExtractor) *Comments {
 
 	return &Comments{
-		db:       db,
-		enforcer: enforcer,
+		db:            db,
+		userExtractor: userExtractor,
 	}
 }
 
@@ -113,16 +111,24 @@ func (s *Comments) Routes(apiGroup *gin.RouterGroup) {
 			return
 		}
 
-		// $this->userHydrator->setFields([]);
-
-		positive := make([]APIUser, 0)
+		positive := make([]*APIUser, 0)
 		for _, user := range votes.PositiveVotes {
-			positive = append(positive, ExtractUser(user, s.enforcer))
+			extracted, err := s.userExtractor.Extract(&user)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			positive = append(positive, extracted)
 		}
 
-		negative := make([]APIUser, 0)
+		negative := make([]*APIUser, 0)
 		for _, user := range votes.NegativeVotes {
-			negative = append(negative, ExtractUser(user, s.enforcer))
+			extracted, err := s.userExtractor.Extract(&user)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			negative = append(negative, extracted)
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -130,32 +136,4 @@ func (s *Comments) Routes(apiGroup *gin.RouterGroup) {
 			"negative": negative,
 		})
 	})
-}
-
-// ExtractUser ExtractUser
-func ExtractUser(row DBUser, enforcer *casbin.Enforcer) APIUser {
-
-	longAway := true
-	if row.LastOnline != nil {
-		date := time.Now().AddDate(0, -6, 0)
-		longAway = date.After(*row.LastOnline)
-	}
-
-	isGreen := row.Role != "" && enforcer.Enforce(row.Role, "status", "be-green")
-
-	route := []string{"/users", fmt.Sprintf("user%d", row.ID)}
-	if row.Identity != nil {
-		route = []string{"/users", *row.Identity}
-	}
-
-	return APIUser{
-		ID:       row.ID,
-		Name:     row.Name,
-		Deleted:  row.Deleted,
-		LongAway: longAway,
-		Green:    isGreen,
-		Route:    route,
-		Identity: row.Identity,
-	}
-
 }
