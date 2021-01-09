@@ -98,7 +98,6 @@ func main() {
 		log.Printf("Error: %s\n", cmdErr.Error())
 		sentry.CaptureException(cmdErr)
 		exitCode = 1
-		return
 	}
 
 	err = app.Close()
