@@ -68,7 +68,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 					return nil, err
 				}
 
-				user, err := userRepository.GetUser(ban.ByUserID)
+				user, err := userRepository.GetUser(GetUsersOptions{ID: ban.ByUserID})
 				if err != nil {
 					return nil, err
 				}
@@ -79,7 +79,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 						return nil, err
 					}
 
-					result.Blacklist.User, err = userExtractor.Extract(user)
+					result.Blacklist.User, err = userExtractor.Extract(user, map[string]bool{})
 					if err != nil {
 						return nil, err
 					}

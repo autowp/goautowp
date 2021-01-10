@@ -44,7 +44,7 @@ func testRequestBody(t *testing.T, url string) []byte {
 }
 
 func TestGetSpecs(t *testing.T) {
-	bodyBytes := testRequestBody(t, "/go-api/spec")
+	bodyBytes := testRequestBody(t, "/api/spec")
 
 	var response specResult
 	err := json.Unmarshal(bodyBytes, &response)
@@ -54,7 +54,7 @@ func TestGetSpecs(t *testing.T) {
 }
 
 func TestGetPerspectives(t *testing.T) {
-	bodyBytes := testRequestBody(t, "/go-api/perspective")
+	bodyBytes := testRequestBody(t, "/api/perspective")
 
 	var response perspectiveResult
 	err := json.Unmarshal(bodyBytes, &response)

@@ -16,23 +16,25 @@ import (
 
 // Container Container
 type Container struct {
-	acl               *ACL
-	autowpDB          *sql.DB
-	banRepository     *BanRepository
-	catalogue         *Catalogue
-	comments          *Comments
-	config            Config
-	duplicateFinder   *DuplicateFinder
-	enforcer          *casbin.Enforcer
-	ipController      *IPController
-	location          *time.Location
-	privateHttpServer *http.Server
-	privateRouter     *gin.Engine
-	publicHttpServer  *http.Server
-	publicRouter      *gin.Engine
-	traffic           *Traffic
-	trafficDB         *pgxpool.Pool
-	userRepository    *UserRepository
+	acl                *ACL
+	autowpDB           *sql.DB
+	banRepository      *BanRepository
+	catalogue          *Catalogue
+	comments           *Comments
+	config             Config
+	contactsController *ContactsController
+	contactsRepository *ContactsRepository
+	duplicateFinder    *DuplicateFinder
+	enforcer           *casbin.Enforcer
+	ipController       *IPController
+	location           *time.Location
+	privateHttpServer  *http.Server
+	privateRouter      *gin.Engine
+	publicHttpServer   *http.Server
+	publicRouter       *gin.Engine
+	traffic            *Traffic
+	trafficDB          *pgxpool.Pool
+	userRepository     *UserRepository
 }
 
 // NewContainer constructor
@@ -47,6 +49,8 @@ func (s *Container) Close() error {
 	s.banRepository = nil
 	s.catalogue = nil
 	s.comments = nil
+	s.contactsController = nil
+	s.contactsRepository = nil
 	s.duplicateFinder = nil
 	s.traffic = nil
 	s.userRepository = nil
@@ -190,6 +194,58 @@ func (s *Container) GetComments() (*Comments, error) {
 
 func (s *Container) GetConfig() (Config, error) {
 	return s.config, nil
+}
+
+func (s *Container) GetContactsController() (*ContactsController, error) {
+	if s.contactsController == nil {
+		repository, err := s.GetContactsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		userRepository, err := s.GetUserRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		userExtractor, err := s.GetUserExtractor()
+		if err != nil {
+			return nil, err
+		}
+
+		db, err := s.GetAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		config, err := s.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		s.contactsController, err = NewContactsController(repository, userRepository, userExtractor, db, config.OAuth)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s.contactsController, nil
+}
+
+func (s *Container) GetContactsRepository() (*ContactsRepository, error) {
+	if s.contactsRepository == nil {
+		db, err := s.GetAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.contactsRepository, err = NewContactsRepository(db)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s.contactsRepository, nil
 }
 
 func (s *Container) GetDuplicateFinder() (*DuplicateFinder, error) {
@@ -363,9 +419,9 @@ func (s *Container) GetPublicRouter() (*gin.Engine, error) {
 		return nil, err
 	}
 
-	goapiGroup := r.Group("/go-api")
-	{
-		catalogue.Routes(goapiGroup)
+	contactsCtrl, err := s.GetContactsController()
+	if err != nil {
+		return nil, err
 	}
 
 	apiGroup := r.Group("/api")
@@ -375,6 +431,7 @@ func (s *Container) GetPublicRouter() (*gin.Engine, error) {
 		comments.Routes(apiGroup)
 		ipCtrl.SetupRouter(apiGroup)
 		traffic.SetupPublicRouter(apiGroup)
+		contactsCtrl.SetupRouter(apiGroup)
 	}
 
 	s.publicRouter = r

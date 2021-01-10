@@ -413,7 +413,7 @@ func (s *Traffic) SetupPublicRouter(apiGroup *gin.RouterGroup) {
 					return
 				}
 
-				extractedUser, err := s.userExtractor.Extract(user)
+				extractedUser, err := s.userExtractor.Extract(user, map[string]bool{})
 				if err != nil {
 					c.String(http.StatusInternalServerError, err.Error())
 					return

@@ -3,38 +3,15 @@ package goautowp
 import (
 	"database/sql"
 	"github.com/autowp/goautowp/util"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
-	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 // Comments service
 type Comments struct {
 	db            *sql.DB
 	userExtractor *UserExtractor
-}
-
-// APIUser APIUser
-type APIUser struct {
-	ID       int      `json:"id"`
-	Name     string   `json:"name"`
-	Deleted  bool     `json:"deleted"`
-	LongAway bool     `json:"long_away"`
-	Green    bool     `json:"green"`
-	Route    []string `json:"route"`
-	Identity *string  `json:"identity"`
-}
-
-// DBUser DBUser
-type DBUser struct {
-	ID         int
-	Name       string
-	Deleted    bool
-	Identity   *string
-	LastOnline *time.Time
-	Role       string
 }
 
 type getVotesResult struct {
@@ -113,7 +90,7 @@ func (s *Comments) Routes(apiGroup *gin.RouterGroup) {
 
 		positive := make([]*APIUser, 0)
 		for _, user := range votes.PositiveVotes {
-			extracted, err := s.userExtractor.Extract(&user)
+			extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -123,7 +100,7 @@ func (s *Comments) Routes(apiGroup *gin.RouterGroup) {
 
 		negative := make([]*APIUser, 0)
 		for _, user := range votes.NegativeVotes {
-			extracted, err := s.userExtractor.Extract(&user)
+			extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return

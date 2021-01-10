@@ -1,7 +1,9 @@
 package goautowp
 
 import (
+	"crypto/md5"
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -15,7 +17,7 @@ func NewUserExtractor(container *Container) *UserExtractor {
 	}
 }
 
-func (s *UserExtractor) Extract(row *DBUser) (*APIUser, error) {
+func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, error) {
 	longAway := true
 	if row.LastOnline != nil {
 		date := time.Now().AddDate(0, -6, 0)
@@ -34,7 +36,7 @@ func (s *UserExtractor) Extract(row *DBUser) (*APIUser, error) {
 		route = []string{"/users", *row.Identity}
 	}
 
-	return &APIUser{
+	user := APIUser{
 		ID:       row.ID,
 		Name:     row.Name,
 		Deleted:  row.Deleted,
@@ -42,5 +44,24 @@ func (s *UserExtractor) Extract(row *DBUser) (*APIUser, error) {
 		Green:    isGreen,
 		Route:    route,
 		Identity: row.Identity,
-	}, nil
+	}
+
+	for field := range fields {
+		switch field {
+		case "avatar":
+		case "gravatar":
+			if row.EMail != nil {
+				str := fmt.Sprintf(
+					"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
+					md5.Sum([]byte(*row.EMail)),
+					url.PathEscape("https://www.autowp.ru/_.gif"),
+				)
+				user.Gravatar = &str
+			}
+		case "last_online":
+			user.LastOnline = row.LastOnline
+		}
+	}
+
+	return &user, nil
 }
