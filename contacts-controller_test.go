@@ -15,6 +15,14 @@ func TestCreateDeleteContact(t *testing.T) {
 	w := testRequest(t, req)
 	require.Equal(t, http.StatusCreated, w.Code)
 
+	// get
+	req, err = http.NewRequest(http.MethodGet, "/api/contacts", nil)
+	require.NoError(t, err)
+	req.Header.Add("Authorization", adminAuthorizationHeader)
+
+	w = testRequest(t, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
 	// delete
 	req, err = http.NewRequest(http.MethodDelete, "/api/contacts/1", nil)
 	require.NoError(t, err)

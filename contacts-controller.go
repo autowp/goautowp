@@ -38,7 +38,6 @@ func NewContactsController(repository *ContactsRepository, userRepository *UserR
 
 func (s *ContactsController) SetupRouter(apiGroup *gin.RouterGroup) {
 	apiGroup.GET("/contacts", func(c *gin.Context) {
-
 		id, _, err := validateAuthorization(c, s.autowpDB, s.oauthConfig)
 		if err != nil {
 			c.String(http.StatusForbidden, err.Error())

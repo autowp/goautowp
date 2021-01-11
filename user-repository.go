@@ -89,7 +89,7 @@ func (s *UserRepository) GetUsers(options GetUsersOptions) ([]DBUser, error) {
 	}
 
 	if options.InContacts != 0 {
-		sqSelect = sqSelect.Join("contact", "users.id = contact.contact_user_id").Where(sq.Eq{"contact.user_id": options.InContacts})
+		sqSelect = sqSelect.Join("contact ON users.id = contact.contact_user_id").Where(sq.Eq{"contact.user_id": options.InContacts})
 	}
 
 	if options.Deleted != nil {
