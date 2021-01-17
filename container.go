@@ -16,25 +16,27 @@ import (
 
 // Container Container
 type Container struct {
-	acl                *ACL
-	autowpDB           *sql.DB
-	banRepository      *BanRepository
-	catalogue          *Catalogue
-	comments           *Comments
-	config             Config
-	contactsController *ContactsController
-	contactsRepository *ContactsRepository
-	duplicateFinder    *DuplicateFinder
-	enforcer           *casbin.Enforcer
-	ipController       *IPController
-	location           *time.Location
-	privateHttpServer  *http.Server
-	privateRouter      *gin.Engine
-	publicHttpServer   *http.Server
-	publicRouter       *gin.Engine
-	traffic            *Traffic
-	trafficDB          *pgxpool.Pool
-	userRepository     *UserRepository
+	acl                 *ACL
+	autowpDB            *sql.DB
+	banRepository       *BanRepository
+	catalogue           *Catalogue
+	comments            *Comments
+	config              Config
+	contactsController  *ContactsController
+	contactsRepository  *ContactsRepository
+	duplicateFinder     *DuplicateFinder
+	enforcer            *casbin.Enforcer
+	feedbackController  *FeedbackController
+	ipController        *IPController
+	location            *time.Location
+	privateHttpServer   *http.Server
+	privateRouter       *gin.Engine
+	publicHttpServer    *http.Server
+	publicRouter        *gin.Engine
+	recaptchaController *RecaptchaController
+	traffic             *Traffic
+	trafficDB           *pgxpool.Pool
+	userRepository      *UserRepository
 }
 
 // NewContainer constructor
@@ -54,6 +56,7 @@ func (s *Container) Close() error {
 	s.duplicateFinder = nil
 	s.traffic = nil
 	s.userRepository = nil
+	s.feedbackController = nil
 
 	if s.autowpDB != nil {
 		err := s.autowpDB.Close()
@@ -272,6 +275,23 @@ func (s *Container) GetEnforcer() (*casbin.Enforcer, error) {
 	return s.enforcer, nil
 }
 
+func (s *Container) GetFeedbackController() (*FeedbackController, error) {
+	if s.feedbackController == nil {
+
+		config, err := s.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		s.feedbackController, err = NewFeedbackController(config.Feedback, config.Recaptcha, config.SMTP)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s.feedbackController, nil
+}
+
 func (s *Container) GetIPController() (*IPController, error) {
 	if s.ipController == nil {
 
@@ -394,6 +414,11 @@ func (s *Container) GetPublicRouter() (*gin.Engine, error) {
 	r.Use(gin.Recovery())
 	r.Use(sentrygin.New(sentrygin.Options{}))
 
+	acl, err := s.GetACL()
+	if err != nil {
+		return nil, err
+	}
+
 	catalogue, err := s.GetCatalogue()
 	if err != nil {
 		return nil, err
@@ -404,12 +429,12 @@ func (s *Container) GetPublicRouter() (*gin.Engine, error) {
 		return nil, err
 	}
 
-	acl, err := s.GetACL()
+	contactsCtrl, err := s.GetContactsController()
 	if err != nil {
 		return nil, err
 	}
 
-	traffic, err := s.GetTraffic()
+	feedbackCtrl, err := s.GetFeedbackController()
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +444,12 @@ func (s *Container) GetPublicRouter() (*gin.Engine, error) {
 		return nil, err
 	}
 
-	contactsCtrl, err := s.GetContactsController()
+	recaptchaCtrl, err := s.GetRecaptchaController()
+	if err != nil {
+		return nil, err
+	}
+
+	traffic, err := s.GetTraffic()
 	if err != nil {
 		return nil, err
 	}
@@ -429,14 +459,33 @@ func (s *Container) GetPublicRouter() (*gin.Engine, error) {
 		acl.Routes(apiGroup)
 		catalogue.Routes(apiGroup)
 		comments.Routes(apiGroup)
-		ipCtrl.SetupRouter(apiGroup)
-		traffic.SetupPublicRouter(apiGroup)
 		contactsCtrl.SetupRouter(apiGroup)
+		feedbackCtrl.SetupRouter(apiGroup)
+		ipCtrl.SetupRouter(apiGroup)
+		recaptchaCtrl.SetupRouter(apiGroup)
+		traffic.SetupPublicRouter(apiGroup)
 	}
 
 	s.publicRouter = r
 
 	return r, nil
+}
+
+func (s *Container) GetRecaptchaController() (*RecaptchaController, error) {
+	if s.recaptchaController == nil {
+		config, err := s.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		s.recaptchaController, err = NewRecaptchaController(config.Recaptcha)
+		if err != nil {
+			log.Println(err.Error())
+			return nil, err
+		}
+	}
+
+	return s.recaptchaController, nil
 }
 
 func (s *Container) GetTraffic() (*Traffic, error) {

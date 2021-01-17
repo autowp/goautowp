@@ -10,6 +10,7 @@ require (
 	github.com/containerd/continuity v0.0.0-20201208142359-180525291bb7 // indirect
 	github.com/corona10/goimagehash v1.0.3
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/dpapathanasiou/go-recaptcha v0.0.0-20190121160230-be5090b17804
 	github.com/flosch/pongo2 v0.0.0-20190707114632-bbf5a6c351f4 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/getsentry/sentry-go v0.9.0
@@ -26,7 +27,7 @@ require (
 	github.com/lib/pq v1.9.0 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mediocregopher/mediocre-go-lib v0.0.0-20181029021733-cb65787f37ed // indirect
-	github.com/mitchellh/mapstructure v1.4.0 // indirect
+	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/spf13/afero v1.5.1 // indirect
@@ -36,10 +37,12 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.6.1
-	github.com/ugorji/go v1.2.2 // indirect
+	github.com/ugorji/go v1.2.3 // indirect
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
-	golang.org/x/sys v0.0.0-20210108172913-0df2131ae363 // indirect
+	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
 	golang.org/x/text v0.3.5 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

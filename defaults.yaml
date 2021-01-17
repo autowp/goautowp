@@ -34,3 +34,17 @@ private-rest:
 traffic-migrations:
   dsn: postgres://traffic:password@127.0.0.1/traffic?sslmode=disable
   dir: ./traffic-migrations
+recaptcha:
+  public-key: public
+  private-key: private
+smtp:
+  username: username
+  password: password
+  hostname: localhost
+  port: 465
+feedback:
+  captcha: true
+  from: Robot autowp.ru <no-reply@autowp.ru>
+  to:
+  - autowp@gmail.com
+  subject: AutoWP Feedback

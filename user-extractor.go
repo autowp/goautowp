@@ -49,6 +49,7 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, 
 	for field := range fields {
 		switch field {
 		case "avatar":
+			// TODO
 		case "gravatar":
 			if row.EMail != nil {
 				str := fmt.Sprintf(

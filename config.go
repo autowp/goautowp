@@ -55,6 +55,28 @@ type OAuthConfig struct {
 	Secret string `yaml:"secret" mapstructure:"secret"`
 }
 
+// RecaptchaConfig RecaptchaConfig
+type RecaptchaConfig struct {
+	PublicKey  string `yaml:"public-key"  mapstructure:"public-key"`
+	PrivateKey string `yaml:"private-key" mapstructure:"private-key"`
+}
+
+// SMTPConfig SMTPConfig
+type SMTPConfig struct {
+	Hostname string `yaml:"hostname" mapstructure:"hostname"`
+	Port     int    `yaml:"port"     mapstructure:"port"`
+	Username string `yaml:"username" mapstructure:"username"`
+	Password string `yaml:"password" mapstructure:"password"`
+}
+
+// FeedbackConfig FeedbackConfig
+type FeedbackConfig struct {
+	Captcha bool     `yaml:"captcha"    mapstructure:"captcha"`
+	From    string   `yaml:"from"    mapstructure:"from"`
+	To      []string `yaml:"to"      mapstructure:"to"`
+	Subject string   `yaml:"subject" mapstructure:"subject"`
+}
+
 // Config Application config definition
 type Config struct {
 	GinMode           string                `yaml:"gin-mode" mapstructure:"gin-mode"`
@@ -70,6 +92,9 @@ type Config struct {
 	PrivateRest       RestConfig            `yaml:"private-rest"       mapstructure:"private-rest"`
 	TrafficDSN        string                `yaml:"traffic-dsn"        mapstructure:"traffic-dsn"`
 	TrafficMigrations MigrationsConfig      `yaml:"traffic-migrations" mapstructure:"traffic-migrations"`
+	Recaptcha         RecaptchaConfig       `yaml:"recaptcha"          mapstructure:"recaptcha"`
+	SMTP              SMTPConfig            `yaml:"smtp"               mapstructure:"smtp"`
+	Feedback          FeedbackConfig        `yaml:"feedback"           mapstructure:"feedback"`
 }
 
 // LoadConfig LoadConfig
