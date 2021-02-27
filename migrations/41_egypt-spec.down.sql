@@ -1,1 +1,1 @@
-DELETE FROM `spec` WHERE id = 29;
+DELETE FROM `spec` WHERE id = 57;
