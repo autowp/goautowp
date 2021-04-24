@@ -1,0 +1,22 @@
+syntax = "proto3";
+package goautowp;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/autowp/goautowp";
+
+service Autowp {
+  rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
+}
+
+message Spec {
+  int64 id = 1;
+  string name = 2;
+  string short_name = 3;
+  repeated Spec childs = 4;
+}
+
+message SpecsItems {
+  repeated Spec items = 1;
+}
+

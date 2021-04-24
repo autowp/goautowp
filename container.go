@@ -9,6 +9,8 @@ import (
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"log"
 	"net/http"
 	"time"
@@ -27,6 +29,7 @@ type Container struct {
 	duplicateFinder     *DuplicateFinder
 	enforcer            *casbin.Enforcer
 	feedbackController  *FeedbackController
+	grpcServer          *grpc.Server
 	ipController        *IPController
 	location            *time.Location
 	privateHttpServer   *http.Server
@@ -600,4 +603,26 @@ func (s *Container) GetUserRepository() (*UserRepository, error) {
 	}
 
 	return s.userRepository, nil
+}
+
+type GRPCServer struct {
+	UnimplementedAutowpServer
+}
+
+func (s *GRPCServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error) {
+	items := make([]*Spec, 0)
+
+	return &SpecsItems{
+		Items: items,
+	}, nil
+}
+
+func (s *Container) GetPublicGRPCServer() (*grpc.Server, error) {
+
+	if s.grpcServer == nil {
+		s.grpcServer = grpc.NewServer()
+		RegisterAutowpServer(s.grpcServer, &GRPCServer{})
+	}
+
+	return s.grpcServer, nil
 }

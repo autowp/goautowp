@@ -88,6 +88,9 @@ func main() {
 		}
 		quit := captureOsInterrupt()
 		cmdErr = app.ServePublic(quit)
+	case "serve-grpc-public":
+		quit := captureOsInterrupt()
+		cmdErr = app.ServePublicGRPC(quit)
 	case "serve-private":
 		quit := captureOsInterrupt()
 		cmdErr = app.ServePrivate(quit)

@@ -45,6 +45,11 @@ type DuplicateFinderConfig struct {
 	Queue    string `yaml:"queue"    mapstructure:"queue"`
 }
 
+// GRPCConfig GRPCConfig
+type GRPCConfig struct {
+	Listen string `mapstructure:"listen"`
+}
+
 // RestConfig RestConfig
 type RestConfig struct {
 	Listen string `mapstructure:"listen"`
@@ -79,7 +84,8 @@ type FeedbackConfig struct {
 
 // Config Application config definition
 type Config struct {
-	GinMode           string                `yaml:"gin-mode" mapstructure:"gin-mode"`
+	GinMode           string                `yaml:"gin-mode"           mapstructure:"gin-mode"`
+	PublicGRPC        GRPCConfig            `yaml:"public-grpc"        mapstructure:"public-grpc"`
 	PublicRest        RestConfig            `yaml:"public-rest"        mapstructure:"public-rest"`
 	DuplicateFinder   DuplicateFinderConfig `yaml:"duplicate_finder"   mapstructure:"duplicate_finder"`
 	AutowpDSN         string                `yaml:"autowp-dsn"         mapstructure:"autowp-dsn"`
