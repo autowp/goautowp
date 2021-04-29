@@ -110,7 +110,7 @@ func (s *Catalogue) getVehicleTypesTree(parentID int) ([]VehicleType, error) {
 	return result, nil
 }
 
-func (s *Catalogue) getSpecs(parentID int) []spec {
+func (s *Catalogue) getSpecs(parentID int64) ([]*Spec, error) {
 	sqSelect := sq.Select("id, name, short_name").From("spec").OrderBy("name")
 
 	if parentID != 0 {
@@ -121,22 +121,26 @@ func (s *Catalogue) getSpecs(parentID int) []spec {
 
 	rows, err := sqSelect.RunWith(s.db).Query()
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 	defer util.Close(rows)
 
-	var specs []spec
+	var specs []*Spec
 	for rows.Next() {
-		var r spec
-		err = rows.Scan(&r.ID, &r.Name, &r.ShortName)
+		var r Spec
+		err = rows.Scan(&r.Id, &r.Name, &r.ShortName)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		r.Childs = s.getSpecs(r.ID)
-		specs = append(specs, r)
+		childs, err := s.getSpecs(r.Id)
+		if err != nil {
+			return nil, err
+		}
+		r.Childs = childs
+		specs = append(specs, &r)
 	}
 
-	return specs
+	return specs, nil
 }
 
 func (s *Catalogue) getPerspectives() []perspective {
@@ -166,11 +170,6 @@ func (s *Catalogue) Routes(apiGroup *gin.RouterGroup) {
 	apiGroup.GET("/perspective", func(c *gin.Context) {
 		perspectives := s.getPerspectives()
 		c.JSON(http.StatusOK, perspectiveResult{perspectives})
-	})
-
-	apiGroup.GET("/spec", func(c *gin.Context) {
-		specs := s.getSpecs(0)
-		c.JSON(http.StatusOK, specResult{specs})
 	})
 
 	apiGroup.GET("/brands/icons", func(c *gin.Context) {

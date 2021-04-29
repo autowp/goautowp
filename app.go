@@ -23,7 +23,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"       // enable file migration source
 )
 
-// Service Main Object
+// Application is Service Main Object
 type Application struct {
 	container *Container
 }
@@ -60,7 +60,6 @@ func (s *Application) MigrateAutowp() error {
 }
 
 func (s *Application) ServePublic(quit chan bool) error {
-
 	httpServer, err := s.container.GetPublicHttpServer()
 	if err != nil {
 		return err

@@ -1,4 +1,6 @@
 gin-mode: "debug"
+public-grpc:
+  listen: ":8081"
 public-rest:
   listen: ":8080"
 sentry:
