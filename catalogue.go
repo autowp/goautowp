@@ -31,17 +31,6 @@ type perspectiveResult struct {
 	Items []perspective `json:"items"`
 }
 
-type spec struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	ShortName string `json:"short_name"`
-	Childs    []spec `json:"childs"`
-}
-
-type specResult struct {
-	Items []spec `json:"items"`
-}
-
 // VehicleType VehicleType
 type VehicleType struct {
 	ID     int           `json:"id"`
