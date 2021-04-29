@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/autowp/goautowp/util"
 	"log"
-	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,7 +23,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"       // enable file migration source
 )
 
-// Service Main Object
+// Application is Service Main Object
 type Application struct {
 	container *Container
 }
@@ -56,39 +55,6 @@ func (s *Application) MigrateAutowp() error {
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
-
-	return nil
-}
-
-func (s *Application) ServePublicGRPC(quit chan bool) error {
-
-	config, err := s.container.GetConfig()
-	if err != nil {
-		return err
-	}
-
-	grpcServer, err := s.container.GetPublicGRPCServer()
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		<-quit
-		grpcServer.GracefulStop()
-	}()
-
-	log.Println("public GRPC listener started")
-
-	lis, err := net.Listen("tcp", config.PublicGRPC.Listen)
-	if err != nil {
-		return err
-	}
-
-	if err := grpcServer.Serve(lis); err != nil {
-		return err
-	}
-
-	log.Println("public GRPC listener stopped")
 
 	return nil
 }

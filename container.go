@@ -8,9 +8,9 @@ import (
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"log"
 	"net/http"
 	"time"
@@ -29,13 +29,13 @@ type Container struct {
 	duplicateFinder     *DuplicateFinder
 	enforcer            *casbin.Enforcer
 	feedbackController  *FeedbackController
-	grpcServer          *grpc.Server
+	grpcServer          *GRPCServer
 	ipController        *IPController
 	location            *time.Location
 	privateHttpServer   *http.Server
 	privateRouter       *gin.Engine
 	publicHttpServer    *http.Server
-	publicRouter        *gin.Engine
+	publicRouter        http.HandlerFunc
 	recaptchaController *RecaptchaController
 	traffic             *Traffic
 	trafficDB           *pgxpool.Pool
@@ -407,7 +407,7 @@ func (s *Container) GetPublicHttpServer() (*http.Server, error) {
 	return s.publicHttpServer, nil
 }
 
-func (s *Container) GetPublicRouter() (*gin.Engine, error) {
+func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 
 	if s.publicRouter != nil {
 		return s.publicRouter, nil
@@ -469,9 +469,26 @@ func (s *Container) GetPublicRouter() (*gin.Engine, error) {
 		traffic.SetupPublicRouter(apiGroup)
 	}
 
-	s.publicRouter = r
+	srv, err := s.GetGRPCServer()
+	if err != nil {
+		return nil, err
+	}
 
-	return r, nil
+	grpcServer := grpc.NewServer()
+	RegisterAutowpServer(grpcServer, srv)
+
+	wrappedGrpc := grpcweb.WrapServer(grpcServer)
+
+	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
+		if wrappedGrpc.IsGrpcWebRequest(req) {
+			wrappedGrpc.ServeHTTP(resp, req)
+			return
+		}
+		// Fall back to other servers.
+		r.ServeHTTP(resp, req)
+	}
+
+	return s.publicRouter, nil
 }
 
 func (s *Container) GetRecaptchaController() (*RecaptchaController, error) {
@@ -605,23 +622,16 @@ func (s *Container) GetUserRepository() (*UserRepository, error) {
 	return s.userRepository, nil
 }
 
-type GRPCServer struct {
-	UnimplementedAutowpServer
-}
-
-func (s *GRPCServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error) {
-	items := make([]*Spec, 0)
-
-	return &SpecsItems{
-		Items: items,
-	}, nil
-}
-
-func (s *Container) GetPublicGRPCServer() (*grpc.Server, error) {
-
+func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 	if s.grpcServer == nil {
-		s.grpcServer = grpc.NewServer()
-		RegisterAutowpServer(s.grpcServer, &GRPCServer{})
+		catalogue, err := s.GetCatalogue()
+		if err != nil {
+			return nil, err
+		}
+
+		s.grpcServer = &GRPCServer{
+			Catalogue: catalogue,
+		}
 	}
 
 	return s.grpcServer, nil
