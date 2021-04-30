@@ -18,28 +18,27 @@ import (
 
 // Container Container
 type Container struct {
-	acl                 *ACL
-	autowpDB            *sql.DB
-	banRepository       *BanRepository
-	catalogue           *Catalogue
-	comments            *Comments
-	config              Config
-	contactsController  *ContactsController
-	contactsRepository  *ContactsRepository
-	duplicateFinder     *DuplicateFinder
-	enforcer            *casbin.Enforcer
-	feedbackController  *FeedbackController
-	grpcServer          *GRPCServer
-	ipController        *IPController
-	location            *time.Location
-	privateHttpServer   *http.Server
-	privateRouter       *gin.Engine
-	publicHttpServer    *http.Server
-	publicRouter        http.HandlerFunc
-	recaptchaController *RecaptchaController
-	traffic             *Traffic
-	trafficDB           *pgxpool.Pool
-	userRepository      *UserRepository
+	acl                *ACL
+	autowpDB           *sql.DB
+	banRepository      *BanRepository
+	catalogue          *Catalogue
+	comments           *Comments
+	config             Config
+	contactsController *ContactsController
+	contactsRepository *ContactsRepository
+	duplicateFinder    *DuplicateFinder
+	enforcer           *casbin.Enforcer
+	feedbackController *FeedbackController
+	grpcServer         *GRPCServer
+	ipController       *IPController
+	location           *time.Location
+	privateHttpServer  *http.Server
+	privateRouter      *gin.Engine
+	publicHttpServer   *http.Server
+	publicRouter       http.HandlerFunc
+	traffic            *Traffic
+	trafficDB          *pgxpool.Pool
+	userRepository     *UserRepository
 }
 
 // NewContainer constructor
@@ -447,11 +446,6 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 		return nil, err
 	}
 
-	recaptchaCtrl, err := s.GetRecaptchaController()
-	if err != nil {
-		return nil, err
-	}
-
 	traffic, err := s.GetTraffic()
 	if err != nil {
 		return nil, err
@@ -465,7 +459,6 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 		contactsCtrl.SetupRouter(apiGroup)
 		feedbackCtrl.SetupRouter(apiGroup)
 		ipCtrl.SetupRouter(apiGroup)
-		recaptchaCtrl.SetupRouter(apiGroup)
 		traffic.SetupPublicRouter(apiGroup)
 	}
 
@@ -489,23 +482,6 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 	}
 
 	return s.publicRouter, nil
-}
-
-func (s *Container) GetRecaptchaController() (*RecaptchaController, error) {
-	if s.recaptchaController == nil {
-		config, err := s.GetConfig()
-		if err != nil {
-			return nil, err
-		}
-
-		s.recaptchaController, err = NewRecaptchaController(config.Recaptcha)
-		if err != nil {
-			log.Println(err.Error())
-			return nil, err
-		}
-	}
-
-	return s.recaptchaController, nil
 }
 
 func (s *Container) GetTraffic() (*Traffic, error) {
@@ -629,8 +605,15 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
+		config, err := s.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+
 		s.grpcServer = &GRPCServer{
-			Catalogue: catalogue,
+			Catalogue:         catalogue,
+			ReCaptchaConfig:   config.Recaptcha,
+			FileStorageConfig: config.FileStorage,
 		}
 	}
 

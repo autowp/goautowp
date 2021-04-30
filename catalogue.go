@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -232,27 +231,6 @@ func (s *Catalogue) getPerspectives(groupID *int32) ([]*Perspective, error) {
 func (s *Catalogue) Routes(apiGroup *gin.RouterGroup) {
 	apiGroup.GET("/brands/icons", func(c *gin.Context) {
 
-		if len(s.fileStorageConfig.S3.Endpoints) <= 0 {
-			c.String(http.StatusInternalServerError, "No endpoints provided")
-			return
-		}
-
-		endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))]
-
-		parsedURL, err := url.Parse(endpoint)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/brands.png"
-		imageURL := parsedURL.String()
-
-		parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/brands.css"
-		cssURL := parsedURL.String()
-
-		c.JSON(http.StatusOK, BrandsIconsResult{imageURL, cssURL})
 	})
 
 	apiGroup.GET("/vehicle-types", func(c *gin.Context) {

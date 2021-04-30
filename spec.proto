@@ -9,6 +9,8 @@ service Autowp {
   rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
   rpc GetPerspectives(google.protobuf.Empty) returns (PerspectivesItems) {}
   rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
+  rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
+  rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
 }
 
 message Spec {
@@ -45,4 +47,13 @@ message PerspectivePage {
 
 message PerspectivePagesItems {
   repeated PerspectivePage items = 1;
+}
+
+message ReCaptchaConfig {
+  string public_key = 1;
+}
+
+message BrandIcons{
+  string image = 1;
+  string css = 2;
 }
