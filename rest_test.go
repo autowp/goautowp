@@ -43,16 +43,6 @@ func testRequestBody(t *testing.T, url string) []byte {
 	return bodyBytes
 }
 
-func TestGetPerspectives(t *testing.T) {
-	bodyBytes := testRequestBody(t, "/api/perspective")
-
-	var response perspectiveResult
-	err := json.Unmarshal(bodyBytes, &response)
-	require.NoError(t, err)
-
-	require.True(t, len(response.Items) > 0)
-}
-
 func TestGetBrandIcons(t *testing.T) {
 	bodyBytes := testRequestBody(t, "/api/brands/icons")
 
