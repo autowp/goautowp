@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -99,7 +100,7 @@ func (s *Catalogue) getVehicleTypesTree(parentID int) ([]VehicleType, error) {
 	return result, nil
 }
 
-func (s *Catalogue) getSpecs(parentID int64) ([]*Spec, error) {
+func (s *Catalogue) getSpecs(parentID int32) ([]*Spec, error) {
 	sqSelect := sq.Select("id, name, short_name").From("spec").OrderBy("name")
 
 	if parentID != 0 {
@@ -132,35 +133,112 @@ func (s *Catalogue) getSpecs(parentID int64) ([]*Spec, error) {
 	return specs, nil
 }
 
-func (s *Catalogue) getPerspectives() []perspective {
-	sqSelect := sq.Select("id, name").From("perspectives").OrderBy("position")
+func (s *Catalogue) getPerspectiveGroups(pageID int32) ([]*PerspectiveGroup, error) {
+	sqSelect := sq.Select("id, name").From("perspectives_groups").Where(sq.Eq{"page_id": pageID}).OrderBy("position")
 
 	rows, err := sqSelect.RunWith(s.db).Query()
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 	defer util.Close(rows)
 
-	var perspectives []perspective
+	var wg sync.WaitGroup
+
+	var perspectiveGroups []*PerspectiveGroup
 	for rows.Next() {
-		var r perspective
-		err = rows.Scan(&r.ID, &r.Name)
+		var r PerspectiveGroup
+		err = rows.Scan(&r.Id, &r.Name)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		perspectives = append(perspectives, r)
+
+		wg.Add(1)
+		go func() {
+			perspectives, err := s.getPerspectives(&r.Id)
+			if err != nil {
+				return
+			}
+			r.Perspectives = perspectives
+
+			wg.Done()
+		}()
+		perspectiveGroups = append(perspectiveGroups, &r)
 	}
 
-	return perspectives
+	wg.Wait()
+
+	return perspectiveGroups, nil
+}
+
+func (s *Catalogue) getPerspectivePages() ([]*PerspectivePage, error) {
+	sqSelect := sq.Select("id, name").From("perspectives_pages").OrderBy("id")
+
+	rows, err := sqSelect.RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer util.Close(rows)
+
+	var wg sync.WaitGroup
+
+	var perspectivePages []*PerspectivePage
+	for rows.Next() {
+		var r PerspectivePage
+		err = rows.Scan(&r.Id, &r.Name)
+		if err != nil {
+			return nil, err
+		}
+		wg.Add(1)
+		go func() {
+			groups, err := s.getPerspectiveGroups(r.Id)
+			if err != nil {
+				return
+			}
+			r.Groups = groups
+
+			wg.Done()
+		}()
+		perspectivePages = append(perspectivePages, &r)
+	}
+
+	wg.Wait()
+
+	return perspectivePages, nil
+}
+
+func (s *Catalogue) getPerspectives(groupID *int32) ([]*Perspective, error) {
+	sqSelect := sq.Select("perspectives.id, perspectives.name").From("perspectives")
+
+	if groupID != nil {
+		sqSelect = sqSelect.
+			Join("perspectives_groups_perspectives ON perspectives.id = perspectives_groups_perspectives.perspective_id").
+			Where(sq.Eq{"perspectives_groups_perspectives.group_id": *groupID}).
+			OrderBy("perspectives_groups_perspectives.position")
+	} else {
+		sqSelect = sqSelect.OrderBy("perspectives.position")
+	}
+
+	rows, err := sqSelect.RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer util.Close(rows)
+
+	var perspectives []*Perspective
+	for rows.Next() {
+		var r Perspective
+		err = rows.Scan(&r.Id, &r.Name)
+		if err != nil {
+			return nil, err
+		}
+		perspectives = append(perspectives, &r)
+	}
+
+	return perspectives, nil
 }
 
 // Routes adds routes
 func (s *Catalogue) Routes(apiGroup *gin.RouterGroup) {
-	apiGroup.GET("/perspective", func(c *gin.Context) {
-		perspectives := s.getPerspectives()
-		c.JSON(http.StatusOK, perspectiveResult{perspectives})
-	})
-
 	apiGroup.GET("/brands/icons", func(c *gin.Context) {
 
 		if len(s.fileStorageConfig.S3.Endpoints) <= 0 {

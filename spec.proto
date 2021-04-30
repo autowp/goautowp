@@ -7,10 +7,12 @@ option go_package = "github.com/autowp/goautowp";
 
 service Autowp {
   rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
+  rpc GetPerspectives(google.protobuf.Empty) returns (PerspectivesItems) {}
+  rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
 }
 
 message Spec {
-  int64 id = 1;
+  int32 id = 1;
   string name = 2;
   string short_name = 3;
   repeated Spec childs = 4;
@@ -20,3 +22,27 @@ message SpecsItems {
   repeated Spec items = 1;
 }
 
+message Perspective {
+  int32 id = 1;
+  string name = 2;
+}
+
+message PerspectivesItems {
+  repeated Perspective items = 1;
+}
+
+message PerspectiveGroup {
+  int32 id = 1;
+  string name = 2;
+  repeated Perspective perspectives = 3;
+}
+
+message PerspectivePage {
+  int32 id = 1;
+  string name = 2;
+  repeated PerspectiveGroup groups = 3;
+}
+
+message PerspectivePagesItems {
+  repeated PerspectivePage items = 1;
+}
