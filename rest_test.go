@@ -43,17 +43,6 @@ func testRequestBody(t *testing.T, url string) []byte {
 	return bodyBytes
 }
 
-func TestGetBrandIcons(t *testing.T) {
-	bodyBytes := testRequestBody(t, "/api/brands/icons")
-
-	var response BrandsIconsResult
-	err := json.Unmarshal(bodyBytes, &response)
-	require.NoError(t, err)
-
-	require.Contains(t, response.Image, "png")
-	require.Contains(t, response.CSS, "css")
-}
-
 func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
 	response := testRequestURL(t, "/api/vehicle-types")
 

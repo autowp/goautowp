@@ -33,12 +33,6 @@ type VehicleTypeResult struct {
 	Items []VehicleType `json:"items"`
 }
 
-// BrandsIconsResult BrandsIconsResult
-type BrandsIconsResult struct {
-	Image string `json:"image"`
-	CSS   string `json:"css"`
-}
-
 // NewCatalogue constructor
 func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, oauthConfig OAuthConfig) (*Catalogue, error) {
 
