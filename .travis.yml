@@ -11,7 +11,7 @@ services:
   - postgresql
 
 go:
-  - "1.15"
+  - "1.16"
 
 addons:
   sonarcloud:
