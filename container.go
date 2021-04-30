@@ -170,7 +170,7 @@ func (s *Container) GetCatalogue() (*Catalogue, error) {
 			return nil, err
 		}
 
-		s.catalogue, err = NewCatalogue(db, enforcer, config.FileStorage, config.OAuth)
+		s.catalogue, err = NewCatalogue(db, enforcer, config.OAuth)
 		if err != nil {
 			return nil, err
 		}

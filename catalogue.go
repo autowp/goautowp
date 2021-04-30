@@ -16,10 +16,9 @@ import (
 
 // Catalogue service
 type Catalogue struct {
-	db                *sql.DB
-	enforcer          *casbin.Enforcer
-	fileStorageConfig FileStorageConfig
-	oauthConfig       OAuthConfig
+	db          *sql.DB
+	enforcer    *casbin.Enforcer
+	oauthConfig OAuthConfig
 }
 
 // VehicleType VehicleType
@@ -41,7 +40,7 @@ type BrandsIconsResult struct {
 }
 
 // NewCatalogue constructor
-func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, fileStorageConfig FileStorageConfig, oauthConfig OAuthConfig) (*Catalogue, error) {
+func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, oauthConfig OAuthConfig) (*Catalogue, error) {
 
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
@@ -50,10 +49,9 @@ func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, fileStorageConfig FileS
 	rand.Seed(time.Now().Unix())
 
 	return &Catalogue{
-		db:                db,
-		enforcer:          enforcer,
-		fileStorageConfig: fileStorageConfig,
-		oauthConfig:       oauthConfig,
+		db:          db,
+		enforcer:    enforcer,
+		oauthConfig: oauthConfig,
 	}, nil
 }
 
