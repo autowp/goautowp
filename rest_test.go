@@ -31,18 +31,6 @@ func testRequestURL(t *testing.T, url string) *httptest.ResponseRecorder {
 	return testRequest(t, req)
 }
 
-func testRequestBody(t *testing.T, url string) []byte {
-
-	w := testRequestURL(t, url)
-
-	require.Equal(t, http.StatusOK, w.Code)
-
-	bodyBytes, err := ioutil.ReadAll(w.Body)
-	require.NoError(t, err)
-
-	return bodyBytes
-}
-
 func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
 	response := testRequestURL(t, "/api/vehicle-types")
 
