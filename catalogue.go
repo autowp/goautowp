@@ -229,10 +229,6 @@ func (s *Catalogue) getPerspectives(groupID *int32) ([]*Perspective, error) {
 
 // Routes adds routes
 func (s *Catalogue) Routes(apiGroup *gin.RouterGroup) {
-	apiGroup.GET("/brands/icons", func(c *gin.Context) {
-
-	})
-
 	apiGroup.GET("/vehicle-types", func(c *gin.Context) {
 
 		_, role, err := validateAuthorization(c, s.db, s.oauthConfig)
