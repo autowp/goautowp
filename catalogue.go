@@ -23,15 +23,6 @@ type Catalogue struct {
 	oauthConfig       OAuthConfig
 }
 
-type perspective struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-type perspectiveResult struct {
-	Items []perspective `json:"items"`
-}
-
 // VehicleType VehicleType
 type VehicleType struct {
 	ID     int           `json:"id"`
