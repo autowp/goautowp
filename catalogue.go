@@ -4,14 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"sync"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
-	"github.com/gin-gonic/gin"
 )
 
 // Catalogue service
@@ -19,18 +17,6 @@ type Catalogue struct {
 	db          *sql.DB
 	enforcer    *casbin.Enforcer
 	oauthConfig OAuthConfig
-}
-
-// VehicleType VehicleType
-type VehicleType struct {
-	ID     int           `json:"id"`
-	Name   string        `json:"name"`
-	Childs []VehicleType `json:"childs"`
-}
-
-// VehicleTypeResult VehicleTypeResult
-type VehicleTypeResult struct {
-	Items []VehicleType `json:"items"`
 }
 
 // NewCatalogue constructor
@@ -49,7 +35,7 @@ func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, oauthConfig OAuthConfig
 	}, nil
 }
 
-func (s *Catalogue) getVehicleTypesTree(parentID int) ([]VehicleType, error) {
+func (s *Catalogue) getVehicleTypesTree(parentID int32) ([]*VehicleType, error) {
 
 	sqSelect := sq.Select("id, name").From("car_types").OrderBy("position")
 
@@ -65,18 +51,18 @@ func (s *Catalogue) getVehicleTypesTree(parentID int) ([]VehicleType, error) {
 		return nil, err
 	}
 
-	result := []VehicleType{}
+	result := []*VehicleType{}
 	for rows.Next() {
 		var r VehicleType
-		err = rows.Scan(&r.ID, &r.Name)
+		err = rows.Scan(&r.Id, &r.Name)
 		if err != nil {
 			return nil, err
 		}
-		r.Childs, err = s.getVehicleTypesTree(r.ID)
+		r.Childs, err = s.getVehicleTypesTree(r.Id)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, r)
+		result = append(result, &r)
 	}
 
 	return result, nil
@@ -217,30 +203,4 @@ func (s *Catalogue) getPerspectives(groupID *int32) ([]*Perspective, error) {
 	}
 
 	return perspectives, nil
-}
-
-// Routes adds routes
-func (s *Catalogue) Routes(apiGroup *gin.RouterGroup) {
-	apiGroup.GET("/vehicle-types", func(c *gin.Context) {
-
-		_, role, err := validateAuthorization(c, s.db, s.oauthConfig)
-		if err != nil {
-			c.String(http.StatusForbidden, err.Error())
-			return
-		}
-
-		if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
-			c.Status(http.StatusForbidden)
-			return
-		}
-
-		items, err := s.getVehicleTypesTree(0)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		c.JSON(http.StatusOK, VehicleTypeResult{items})
-	})
 }

@@ -18,7 +18,6 @@ import (
 
 // Container Container
 type Container struct {
-	acl                *ACL
 	autowpDB           *sql.DB
 	banRepository      *BanRepository
 	catalogue          *Catalogue
@@ -49,7 +48,6 @@ func NewContainer(config Config) *Container {
 }
 
 func (s *Container) Close() error {
-	s.acl = nil
 	s.banRepository = nil
 	s.catalogue = nil
 	s.comments = nil
@@ -75,29 +73,6 @@ func (s *Container) Close() error {
 	}
 
 	return nil
-}
-
-func (s *Container) GetACL() (*ACL, error) {
-	if s.acl == nil {
-		db, err := s.GetAutowpDB()
-		if err != nil {
-			return nil, err
-		}
-
-		enforcer, err := s.GetEnforcer()
-		if err != nil {
-			return nil, err
-		}
-
-		config, err := s.GetConfig()
-		if err != nil {
-			return nil, err
-		}
-
-		s.acl = NewACL(db, enforcer, config.OAuth)
-	}
-
-	return s.acl, nil
 }
 
 func (s *Container) GetAutowpDB() (*sql.DB, error) {
@@ -416,16 +391,6 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 	r.Use(gin.Recovery())
 	r.Use(sentrygin.New(sentrygin.Options{}))
 
-	acl, err := s.GetACL()
-	if err != nil {
-		return nil, err
-	}
-
-	catalogue, err := s.GetCatalogue()
-	if err != nil {
-		return nil, err
-	}
-
 	comments, err := s.GetComments()
 	if err != nil {
 		return nil, err
@@ -453,8 +418,6 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 
 	apiGroup := r.Group("/api")
 	{
-		acl.Routes(apiGroup)
-		catalogue.Routes(apiGroup)
 		comments.Routes(apiGroup)
 		contactsCtrl.SetupRouter(apiGroup)
 		feedbackCtrl.SetupRouter(apiGroup)
@@ -610,10 +573,19 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
-		s.grpcServer = &GRPCServer{
-			Catalogue:         catalogue,
-			ReCaptchaConfig:   config.Recaptcha,
-			FileStorageConfig: config.FileStorage,
+		db, err := s.GetAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		enforcer, err := s.GetEnforcer()
+		if err != nil {
+			return nil, err
+		}
+
+		s.grpcServer, err = NewGRPCServer(catalogue, config.Recaptcha, config.FileStorage, db, enforcer, config.OAuth)
+		if err != nil {
+			return nil, err
 		}
 	}
 

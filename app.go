@@ -5,10 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/autowp/goautowp/util"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -158,8 +162,31 @@ func validateAuthorization(c *gin.Context, db *sql.DB, config OAuthConfig) (int,
 	}
 	tokenString := authHeader[len(bearerSchema)+1:]
 
+	return validateTokenAuthorization(tokenString, db, config)
+}
+
+func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConfig) (int, string, error) {
+	const bearerSchema = "Bearer"
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return 0, "", status.Errorf(codes.InvalidArgument, "missing metadata")
+	}
+
+	lines := md["authorization"]
+
+	if len(lines) < 1 {
+		return 0, "", nil
+	}
+
+	tokenString := strings.TrimPrefix(lines[0], bearerSchema+" ")
+
+	return validateTokenAuthorization(tokenString, db, config)
+}
+
+func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConfig) (int, string, error) {
 	if len(tokenString) <= 0 {
-		return 0, "", fmt.Errorf("authorization header is invalid")
+		return 0, "", fmt.Errorf("authorization token is invalid")
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {

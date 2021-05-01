@@ -19,11 +19,13 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AutowpClient interface {
-	GetSpecs(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SpecsItems, error)
+	AclEnforce(ctx context.Context, in *AclEnforceRequest, opts ...grpc.CallOption) (*AclEnforceResult, error)
+	GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error)
 	GetPerspectives(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivesItems, error)
 	GetPerspectivePages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ReCaptchaConfig, error)
-	GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error)
+	GetSpecs(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SpecsItems, error)
+	GetVehicleTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VehicleTypeItems, error)
 }
 
 type autowpClient struct {
@@ -34,9 +36,18 @@ func NewAutowpClient(cc grpc.ClientConnInterface) AutowpClient {
 	return &autowpClient{cc}
 }
 
-func (c *autowpClient) GetSpecs(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SpecsItems, error) {
-	out := new(SpecsItems)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetSpecs", in, out, opts...)
+func (c *autowpClient) AclEnforce(ctx context.Context, in *AclEnforceRequest, opts ...grpc.CallOption) (*AclEnforceResult, error) {
+	out := new(AclEnforceResult)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/AclEnforce", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *autowpClient) GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error) {
+	out := new(BrandIcons)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetBrandIcons", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +81,18 @@ func (c *autowpClient) GetReCaptchaConfig(ctx context.Context, in *emptypb.Empty
 	return out, nil
 }
 
-func (c *autowpClient) GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error) {
-	out := new(BrandIcons)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetBrandIcons", in, out, opts...)
+func (c *autowpClient) GetSpecs(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SpecsItems, error) {
+	out := new(SpecsItems)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetSpecs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *autowpClient) GetVehicleTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VehicleTypeItems, error) {
+	out := new(VehicleTypeItems)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetVehicleTypes", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +103,13 @@ func (c *autowpClient) GetBrandIcons(ctx context.Context, in *emptypb.Empty, opt
 // All implementations must embed UnimplementedAutowpServer
 // for forward compatibility
 type AutowpServer interface {
-	GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error)
+	AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error)
+	GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error)
 	GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error)
 	GetPerspectivePages(context.Context, *emptypb.Empty) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error)
-	GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error)
+	GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error)
+	GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error)
 	mustEmbedUnimplementedAutowpServer()
 }
 
@@ -95,8 +117,11 @@ type AutowpServer interface {
 type UnimplementedAutowpServer struct {
 }
 
-func (UnimplementedAutowpServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSpecs not implemented")
+func (UnimplementedAutowpServer) AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AclEnforce not implemented")
+}
+func (UnimplementedAutowpServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBrandIcons not implemented")
 }
 func (UnimplementedAutowpServer) GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPerspectives not implemented")
@@ -107,8 +132,11 @@ func (UnimplementedAutowpServer) GetPerspectivePages(context.Context, *emptypb.E
 func (UnimplementedAutowpServer) GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReCaptchaConfig not implemented")
 }
-func (UnimplementedAutowpServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetBrandIcons not implemented")
+func (UnimplementedAutowpServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSpecs not implemented")
+}
+func (UnimplementedAutowpServer) GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVehicleTypes not implemented")
 }
 func (UnimplementedAutowpServer) mustEmbedUnimplementedAutowpServer() {}
 
@@ -123,20 +151,38 @@ func RegisterAutowpServer(s grpc.ServiceRegistrar, srv AutowpServer) {
 	s.RegisterService(&Autowp_ServiceDesc, srv)
 }
 
-func _Autowp_GetSpecs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Autowp_AclEnforce_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AclEnforceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).AclEnforce(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Autowp/AclEnforce",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).AclEnforce(ctx, req.(*AclEnforceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Autowp_GetBrandIcons_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AutowpServer).GetSpecs(ctx, in)
+		return srv.(AutowpServer).GetBrandIcons(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetSpecs",
+		FullMethod: "/goautowp.Autowp/GetBrandIcons",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetSpecs(ctx, req.(*emptypb.Empty))
+		return srv.(AutowpServer).GetBrandIcons(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -195,20 +241,38 @@ func _Autowp_GetReCaptchaConfig_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autowp_GetBrandIcons_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Autowp_GetSpecs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AutowpServer).GetBrandIcons(ctx, in)
+		return srv.(AutowpServer).GetSpecs(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetBrandIcons",
+		FullMethod: "/goautowp.Autowp/GetSpecs",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetBrandIcons(ctx, req.(*emptypb.Empty))
+		return srv.(AutowpServer).GetSpecs(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Autowp_GetVehicleTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).GetVehicleTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Autowp/GetVehicleTypes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).GetVehicleTypes(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -221,8 +285,12 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AutowpServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetSpecs",
-			Handler:    _Autowp_GetSpecs_Handler,
+			MethodName: "AclEnforce",
+			Handler:    _Autowp_AclEnforce_Handler,
+		},
+		{
+			MethodName: "GetBrandIcons",
+			Handler:    _Autowp_GetBrandIcons_Handler,
 		},
 		{
 			MethodName: "GetPerspectives",
@@ -237,8 +305,12 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Autowp_GetReCaptchaConfig_Handler,
 		},
 		{
-			MethodName: "GetBrandIcons",
-			Handler:    _Autowp_GetBrandIcons_Handler,
+			MethodName: "GetSpecs",
+			Handler:    _Autowp_GetSpecs_Handler,
+		},
+		{
+			MethodName: "GetVehicleTypes",
+			Handler:    _Autowp_GetVehicleTypes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

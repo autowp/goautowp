@@ -6,11 +6,13 @@ import "google/protobuf/empty.proto";
 option go_package = "github.com/autowp/goautowp";
 
 service Autowp {
-  rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
+  rpc AclEnforce(AclEnforceRequest) returns (AclEnforceResult) {}
+  rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
   rpc GetPerspectives(google.protobuf.Empty) returns (PerspectivesItems) {}
   rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
   rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
-  rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
+  rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
+  rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
 }
 
 message Spec {
@@ -53,7 +55,26 @@ message ReCaptchaConfig {
   string public_key = 1;
 }
 
-message BrandIcons{
+message BrandIcons {
   string image = 1;
   string css = 2;
+}
+
+message AclEnforceRequest {
+  string resource = 1;
+  string privilege = 2;
+}
+
+message AclEnforceResult {
+  bool result = 1;
+}
+
+message VehicleType {
+  int32 id = 1;
+  string name = 2;
+  repeated VehicleType childs = 4;
+}
+
+message VehicleTypeItems {
+  repeated VehicleType items = 1;
 }
