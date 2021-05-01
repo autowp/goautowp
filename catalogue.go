@@ -204,3 +204,35 @@ func (s *Catalogue) getPerspectives(groupID *int32) ([]*Perspective, error) {
 
 	return perspectives, nil
 }
+
+func (s *Catalogue) getBrandVehicleTypes(brandID int32) ([]*BrandVehicleType, error) {
+	sqSelect := sq.
+		Select("car_types.id, car_types.name, car_types.catname, COUNT(DISTINCT item.id)").
+		From("car_types").
+		Join("vehicle_vehicle_type ON car_types.id = vehicle_vehicle_type.vehicle_type_id").
+		Join("item ON vehicle_vehicle_type.vehicle_id = item.id").
+		Join("item_parent_cache ON item.id = item_parent_cache.item_id").
+		Where(sq.Eq{"item_parent_cache.parent_id": brandID}).
+		Where("(item.begin_year or item.begin_model_year)").
+		Where("not item.is_group").
+		GroupBy("car_types.id").
+		OrderBy("car_types.position")
+
+	rows, err := sqSelect.RunWith(s.db).Query()
+	defer util.Close(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []*BrandVehicleType{}
+	for rows.Next() {
+		var r BrandVehicleType
+		err = rows.Scan(&r.Id, &r.Name, &r.Catname, &r.ItemsCount)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, &r)
+	}
+
+	return result, nil
+}

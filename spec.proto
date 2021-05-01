@@ -8,6 +8,7 @@ option go_package = "github.com/autowp/goautowp";
 service Autowp {
   rpc AclEnforce(AclEnforceRequest) returns (AclEnforceResult) {}
   rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
+  rpc GetBrandVehicleTypes(GetBrandVehicleTypesRequest) returns (BrandVehicleTypeItems) {}
   rpc GetPerspectives(google.protobuf.Empty) returns (PerspectivesItems) {}
   rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
   rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
@@ -77,4 +78,19 @@ message VehicleType {
 
 message VehicleTypeItems {
   repeated VehicleType items = 1;
+}
+
+message GetBrandVehicleTypesRequest {
+  int32 brand_id = 1;
+}
+
+message BrandVehicleTypeItems {
+  repeated BrandVehicleType items = 1;
+}
+
+message BrandVehicleType {
+  int32 id = 1;
+  string name = 2;
+  string catname = 3;
+  string items_count = 4;
 }

@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AutowpClient interface {
 	AclEnforce(ctx context.Context, in *AclEnforceRequest, opts ...grpc.CallOption) (*AclEnforceResult, error)
 	GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error)
+	GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error)
 	GetPerspectives(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivesItems, error)
 	GetPerspectivePages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ReCaptchaConfig, error)
@@ -48,6 +49,15 @@ func (c *autowpClient) AclEnforce(ctx context.Context, in *AclEnforceRequest, op
 func (c *autowpClient) GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error) {
 	out := new(BrandIcons)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetBrandIcons", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *autowpClient) GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error) {
+	out := new(BrandVehicleTypeItems)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetBrandVehicleTypes", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +115,7 @@ func (c *autowpClient) GetVehicleTypes(ctx context.Context, in *emptypb.Empty, o
 type AutowpServer interface {
 	AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error)
 	GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error)
+	GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error)
 	GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error)
 	GetPerspectivePages(context.Context, *emptypb.Empty) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error)
@@ -122,6 +133,9 @@ func (UnimplementedAutowpServer) AclEnforce(context.Context, *AclEnforceRequest)
 }
 func (UnimplementedAutowpServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrandIcons not implemented")
+}
+func (UnimplementedAutowpServer) GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBrandVehicleTypes not implemented")
 }
 func (UnimplementedAutowpServer) GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPerspectives not implemented")
@@ -183,6 +197,24 @@ func _Autowp_GetBrandIcons_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutowpServer).GetBrandIcons(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Autowp_GetBrandVehicleTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBrandVehicleTypesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).GetBrandVehicleTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Autowp/GetBrandVehicleTypes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).GetBrandVehicleTypes(ctx, req.(*GetBrandVehicleTypesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -291,6 +323,10 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBrandIcons",
 			Handler:    _Autowp_GetBrandIcons_Handler,
+		},
+		{
+			MethodName: "GetBrandVehicleTypes",
+			Handler:    _Autowp_GetBrandVehicleTypes_Handler,
 		},
 		{
 			MethodName: "GetPerspectives",

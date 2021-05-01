@@ -109,7 +109,7 @@ func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*Ac
 	}, nil
 }
 
-func (s *GRPCServer) GetVehicleTypes(ctx context.Context, in *emptypb.Empty) (*VehicleTypeItems, error) {
+func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*VehicleTypeItems, error) {
 	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
@@ -126,6 +126,18 @@ func (s *GRPCServer) GetVehicleTypes(ctx context.Context, in *emptypb.Empty) (*V
 	}
 
 	return &VehicleTypeItems{
+		Items: items,
+	}, nil
+}
+
+func (s *GRPCServer) GetBrandVehicleTypes(_ context.Context, in *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error) {
+	items, err := s.catalogue.getBrandVehicleTypes(in.BrandId)
+
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &BrandVehicleTypeItems{
 		Items: items,
 	}, nil
 }
