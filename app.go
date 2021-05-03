@@ -154,17 +154,6 @@ func applyAutowpMigrations(config MigrationsConfig) error {
 	return nil
 }
 
-func validateAuthorization(c *gin.Context, db *sql.DB, config OAuthConfig) (int, string, error) {
-	const bearerSchema = "Bearer"
-	authHeader := c.GetHeader("Authorization")
-	if len(authHeader) <= len(bearerSchema) {
-		return 0, "", fmt.Errorf("authorization header is required")
-	}
-	tokenString := authHeader[len(bearerSchema)+1:]
-
-	return validateTokenAuthorization(tokenString, db, config)
-}
-
 func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConfig) (int, string, error) {
 	const bearerSchema = "Bearer"
 

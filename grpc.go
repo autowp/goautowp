@@ -463,6 +463,9 @@ func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRe
 		Captcha: in.Captcha,
 		IP:      remoteAddr,
 	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
 
 	if fv != nil {
 		st := status.New(codes.InvalidArgument, "invalid request")
