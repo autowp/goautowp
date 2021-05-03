@@ -18,7 +18,7 @@ func feedbackTestRequest(t *testing.T, req *http.Request) *httptest.ResponseReco
 
 	config.Feedback.Captcha = false
 
-	ctrl, err := NewFeedbackController(config.Feedback, config.Recaptcha, config.SMTP)
+	ctrl, err := NewFeedback(config.Feedback, config.Recaptcha, config.SMTP)
 	require.NoError(t, err)
 
 	apiGroup := router.Group("/api")

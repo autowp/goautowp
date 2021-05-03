@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"net"
 )
@@ -28,7 +29,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 		}
 
 		if len(host) > 0 {
-			result.Hostname = &host[0]
+			result.Hostname = host[0]
 		}
 	}
 
@@ -56,10 +57,10 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 			}
 
 			if ban != nil {
-				result.Blacklist = &APIIPBlacklist{
-					Until:    ban.Until,
-					ByUserID: ban.ByUserID,
-					User:     nil,
+				result.Blacklist = &APIBanItem{
+					Until:    timestamppb.New(ban.Until),
+					ByUserId: int32(ban.ByUserID),
+					ByUser:   nil,
 					Reason:   ban.Reason,
 				}
 
@@ -79,7 +80,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 						return nil, err
 					}
 
-					result.Blacklist.User, err = userExtractor.Extract(user, map[string]bool{})
+					result.Blacklist.ByUser, err = userExtractor.Extract(user, map[string]bool{})
 					if err != nil {
 						return nil, err
 					}

@@ -2,18 +2,46 @@ syntax = "proto3";
 package goautowp;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/rpc/status.proto";
+import "google/protobuf/any.proto";
+import "google/rpc/error_details.proto";
 
 option go_package = "github.com/autowp/goautowp";
 
 service Autowp {
   rpc AclEnforce(AclEnforceRequest) returns (AclEnforceResult) {}
+  rpc AddToTrafficBlacklist(AddToTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
+  rpc AddToTrafficWhitelist(AddToTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
+  rpc CreateContact(CreateContactRequest) returns (google.protobuf.Empty) {}
+  rpc CreateFeedback(APICreateFeedbackRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteContact(DeleteContactRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteFromTrafficBlacklist(DeleteFromTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteFromTrafficWhitelist(DeleteFromTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
   rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
   rpc GetBrandVehicleTypes(GetBrandVehicleTypesRequest) returns (BrandVehicleTypeItems) {}
+  rpc GetCommentVotes(GetCommentVotesRequest) returns (CommentVoteItems) {}
+  rpc GetContact(GetContactRequest) returns (Contact) {}
+  rpc GetContacts(GetContactsRequest) returns (ContactItems) {}
+  rpc GetIP(APIGetIPRequest) returns (APIIP) {}
   rpc GetPerspectives(google.protobuf.Empty) returns (PerspectivesItems) {}
   rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
   rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
   rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
+  rpc GetTrafficTop(google.protobuf.Empty) returns (APITrafficTopResponse) {}
+  rpc GetTrafficWhitelist(google.protobuf.Empty) returns (APITrafficWhitelistItems) {}
   rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
+}
+
+message ErrorDetails {
+  google.rpc.RetryInfo retryInfo = 1;
+  google.rpc.DebugInfo debugInfo = 2;
+  google.rpc.QuotaFailure quotaFailure = 3;
+  google.rpc.PreconditionFailure preconditionFailure = 4;
+  google.rpc.BadRequest badRequest = 5;
+  google.rpc.RequestInfo requestInfo = 6;
+  google.rpc.Help help = 7;
+  google.rpc.LocalizedMessage localizedMessage = 8;
 }
 
 message Spec {
@@ -93,4 +121,130 @@ message BrandVehicleType {
   string name = 2;
   string catname = 3;
   string items_count = 4;
+}
+
+message CreateContactRequest {
+  int32 user_id = 1;
+}
+
+message DeleteContactRequest {
+  int32 user_id = 1;
+}
+
+message GetContactRequest {
+  int32 user_id = 1;
+}
+
+message User {
+  int32 id = 1;
+  string name = 2;
+  bool deleted = 3;
+  bool long_away = 4;
+  bool green = 5;
+  repeated string route = 6;
+  string identity = 7;
+  string avatar = 8;
+  string gravatar = 9;
+  google.protobuf.Timestamp last_online = 10;
+}
+
+message Contact {
+  int32 contact_user_id = 1;
+  User user = 2;
+}
+
+message ContactItems {
+  repeated Contact items = 1;
+}
+
+message GetContactsRequest {
+  repeated string fields = 1;
+}
+
+message GetCommentVotesRequest {
+  int32 comment_id = 1;
+}
+
+message CommentVoteItems {
+  repeated CommentVote items  = 1;
+}
+
+message CommentVote {
+  enum VoteValue {
+    UNKNOWN = 0;
+    POSITIVE = -1;
+    NEGATIVE = 1;
+  }
+  VoteValue value = 1;
+  User user = 2;
+}
+
+message APIBanItem {
+  google.protobuf.Timestamp until = 1;
+  int32 by_user_id = 2;
+  User by_user = 3;
+  string reason = 4;
+}
+
+message APITrafficTopItem {
+  string ip = 1;
+  int32 count = 2;
+  APIBanItem ban = 3;
+  bool in_whitelist = 4;
+  string whois_url = 5;
+}
+
+message APITrafficTopResponse {
+  repeated APITrafficTopItem items = 1;
+}
+
+message APIGetIPRequest {
+  string ip = 1;
+  repeated string fields = 2;
+}
+
+message APIIPRights {
+  bool add_to_blacklist = 1;
+  bool remove_from_blacklist = 2;
+}
+
+message APIIP {
+  string address = 1;
+  string hostname = 2;
+  APIBanItem blacklist = 3;
+  APIIPRights rights = 4;
+}
+
+message APICreateFeedbackRequest {
+  string name = 1;
+  string email = 2;
+  string message = 3;
+  string captcha = 4;
+}
+
+message DeleteFromTrafficWhitelistRequest {
+  string ip = 1;
+}
+
+message DeleteFromTrafficBlacklistRequest {
+  string ip = 1;
+}
+
+message AddToTrafficBlacklistRequest {
+  string ip = 1;
+  int32 period = 2;
+  string reason = 3;
+}
+
+message AddToTrafficWhitelistRequest {
+  string ip = 1;
+}
+
+message APITrafficWhitelistItem {
+  string ip = 1;
+  string description = 2;
+}
+
+message APITrafficWhitelistItems {
+  repeated APITrafficWhitelistItem items = 1;
 }

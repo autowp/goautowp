@@ -3,9 +3,6 @@ package goautowp
 import (
 	"database/sql"
 	"github.com/autowp/goautowp/util"
-	"github.com/gin-gonic/gin"
-	"net/http"
-	"strconv"
 )
 
 // Comments service
@@ -62,55 +59,4 @@ func (s *Comments) getVotes(id int) (*getVotesResult, error) {
 		PositiveVotes: positiveVotes,
 		NegativeVotes: negativeVotes,
 	}, nil
-}
-
-// Routes adds routes
-func (s *Comments) Routes(apiGroup *gin.RouterGroup) {
-	apiGroup.GET("/comment/votes", func(c *gin.Context) {
-
-		idStr := c.Query("id")
-
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			c.String(http.StatusBadRequest, err.Error())
-			return
-		}
-
-		votes, err := s.getVotes(id)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		if votes == nil {
-			c.Status(http.StatusNotFound)
-			return
-		}
-
-		positive := make([]*APIUser, 0)
-		for _, user := range votes.PositiveVotes {
-			extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			positive = append(positive, extracted)
-		}
-
-		negative := make([]*APIUser, 0)
-		for _, user := range votes.NegativeVotes {
-			extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			negative = append(negative, extracted)
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"positive": positive,
-			"negative": negative,
-		})
-	})
 }

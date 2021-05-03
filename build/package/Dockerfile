@@ -17,8 +17,7 @@ RUN adduser \
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
 
 # Populate the module cache based on the go.{mod,sum} files.
-COPY go.mod .
-COPY go.sum .
+COPY go.mod go.sum ./
 RUN go mod download && \
     go mod verify
 

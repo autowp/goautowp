@@ -3,6 +3,7 @@ package goautowp
 import (
 	"crypto/md5"
 	"fmt"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"net/url"
 	"time"
 )
@@ -17,7 +18,7 @@ func NewUserExtractor(container *Container) *UserExtractor {
 	}
 }
 
-func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, error) {
+func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*User, error) {
 	longAway := true
 	if row.LastOnline != nil {
 		date := time.Now().AddDate(0, -6, 0)
@@ -36,14 +37,19 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, 
 		route = []string{"/users", *row.Identity}
 	}
 
-	user := APIUser{
-		ID:       row.ID,
+	identity := ""
+	if row.Identity != nil {
+		identity = *row.Identity
+	}
+
+	user := User{
+		Id:       int32(row.ID),
 		Name:     row.Name,
 		Deleted:  row.Deleted,
 		LongAway: longAway,
 		Green:    isGreen,
 		Route:    route,
-		Identity: row.Identity,
+		Identity: identity,
 	}
 
 	for field := range fields {
@@ -57,10 +63,12 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, 
 					md5.Sum([]byte(*row.EMail)),
 					url.PathEscape("https://www.autowp.ru/_.gif"),
 				)
-				user.Gravatar = &str
+				user.Gravatar = str
 			}
 		case "last_online":
-			user.LastOnline = row.LastOnline
+			if row.LastOnline != nil {
+				user.LastOnline = timestamppb.New(*row.LastOnline)
+			}
 		}
 	}
 

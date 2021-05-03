@@ -23,13 +23,11 @@ type Container struct {
 	catalogue          *Catalogue
 	comments           *Comments
 	config             Config
-	contactsController *ContactsController
 	contactsRepository *ContactsRepository
 	duplicateFinder    *DuplicateFinder
 	enforcer           *casbin.Enforcer
-	feedbackController *FeedbackController
+	feedback           *Feedback
 	grpcServer         *GRPCServer
-	ipController       *IPController
 	location           *time.Location
 	privateHttpServer  *http.Server
 	privateRouter      *gin.Engine
@@ -51,12 +49,11 @@ func (s *Container) Close() error {
 	s.banRepository = nil
 	s.catalogue = nil
 	s.comments = nil
-	s.contactsController = nil
 	s.contactsRepository = nil
 	s.duplicateFinder = nil
 	s.traffic = nil
 	s.userRepository = nil
-	s.feedbackController = nil
+	s.feedback = nil
 
 	if s.autowpDB != nil {
 		err := s.autowpDB.Close()
@@ -176,42 +173,6 @@ func (s *Container) GetConfig() (Config, error) {
 	return s.config, nil
 }
 
-func (s *Container) GetContactsController() (*ContactsController, error) {
-	if s.contactsController == nil {
-		repository, err := s.GetContactsRepository()
-		if err != nil {
-			return nil, err
-		}
-
-		userRepository, err := s.GetUserRepository()
-		if err != nil {
-			return nil, err
-		}
-
-		userExtractor, err := s.GetUserExtractor()
-		if err != nil {
-			return nil, err
-		}
-
-		db, err := s.GetAutowpDB()
-		if err != nil {
-			return nil, err
-		}
-
-		config, err := s.GetConfig()
-		if err != nil {
-			return nil, err
-		}
-
-		s.contactsController, err = NewContactsController(repository, userRepository, userExtractor, db, config.OAuth)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return s.contactsController, nil
-}
-
 func (s *Container) GetContactsRepository() (*ContactsRepository, error) {
 	if s.contactsRepository == nil {
 		db, err := s.GetAutowpDB()
@@ -252,58 +213,21 @@ func (s *Container) GetEnforcer() (*casbin.Enforcer, error) {
 	return s.enforcer, nil
 }
 
-func (s *Container) GetFeedbackController() (*FeedbackController, error) {
-	if s.feedbackController == nil {
+func (s *Container) GetFeedback() (*Feedback, error) {
+	if s.feedback == nil {
 
 		config, err := s.GetConfig()
 		if err != nil {
 			return nil, err
 		}
 
-		s.feedbackController, err = NewFeedbackController(config.Feedback, config.Recaptcha, config.SMTP)
+		s.feedback, err = NewFeedback(config.Feedback, config.Recaptcha, config.SMTP)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return s.feedbackController, nil
-}
-
-func (s *Container) GetIPController() (*IPController, error) {
-	if s.ipController == nil {
-
-		autowpDB, err := s.GetAutowpDB()
-		if err != nil {
-			return nil, err
-		}
-
-		enforcer, err := s.GetEnforcer()
-		if err != nil {
-			return nil, err
-		}
-
-		ipExtractor, err := s.GetIPExtractor()
-		if err != nil {
-			return nil, err
-		}
-
-		banRepository, err := s.GetBanRepository()
-		if err != nil {
-			return nil, err
-		}
-
-		config, err := s.GetConfig()
-		if err != nil {
-			return nil, err
-		}
-
-		s.ipController, err = NewIPController(autowpDB, enforcer, ipExtractor, banRepository, config.OAuth)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return s.ipController, nil
+	return s.feedback, nil
 }
 
 func (s *Container) GetIPExtractor() (*IPExtractor, error) {
@@ -387,44 +311,6 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 		return s.publicRouter, nil
 	}
 
-	r := gin.New()
-	r.Use(gin.Recovery())
-	r.Use(sentrygin.New(sentrygin.Options{}))
-
-	comments, err := s.GetComments()
-	if err != nil {
-		return nil, err
-	}
-
-	contactsCtrl, err := s.GetContactsController()
-	if err != nil {
-		return nil, err
-	}
-
-	feedbackCtrl, err := s.GetFeedbackController()
-	if err != nil {
-		return nil, err
-	}
-
-	ipCtrl, err := s.GetIPController()
-	if err != nil {
-		return nil, err
-	}
-
-	traffic, err := s.GetTraffic()
-	if err != nil {
-		return nil, err
-	}
-
-	apiGroup := r.Group("/api")
-	{
-		comments.Routes(apiGroup)
-		contactsCtrl.SetupRouter(apiGroup)
-		feedbackCtrl.SetupRouter(apiGroup)
-		ipCtrl.SetupRouter(apiGroup)
-		traffic.SetupPublicRouter(apiGroup)
-	}
-
 	srv, err := s.GetGRPCServer()
 	if err != nil {
 		return nil, err
@@ -435,14 +321,7 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 
 	wrappedGrpc := grpcweb.WrapServer(grpcServer)
 
-	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
-		if wrappedGrpc.IsGrpcWebRequest(req) {
-			wrappedGrpc.ServeHTTP(resp, req)
-			return
-		}
-		// Fall back to other servers.
-		r.ServeHTTP(resp, req)
-	}
+	s.publicRouter = wrappedGrpc.ServeHTTP
 
 	return s.publicRouter, nil
 }
@@ -583,7 +462,56 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
-		s.grpcServer, err = NewGRPCServer(catalogue, config.Recaptcha, config.FileStorage, db, enforcer, config.OAuth)
+		contactsRepository, err := s.GetContactsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		userRepository, err := s.GetUserRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		userExtractor, err := s.GetUserExtractor()
+		if err != nil {
+			return nil, err
+		}
+
+		comments, err := s.GetComments()
+		if err != nil {
+			return nil, err
+		}
+
+		traffic, err := s.GetTraffic()
+		if err != nil {
+			return nil, err
+		}
+
+		ipExtractor, err := s.GetIPExtractor()
+		if err != nil {
+			return nil, err
+		}
+
+		feedback, err := s.GetFeedback()
+		if err != nil {
+			return nil, err
+		}
+
+		s.grpcServer, err = NewGRPCServer(
+			catalogue,
+			config.Recaptcha,
+			config.FileStorage,
+			db,
+			enforcer,
+			config.OAuth,
+			contactsRepository,
+			userRepository,
+			userExtractor,
+			comments,
+			traffic,
+			ipExtractor,
+			feedback,
+		)
 		if err != nil {
 			return nil, err
 		}
