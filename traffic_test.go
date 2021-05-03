@@ -1,13 +1,10 @@
 package goautowp
 
 import (
-	"bytes"
-	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"io/ioutil"
+	"context"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"net"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -15,7 +12,6 @@ import (
 )
 
 const adminAccessToken = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMyJ9.tI-wPZ4BSqmpsZN0-SgWXaokzvB8T-uYWLR9OQurxPFNoPC56U3op1gSE5n2H02GYfDGig0Eyp6U0NbDpsQaAg"
-const adminAuthorizationHeader = "Bearer " + adminAccessToken
 
 func createTrafficService(t *testing.T) *Traffic {
 	config := LoadConfig()
@@ -140,52 +136,39 @@ func TestWhitelistedNotBanned(t *testing.T) {
 }
 
 func TestHttpBanPost(t *testing.T) {
-	s := createTrafficService(t)
-
-	err := s.Ban.Remove(net.IPv4(127, 0, 0, 1))
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	r := gin.New()
-	apiGroup := r.Group("/api")
-	s.SetupPublicRouter(apiGroup)
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + adminAccessToken}))
 
-	w := httptest.NewRecorder()
-	b, err := json.Marshal(map[string]interface{}{
-		"ip":     "127.0.0.1",
-		"period": 3,
-		"reason": "Test",
+	_, err = srv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
+	require.NoError(t, err)
+
+	_, err = srv.AddToTrafficBlacklist(ctx, &AddToTrafficBlacklistRequest{
+		Ip:     "127.0.0.1",
+		Period: 3,
+		Reason: "Test",
 	})
 	require.NoError(t, err)
-	req, err := http.NewRequest("POST", "/api/traffic/blacklist", bytes.NewBuffer(b))
+
+	ip, err := srv.GetIP(ctx, &APIGetIPRequest{
+		Ip:     "127.0.0.1",
+		Fields: []string{"blacklist"},
+	})
 	require.NoError(t, err)
-	req.Header.Add("Authorization", adminAuthorizationHeader)
-	r.ServeHTTP(w, req)
+	require.NotNil(t, ip.Blacklist)
 
-	require.Equal(t, http.StatusCreated, w.Code)
-
-	exists, err := s.Ban.Exists(net.IPv4(127, 0, 0, 1))
+	_, err = srv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
 	require.NoError(t, err)
-	require.True(t, exists)
 
-	w = httptest.NewRecorder()
-	req, err = http.NewRequest("DELETE", "/api/traffic/blacklist/127.0.0.1", nil)
+	ip, err = srv.GetIP(ctx, &APIGetIPRequest{Ip: "127.0.0.1"})
 	require.NoError(t, err)
-	req.Header.Add("Authorization", adminAuthorizationHeader)
-	r.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusNoContent, w.Code)
-
-	exists, err = s.Ban.Exists(net.IPv4(127, 0, 0, 1))
-	require.NoError(t, err)
-	require.False(t, exists)
+	require.Nil(t, ip.Blacklist)
 }
 
 func TestTop(t *testing.T) {
-	s := createTrafficService(t)
 
-	r := gin.New()
-	apiGroup := r.Group("/api")
-	s.SetupPublicRouter(apiGroup)
+	s := createTrafficService(t)
 
 	err := s.Ban.Clear()
 	require.NoError(t, err)
@@ -202,14 +185,15 @@ func TestTop(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	w := httptest.NewRecorder()
-	req, err := http.NewRequest("GET", "/api/traffic", nil)
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
-	r.ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusOK, w.Code)
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + adminAccessToken}))
 
-	body, err := ioutil.ReadAll(w.Body)
+	top, err := srv.GetTrafficTop(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
-	require.Equal(t, `{"items":[{"ip":"::1","count":10,"ban":null,"in_whitelist":false,"whois_url":"http://nic.ru/whois/?query=%3A%3A1"},{"ip":"192.168.0.1","count":1,"ban":null,"in_whitelist":false,"whois_url":"http://nic.ru/whois/?query=192.168.0.1"}]}`, string(body))
+	require.Equal(t, top.Items[0].Ip, "::1")
+	require.EqualValues(t, top.Items[0].Count, 10)
+	require.Equal(t, top.Items[0].WhoisUrl, "https://nic.ru/whois/?query=%3A%3A1")
+	// require.Equal(t, `{"items":[{"ip":"::1","count":10,"ban":null,"in_whitelist":false,"whois_url":"http://nic.ru/whois/?query=%3A%3A1"},{"ip":"192.168.0.1","count":1,"ban":null,"in_whitelist":false,"whois_url":"http://nic.ru/whois/?query=192.168.0.1"}]}`, string(body))
 }

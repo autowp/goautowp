@@ -36,11 +36,10 @@ require (
 	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.6.1
 	github.com/ugorji/go v1.2.5 // indirect
-	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
-	golang.org/x/net v0.0.0-20210502030024-e5908800b52b // indirect
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20210502180810-71e4cd670f79 // indirect
-	google.golang.org/genproto v0.0.0-20210429181445-86c259c2b4ab
+	golang.org/x/crypto v0.0.0-20210503195802-e9a32991a82e // indirect
+	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420 // indirect
+	golang.org/x/sys v0.0.0-20210503173754-0981d6026fa6 // indirect
+	google.golang.org/genproto v0.0.0-20210503173045-b96a97608f20
 	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect

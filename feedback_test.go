@@ -1,106 +1,91 @@
 package goautowp
 
 import (
-	"github.com/gin-gonic/gin"
+	"context"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"net/http/httptest"
-	"strings"
+	"google.golang.org/grpc/peer"
+	"net"
 	"testing"
 )
 
-func feedbackTestRequest(t *testing.T, req *http.Request) *httptest.ResponseRecorder {
-	config := LoadConfig()
-
-	// container := NewContainer(config)
-
-	router := gin.New()
-
-	config.Feedback.Captcha = false
-
-	ctrl, err := NewFeedback(config.Feedback, config.Recaptcha, config.SMTP)
-	require.NoError(t, err)
-
-	apiGroup := router.Group("/api")
-	ctrl.SetupRouter(apiGroup)
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	return w
-}
-
 func TestFeedbackNoBody(t *testing.T) {
-	// empty request
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback", nil)
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	w := feedbackTestRequest(t, req)
-	require.Equal(t, http.StatusBadRequest, w.Code)
-}
+	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
 
-func TestFeedbackEmptyBody(t *testing.T) {
-	// empty request
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback", strings.NewReader(
-		`{}`,
-	))
-	require.NoError(t, err)
-
-	w := feedbackTestRequest(t, req)
-	require.Equal(t, http.StatusBadRequest, w.Code)
+	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{})
+	require.Error(t, err)
 }
 
 func TestFeedbackEmptyValues(t *testing.T) {
-	// empty request
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback", strings.NewReader(
-		`{"name":"","email":"","message":""}`,
-	))
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	w := feedbackTestRequest(t, req)
-	require.Equal(t, http.StatusBadRequest, w.Code)
+	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+
+	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
+		Name:    "",
+		Email:   "",
+		Message: "",
+	})
+	require.Error(t, err)
 }
 
 func TestFeedbackEmptyName(t *testing.T) {
-	// empty request
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback", strings.NewReader(
-		`{"name":"","email":"test@example.com","message":"message"}`,
-	))
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	w := feedbackTestRequest(t, req)
-	require.Equal(t, http.StatusBadRequest, w.Code)
+	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+
+	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
+		Name:    "",
+		Email:   "test@example.com",
+		Message: "message",
+	})
+	require.Error(t, err)
 }
 
 func TestFeedbackEmptyEmail(t *testing.T) {
-	// empty request
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback", strings.NewReader(
-		`{"name":"user","email":"","message":"message"}`,
-	))
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	w := feedbackTestRequest(t, req)
-	require.Equal(t, http.StatusBadRequest, w.Code)
+	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+
+	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
+		Name:    "",
+		Email:   "",
+		Message: "message",
+	})
+	require.Error(t, err)
 }
 
 func TestFeedbackEmptyMessage(t *testing.T) {
-	// empty request
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback", strings.NewReader(
-		`{"name":"user","email":"test@example.com","message":""}`,
-	))
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	w := feedbackTestRequest(t, req)
-	require.Equal(t, http.StatusBadRequest, w.Code)
+	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+
+	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
+		Name:    "user",
+		Email:   "test@example.com",
+		Message: "",
+	})
+	require.Error(t, err)
 }
 
 func TestFeedbackMessage(t *testing.T) {
-	// empty request
-	req, err := http.NewRequest(http.MethodPost, "/api/feedback", strings.NewReader(
-		`{"name":"user","email":"test@example.com","message":"message"}`,
-	))
+	config := LoadConfig()
+	config.Feedback.Captcha = false
+	srv, err := NewContainer(config).GetGRPCServer()
 	require.NoError(t, err)
 
-	w := feedbackTestRequest(t, req)
-	require.Equal(t, http.StatusInternalServerError, w.Code)
+	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+
+	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
+		Name:    "user",
+		Email:   "test@example.com",
+		Message: "message",
+	})
+	require.NoError(t, err)
 }

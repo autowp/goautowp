@@ -1,101 +1,69 @@
 package goautowp
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
+	"context"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func testRequest(t *testing.T, req *http.Request) *httptest.ResponseRecorder {
-	config := LoadConfig()
-
-	container := NewContainer(config)
-
-	router, err := container.GetPublicRouter()
-	require.NoError(t, err)
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	return w
-}
-
-func testRequestURL(t *testing.T, url string) *httptest.ResponseRecorder {
-	req, err := http.NewRequest("GET", url, nil)
-	require.NoError(t, err)
-
-	return testRequest(t, req)
-}
-
 func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
-	response := testRequestURL(t, "/api/vehicle-types")
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
+	require.NoError(t, err)
 
-	require.Equal(t, http.StatusForbidden, response.Code)
+	_, err = srv.GetVehicleTypes(context.Background(), &emptypb.Empty{})
+	require.Error(t, err)
 }
 
 func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
-	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	req.Header.Add("Authorization", "")
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer "}))
 
-	response := testRequest(t, req)
-
-	require.Equal(t, http.StatusForbidden, response.Code)
+	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
+	require.Error(t, err)
 }
 
 func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
-	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	req.Header.Add("Authorization", "abc")
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer abc"}))
 
-	response := testRequest(t, req)
-
-	require.Equal(t, http.StatusForbidden, response.Code)
+	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
+	require.Error(t, err)
 }
 
 func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
-	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ")
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ"}))
 
-	response := testRequest(t, req)
-
-	require.Equal(t, http.StatusForbidden, response.Code)
+	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
+	require.Error(t, err)
 }
 
 func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
-	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ")
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ"}))
 
-	response := testRequest(t, req)
-
-	require.Equal(t, http.StatusForbidden, response.Code)
+	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
+	require.Error(t, err)
 }
 
 func TestGetVehicleTypes(t *testing.T) {
-	req, err := http.NewRequest("GET", "/api/vehicle-types", nil)
+	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMyJ9.tI-wPZ4BSqmpsZN0-SgWXaokzvB8T-uYWLR9OQurxPFNoPC56U3op1gSE5n2H02GYfDGig0Eyp6U0NbDpsQaAg")
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMyJ9.tI-wPZ4BSqmpsZN0-SgWXaokzvB8T-uYWLR9OQurxPFNoPC56U3op1gSE5n2H02GYfDGig0Eyp6U0NbDpsQaAg"}))
 
-	response := testRequest(t, req)
-
-	require.Equal(t, http.StatusOK, response.Code)
-
-	bodyBytes, err := ioutil.ReadAll(response.Body)
-	require.NoError(t, err)
-
-	var result VehicleTypeResult
-	err = json.Unmarshal(bodyBytes, &result)
+	result, err := srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 
 	require.Greater(t, len(result.Items), 0)
