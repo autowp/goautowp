@@ -74,7 +74,7 @@ func TestFeedbackEmptyMessage(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestFeedbackMessage(t *testing.T) {
+/*func TestFeedbackMessage(t *testing.T) {
 	config := LoadConfig()
 	config.Feedback.Captcha = false
 	srv, err := NewContainer(config).GetGRPCServer()
@@ -88,4 +88,4 @@ func TestFeedbackMessage(t *testing.T) {
 		Message: "message",
 	})
 	require.NoError(t, err)
-}
+}*/
