@@ -9,10 +9,10 @@ type CommentsType int
 
 const (
 	CommentsTypePictureID    CommentsType = 1
-	CommentsTypeItemID                    = 2
-	CommentsTypeVotingID                  = 3
-	CommentsTypeArticleID                 = 4
-	CommentsTypeForumTopicID              = 5
+	CommentsTypeItemID       CommentsType = 2
+	CommentsTypeVotingID     CommentsType = 3
+	CommentsTypeArticleID    CommentsType = 4
+	CommentsTypeForumTopicID CommentsType = 5
 )
 
 // Comments service
