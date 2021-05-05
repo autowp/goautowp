@@ -32,7 +32,10 @@ type AutowpClient interface {
 	GetCommentVotes(ctx context.Context, in *GetCommentVotesRequest, opts ...grpc.CallOption) (*CommentVoteItems, error)
 	GetContact(ctx context.Context, in *GetContactRequest, opts ...grpc.CallOption) (*Contact, error)
 	GetContacts(ctx context.Context, in *GetContactsRequest, opts ...grpc.CallOption) (*ContactItems, error)
+	GetForumsUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error)
 	GetIP(ctx context.Context, in *APIGetIPRequest, opts ...grpc.CallOption) (*APIIP, error)
+	GetMessagesNewCount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageNewCount, error)
+	GetMessagesSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageSummary, error)
 	GetPerspectives(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivesItems, error)
 	GetPerspectivePages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ReCaptchaConfig, error)
@@ -167,9 +170,36 @@ func (c *autowpClient) GetContacts(ctx context.Context, in *GetContactsRequest, 
 	return out, nil
 }
 
+func (c *autowpClient) GetForumsUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error) {
+	out := new(APIForumsUserSummary)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetForumsUserSummary", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *autowpClient) GetIP(ctx context.Context, in *APIGetIPRequest, opts ...grpc.CallOption) (*APIIP, error) {
 	out := new(APIIP)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetIP", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *autowpClient) GetMessagesNewCount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageNewCount, error) {
+	out := new(APIMessageNewCount)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetMessagesNewCount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *autowpClient) GetMessagesSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageSummary, error) {
+	out := new(APIMessageSummary)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetMessagesSummary", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +286,10 @@ type AutowpServer interface {
 	GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error)
 	GetContact(context.Context, *GetContactRequest) (*Contact, error)
 	GetContacts(context.Context, *GetContactsRequest) (*ContactItems, error)
+	GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error)
 	GetIP(context.Context, *APIGetIPRequest) (*APIIP, error)
+	GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error)
+	GetMessagesSummary(context.Context, *emptypb.Empty) (*APIMessageSummary, error)
 	GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error)
 	GetPerspectivePages(context.Context, *emptypb.Empty) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error)
@@ -310,8 +343,17 @@ func (UnimplementedAutowpServer) GetContact(context.Context, *GetContactRequest)
 func (UnimplementedAutowpServer) GetContacts(context.Context, *GetContactsRequest) (*ContactItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContacts not implemented")
 }
+func (UnimplementedAutowpServer) GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetForumsUserSummary not implemented")
+}
 func (UnimplementedAutowpServer) GetIP(context.Context, *APIGetIPRequest) (*APIIP, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetIP not implemented")
+}
+func (UnimplementedAutowpServer) GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessagesNewCount not implemented")
+}
+func (UnimplementedAutowpServer) GetMessagesSummary(context.Context, *emptypb.Empty) (*APIMessageSummary, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessagesSummary not implemented")
 }
 func (UnimplementedAutowpServer) GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPerspectives not implemented")
@@ -581,6 +623,24 @@ func _Autowp_GetContacts_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Autowp_GetForumsUserSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).GetForumsUserSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Autowp/GetForumsUserSummary",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).GetForumsUserSummary(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Autowp_GetIP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(APIGetIPRequest)
 	if err := dec(in); err != nil {
@@ -595,6 +655,42 @@ func _Autowp_GetIP_Handler(srv interface{}, ctx context.Context, dec func(interf
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutowpServer).GetIP(ctx, req.(*APIGetIPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Autowp_GetMessagesNewCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).GetMessagesNewCount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Autowp/GetMessagesNewCount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).GetMessagesNewCount(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Autowp_GetMessagesSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).GetMessagesSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Autowp/GetMessagesSummary",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).GetMessagesSummary(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -785,8 +881,20 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Autowp_GetContacts_Handler,
 		},
 		{
+			MethodName: "GetForumsUserSummary",
+			Handler:    _Autowp_GetForumsUserSummary_Handler,
+		},
+		{
 			MethodName: "GetIP",
 			Handler:    _Autowp_GetIP_Handler,
+		},
+		{
+			MethodName: "GetMessagesNewCount",
+			Handler:    _Autowp_GetMessagesNewCount_Handler,
+		},
+		{
+			MethodName: "GetMessagesSummary",
+			Handler:    _Autowp_GetMessagesSummary_Handler,
 		},
 		{
 			MethodName: "GetPerspectives",

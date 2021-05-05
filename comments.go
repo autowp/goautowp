@@ -5,6 +5,16 @@ import (
 	"github.com/autowp/goautowp/util"
 )
 
+type CommentsType int
+
+const (
+	CommentsTypePictureID    CommentsType = 1
+	CommentsTypeItemID                    = 2
+	CommentsTypeVotingID                  = 3
+	CommentsTypeArticleID                 = 4
+	CommentsTypeForumTopicID              = 5
+)
+
 // Comments service
 type Comments struct {
 	db            *sql.DB

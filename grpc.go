@@ -34,6 +34,8 @@ type GRPCServer struct {
 	traffic            *Traffic
 	ipExtractor        *IPExtractor
 	feedback           *Feedback
+	forums             *Forums
+	messages           *Messages
 }
 
 func NewGRPCServer(
@@ -50,6 +52,8 @@ func NewGRPCServer(
 	traffic *Traffic,
 	ipExtractor *IPExtractor,
 	feedback *Feedback,
+	forums *Forums,
+	messages *Messages,
 ) (*GRPCServer, error) {
 	return &GRPCServer{
 		catalogue:          catalogue,
@@ -65,6 +69,8 @@ func NewGRPCServer(
 		traffic:            traffic,
 		ipExtractor:        ipExtractor,
 		feedback:           feedback,
+		forums:             forums,
+		messages:           messages,
 	}, nil
 }
 
@@ -601,4 +607,89 @@ func (s *GRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) 
 	return &APITrafficWhitelistItems{
 		Items: list,
 	}, nil
+}
+
+func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty) (*APIForumsUserSummary, error) {
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	subscriptionsCount, err := s.forums.GetUserSummary(userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &APIForumsUserSummary{
+		SubscriptionsCount: int32(subscriptionsCount),
+	}, nil
+}
+
+func (s *GRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) (*APIMessageNewCount, error) {
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	count, err := s.messages.GetUserNewMessagesCount(userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &APIMessageNewCount{
+		Count: int32(count),
+	}, nil
+}
+
+func (s *GRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (*APIMessageSummary, error) {
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	inbox, err := s.messages.GetInboxCount(userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	inboxNew, err := s.messages.GetInboxNewCount(userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	sent, err := s.messages.GetSentCount(userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	system, err := s.messages.GetSystemCount(userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	systemNew, err := s.messages.GetSystemNewCount(userID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &APIMessageSummary{
+		InboxCount:     int32(inbox),
+		InboxNewCount:  int32(inboxNew),
+		SentCount:      int32(sent),
+		SystemCount:    int32(system),
+		SystemNewCount: int32(systemNew),
+	}, nil
+
 }

@@ -36,6 +36,8 @@ type Container struct {
 	traffic            *Traffic
 	trafficDB          *pgxpool.Pool
 	userRepository     *UserRepository
+	forums             *Forums
+	messages           *Messages
 }
 
 // NewContainer constructor
@@ -497,6 +499,16 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
+		forums, err := s.GetForums()
+		if err != nil {
+			return nil, err
+		}
+
+		messages, err := s.GetMessages()
+		if err != nil {
+			return nil, err
+		}
+
 		s.grpcServer, err = NewGRPCServer(
 			catalogue,
 			config.Recaptcha,
@@ -511,6 +523,8 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			traffic,
 			ipExtractor,
 			feedback,
+			forums,
+			messages,
 		)
 		if err != nil {
 			return nil, err
@@ -518,4 +532,30 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 	}
 
 	return s.grpcServer, nil
+}
+
+func (s *Container) GetForums() (*Forums, error) {
+	if s.forums == nil {
+		db, err := s.GetAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.forums = NewForums(db)
+	}
+
+	return s.forums, nil
+}
+
+func (s *Container) GetMessages() (*Messages, error) {
+	if s.messages == nil {
+		db, err := s.GetAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.messages = NewMessages(db)
+	}
+
+	return s.messages, nil
 }

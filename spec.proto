@@ -23,7 +23,10 @@ service Autowp {
   rpc GetCommentVotes(GetCommentVotesRequest) returns (CommentVoteItems) {}
   rpc GetContact(GetContactRequest) returns (Contact) {}
   rpc GetContacts(GetContactsRequest) returns (ContactItems) {}
+  rpc GetForumsUserSummary(google.protobuf.Empty) returns (APIForumsUserSummary) {}
   rpc GetIP(APIGetIPRequest) returns (APIIP) {}
+  rpc GetMessagesNewCount(google.protobuf.Empty) returns (APIMessageNewCount) {}
+  rpc GetMessagesSummary(google.protobuf.Empty) returns (APIMessageSummary) {}
   rpc GetPerspectives(google.protobuf.Empty) returns (PerspectivesItems) {}
   rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
   rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
@@ -247,4 +250,20 @@ message APITrafficWhitelistItem {
 
 message APITrafficWhitelistItems {
   repeated APITrafficWhitelistItem items = 1;
+}
+
+message APIForumsUserSummary {
+  int32 subscriptionsCount = 1;
+}
+
+message APIMessageNewCount {
+  int32 count = 1;
+}
+
+message APIMessageSummary {
+  int32 inbox_count = 1;
+  int32 inbox_new_count = 2;
+  int32 sent_count = 3;
+  int32 system_count = 4;
+  int32 system_new_count = 5;
 }
