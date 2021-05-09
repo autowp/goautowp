@@ -190,6 +190,20 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 		return 0, "", err
 	}
 
+	if !token.Valid {
+		if ve, ok := err.(*jwt.ValidationError); ok {
+			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
+				return 0, "", fmt.Errorf("that's not even a token")
+			} else if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
+				return 0, "", fmt.Errorf("timing is everything")
+			} else {
+				return 0, "", err
+			}
+		} else {
+			return 0, "", err
+		}
+	}
+
 	claims := token.Claims.(jwt.MapClaims)
 	idStr := claims["sub"].(string)
 
