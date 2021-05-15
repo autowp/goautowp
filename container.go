@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/casbin/casbin"
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
@@ -38,6 +39,7 @@ type Container struct {
 	userRepository     *UserRepository
 	forums             *Forums
 	messages           *Messages
+	imageStorage       *storage.Storage
 }
 
 // NewContainer constructor
@@ -558,4 +560,22 @@ func (s *Container) GetMessages() (*Messages, error) {
 	}
 
 	return s.messages, nil
+}
+
+func (s *Container) GetImageStorage() (*storage.Storage, error) {
+	if s.imageStorage == nil {
+		db, err := s.GetAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		imageStorage, err := storage.NewStorage(db)
+		if err != nil {
+			return nil, err
+		}
+
+		s.imageStorage = imageStorage
+	}
+
+	return s.imageStorage, nil
 }

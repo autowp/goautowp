@@ -55,7 +55,18 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*User, err
 	for field := range fields {
 		switch field {
 		case "avatar":
-			// TODO
+			storage, err := s.container.GetImageStorage()
+			if err != nil {
+				return nil, err
+			}
+
+			avatar, err := storage.GetFormatedImage(row.Img, "avatar")
+			if err != nil {
+				return nil, err
+			}
+
+			user.Avatar = avatar
+
 		case "gravatar":
 			if row.EMail != nil {
 				str := fmt.Sprintf(

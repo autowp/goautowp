@@ -138,6 +138,14 @@ message GetContactRequest {
   int32 user_id = 1;
 }
 
+message APIImage {
+  int32 id = 1;
+  string src = 2;
+  int32 width = 3;
+  int32 height = 4;
+  int32 filesize = 5;
+}
+
 message User {
   int32 id = 1;
   string name = 2;
@@ -146,7 +154,7 @@ message User {
   bool green = 5;
   repeated string route = 6;
   string identity = 7;
-  string avatar = 8;
+  APIImage avatar = 8;
   string gravatar = 9;
   google.protobuf.Timestamp last_online = 10;
 }

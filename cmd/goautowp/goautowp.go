@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/autowp/goautowp"
 	"github.com/getsentry/sentry-go"
+	"gopkg.in/gographics/imagick.v2/imagick"
 	"log"
 	"os"
 	"os/signal"
@@ -28,6 +29,9 @@ func captureOsInterrupt() chan bool {
 }
 
 func main() {
+
+	imagick.Initialize()
+	defer imagick.Terminate()
 
 	config := goautowp.LoadConfig()
 
