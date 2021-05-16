@@ -8,22 +8,22 @@ type Image struct {
 	src      string
 }
 
-func (s Image) GetId() int {
+func (s Image) Id() int {
 	return s.id
 }
 
-func (s Image) GetSrc() string {
+func (s Image) Src() string {
 	return s.src
 }
 
-func (s Image) GetWidth() int {
+func (s Image) Width() int {
 	return s.width
 }
 
-func (s Image) GetHeight() int {
+func (s Image) Height() int {
 	return s.height
 }
 
-func (s Image) GetFileSize() int {
+func (s Image) FileSize() int {
 	return s.filesize
 }

@@ -3,6 +3,7 @@ package goautowp
 import (
 	"crypto/md5"
 	"fmt"
+	"github.com/autowp/goautowp/image/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"net/url"
 	"time"
@@ -15,6 +16,19 @@ type UserExtractor struct {
 func NewUserExtractor(container *Container) *UserExtractor {
 	return &UserExtractor{
 		container: container,
+	}
+}
+
+func ImageToAPIImage(i *storage.Image) *APIImage {
+	if i == nil {
+		return nil
+	}
+	return &APIImage{
+		Id:       int32(i.Id()),
+		Width:    int32(i.Width()),
+		Height:   int32(i.Height()),
+		Filesize: int32(i.FileSize()),
+		Src:      i.Src(),
 	}
 }
 
@@ -55,17 +69,19 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*User, err
 	for field := range fields {
 		switch field {
 		case "avatar":
-			storage, err := s.container.GetImageStorage()
-			if err != nil {
-				return nil, err
-			}
+			if row.Img != nil {
+				is, err := s.container.GetImageStorage()
+				if err != nil {
+					return nil, err
+				}
 
-			avatar, err := storage.GetFormatedImage(row.Img, "avatar")
-			if err != nil {
-				return nil, err
-			}
+				avatar, err := is.GetFormatedImage(*row.Img, "avatar")
+				if err != nil {
+					return nil, err
+				}
 
-			user.Avatar = avatar
+				user.Avatar = ImageToAPIImage(avatar)
+			}
 
 		case "gravatar":
 			if row.EMail != nil {
