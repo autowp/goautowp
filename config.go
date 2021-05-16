@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/spf13/viper"
 )
 
@@ -95,6 +96,7 @@ type Config struct {
 	Recaptcha         RecaptchaConfig       `yaml:"recaptcha"          mapstructure:"recaptcha"`
 	SMTP              SMTPConfig            `yaml:"smtp"               mapstructure:"smtp"`
 	Feedback          FeedbackConfig        `yaml:"feedback"           mapstructure:"feedback"`
+	ImageStorage      storage.StorageConfig `yaml:"image-storage"      mapstructure:"image-storage"`
 }
 
 // LoadConfig LoadConfig
