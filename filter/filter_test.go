@@ -10,18 +10,16 @@ func TestSanitizeFilename(t *testing.T) {
 		Input  string
 		Output string
 	}{
-		{
-			Input:  "абвгдеёжзиклмнопрстуфх ц ч ш щ ъыь эюя",
-			Output: "abvgdeiozhziklmnoprstufkh_ts_ch_sh_shch_y_eiuia",
-		},
-		{
-			Input:  "Škoda",
-			Output: "skoda",
-		},
-		{
-			Input:  "数据库",
-			Output: "shu_ju_ku",
-		},
+		{"абвгдеёжзиклмнопрстуфх ц ч ш щ ъыь эюя", "abvgdeiozhziklmnoprstufkh_ts_ch_sh_shch_y_eiuia"},
+		{"Škoda", "skoda"},
+		{"数据库", "shu_ju_ku"},
+		{"just.test", "just.test"},
+		{".", "_"},
+		{"..", "_"},
+		{"...", "..."},
+		{"", "_"},
+		{"just test", "just_test"},
+		{"просто тест ", "prosto_test"},
 	}
 
 	for _, testCase := range testCases {
