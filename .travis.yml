@@ -39,7 +39,7 @@ before_script:
 script:
   - golangci-lint run ./... || travis_terminate 1;
 
-  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+  - echo "$DOCKER_PASSWORD" | docker login -u="$DOCKER_USERNAME" --password-stdin || travis_terminate 1;
   - docker-compose -f docker-compose-travis.yml up -d || travis_terminate 1;
 
   - ./waitforit -address tcp://localhost:5672 -timeout 30 || travis_terminate 1;
