@@ -38,7 +38,7 @@ require (
 	github.com/ugorji/go v1.2.5 // indirect
 	golang.org/x/crypto v0.0.0-20210503195802-e9a32991a82e // indirect
 	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420 // indirect
-	golang.org/x/sys v0.0.0-20210503173754-0981d6026fa6 // indirect
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	google.golang.org/genproto v0.0.0-20210503173045-b96a97608f20
 	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.26.0
