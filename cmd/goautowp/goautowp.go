@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/autowp/goautowp"
 	"github.com/getsentry/sentry-go"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 	"log"
 	"os"
 	"os/signal"

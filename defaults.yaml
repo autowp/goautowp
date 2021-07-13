@@ -161,7 +161,7 @@ image-storage:
       format: jpeg
   s3:
     region: ''
-    version: latest
+    #version: latest
     endpoint: http://minio:9000
     credentials:
       key: key

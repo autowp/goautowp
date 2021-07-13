@@ -96,7 +96,7 @@ type Config struct {
 	Recaptcha         RecaptchaConfig       `yaml:"recaptcha"          mapstructure:"recaptcha"`
 	SMTP              SMTPConfig            `yaml:"smtp"               mapstructure:"smtp"`
 	Feedback          FeedbackConfig        `yaml:"feedback"           mapstructure:"feedback"`
-	ImageStorage      storage.StorageConfig `yaml:"image-storage"      mapstructure:"image-storage"`
+	ImageStorage      storage.Config        `yaml:"image-storage"      mapstructure:"image-storage"`
 }
 
 // LoadConfig LoadConfig

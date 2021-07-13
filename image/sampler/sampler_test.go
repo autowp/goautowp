@@ -2,7 +2,7 @@ package sampler
 
 import (
 	"github.com/stretchr/testify/require"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 	"testing"
 )
 

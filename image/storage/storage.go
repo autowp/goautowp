@@ -4,19 +4,28 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/util"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/go-sql-driver/mysql"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
+	"image"
 	"io"
 	"math"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
+import _ "image/png"
+import _ "image/jpeg"
+import _ "image/gif"
 
 const (
 	StatusDefault    int = 0
@@ -35,7 +44,7 @@ var formats2ContentType = map[string]string{
 }
 
 type Storage struct {
-	config               StorageConfig
+	config               Config
 	db                   *sql.DB
 	dirs                 map[string]*Dir
 	formats              map[string]*sampler.Format
@@ -57,13 +66,18 @@ type imageRow struct {
 }
 
 type formatedImageRow struct {
-	ID              int
+	ImageID         int
 	Format          string
 	FormatedImageID int
 	Status          int
 }
 
-func NewStorage(db *sql.DB, config StorageConfig) (*Storage, error) {
+type FlushOptions struct {
+	Image  int
+	Format string
+}
+
+func NewStorage(db *sql.DB, config Config) (*Storage, error) {
 	dirs := make(map[string]*Dir)
 	for dirName, dirConfig := range config.Dirs {
 		dir, err := NewDir(dirConfig.Bucket, dirConfig.NamingStrategy)
@@ -96,7 +110,7 @@ func (s *Storage) GetImage(id int) (*Image, error) {
 	`, id)
 
 	var r Image
-	err := row.Scan(&r.id, &r.width, &r.height, &r.filesize)
+	err := row.Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -146,7 +160,12 @@ func (s *Storage) getDir(dirName string) *Dir {
 }
 
 func (s *Storage) getS3Client() (*s3.S3, error) {
-	sess := session.Must(session.NewSession())
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region:           &s.config.S3.Region,
+		Endpoint:         &s.config.S3.Endpoint,
+		S3ForcePathStyle: &s.config.S3.UsePathStyleEndpoint,
+		Credentials:      credentials.NewStaticCredentials(s.config.S3.Credentials.Key, s.config.S3.Credentials.Key, s.config.S3.Credentials.Secret),
+	}))
 	svc := s3.New(sess)
 
 	return svc, nil
@@ -245,8 +264,8 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 		var formatedImageRow formatedImageRow
 
 		for i := 0; i < maxInsertAttempts && !done; i++ {
-			row := s.db.QueryRow("SELECT id, status FROM formated_image WHERE id = ?", imageId)
-			err := row.Scan(&formatedImageRow.ID, &formatedImageRow.Status)
+			row := s.db.QueryRow("SELECT formated_image_id, status FROM formated_image WHERE id = ?", imageId)
+			err := row.Scan(&formatedImageRow.FormatedImageID, &formatedImageRow.Status)
 			if err != nil {
 				return 0, err
 			}
@@ -271,7 +290,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 			}
 		}
 
-		if formatedImageRow.ID == 0 {
+		if formatedImageRow.FormatedImageID == 0 {
 			return 0, fmt.Errorf("failed to format image")
 		}
 
@@ -280,7 +299,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 
 	var formatedImageId int
 	// try {
-	// $crop = $this->getRowCrop($imageRow);
+	// $crop = $this->getRowCrop(imageRow);
 
 	cropSuffix := getCropSuffix(imageRow)
 
@@ -442,7 +461,7 @@ func (s *Storage) addImageFromImagick(mw *imagick.MagickWand, dirName string, op
 func (s *Storage) generateLockWrite(dirName string, options GenerateOptions, width int, height int, callback func(string) error) (int, error) {
 	var insertAttemptException error
 	imageId := 0
-	for attemptIndex := 0; attemptIndex >= maxInsertAttempts; attemptIndex++ {
+	for attemptIndex := 0; attemptIndex < maxInsertAttempts; attemptIndex++ {
 		insertAttemptException = s.incDirCounter(dirName)
 
 		if insertAttemptException == nil {
@@ -546,9 +565,575 @@ func (s *Storage) createImagePath(dirName string, options GenerateOptions) (stri
 }
 
 func imageFormatContentType(format string) (string, error) {
+	format = strings.ToUpper(format)
 	result, ok := formats2ContentType[format]
 	if !ok {
 		return "", fmt.Errorf("unknown format `%s`", format)
+	}
+
+	return result, nil
+}
+
+func (s *Storage) RemoveImage(imageId int) error {
+	imageRow := s.db.QueryRow(`
+		SELECT id, dir, filepath
+		FROM image
+		WHERE id = ?
+	`, imageId)
+
+	var r Image
+	err := imageRow.Scan(&r.id, &r.dir, &r.filepath)
+	if err != nil {
+		return err
+	}
+
+	err = s.Flush(FlushOptions{
+		Image: r.Id(),
+	})
+	if err != nil {
+		return err
+	}
+
+	// to save remove formatted image
+	_, err = s.db.Exec("DELETE FROM formated_image WHERE formated_image_id = ?", r.Id())
+	if err != nil {
+		return err
+	}
+
+	// important to delete row first
+	_, err = s.db.Exec("DELETE FROM image WHERE id = ?", r.Id())
+	if err != nil {
+		return err
+	}
+
+	dir := s.getDir(r.Dir())
+	if dir == nil {
+		return fmt.Errorf("dir '%s' not defined", r.Dir())
+	}
+
+	s3c, err := s.getS3Client()
+	if err != nil {
+		return err
+	}
+
+	bucket := dir.Bucket()
+	key := r.Filepath()
+	_, err = s3c.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Storage) Flush(options FlushOptions) error {
+
+	sqSelect := sq.Select("image_id, format, formated_image_id").From("formated_image")
+
+	if len(options.Format) > 0 {
+		sqSelect = sqSelect.Where(sq.Eq{"formated_image.format": options.Format})
+	}
+
+	if options.Image > 0 {
+		sqSelect = sqSelect.Where(sq.Eq{"formated_image.image_id": options.Image})
+	}
+
+	rows, err := sqSelect.RunWith(s.db).Query()
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	defer util.Close(rows)
+
+	for rows.Next() {
+		var r formatedImageRow
+		err = rows.Scan(&r.ImageID, &r.Format, &r.FormatedImageID)
+		if err != nil {
+			return err
+		}
+
+		if r.FormatedImageID > 0 {
+			err = s.RemoveImage(r.FormatedImageID)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = s.db.Exec("DELETE FROM formated_image WHERE image_id = ? AND format = ?", r.ImageID, r.Format)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Storage) ChangeImageName(imageId int, options GenerateOptions) error {
+	row := s.db.QueryRow(`
+		SELECT id, dir, filepath
+		FROM image
+		WHERE id = ?
+	`, imageId)
+
+	var r Image
+	err := row.Scan(&r.id, &r.dir, &r.filepath)
+	if err != nil {
+		return err
+	}
+
+	dir := s.getDir(r.Dir())
+	if dir == nil {
+		return fmt.Errorf("dir '%v' not defined", r.Dir())
+	}
+
+	if len(options.Extension) <= 0 {
+		options.Extension = strings.TrimLeft(filepath.Ext(r.Filepath()), ".")
+	}
+
+	var insertAttemptException error
+
+	s3c, err := s.getS3Client()
+	if err != nil {
+		return err
+	}
+
+	for attemptIndex := 0; attemptIndex < maxInsertAttempts; attemptIndex++ {
+		options.Index = indexByAttempt(attemptIndex)
+		destFileName, err := s.createImagePath(r.Dir(), options)
+		if err != nil {
+			return nil
+		}
+
+		insertAttemptException = nil
+
+		if destFileName == r.Filepath() {
+			return fmt.Errorf("trying to rename to self")
+		}
+
+		_, insertAttemptException = s.db.Exec("UPDATE image SET filepath = ? WHERE id = ?", destFileName, r.id)
+
+		if insertAttemptException == nil {
+
+			bucket := dir.Bucket()
+			copySource := dir.Bucket() + "/" + r.Filepath()
+			acl := "public-read"
+			_, err = s3c.CopyObject(&s3.CopyObjectInput{
+				Bucket:     &bucket,
+				CopySource: &copySource,
+				Key:        &destFileName,
+				ACL:        &acl,
+			})
+			if err != nil {
+				return err
+			}
+			fpath := r.Filepath()
+			_, err = s3c.DeleteObject(&s3.DeleteObjectInput{
+				Bucket: &bucket,
+				Key:    &fpath,
+			})
+			if err != nil {
+				return err
+			}
+
+			break
+		}
+	}
+
+	return insertAttemptException
+}
+
+func (s *Storage) AddImageFromFile(file string, dirName string, options GenerateOptions) (int, error) {
+	handle, err := os.Open(file)
+	if err != nil {
+		return 0, err
+	}
+	defer util.Close(handle)
+	imageInfo, imageType, err := image.DecodeConfig(handle)
+	if err != nil {
+		return 0, err
+	}
+
+	if imageInfo.Width <= 0 || imageInfo.Height <= 0 {
+		return 0, fmt.Errorf("failed to get image size of '$file' (%v x %v)", imageInfo.Width, imageInfo.Height)
+	}
+
+	if len(options.Extension) <= 0 {
+		var ext string
+		switch imageType {
+		case "gif":
+			ext = "gif"
+		case "jpeg":
+			ext = "jpg"
+		case "png":
+			ext = "png"
+		default:
+			return 0, fmt.Errorf("unsupported image type `%v`", imageType)
+		}
+		options.Extension = ext
+	}
+
+	dir := s.getDir(dirName)
+	if dir == nil {
+		return 0, fmt.Errorf("dir '%v' not defined", dirName)
+	}
+
+	id, err := s.generateLockWrite(
+		dirName,
+		options,
+		imageInfo.Width,
+		imageInfo.Height,
+		func(fileName string) error {
+			s3c, err := s.getS3Client()
+			if err != nil {
+				return err
+			}
+			bucket := dir.Bucket()
+			acl := "public-read"
+
+			contentType, err := imageFormatContentType(options.Extension)
+			if err != nil {
+				return err
+			}
+
+			_, err = s3c.PutObject(&s3.PutObjectInput{
+				Key:         &fileName,
+				Body:        handle,
+				Bucket:      &bucket,
+				ACL:         &acl,
+				ContentType: &contentType,
+			})
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	/*$exif = $this->extractEXIF($id);
+	if ($exif) {
+		$exif = json_encode($exif, JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
+	}*/
+
+	fi, err := handle.Stat()
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = s.db.Exec(
+		"UPDATE image SET filesize = ? WHERE id = ?",
+		fi.Size(),
+		// exif,
+		id,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
+func (s *Storage) AddImageFromBlob(blob []byte, dirName string, options GenerateOptions) (int, error) {
+	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+	err := mw.ReadImageBlob(blob)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := s.addImageFromImagick(mw, dirName, options)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
+func (s *Storage) Flop(imageId int) error {
+	row := s.db.QueryRow(`
+		SELECT dir, filepath
+		FROM image
+		WHERE id = ?
+	`, imageId)
+
+	var r Image
+	err := row.Scan(&r.dir, &r.filepath)
+	if err != nil {
+		return err
+	}
+
+	dir := s.getDir(r.Dir())
+	if dir == nil {
+		return fmt.Errorf("dir '%v' not defined", r.Dir())
+	}
+
+	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+
+	s3c, err := s.getS3Client()
+	if err != nil {
+		return err
+	}
+	bucket := dir.Bucket()
+	fpath := r.Filepath()
+	object, err := s3c.GetObject(&s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &fpath,
+	})
+	if err != nil {
+		return err
+	}
+
+	imgBytes, err := io.ReadAll(object.Body)
+	if err != nil {
+		return err
+	}
+
+	err = mw.ReadImageBlob(imgBytes)
+	if err != nil {
+		return err
+	}
+
+	// format
+	err = mw.FlopImage()
+	if err != nil {
+		return err
+	}
+
+	acl := "public-read"
+	b := bytes.NewReader(mw.GetImagesBlob())
+
+	contentType, err := imageFormatContentType(mw.GetImageFormat())
+	if err != nil {
+		return err
+	}
+
+	_, err = s3c.PutObject(&s3.PutObjectInput{
+		Key:         &fpath,
+		Body:        b,
+		Bucket:      &bucket,
+		ACL:         &acl,
+		ContentType: &contentType,
+	})
+	if err != nil {
+		return err
+	}
+
+	return s.Flush(FlushOptions{
+		Image: imageId,
+	})
+}
+
+func (s *Storage) Normalize(imageId int) error {
+	row := s.db.QueryRow(`
+		SELECT dir, filepath
+		FROM image
+		WHERE id = ?
+	`, imageId)
+
+	var r Image
+	err := row.Scan(&r.dir, &r.filepath)
+	if err != nil {
+		return err
+	}
+
+	dir := s.getDir(r.Dir())
+	if dir == nil {
+		return fmt.Errorf("dir '%v' not defined", r.Dir())
+	}
+
+	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+
+	s3c, err := s.getS3Client()
+	if err != nil {
+		return err
+	}
+	bucket := dir.Bucket()
+	fpath := r.Filepath()
+	object, err := s3c.GetObject(&s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &fpath,
+	})
+	if err != nil {
+		return err
+	}
+
+	imgBytes, err := io.ReadAll(object.Body)
+	if err != nil {
+		return err
+	}
+
+	err = mw.ReadImageBlob(imgBytes)
+	if err != nil {
+		return err
+	}
+
+	// format
+	err = mw.NormalizeImage()
+	if err != nil {
+		return err
+	}
+
+	acl := "public-read"
+	b := bytes.NewReader(mw.GetImagesBlob())
+
+	contentType, err := imageFormatContentType(mw.GetImageFormat())
+	if err != nil {
+		return err
+	}
+
+	_, err = s3c.PutObject(&s3.PutObjectInput{
+		Key:         &fpath,
+		Body:        b,
+		Bucket:      &bucket,
+		ACL:         &acl,
+		ContentType: &contentType,
+	})
+	if err != nil {
+		return err
+	}
+
+	return s.Flush(FlushOptions{
+		Image: imageId,
+	})
+}
+
+func (s *Storage) SetImageCrop(imageId int, crop sampler.Crop) error {
+	if imageId <= 0 {
+		return fmt.Errorf("invalid image id provided `%v`", imageId)
+	}
+
+	if crop.Left < 0 || crop.Top < 0 || crop.Width <= 0 || crop.Height <= 0 {
+		crop.Left = 0
+		crop.Top = 0
+		crop.Width = 0
+		crop.Height = 0
+	}
+
+	_, err := s.db.Exec(
+		"UPDATE image SET crop_left = ?, crop_top = ?, crop_width = ?, crop_height = ? WHERE id = ?",
+		crop.Left,
+		crop.Top,
+		crop.Width,
+		crop.Height,
+	)
+	if err != nil {
+		return err
+	}
+
+	for formatName, format := range s.formats {
+		if !format.IsIgnoreCrop() {
+			err = s.Flush(FlushOptions{
+				Format: formatName,
+				Image:  imageId,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *Storage) GetImageCrop(imageId int) (*sampler.Crop, error) {
+	row := s.db.QueryRow(`
+		SELECT crop_left, crop_top, crop_width, crop_height
+		FROM image
+		WHERE id = ?
+	`, imageId)
+
+	var crop sampler.Crop
+
+	err := row.Scan(&crop.Left, &crop.Top, &crop.Width, &crop.Height)
+	if err != nil {
+		return nil, err
+	}
+
+	if crop.Width <= 0 || crop.Height <= 0 {
+		return nil, nil
+	}
+
+	return &crop, nil
+}
+
+func (s *Storage) GetImages(imageIds []int) (map[int]Image, error) {
+	rows, err := s.db.Query(`
+		SELECT id, width, height, filesize, filepath
+		FROM image
+		WHERE id IN (?)
+	`, imageIds)
+	if err == sql.ErrNoRows {
+		return make(map[int]Image), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer util.Close(rows)
+
+	result := make(map[int]Image)
+
+	for rows.Next() {
+		var r Image
+		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize)
+		if err != nil {
+			return nil, err
+		}
+
+		result[r.id] = r
+	}
+
+	return result, nil
+}
+
+func (s *Storage) GetFormattedImages(imageIds []int, formatName string) (map[int]Image, error) {
+
+	rows, err := s.db.Query(`
+		SELECT image.id, image.width, image.height, image.filesize, image.filepath
+		FROM image
+			INNER JOIN formated_image ON image.id = formated_image.formated_image_id
+		WHERE formated_image.image_id IN (?) AND formated_image.format = ?
+	`, imageIds, formatName)
+	if err == sql.ErrNoRows {
+		return make(map[int]Image), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer util.Close(rows)
+
+	result := make(map[int]Image)
+
+	for rows.Next() {
+		var r Image
+		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize)
+		if err != nil {
+			return nil, err
+		}
+
+		result[r.id] = r
+	}
+
+	for _, imageId := range imageIds {
+		formattedImageId, err := s.doFormatImage(imageId, formatName)
+		if err != nil {
+			return nil, err
+		}
+		img, err := s.GetImage(formattedImageId)
+		if err != nil {
+			return nil, err
+		}
+		result[imageId] = *img
 	}
 
 	return result, nil
