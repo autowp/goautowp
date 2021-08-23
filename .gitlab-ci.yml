@@ -1,0 +1,69 @@
+image: docker
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_HOST: tcp://docker:2375
+  SONAR_SCANNER_VERSION: "4.6.2.2472"
+
+stages:
+  - build
+
+build:
+  stage: build
+  services:
+    - name: docker:dind
+      alias: docker
+
+  before_script:
+    - apk add --update curl docker-compose postgresql-client
+
+    - curl -o /usr/local/bin/waitforit -sSL https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64
+    - chmod +x /usr/local/bin/waitforit
+    - waitforit -address=tcp://docker:2375 -timeout=30
+
+    - wget https://golang.org/dl/go1.17.linux-amd64.tar.gz
+    - rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-amd64.tar.gz
+    - export PATH=$PATH:/usr/local/go/bin
+
+    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.1
+    - go get -u github.com/mattn/goveralls
+
+    - mkdir -p /opt
+    - curl -fSL https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}.zip -o /opt/sonar-scanner.zip
+    - unzip /opt/sonar-scanner.zip -d /opt
+    - rm /opt/sonar-scanner.zip
+    - ln -s /opt/sonar-scanner-${SONAR_SCANNER_VERSION}/bin/sonar-scanner /usr/bin/sonar-scanner
+  script:
+    - go mod verify
+    - go mod download
+
+    - golangci-lint run ./...
+
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u="$CI_REGISTRY_USER" --password-stdin
+    - docker-compose up -d
+
+    - ./waitforit -address tcp://localhost:5672 -timeout 30
+    - ./waitforit -address tcp://localhost:3306 -timeout 30
+    - ./waitforit -address tcp://localhost:5432 -timeout 30
+    - ./waitforit -address tcp://localhost:8081 -timeout 30
+
+    - psql -c 'CREATE DATABASE traffic;' -U postgres
+    - psql -c "CREATE USER traffic WITH PASSWORD 'password';" -U postgres
+    - psql -c 'GRANT ALL PRIVILEGES ON DATABASE traffic TO traffic;' -U postgres
+    - psql -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO traffic;' -U postgres traffic
+
+    - sleep 5
+
+    - source test.env
+    - go test -run TestAutowpMigrations
+    - go test -run TestTrafficMigrations
+    - docker exec -it goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql"
+    - go test -v -race -coverprofile=cov.out
+    - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN
+    - goveralls -service=travis-ci
+
+    - docker build -f build/package/Dockerfile . -t $CI_REGISTRY_IMAGE
+    - docker push $CI_REGISTRY_IMAGE;
+  only:
+    - master
