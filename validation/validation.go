@@ -1,6 +1,8 @@
 package validation
 
 import (
+	"database/sql"
+	"fmt"
 	"github.com/dpapathanasiou/go-recaptcha"
 	"net/mail"
 	"strings"
@@ -8,6 +10,10 @@ import (
 
 const NotEmptyIsEmpty = "Value is required and can't be empty"
 const EmailAddressInvalidFormat = "The input is not a valid email address"
+const StringLengthTooShort = "The input is less than %d characters long"
+const StringLengthTooLong = "The input is more than %d characters long"
+const EmailNotExistsExists = "E-mail already registered"
+const IdenticalStringsNotSame = "The two given tokens do not match"
 
 type FilterInterface interface {
 	FilterString(value string) string
@@ -21,6 +27,12 @@ type ValidatorInterface interface {
 type NotEmpty struct {
 }
 
+// StringLength validator
+type StringLength struct {
+	Min int
+	Max int
+}
+
 // EmailAddress validator
 type EmailAddress struct {
 }
@@ -30,11 +42,21 @@ type Recaptcha struct {
 	ClientIP string
 }
 
+// EmailNotExists validator
+type EmailNotExists struct {
+	DB *sql.DB
+}
+
+// IdenticalStrings validator
+type IdenticalStrings struct {
+	Pattern string
+}
+
 // StringTrimFilter filter
 type StringTrimFilter struct {
 }
 
-// InputFilterString InputFilterString
+// IsValidString IsValidString
 func (s *NotEmpty) IsValidString(value string) []string {
 	if len(value) > 0 {
 		return []string{}
@@ -43,7 +65,21 @@ func (s *NotEmpty) IsValidString(value string) []string {
 	return []string{NotEmptyIsEmpty}
 }
 
-// InputFilterString InputFilterString
+// IsValidString IsValidString
+func (s *StringLength) IsValidString(value string) []string {
+	l := len(value)
+	if l < s.Min {
+		return []string{fmt.Sprintf(StringLengthTooShort, s.Min)}
+	}
+
+	if l > s.Max {
+		return []string{fmt.Sprintf(StringLengthTooLong, s.Max)}
+	}
+
+	return []string{}
+}
+
+// IsValidString IsValidString
 func (s *EmailAddress) IsValidString(value string) []string {
 	_, err := mail.ParseAddress(value)
 	if err != nil {
@@ -53,7 +89,7 @@ func (s *EmailAddress) IsValidString(value string) []string {
 	return []string{}
 }
 
-// InputFilterString InputFilterString
+// IsValidString IsValidString
 func (s *Recaptcha) IsValidString(value string) []string {
 	_, err := recaptcha.Confirm(s.ClientIP, value)
 	if err != nil {
@@ -63,7 +99,31 @@ func (s *Recaptcha) IsValidString(value string) []string {
 	return []string{}
 }
 
-// StringTrimFilter filter
+// IsValidString IsValidString
+func (s *EmailNotExists) IsValidString(value string) []string {
+	var exists bool
+	err := s.DB.QueryRow("SELECT 1 FROM users WHERE email = ?", value).Scan(&exists)
+	if err == sql.ErrNoRows {
+		return []string{}
+	}
+
+	if err != nil {
+		return []string{err.Error()}
+	}
+
+	return []string{EmailNotExistsExists}
+}
+
+// IsValidString IsValidString
+func (s *IdenticalStrings) IsValidString(value string) []string {
+	if value != s.Pattern {
+		return []string{IdenticalStringsNotSame}
+	}
+
+	return []string{}
+}
+
+// FilterString filter
 func (s *StringTrimFilter) FilterString(value string) string {
 	return strings.TrimSpace(value)
 }
@@ -73,7 +133,7 @@ type InputFilter struct {
 	Validators []ValidatorInterface
 }
 
-// InputFilterString InputFilterString
+// IsValidString IsValidString
 func (s *InputFilter) IsValidString(value string) (string, []string) {
 	value = filterString(value, s.Filters)
 	errors := validateString(value, s.Validators)

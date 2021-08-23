@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"github.com/autowp/goautowp/validation"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"gopkg.in/gomail.v2"
 )
 
 // Feedback Main Object
 type Feedback struct {
+	captchaEnabled  bool
 	config          FeedbackConfig
 	recaptchaConfig RecaptchaConfig
-	smtpConfig      SMTPConfig
+	emailSender     EmailSender
 }
 
 // CreateFeedbackRequest CreateFeedbackRequest
@@ -24,12 +24,13 @@ type CreateFeedbackRequest struct {
 }
 
 // NewFeedback constructor
-func NewFeedback(config FeedbackConfig, recaptchaConfig RecaptchaConfig, smtpConfig SMTPConfig) (*Feedback, error) {
+func NewFeedback(config FeedbackConfig, recaptchaConfig RecaptchaConfig, captchaEnabled bool, emailSender EmailSender) (*Feedback, error) {
 
 	s := &Feedback{
 		config:          config,
 		recaptchaConfig: recaptchaConfig,
-		smtpConfig:      smtpConfig,
+		captchaEnabled:  captchaEnabled,
+		emailSender:     emailSender,
 	}
 
 	return s, nil
@@ -37,7 +38,7 @@ func NewFeedback(config FeedbackConfig, recaptchaConfig RecaptchaConfig, smtpCon
 
 func (s *Feedback) Create(request CreateFeedbackRequest) ([]*errdetails.BadRequest_FieldViolation, error) {
 
-	InvalidParams, err := request.Validate(s.config.Captcha, request.IP)
+	InvalidParams, err := request.Validate(s.captchaEnabled, request.IP)
 	if err != nil {
 		return nil, err
 	}
@@ -48,20 +49,9 @@ func (s *Feedback) Create(request CreateFeedbackRequest) ([]*errdetails.BadReque
 
 	message := fmt.Sprintf("Имя: %s\nE-mail: %s\nСообщение:\n%s", request.Name, request.Email, request.Message)
 
-	m := gomail.NewMessage()
-	m.SetHeader("From", s.config.From)
-	m.SetHeader("To", s.config.To...)
-	m.SetHeader("Subject", s.config.Subject)
-	m.SetBody("text/plain", message)
-	m.SetHeader("Reply-To", request.Email)
+	err = s.emailSender.Send(s.config.From, s.config.To, s.config.Subject, message, request.Email)
 
-	d := gomail.NewDialer(s.smtpConfig.Hostname, s.smtpConfig.Port, s.smtpConfig.Username, s.smtpConfig.Password)
-
-	if err := d.DialAndSend(m); err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, err
 }
 
 func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*errdetails.BadRequest_FieldViolation, error) {

@@ -3,8 +3,8 @@ package goautowp;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
-import "google/rpc/status.proto";
-import "google/protobuf/any.proto";
+//import "google/rpc/status.proto";
+//import "google/protobuf/any.proto";
 import "google/rpc/error_details.proto";
 
 option go_package = "github.com/autowp/goautowp";
@@ -34,6 +34,11 @@ service Autowp {
   rpc GetTrafficTop(google.protobuf.Empty) returns (APITrafficTopResponse) {}
   rpc GetTrafficWhitelist(google.protobuf.Empty) returns (APITrafficWhitelistItems) {}
   rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
+  rpc CreateUser(APICreateUserRequest) returns (google.protobuf.Empty) {}
+  rpc PasswordRecovery(APIPasswordRecoveryRequest) returns (google.protobuf.Empty) {}
+  rpc PasswordRecoveryCheckCode(APIPasswordRecoveryCheckCodeRequest) returns (google.protobuf.Empty) {}
+  rpc PasswordRecoveryConfirm(APIPasswordRecoveryConfirmRequest) returns (APIPasswordRecoveryConfirmResponse) {}
+  rpc EmailChangeConfirm(APIEmailChangeConfirmRequest) returns (google.protobuf.Empty) {}
 }
 
 message ErrorDetails {
@@ -266,4 +271,36 @@ message APIMessageSummary {
   int32 sent_count = 3;
   int32 system_count = 4;
   int32 system_new_count = 5;
+}
+
+message APICreateUserRequest {
+  string email = 1;
+  string name = 2;
+  string password = 3;
+  string password_confirm = 4;
+  string language = 5;
+  string captcha = 6;
+}
+
+message APIPasswordRecoveryRequest {
+  string email = 1;
+  string captcha = 2;
+}
+
+message APIPasswordRecoveryCheckCodeRequest {
+  string code = 1;
+}
+
+message APIPasswordRecoveryConfirmRequest {
+  string code = 1;
+  string password = 2;
+  string password_confirm = 3;
+}
+
+message APIPasswordRecoveryConfirmResponse {
+  string login = 1;
+}
+
+message APIEmailChangeConfirmRequest {
+  string code = 1;
 }

@@ -21,6 +21,7 @@ import (
 
 type GRPCServer struct {
 	UnimplementedAutowpServer
+	container          *Container
 	catalogue          *Catalogue
 	reCaptchaConfig    RecaptchaConfig
 	fileStorageConfig  FileStorageConfig
@@ -39,6 +40,7 @@ type GRPCServer struct {
 }
 
 func NewGRPCServer(
+	container *Container,
 	catalogue *Catalogue,
 	reCaptchaConfig RecaptchaConfig,
 	fileStorageConfig FileStorageConfig,
@@ -56,6 +58,7 @@ func NewGRPCServer(
 	messages *Messages,
 ) (*GRPCServer, error) {
 	return &GRPCServer{
+		container:          container,
 		catalogue:          catalogue,
 		reCaptchaConfig:    reCaptchaConfig,
 		fileStorageConfig:  fileStorageConfig,
@@ -473,17 +476,8 @@ func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRe
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
-	if fv != nil {
-		st := status.New(codes.InvalidArgument, "invalid request")
-		br := &errdetails.BadRequest{
-			FieldViolations: fv,
-		}
-		st, err = st.WithDetails(br)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
-		}
-
-		return nil, st.Err()
+	if fv != nil && len(fv) > 0 {
+		return nil, wrapFieldViolations(fv)
 	}
 
 	return &emptypb.Empty{}, nil
@@ -692,4 +686,160 @@ func (s *GRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (
 		SystemNewCount: int32(systemNew),
 	}, nil
 
+}
+
+func (s *GRPCServer) CreateUser(ctx context.Context, in *APICreateUserRequest) (*emptypb.Empty, error) {
+
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "Failed extract peer from context")
+	}
+	remoteAddr := p.Addr.String()
+
+	config, err := s.container.GetConfig()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	language, ok := config.Languages[in.Language]
+	if !ok {
+		return nil, status.Errorf(codes.InvalidArgument, "language `%s` is not defined", in.Language)
+	}
+
+	user := CreateUserOptions{
+		UserName:        in.Name,
+		FirstName:       in.Name,
+		Email:           in.Email,
+		Timezone:        language.Timezone,
+		Language:        in.Language,
+		Password:        in.Password,
+		PasswordConfirm: in.PasswordConfirm,
+		Captcha:         in.Captcha,
+	}
+
+	fv, err := s.userRepository.ValidateCreateUser(user, config.Captcha, remoteAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	if fv != nil && len(fv) > 0 {
+		return nil, wrapFieldViolations(fv)
+	}
+
+	_, err = s.userRepository.CreateUser(user)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *GRPCServer) PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest) (*emptypb.Empty, error) {
+
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "Failed extract peer from context")
+	}
+	remoteAddr := p.Addr.String()
+
+	pr, err := s.container.GetPasswordRecovery()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	fv, err := pr.Start(in.Email, in.Captcha, remoteAddr)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if fv != nil && len(fv) > 0 {
+		return nil, wrapFieldViolations(fv)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *GRPCServer) PasswordRecoveryCheckCode(_ context.Context, in *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error) {
+
+	if len(in.Code) <= 0 {
+		return nil, status.Errorf(codes.Internal, "Invalid code")
+	}
+
+	pr, err := s.container.GetPasswordRecovery()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	userId, err := pr.GetUserID(in.Code)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if userId == 0 {
+		return nil, status.Errorf(codes.NotFound, "Token not found")
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *GRPCServer) PasswordRecoveryConfirm(_ context.Context, in *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error) {
+
+	pr, err := s.container.GetPasswordRecovery()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	fv, userId, err := pr.Finish(in.Code, in.Password, in.PasswordConfirm)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	if fv != nil && len(fv) > 0 {
+		return nil, wrapFieldViolations(fv)
+	}
+
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	err = users.SetPassword(userId, in.Password)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	login, err := users.GetLogin(userId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &APIPasswordRecoveryConfirmResponse{
+		Login: login,
+	}, nil
+}
+
+func wrapFieldViolations(fv []*errdetails.BadRequest_FieldViolation) error {
+	st := status.New(codes.InvalidArgument, "invalid request")
+	br := &errdetails.BadRequest{
+		FieldViolations: fv,
+	}
+	st, err := st.WithDetails(br)
+	if err != nil {
+		return status.Errorf(codes.Internal, err.Error())
+	}
+
+	return st.Err()
+}
+
+func (s *GRPCServer) EmailChangeConfirm(_ context.Context, in *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	err = users.EmailChangeFinish(in.Code)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
 }
