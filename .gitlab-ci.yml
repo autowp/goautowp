@@ -38,10 +38,8 @@ test:
     - go test -run TestAutowpMigrations
     - go test -run TestTrafficMigrations
     - docker exec -t goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql"
-    - go test -v -race -coverprofile=cov.out
     - gotestsum --junitfile report.xml --format testname -- -race
     - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN
-    #- goveralls -service=gitlab
   artifacts:
     reports:
       junit: report.xml
@@ -52,6 +50,7 @@ publish:
     - name: docker:dind
       alias: docker
   before_script:
+    - apk add --update curl
     - ./tools/install-waitforit.sh
   script:
     - waitforit -address=tcp://docker:2375 -timeout=30
