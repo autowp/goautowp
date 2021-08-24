@@ -6,18 +6,17 @@ variables:
   DOCKER_HOST: tcp://docker:2375
 
 stages:
-  - build
+  - test
+  - publish
 
-build:
-  stage: build
+test:
+  stage: test
   services:
     - name: docker:dind
       alias: docker
 
   before_script:
     - apk add --update alpine-sdk curl docker-compose openjdk11 postgresql-client
-
-    - ls -lah ./tools
 
     - ./tools/install-waitforit.sh
     - ./tools/install-golang.sh
@@ -35,8 +34,6 @@ build:
 
     - ./tools/wait.sh
 
-    - docker logs goautowp_mysql_test
-
     - source test.env
     - go test -run TestAutowpMigrations
     - go test -run TestTrafficMigrations
@@ -45,11 +42,19 @@ build:
     - gotestsum --junitfile report.xml --format testname -- -race
     - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN
     #- goveralls -service=gitlab
+  artifacts:
+    reports:
+      junit: report.xml
 
+publish:
+  stage: publish
+  services:
+    - name: docker:dind
+      alias: docker
+  before_script:
+    - ./tools/install-waitforit.sh
+  script:
     - docker build -f build/package/Dockerfile . -t $CI_REGISTRY_IMAGE
     - docker push $CI_REGISTRY_IMAGE;
   only:
     - master
-  artifacts:
-    reports:
-      junit: cov.out
