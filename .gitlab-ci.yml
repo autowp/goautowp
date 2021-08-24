@@ -44,10 +44,10 @@ build:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u="$CI_REGISTRY_USER" --password-stdin
     - docker-compose up -d
 
-    - ./waitforit -address tcp://localhost:5672 -timeout 30
-    - ./waitforit -address tcp://localhost:3306 -timeout 30
-    - ./waitforit -address tcp://localhost:5432 -timeout 30
-    - ./waitforit -address tcp://localhost:8081 -timeout 30
+    - waitforit -address tcp://localhost:5672 -timeout 30
+    - waitforit -address tcp://localhost:3306 -timeout 30
+    - waitforit -address tcp://localhost:5432 -timeout 30
+    - waitforit -address tcp://localhost:8081 -timeout 30
 
     - psql -c 'CREATE DATABASE traffic;' -U postgres
     - psql -c "CREATE USER traffic WITH PASSWORD 'password';" -U postgres
