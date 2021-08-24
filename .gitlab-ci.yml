@@ -43,7 +43,7 @@ build:
     - docker exec -t goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql"
     - go test -v -race -coverprofile=cov.out
     - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN
-    - goveralls -service=travis-ci
+    - goveralls -service=gitlab
 
     - docker build -f build/package/Dockerfile . -t $CI_REGISTRY_IMAGE
     - docker push $CI_REGISTRY_IMAGE;
