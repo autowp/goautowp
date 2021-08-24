@@ -8,7 +8,7 @@ waitforit -address tcp://localhost:5432 -timeout 30
 waitforit -address tcp://localhost:8081 -timeout 30
 
 echo "waiting for mysql"
-while ! docker logs container | grep -q "ready for connections";
+while ! docker-compose logs mysql | grep -q "ready for connections";
 do
     sleep 1
     echo "."

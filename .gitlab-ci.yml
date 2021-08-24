@@ -17,6 +17,8 @@ build:
   before_script:
     - apk add --update alpine-sdk curl docker-compose postgresql-client
 
+    - ls -lah ./tools
+
     - ./tools/install-waitforit.sh
     - ./tools/install-golang.sh
     - ./tools/install-sonarscanner.sh
