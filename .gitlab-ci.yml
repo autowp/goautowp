@@ -54,6 +54,7 @@ publish:
   before_script:
     - ./tools/install-waitforit.sh
   script:
+    - waitforit -address=tcp://docker:2375 -timeout=30
     - docker build -f build/package/Dockerfile . -t $CI_REGISTRY_IMAGE
     - docker push $CI_REGISTRY_IMAGE;
   only:
