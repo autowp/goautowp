@@ -4,7 +4,6 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
   DOCKER_HOST: tcp://docker:2375
-  SONAR_SCANNER_VERSION: "4.6.2.2472"
 
 stages:
   - build
@@ -18,38 +17,19 @@ build:
   before_script:
     - apk add --update alpine-sdk curl docker-compose postgresql-client
 
-    - curl -o /usr/local/bin/waitforit -sSL https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64
-    - chmod +x /usr/local/bin/waitforit
-    - waitforit -address=tcp://docker:2375 -timeout=30
-
-    - wget https://golang.org/dl/go1.17.linux-amd64.tar.gz
-    - rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-amd64.tar.gz
-    - export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
-    - export GOPATH=$HOME/go
-
-    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env ech)/bin v1.41.1
-    - go install github.com/mattn/goveralls@latest
-
-    - mkdir -p /opt
-    - curl -fSL https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}.zip -o /opt/sonar-scanner.zip
-    - unzip /opt/sonar-scanner.zip -d /opt
-    - rm /opt/sonar-scanner.zip
-    - ln -s /opt/sonar-scanner-${SONAR_SCANNER_VERSION}/bin/sonar-scanner /usr/bin/sonar-scanner
+    - ./tools/install-waitforit.sh
+    - ./tools/install-golang.sh
+    - ./tools/install-sonarscanner.sh
   script:
     - go mod verify
     - go mod download
-
     - golangci-lint run ./...
 
+    - waitforit -address=tcp://docker:2375 -timeout=30
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u="$CI_REGISTRY_USER" --password-stdin
     - docker-compose up -d
 
-    - waitforit -address tcp://localhost:5672 -timeout 30
-    - waitforit -address tcp://localhost:3306 -timeout 30
-    - waitforit -address tcp://localhost:5432 -timeout 30
-    - waitforit -address tcp://localhost:8081 -timeout 30
-
-    - sleep 5
+    - ./tools/wait.sh
 
     - docker logs goautowp_mysql_test
 
