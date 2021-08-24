@@ -13,3 +13,9 @@ do
     sleep 1
     echo "."
 done
+
+while ! echo "select version()" | mysql -u root -ppassword autowp --host=127.0.0.1 | grep version;
+do
+    sleep 1
+    echo "."
+done
