@@ -51,6 +51,8 @@ build:
 
     - sleep 5
 
+    - docker logs goautowp_mysql_test
+
     - source test.env
     - go test -run TestAutowpMigrations
     - go test -run TestTrafficMigrations
