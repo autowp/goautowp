@@ -15,7 +15,7 @@ build:
       alias: docker
 
   before_script:
-    - apk add --update alpine-sdk curl docker-compose mysql-client postgresql-client
+    - apk add --update alpine-sdk curl docker-compose postgresql-client
 
     - ls -lah ./tools
 
