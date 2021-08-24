@@ -40,7 +40,7 @@ build:
     - source test.env
     - go test -run TestAutowpMigrations
     - go test -run TestTrafficMigrations
-    - docker exec -it goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql"
+    - docker exec -t goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql"
     - go test -v -race -coverprofile=cov.out
     - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN
     - goveralls -service=travis-ci
