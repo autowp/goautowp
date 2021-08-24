@@ -40,7 +40,7 @@ func (s *PasswordRecovery) Start(email string, captcha string, ip string) ([]*er
 				},
 			},
 		}
-		captcha, problems = captchaInputFilter.IsValidString(captcha)
+		_, problems = captchaInputFilter.IsValidString(captcha)
 		for _, fv := range problems {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "captcha",
@@ -194,7 +194,7 @@ func (s *PasswordRecovery) ValidateNewPassword(password string, passwordConfirm 
 			&validation.IdenticalStrings{Pattern: password},
 		},
 	}
-	passwordConfirm, problems = passwordConfirmInputFilter.IsValidString(passwordConfirm)
+	_, problems = passwordConfirmInputFilter.IsValidString(passwordConfirm)
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "password_confirm",
@@ -220,7 +220,7 @@ func (s *PasswordRecovery) Finish(token string, password string, passwordConfirm
 		return nil, 0, err
 	}
 
-	if fv != nil && len(fv) > 0 {
+	if len(fv) > 0 {
 		return nil, 0, wrapFieldViolations(fv)
 	}
 

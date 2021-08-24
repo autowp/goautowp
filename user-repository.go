@@ -333,7 +333,7 @@ func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
 		return 0, err
 	}
 
-	r, err = s.autowpDB.Exec(`
+	_, err = s.autowpDB.Exec(`
 		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
 		VALUES (?, ?, ?, 0, ?, "")
 	`, KeyCloakExternalAccountID, userGuid, userID, options.FirstName)
@@ -467,7 +467,9 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 	err = s.autowpDB.QueryRow(`
 			SELECT deleted, e_mail, e_mail_to_check, login, name FROM users WHERE id = ?
 		`, userID).Scan(&deleted, &email, &emailToCheck, &login, &name)
-
+	if err != nil {
+		return "", err
+	}
 	ctx := context.Background()
 	token, err := s.keyCloak.LoginClient(
 		ctx,

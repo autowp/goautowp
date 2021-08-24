@@ -476,7 +476,7 @@ func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRe
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
-	if fv != nil && len(fv) > 0 {
+	if len(fv) > 0 {
 		return nil, wrapFieldViolations(fv)
 	}
 
@@ -722,7 +722,7 @@ func (s *GRPCServer) CreateUser(ctx context.Context, in *APICreateUserRequest) (
 		return nil, err
 	}
 
-	if fv != nil && len(fv) > 0 {
+	if len(fv) > 0 {
 		return nil, wrapFieldViolations(fv)
 	}
 
@@ -752,7 +752,7 @@ func (s *GRPCServer) PasswordRecovery(ctx context.Context, in *APIPasswordRecove
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
-	if fv != nil && len(fv) > 0 {
+	if len(fv) > 0 {
 		return nil, wrapFieldViolations(fv)
 	}
 
@@ -793,7 +793,7 @@ func (s *GRPCServer) PasswordRecoveryConfirm(_ context.Context, in *APIPasswordR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
-	if fv != nil && len(fv) > 0 {
+	if len(fv) > 0 {
 		return nil, wrapFieldViolations(fv)
 	}
 
