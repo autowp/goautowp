@@ -49,11 +49,6 @@ build:
     - waitforit -address tcp://localhost:5432 -timeout 30
     - waitforit -address tcp://localhost:8081 -timeout 30
 
-    - psql -c 'CREATE DATABASE traffic;' -U postgres
-    - psql -c "CREATE USER traffic WITH PASSWORD 'password';" -U postgres
-    - psql -c 'GRANT ALL PRIVILEGES ON DATABASE traffic TO traffic;' -U postgres
-    - psql -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO traffic;' -U postgres traffic
-
     - sleep 5
 
     - source test.env
