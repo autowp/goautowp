@@ -21,7 +21,7 @@ const KeyCloakExternalAccountID = "keycloak"
 
 type GetUsersOptions struct {
 	ID         int
-	InContacts int
+	InContacts int64
 	Order      []string
 	Fields     map[string]bool
 	Deleted    *bool
@@ -276,6 +276,11 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 	return result, nil
 }
 
+func (s *UserRepository) emailChangeCode(email string) string {
+	md5Bytes := md5.Sum([]byte(fmt.Sprintf("%s%s%d", s.emailSalt, email, rand.Int())))
+	return hex.EncodeToString(md5Bytes[:])
+}
+
 func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
 
 	ctx := context.Background()
@@ -311,8 +316,7 @@ func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
 		return 0, err
 	}
 
-	md5Bytes := md5.Sum([]byte(fmt.Sprintf("%s%s%d", s.emailSalt, options.Email, rand.Int())))
-	emailCheckCode := hex.EncodeToString(md5Bytes[:])
+	emailCheckCode := s.emailChangeCode(options.Email)
 
 	username := &options.UserName
 	if len(options.UserName) <= 0 {
@@ -561,12 +565,63 @@ func (s *UserRepository) GetLogin(userID int64) (string, error) {
 	return login, nil
 }
 
-func (s *UserRepository) EmailChangeFinish(code string) error {
+func (s *UserRepository) EmailChangeStart(userID int64, email string) ([]*errdetails.BadRequest_FieldViolation, error) {
+
+	result := make([]*errdetails.BadRequest_FieldViolation, 0)
+	var problems []string
+
+	emailInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.EmailAddress{},
+			&validation.StringLength{Max: 50},
+			&validation.EmailNotExists{DB: s.autowpDB},
+		},
+	}
+	email, problems = emailInputFilter.IsValidString(email)
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "email",
+			Description: fv,
+		})
+	}
+
+	if len(result) > 0 {
+		return result, nil
+	}
+
+	var name string
+	var languageCode string
+	err := s.autowpDB.QueryRow(`
+		SELECT name, language FROM users
+		WHERE id = ?
+	`, userID).Scan(&name, &languageCode)
+	if err != nil {
+		return nil, err
+	}
+
+	language, ok := s.languages[languageCode]
+	if !ok {
+		return nil, fmt.Errorf("language `%s` is not defined", languageCode)
+	}
+
+	emailCheckCode := s.emailChangeCode(email)
+
+	_, err = s.autowpDB.Exec(`
+		UPDATE users SET email_to_check = ?, email_check_code = ?
+		WHERE id = ?
+	`, email, emailCheckCode, userID)
+
+	return nil, s.sendChangeConfirmEmail(email, emailCheckCode, name, language.Hostname)
+}
+
+func (s *UserRepository) EmailChangeFinish(ctx context.Context, code string) error {
 	if len(code) <= 0 {
 		return fmt.Errorf("token is invalid")
 	}
 
-	var id int64
+	var userID int64
 	var email string
 	err := s.autowpDB.QueryRow(`
 		SELECT id, email_to_check FROM users
@@ -574,7 +629,7 @@ func (s *UserRepository) EmailChangeFinish(code string) error {
 		      email_check_code = ? AND
 		      LENGTH(email_check_code) > 0 AND
 		      LENGTH(email_to_check) > 0
-	`, code).Scan(&id, &email)
+	`, code).Scan(&userID, &email)
 	if err != nil {
 		return err
 	}
@@ -582,10 +637,51 @@ func (s *UserRepository) EmailChangeFinish(code string) error {
 	_, err = s.autowpDB.Exec(`
 		UPDATE users SET e_mail = email_to_check, email_check_code = NULL, email_to_check = NULL
 		WHERE id = ?
-	`, id)
+	`, userID)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+	if err != nil {
+		return err
+	}
+
+	token, err := s.keyCloak.LoginClient(
+		ctx,
+		s.keyCloakConfig.ClientID,
+		s.keyCloakConfig.ClientSecret,
+		s.keyCloakConfig.Realm,
+	)
+	if err != nil {
+		return err
+	}
+
+	return s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+		ID:       &userGuid,
+		Email:    &email,
+		Username: &email,
+	})
+}
+
+func (s *UserRepository) sendChangeConfirmEmail(email string, code string, name string, hostname string) error {
+	if len(email) <= 0 || len(code) <= 0 {
+		return nil
+	}
+
+	fromStr := "Robot " + hostname
+	subject := fmt.Sprintf("E-mail confirm on %s", hostname)
+	message := fmt.Sprintf(
+		"Hello.\n\n"+
+			"On the %s you or someone else asked to change contact address of account to %s\n"+
+			"For confirmation of this action, you must click on the link %s\n\n"+
+			"If the message has got to you by mistake - just delete it\n\n"+
+			"Sincerely, %s",
+		"https://"+hostname+"/",
+		email,
+		"https://"+hostname+"/account/emailcheck/"+url.QueryEscape(code),
+		fromStr,
+	)
+
+	return s.emailSender.Send(fromStr+" <no-reply@autowp.ru>", []string{name + " <" + email + ">"}, subject, message, "")
 }

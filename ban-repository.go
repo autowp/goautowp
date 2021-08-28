@@ -39,7 +39,7 @@ func NewBanRepository(db *pgxpool.Pool) (*BanRepository, error) {
 }
 
 // Add IP to list of banned
-func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int, reason string) error {
+func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, reason string) error {
 	reason = strings.TrimSpace(reason)
 	upTo := time.Now().Add(duration)
 

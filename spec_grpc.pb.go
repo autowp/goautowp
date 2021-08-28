@@ -47,6 +47,7 @@ type AutowpClient interface {
 	PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	PasswordRecoveryCheckCode(ctx context.Context, in *APIPasswordRecoveryCheckCodeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error)
+	EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -310,6 +311,15 @@ func (c *autowpClient) PasswordRecoveryConfirm(ctx context.Context, in *APIPassw
 	return out, nil
 }
 
+func (c *autowpClient) EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/EmailChange", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *autowpClient) EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/EmailChangeConfirm", in, out, opts...)
@@ -351,6 +361,7 @@ type AutowpServer interface {
 	PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error)
 	PasswordRecoveryCheckCode(context.Context, *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error)
 	PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error)
+	EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error)
 	EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAutowpServer()
 }
@@ -442,6 +453,9 @@ func (UnimplementedAutowpServer) PasswordRecoveryCheckCode(context.Context, *API
 }
 func (UnimplementedAutowpServer) PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecoveryConfirm not implemented")
+}
+func (UnimplementedAutowpServer) EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EmailChange not implemented")
 }
 func (UnimplementedAutowpServer) EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EmailChangeConfirm not implemented")
@@ -963,6 +977,24 @@ func _Autowp_PasswordRecoveryConfirm_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Autowp_EmailChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIEmailChangeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).EmailChange(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Autowp/EmailChange",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).EmailChange(ctx, req.(*APIEmailChangeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Autowp_EmailChangeConfirm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(APIEmailChangeConfirmRequest)
 	if err := dec(in); err != nil {
@@ -1099,6 +1131,10 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PasswordRecoveryConfirm",
 			Handler:    _Autowp_PasswordRecoveryConfirm_Handler,
+		},
+		{
+			MethodName: "EmailChange",
+			Handler:    _Autowp_EmailChange_Handler,
 		},
 		{
 			MethodName: "EmailChangeConfirm",

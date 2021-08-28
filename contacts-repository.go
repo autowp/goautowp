@@ -10,7 +10,7 @@ type ContactsRepository struct {
 	autowpDB *sql.DB
 }
 
-// NewBanRepository constructor
+// NewContactsRepository constructor
 func NewContactsRepository(db *sql.DB) (*ContactsRepository, error) {
 
 	if db == nil {
@@ -24,7 +24,7 @@ func NewContactsRepository(db *sql.DB) (*ContactsRepository, error) {
 	return s, nil
 }
 
-func (s *ContactsRepository) isExists(id int, contactID int) (bool, error) {
+func (s *ContactsRepository) isExists(id int64, contactID int64) (bool, error) {
 	v := 0
 	err := s.autowpDB.QueryRow("SELECT 1 FROM contact WHERE user_id = ? and contact_user_id = ?", id, contactID).Scan(&v)
 	if err == sql.ErrNoRows {
@@ -37,7 +37,7 @@ func (s *ContactsRepository) isExists(id int, contactID int) (bool, error) {
 	return true, nil
 }
 
-func (s *ContactsRepository) create(id int, contactID int) error {
+func (s *ContactsRepository) create(id int64, contactID int64) error {
 	_, err := s.autowpDB.Exec(`
 		INSERT IGNORE INTO contact (user_id, contact_user_id, timestamp)
 		VALUES (?, ?, NOW())
@@ -49,7 +49,7 @@ func (s *ContactsRepository) create(id int, contactID int) error {
 	return nil
 }
 
-func (s *ContactsRepository) delete(id int, contactID int) error {
+func (s *ContactsRepository) delete(id int64, contactID int64) error {
 	_, err := s.autowpDB.Exec("DELETE FROM contact WHERE user_id = ? AND contact_user_id = ?", id, contactID)
 	if err != nil {
 		return err

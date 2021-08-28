@@ -154,7 +154,7 @@ func applyAutowpMigrations(config MigrationsConfig) error {
 	return nil
 }
 
-func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConfig) (int, string, error) {
+func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConfig) (int64, string, error) {
 	const bearerSchema = "Bearer"
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -173,7 +173,7 @@ func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConf
 	return validateTokenAuthorization(tokenString, db, config)
 }
 
-func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConfig) (int, string, error) {
+func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConfig) (int64, string, error) {
 	if len(tokenString) <= 0 {
 		return 0, "", fmt.Errorf("authorization token is invalid")
 	}
@@ -207,7 +207,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 	claims := token.Claims.(jwt.MapClaims)
 	idStr := claims["sub"].(string)
 
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		return 0, "", err
 	}

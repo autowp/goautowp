@@ -196,7 +196,7 @@ func (s *GRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if int(in.UserId) == userID {
+	if int64(in.UserId) == userID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
@@ -210,7 +210,7 @@ func (s *GRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	err = s.contactsRepository.create(int(userID), int(in.UserId))
+	err = s.contactsRepository.create(userID, int64(in.UserId))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -228,7 +228,7 @@ func (s *GRPCServer) DeleteContact(ctx context.Context, in *DeleteContactRequest
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.contactsRepository.delete(userID, int(in.UserId))
+	err = s.contactsRepository.delete(userID, int64(in.UserId))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -246,11 +246,11 @@ func (s *GRPCServer) GetContact(ctx context.Context, in *GetContactRequest) (*Co
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if int(in.UserId) == userID {
+	if int64(in.UserId) == userID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	exists, err := s.contactsRepository.isExists(userID, int(in.UserId))
+	exists, err := s.contactsRepository.isExists(userID, int64(in.UserId))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -829,13 +829,40 @@ func wrapFieldViolations(fv []*errdetails.BadRequest_FieldViolation) error {
 	return st.Err()
 }
 
-func (s *GRPCServer) EmailChangeConfirm(_ context.Context, in *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
+func (s *GRPCServer) EmailChange(ctx context.Context, in *APIEmailChangeRequest) (*emptypb.Empty, error) {
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
 	users, err := s.container.GetUserRepository()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
-	err = users.EmailChangeFinish(in.Code)
+	fv, err := users.EmailChangeStart(userID, in.Email)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if len(fv) > 0 {
+		return nil, wrapFieldViolations(fv)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *GRPCServer) EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	err = users.EmailChangeFinish(ctx, in.Code)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}

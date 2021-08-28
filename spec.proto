@@ -38,6 +38,7 @@ service Autowp {
   rpc PasswordRecovery(APIPasswordRecoveryRequest) returns (google.protobuf.Empty) {}
   rpc PasswordRecoveryCheckCode(APIPasswordRecoveryCheckCodeRequest) returns (google.protobuf.Empty) {}
   rpc PasswordRecoveryConfirm(APIPasswordRecoveryConfirmRequest) returns (APIPasswordRecoveryConfirmResponse) {}
+  rpc EmailChange(APIEmailChangeRequest) returns (google.protobuf.Empty) {}
   rpc EmailChangeConfirm(APIEmailChangeConfirmRequest) returns (google.protobuf.Empty) {}
 }
 
@@ -299,6 +300,10 @@ message APIPasswordRecoveryConfirmRequest {
 
 message APIPasswordRecoveryConfirmResponse {
   string login = 1;
+}
+
+message APIEmailChangeRequest {
+  string email = 1;
 }
 
 message APIEmailChangeConfirmRequest {
