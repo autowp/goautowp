@@ -102,7 +102,7 @@ func (s *Recaptcha) IsValidString(value string) []string {
 // IsValidString IsValidString
 func (s *EmailNotExists) IsValidString(value string) []string {
 	var exists bool
-	err := s.DB.QueryRow("SELECT 1 FROM users WHERE email = ?", value).Scan(&exists)
+	err := s.DB.QueryRow("SELECT 1 FROM users WHERE e_mail = ?", value).Scan(&exists)
 	if err == sql.ErrNoRows {
 		return []string{}
 	}

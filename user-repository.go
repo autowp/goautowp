@@ -56,7 +56,7 @@ type DBUser struct {
 // CreateUserOptions CreateUserOptions
 type CreateUserOptions struct {
 	UserName        string `json:"user_name"`
-	FirstName       string `json:"first_name"`
+	Name            string `json:"name"`
 	Email           string `json:"email"`
 	Timezone        string `json:"timezone"`
 	Language        string `json:"language"`
@@ -185,17 +185,17 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
 
-	userNameInputFilter := validation.InputFilter{
+	nameInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{
 			&validation.NotEmpty{},
 			&validation.StringLength{Min: 2, Max: 50},
 		},
 	}
-	options.UserName, problems = userNameInputFilter.IsValidString(options.UserName)
+	options.Name, problems = nameInputFilter.IsValidString(options.Name)
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "user_name",
+			Field:       "name",
 			Description: fv,
 		})
 	}
@@ -249,7 +249,7 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 	options.PasswordConfirm, problems = passwordConfirmInputFilter.IsValidString(options.PasswordConfirm)
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "password",
+			Field:       "password_confirm",
 			Description: fv,
 		})
 	}
@@ -303,7 +303,7 @@ func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
 		Totp:          &f,
 		EmailVerified: &f,
 		Username:      &options.Email,
-		FirstName:     &options.FirstName,
+		FirstName:     &options.Name,
 		Email:         &options.Email,
 		Credentials:   &credentials,
 	})
@@ -323,7 +323,7 @@ func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
 		INSERT INTO users (login, e_mail, password, email_to_check, hide_e_mail, email_check_code, name, reg_date, 
 		                   last_online, timezone, last_ip, language)
 		VALUES (?, NULL, MD5(CONCAT(?, ?)), ?, 1, ?, ?, NOW(), NOW(), ?, INET6_ATON(?), ?)
-	`, username, s.usersSalt, options.Password, options.Email, emailCheckCode, options.FirstName, options.Timezone, "127.0.0.1", options.Language)
+	`, username, s.usersSalt, options.Password, options.Email, emailCheckCode, options.Name, options.Timezone, "127.0.0.1", options.Language)
 	if err != nil {
 		return 0, err
 	}
@@ -336,7 +336,7 @@ func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
 	_, err = s.autowpDB.Exec(`
 		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
 		VALUES (?, ?, ?, 0, ?, "")
-	`, KeyCloakExternalAccountID, userGuid, userID, options.FirstName)
+	`, KeyCloakExternalAccountID, userGuid, userID, options.Name)
 	if err != nil {
 		return 0, err
 	}
@@ -346,7 +346,7 @@ func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
 		return 0, fmt.Errorf("language `%s` is not defined", options.Language)
 	}
 
-	err = s.sendRegistrationConfirmEmail(options.Email, emailCheckCode, options.FirstName, language.Hostname)
+	err = s.sendRegistrationConfirmEmail(options.Email, emailCheckCode, options.Name, language.Hostname)
 	if err != nil {
 		return 0, err
 	}

@@ -637,7 +637,12 @@ func (s *Container) GetEmailSender() (EmailSender, error) {
 		if err != nil {
 			return nil, err
 		}
-		s.emailSender = &SmtpEmailSender{config: config.SMTP}
+
+		if s.config.MockEmailSender {
+			s.emailSender = &MockEmailSender{}
+		} else {
+			s.emailSender = &SmtpEmailSender{config: config.SMTP}
+		}
 	}
 
 	return s.emailSender, nil

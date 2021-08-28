@@ -109,6 +109,7 @@ type Config struct {
 	TrafficDSN        string                    `yaml:"traffic-dsn"        mapstructure:"traffic-dsn"`
 	TrafficMigrations MigrationsConfig          `yaml:"traffic-migrations" mapstructure:"traffic-migrations"`
 	Recaptcha         RecaptchaConfig           `yaml:"recaptcha"          mapstructure:"recaptcha"`
+	MockEmailSender   bool                      `yaml:"mock-email-sender"  mapstructure:"mock-email-sender"`
 	SMTP              SMTPConfig                `yaml:"smtp"               mapstructure:"smtp"`
 	Feedback          FeedbackConfig            `yaml:"feedback"           mapstructure:"feedback"`
 	KeyCloak          KeyCloakConfig            `yaml:"keycloak"           mapstructure:"keycloak"`

@@ -707,8 +707,7 @@ func (s *GRPCServer) CreateUser(ctx context.Context, in *APICreateUserRequest) (
 	}
 
 	user := CreateUserOptions{
-		UserName:        in.Name,
-		FirstName:       in.Name,
+		Name:            in.Name,
 		Email:           in.Email,
 		Timezone:        language.Timezone,
 		Language:        in.Language,

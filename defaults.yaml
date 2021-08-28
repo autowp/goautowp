@@ -104,3 +104,4 @@ languages:
     flag    : flag-icon flag-icon-es
     aliases : []
 captcha: true
+mock-email-sender: true
