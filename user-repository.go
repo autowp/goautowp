@@ -460,12 +460,12 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 	}
 
 	var deleted bool
-	var email string
-	var emailToCheck string
+	var email sql.NullString
+	var emailToCheck sql.NullString
 	var login string
 	var name string
 	err = s.autowpDB.QueryRow(`
-			SELECT deleted, e_mail, e_mail_to_check, login, name FROM users WHERE id = ?
+			SELECT deleted, e_mail, email_to_check, login, name FROM users WHERE id = ?
 		`, userID).Scan(&deleted, &email, &emailToCheck, &login, &name)
 	if err != nil {
 		return "", err
@@ -481,23 +481,25 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 		return "", err
 	}
 
+	var keyCloakEmail = &email.String
 	emailVerified := true
-	if len(email) <= 0 {
-		email = emailToCheck
+	if !email.Valid || len(email.String) <= 0 {
+		keyCloakEmail = &emailToCheck.String
 		emailVerified = false
 	}
 	username := login
-	if len(login) <= 0 {
-		login = email
+	if len(login) <= 0 && keyCloakEmail != nil {
+		login = *keyCloakEmail
 	}
 	f := false
+	enabled := !deleted
 	return s.keyCloak.CreateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
-		Enabled:       &deleted,
+		Enabled:       &enabled,
 		Totp:          &f,
 		EmailVerified: &emailVerified,
 		Username:      &username,
 		FirstName:     &name,
-		Email:         &email,
+		Email:         keyCloakEmail,
 	})
 }
 

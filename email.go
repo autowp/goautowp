@@ -1,6 +1,10 @@
 package goautowp
 
-import "gopkg.in/gomail.v2"
+import (
+	"fmt"
+	"gopkg.in/gomail.v2"
+	"strings"
+)
 
 type EmailSender interface {
 	Send(from string, to []string, subject, body, replyTo string) error
@@ -27,7 +31,8 @@ func (s *SmtpEmailSender) Send(from string, to []string, subject, body, replyTo 
 	return d.DialAndSend(m)
 }
 
-func (s *MockEmailSender) Send(_ string, _ []string, _, body, _ string) error {
+func (s *MockEmailSender) Send(from string, to []string, subject, body, _ string) error {
+	fmt.Printf("Subject: %s\nFrom: %s\nTo: %s\n%s", subject, from, strings.Join(to, ", "), body)
 	s.Body = body
 	return nil
 }

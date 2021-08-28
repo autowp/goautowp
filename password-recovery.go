@@ -61,25 +61,30 @@ func (s *PasswordRecovery) Start(email string, captcha string, ip string) ([]*er
 		})
 	}
 
-	var id int
-	var languageCode string
-	var name string
-	err := s.db.QueryRow(`
-		SELECT id, language, name FROM users WHERE e_mail = ? AND NOT deleted LIMIT 1
-	`, email).Scan(&id, &languageCode, &name)
-	if err == sql.ErrNoRows {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "email",
-			Description: "User with that e-mail not found",
-		})
-	}
-
 	if len(result) > 0 {
 		return result, nil
 	}
 
-	if err != nil {
-		return nil, err
+	var id int
+	var languageCode string
+	if len(email) > 0 {
+		err := s.db.QueryRow(`
+		SELECT id, language FROM users WHERE e_mail = ? AND NOT deleted LIMIT 1
+	`, email).Scan(&id, &languageCode)
+		if err == sql.ErrNoRows {
+			err = nil
+			result = append(result, &errdetails.BadRequest_FieldViolation{
+				Field:       "email",
+				Description: "User with that e-mail not found",
+			})
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(result) > 0 {
+		return result, nil
 	}
 
 	code, err := s.createToken(id)
@@ -197,7 +202,7 @@ func (s *PasswordRecovery) ValidateNewPassword(password string, passwordConfirm 
 	_, problems = passwordConfirmInputFilter.IsValidString(passwordConfirm)
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "password_confirm",
+			Field:       "passwordConfirm",
 			Description: fv,
 		})
 	}
@@ -221,7 +226,7 @@ func (s *PasswordRecovery) Finish(token string, password string, passwordConfirm
 	}
 
 	if len(fv) > 0 {
-		return nil, 0, wrapFieldViolations(fv)
+		return fv, 0, nil
 	}
 
 	err = s.DeleteToken(token)
