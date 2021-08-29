@@ -40,6 +40,7 @@ service Autowp {
   rpc PasswordRecoveryConfirm(APIPasswordRecoveryConfirmRequest) returns (APIPasswordRecoveryConfirmResponse) {}
   rpc EmailChange(APIEmailChangeRequest) returns (google.protobuf.Empty) {}
   rpc EmailChangeConfirm(APIEmailChangeConfirmRequest) returns (google.protobuf.Empty) {}
+  rpc SetPassword(APISetPasswordRequest) returns (google.protobuf.Empty) {}
 }
 
 message ErrorDetails {
@@ -308,4 +309,10 @@ message APIEmailChangeRequest {
 
 message APIEmailChangeConfirmRequest {
   string code = 1;
+}
+
+message APISetPasswordRequest {
+  string old_password = 1;
+  string new_password = 2;
+  string new_password_confirm = 3;
 }

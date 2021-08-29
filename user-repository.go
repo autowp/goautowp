@@ -184,6 +184,7 @@ func (s *UserRepository) GetUsers(options GetUsersOptions) ([]DBUser, error) {
 func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEnabled bool, ip string) ([]*errdetails.BadRequest_FieldViolation, error) {
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
+	var err error
 
 	nameInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
@@ -192,7 +193,10 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 			&validation.StringLength{Min: 2, Max: 50},
 		},
 	}
-	options.Name, problems = nameInputFilter.IsValidString(options.Name)
+	options.Name, problems, err = nameInputFilter.IsValidString(options.Name)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "name",
@@ -209,7 +213,10 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 			&validation.EmailNotExists{DB: s.autowpDB},
 		},
 	}
-	options.Email, problems = emailInputFilter.IsValidString(options.Email)
+	options.Email, problems, err = emailInputFilter.IsValidString(options.Email)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "email",
@@ -227,7 +234,10 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 			},
 		},
 	}
-	options.Password, problems = passwordInputFilter.IsValidString(options.Password)
+	options.Password, problems, err = passwordInputFilter.IsValidString(options.Password)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "password",
@@ -246,7 +256,10 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 			&validation.IdenticalStrings{Pattern: options.Password},
 		},
 	}
-	options.PasswordConfirm, problems = passwordConfirmInputFilter.IsValidString(options.PasswordConfirm)
+	options.PasswordConfirm, problems, err = passwordConfirmInputFilter.IsValidString(options.PasswordConfirm)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "password_confirm",
@@ -264,7 +277,10 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 				},
 			},
 		}
-		options.Captcha, problems = captchaInputFilter.IsValidString(options.Captcha)
+		options.Captcha, problems, err = captchaInputFilter.IsValidString(options.Captcha)
+		if err != nil {
+			return nil, err
+		}
 		for _, fv := range problems {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "captcha",
@@ -497,7 +513,7 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 	}
 	f := false
 	enabled := !deleted
-	return s.keyCloak.CreateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+	userGuid, err = s.keyCloak.CreateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
 		Enabled:       &enabled,
 		Totp:          &f,
 		EmailVerified: &emailVerified,
@@ -505,6 +521,20 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 		FirstName:     &name,
 		Email:         keyCloakEmail,
 	})
+	if err != nil {
+		return "", err
+	}
+
+	_, err = s.autowpDB.Exec(`
+		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
+		VALUES (?, ?, ?, 0, ?, "")
+		ON DUPLICATE KEY UPDATE user_id=VALUES(user_id), name=VALUES(name);
+	`, KeyCloakExternalAccountID, userGuid, userID, name)
+	if err != nil {
+		return "", err
+	}
+
+	return userGuid, err
 }
 
 func (s *UserRepository) SetPassword(userID int64, password string) error {
@@ -569,6 +599,7 @@ func (s *UserRepository) EmailChangeStart(userID int64, email string) ([]*errdet
 
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
+	var err error
 
 	emailInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
@@ -579,7 +610,10 @@ func (s *UserRepository) EmailChangeStart(userID int64, email string) ([]*errdet
 			&validation.EmailNotExists{DB: s.autowpDB},
 		},
 	}
-	email, problems = emailInputFilter.IsValidString(email)
+	email, problems, err = emailInputFilter.IsValidString(email)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "email",
@@ -593,7 +627,7 @@ func (s *UserRepository) EmailChangeStart(userID int64, email string) ([]*errdet
 
 	var name string
 	var languageCode string
-	err := s.autowpDB.QueryRow(`
+	err = s.autowpDB.QueryRow(`
 		SELECT name, language FROM users
 		WHERE id = ?
 	`, userID).Scan(&name, &languageCode)
@@ -684,4 +718,102 @@ func (s *UserRepository) sendChangeConfirmEmail(email string, code string, name 
 	)
 
 	return s.emailSender.Send(fromStr+" <no-reply@autowp.ru>", []string{name + " <" + email + ">"}, subject, message, "")
+}
+
+func (s *UserRepository) ValidateChangePassword(userID int64, oldPassword, newPassword, newPasswordConfirm string) ([]*errdetails.BadRequest_FieldViolation, error) {
+
+	result := make([]*errdetails.BadRequest_FieldViolation, 0)
+	var problems []string
+	var err error
+
+	oldPasswordInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.Callback{
+				Callback: func(value string) ([]string, error) {
+					match, err := s.PasswordMatch(userID, oldPassword)
+					if err != nil {
+						return nil, err
+					}
+					if !match {
+						return []string{"Current password is incorrect"}, nil
+					}
+					return []string{}, nil
+				},
+			},
+		},
+	}
+	oldPassword, problems, err = oldPasswordInputFilter.IsValidString(oldPassword)
+	if err != nil {
+		return nil, err
+	}
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "oldPassword",
+			Description: fv,
+		})
+	}
+
+	newPasswordInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.StringLength{
+				Min: 6,
+				Max: 50,
+			},
+		},
+	}
+	newPassword, problems, err = newPasswordInputFilter.IsValidString(newPassword)
+	if err != nil {
+		return nil, err
+	}
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "newPassword",
+			Description: fv,
+		})
+	}
+
+	newPasswordConfirmInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.StringLength{
+				Min: 6,
+				Max: 50,
+			},
+			&validation.IdenticalStrings{Pattern: newPassword},
+		},
+	}
+	newPasswordConfirm, problems, err = newPasswordConfirmInputFilter.IsValidString(newPasswordConfirm)
+	if err != nil {
+		return nil, err
+	}
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "newPasswordConfirm",
+			Description: fv,
+		})
+	}
+
+	return result, nil
+}
+
+func (s *UserRepository) PasswordMatch(userID int64, password string) (bool, error) {
+	var exists bool
+	err := s.autowpDB.QueryRow(`
+		SELECT 1 FROM users 
+		WHERE password = MD5(CONCAT(?, ?)) AND id = ? AND NOT deleted
+	`, s.usersSalt, password, userID).Scan(&exists)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

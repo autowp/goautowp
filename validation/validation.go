@@ -20,7 +20,7 @@ type FilterInterface interface {
 }
 
 type ValidatorInterface interface {
-	IsValidString(value string) []string
+	IsValidString(value string) ([]string, error)
 }
 
 // NotEmpty validator
@@ -52,75 +52,85 @@ type IdenticalStrings struct {
 	Pattern string
 }
 
+// Callback validator
+type Callback struct {
+	Callback func(value string) ([]string, error)
+}
+
 // StringTrimFilter filter
 type StringTrimFilter struct {
 }
 
 // IsValidString IsValidString
-func (s *NotEmpty) IsValidString(value string) []string {
+func (s *NotEmpty) IsValidString(value string) ([]string, error) {
 	if len(value) > 0 {
-		return []string{}
+		return []string{}, nil
 	}
 
-	return []string{NotEmptyIsEmpty}
+	return []string{NotEmptyIsEmpty}, nil
 }
 
 // IsValidString IsValidString
-func (s *StringLength) IsValidString(value string) []string {
+func (s *StringLength) IsValidString(value string) ([]string, error) {
 	l := len(value)
 	if l < s.Min {
-		return []string{fmt.Sprintf(StringLengthTooShort, s.Min)}
+		return []string{fmt.Sprintf(StringLengthTooShort, s.Min)}, nil
 	}
 
 	if l > s.Max {
-		return []string{fmt.Sprintf(StringLengthTooLong, s.Max)}
+		return []string{fmt.Sprintf(StringLengthTooLong, s.Max)}, nil
 	}
 
-	return []string{}
+	return []string{}, nil
 }
 
 // IsValidString IsValidString
-func (s *EmailAddress) IsValidString(value string) []string {
+func (s *EmailAddress) IsValidString(value string) ([]string, error) {
 	_, err := mail.ParseAddress(value)
 	if err != nil {
-		return []string{EmailAddressInvalidFormat}
+		return []string{EmailAddressInvalidFormat}, nil
 	}
 
-	return []string{}
+	return []string{}, nil
 }
 
 // IsValidString IsValidString
-func (s *Recaptcha) IsValidString(value string) []string {
+func (s *Recaptcha) IsValidString(value string) ([]string, error) {
 	_, err := recaptcha.Confirm(s.ClientIP, value)
 	if err != nil {
-		return []string{err.Error()}
+		return []string{err.Error()}, nil
 	}
 
-	return []string{}
+	return []string{}, nil
 }
 
 // IsValidString IsValidString
-func (s *EmailNotExists) IsValidString(value string) []string {
+func (s *EmailNotExists) IsValidString(value string) ([]string, error) {
 	var exists bool
 	err := s.DB.QueryRow("SELECT 1 FROM users WHERE e_mail = ?", value).Scan(&exists)
 	if err == sql.ErrNoRows {
-		return []string{}
+		return []string{}, nil
 	}
 
 	if err != nil {
-		return []string{err.Error()}
+		return nil, err
 	}
 
-	return []string{EmailNotExistsExists}
+	return []string{EmailNotExistsExists}, nil
 }
 
 // IsValidString IsValidString
-func (s *IdenticalStrings) IsValidString(value string) []string {
+func (s *IdenticalStrings) IsValidString(value string) ([]string, error) {
 	if value != s.Pattern {
-		return []string{IdenticalStringsNotSame}
+		return []string{IdenticalStringsNotSame}, nil
 	}
 
-	return []string{}
+	return []string{}, nil
+}
+
+// IsValidString IsValidString
+func (s *Callback) IsValidString(value string) ([]string, error) {
+	return s.Callback(value)
 }
 
 // FilterString filter
@@ -134,10 +144,13 @@ type InputFilter struct {
 }
 
 // IsValidString IsValidString
-func (s *InputFilter) IsValidString(value string) (string, []string) {
+func (s *InputFilter) IsValidString(value string) (string, []string, error) {
 	value = filterString(value, s.Filters)
-	errors := validateString(value, s.Validators)
-	return value, errors
+	violations, err := validateString(value, s.Validators)
+	if err != nil {
+		return "", nil, err
+	}
+	return value, violations, nil
 }
 
 func filterString(value string, filters []FilterInterface) string {
@@ -147,14 +160,17 @@ func filterString(value string, filters []FilterInterface) string {
 	return value
 }
 
-func validateString(value string, validators []ValidatorInterface) []string {
+func validateString(value string, validators []ValidatorInterface) ([]string, error) {
 	result := make([]string, 0)
 	for _, validator := range validators {
-		errors := validator.IsValidString(value)
-		if len(errors) > 0 {
-			return errors
+		violations, err := validator.IsValidString(value)
+		if err != nil {
+			return nil, err
+		}
+		if len(violations) > 0 {
+			return violations, nil
 		}
 	}
 
-	return result
+	return result, nil
 }

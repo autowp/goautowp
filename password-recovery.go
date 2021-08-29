@@ -29,6 +29,7 @@ func (s *PasswordRecovery) Start(email string, captcha string, ip string) ([]*er
 
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
+	var err error
 
 	if s.captchaEnabled {
 		captchaInputFilter := validation.InputFilter{
@@ -40,7 +41,10 @@ func (s *PasswordRecovery) Start(email string, captcha string, ip string) ([]*er
 				},
 			},
 		}
-		_, problems = captchaInputFilter.IsValidString(captcha)
+		_, problems, err = captchaInputFilter.IsValidString(captcha)
+		if err != nil {
+			return nil, err
+		}
 		for _, fv := range problems {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "captcha",
@@ -53,7 +57,10 @@ func (s *PasswordRecovery) Start(email string, captcha string, ip string) ([]*er
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}, &validation.EmailAddress{}},
 	}
-	email, problems = emailInputFilter.IsValidString(email)
+	email, problems, err = emailInputFilter.IsValidString(email)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "email",
@@ -169,6 +176,7 @@ func (s *PasswordRecovery) ValidateNewPassword(password string, passwordConfirm 
 
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
+	var err error
 
 	passwordInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{},
@@ -180,7 +188,10 @@ func (s *PasswordRecovery) ValidateNewPassword(password string, passwordConfirm 
 			},
 		},
 	}
-	password, problems = passwordInputFilter.IsValidString(password)
+	password, problems, err = passwordInputFilter.IsValidString(password)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "password",
@@ -199,7 +210,10 @@ func (s *PasswordRecovery) ValidateNewPassword(password string, passwordConfirm 
 			&validation.IdenticalStrings{Pattern: password},
 		},
 	}
-	_, problems = passwordConfirmInputFilter.IsValidString(passwordConfirm)
+	_, problems, err = passwordConfirmInputFilter.IsValidString(passwordConfirm)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "passwordConfirm",

@@ -869,3 +869,35 @@ func (s *GRPCServer) EmailChangeConfirm(ctx context.Context, in *APIEmailChangeC
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *GRPCServer) SetPassword(ctx context.Context, in *APISetPasswordRequest) (*emptypb.Empty, error) {
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	fv, err := users.ValidateChangePassword(userID, in.OldPassword, in.NewPassword, in.NewPasswordConfirm)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	if len(fv) > 0 {
+		return nil, wrapFieldViolations(fv)
+	}
+
+	err = users.SetPassword(userID, in.NewPassword)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}

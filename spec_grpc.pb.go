@@ -49,6 +49,7 @@ type AutowpClient interface {
 	PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error)
 	EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SetPassword(ctx context.Context, in *APISetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type autowpClient struct {
@@ -329,6 +330,15 @@ func (c *autowpClient) EmailChangeConfirm(ctx context.Context, in *APIEmailChang
 	return out, nil
 }
 
+func (c *autowpClient) SetPassword(ctx context.Context, in *APISetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Autowp/SetPassword", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AutowpServer is the server API for Autowp service.
 // All implementations must embed UnimplementedAutowpServer
 // for forward compatibility
@@ -363,6 +373,7 @@ type AutowpServer interface {
 	PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error)
 	EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error)
 	EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error)
+	SetPassword(context.Context, *APISetPasswordRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAutowpServer()
 }
 
@@ -459,6 +470,9 @@ func (UnimplementedAutowpServer) EmailChange(context.Context, *APIEmailChangeReq
 }
 func (UnimplementedAutowpServer) EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EmailChangeConfirm not implemented")
+}
+func (UnimplementedAutowpServer) SetPassword(context.Context, *APISetPasswordRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPassword not implemented")
 }
 func (UnimplementedAutowpServer) mustEmbedUnimplementedAutowpServer() {}
 
@@ -1013,6 +1027,24 @@ func _Autowp_EmailChangeConfirm_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Autowp_SetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APISetPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).SetPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Autowp/SetPassword",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).SetPassword(ctx, req.(*APISetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Autowp_ServiceDesc is the grpc.ServiceDesc for Autowp service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1139,6 +1171,10 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EmailChangeConfirm",
 			Handler:    _Autowp_EmailChangeConfirm_Handler,
+		},
+		{
+			MethodName: "SetPassword",
+			Handler:    _Autowp_SetPassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
