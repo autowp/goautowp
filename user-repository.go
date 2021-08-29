@@ -85,13 +85,9 @@ func NewUserRepository(
 	emailSender EmailSender,
 	keyCloak gocloak.GoCloak,
 	keyCloakConfig KeyCloakConfig,
-) (*UserRepository, error) {
+) *UserRepository {
 
-	if autowpDB == nil {
-		return nil, fmt.Errorf("database connection is nil")
-	}
-
-	s := &UserRepository{
+	return &UserRepository{
 		autowpDB:       autowpDB,
 		usersSalt:      usersSalt,
 		emailSalt:      emailSalt,
@@ -100,8 +96,6 @@ func NewUserRepository(
 		keyCloak:       keyCloak,
 		keyCloakConfig: keyCloakConfig,
 	}
-
-	return s, nil
 }
 
 func (s *UserRepository) GetUser(options GetUsersOptions) (*DBUser, error) {
@@ -811,6 +805,55 @@ func (s *UserRepository) PasswordMatch(userID int64, password string) (bool, err
 		return false, nil
 	}
 
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (s *UserRepository) DeleteUser(userID int64) (bool, error) {
+
+	var val int
+	err := s.autowpDB.QueryRow("SELECT 1 FROM users WHERE id = ? AND NOT deleted", userID).Scan(&val)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	// $oldImageId = $row['img'];
+
+	_, err = s.autowpDB.Exec(`
+		UPDATE users SET deleted = 1 WHERE id = ?
+	`, userID)
+	// 'img'     => null,
+	if err != nil {
+		return false, err
+	}
+
+	/*if ($oldImageId) {
+		$this->imageStorage->removeImage($oldImageId);
+	}*/
+
+	_, err = s.autowpDB.Exec("DELETE FROM telegram_chat WHERE user_id = ?", userID)
+	if err != nil {
+		return false, err
+	}
+
+	// delete linked profiles
+	_, err = s.autowpDB.Exec(`
+		DELETE FROM user_account WHERE user_id = ? AND service_id != ?
+	`, userID, KeyCloakExternalAccountID)
+	if err != nil {
+		return false, err
+	}
+
+	// unsubscribe from items
+	_, err = s.autowpDB.Exec(`
+		DELETE FROM user_item_subscribe WHERE user_id = ?
+	`, userID)
 	if err != nil {
 		return false, err
 	}

@@ -688,51 +688,6 @@ func (s *GRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (
 
 }
 
-func (s *GRPCServer) CreateUser(ctx context.Context, in *APICreateUserRequest) (*emptypb.Empty, error) {
-
-	p, ok := peer.FromContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "Failed extract peer from context")
-	}
-	remoteAddr := p.Addr.String()
-
-	config, err := s.container.GetConfig()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	language, ok := config.Languages[in.Language]
-	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "language `%s` is not defined", in.Language)
-	}
-
-	user := CreateUserOptions{
-		Name:            in.Name,
-		Email:           in.Email,
-		Timezone:        language.Timezone,
-		Language:        in.Language,
-		Password:        in.Password,
-		PasswordConfirm: in.PasswordConfirm,
-		Captcha:         in.Captcha,
-	}
-
-	fv, err := s.userRepository.ValidateCreateUser(user, config.Captcha, remoteAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(fv) > 0 {
-		return nil, wrapFieldViolations(fv)
-	}
-
-	_, err = s.userRepository.CreateUser(user)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
 func (s *GRPCServer) PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest) (*emptypb.Empty, error) {
 
 	p, ok := peer.FromContext(ctx)

@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"context"
 	"database/sql"
 	"github.com/Nerzal/gocloak/v8"
 	"github.com/stretchr/testify/require"
@@ -27,7 +28,7 @@ func TestRestorePassword(t *testing.T) {
 
 	emailSender := MockEmailSender{}
 
-	users, err := NewUserRepository(
+	users := NewUserRepository(
 		db,
 		config.UsersSalt,
 		config.EmailSalt,
@@ -36,7 +37,6 @@ func TestRestorePassword(t *testing.T) {
 		keycloak,
 		config.KeyCloak,
 	)
-	require.NoError(t, err)
 
 	userID, err := users.CreateUser(CreateUserOptions{
 		Email:           email,
@@ -55,7 +55,7 @@ func TestRestorePassword(t *testing.T) {
 	require.NotEmpty(t, matches)
 	token := matches[1]
 
-	err = users.EmailChangeFinish(token)
+	err = users.EmailChangeFinish(context.Background(), token)
 	require.NoError(t, err)
 
 	pr := NewPasswordRecovery(db, false, config.Languages, &emailSender)

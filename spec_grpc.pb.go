@@ -43,7 +43,6 @@ type AutowpClient interface {
 	GetTrafficTop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficTopResponse, error)
 	GetTrafficWhitelist(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficWhitelistItems, error)
 	GetVehicleTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VehicleTypeItems, error)
-	CreateUser(ctx context.Context, in *APICreateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	PasswordRecoveryCheckCode(ctx context.Context, in *APIPasswordRecoveryCheckCodeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error)
@@ -276,15 +275,6 @@ func (c *autowpClient) GetVehicleTypes(ctx context.Context, in *emptypb.Empty, o
 	return out, nil
 }
 
-func (c *autowpClient) CreateUser(ctx context.Context, in *APICreateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/CreateUser", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *autowpClient) PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/PasswordRecovery", in, out, opts...)
@@ -367,7 +357,6 @@ type AutowpServer interface {
 	GetTrafficTop(context.Context, *emptypb.Empty) (*APITrafficTopResponse, error)
 	GetTrafficWhitelist(context.Context, *emptypb.Empty) (*APITrafficWhitelistItems, error)
 	GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error)
-	CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error)
 	PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error)
 	PasswordRecoveryCheckCode(context.Context, *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error)
 	PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error)
@@ -452,9 +441,6 @@ func (UnimplementedAutowpServer) GetTrafficWhitelist(context.Context, *emptypb.E
 }
 func (UnimplementedAutowpServer) GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVehicleTypes not implemented")
-}
-func (UnimplementedAutowpServer) CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
 }
 func (UnimplementedAutowpServer) PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecovery not implemented")
@@ -919,24 +905,6 @@ func _Autowp_GetVehicleTypes_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autowp_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APICreateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).CreateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/CreateUser",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).CreateUser(ctx, req.(*APICreateUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Autowp_PasswordRecovery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(APIPasswordRecoveryRequest)
 	if err := dec(in); err != nil {
@@ -1149,10 +1117,6 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Autowp_GetVehicleTypes_Handler,
 		},
 		{
-			MethodName: "CreateUser",
-			Handler:    _Autowp_CreateUser_Handler,
-		},
-		{
 			MethodName: "PasswordRecovery",
 			Handler:    _Autowp_PasswordRecovery_Handler,
 		},
@@ -1175,6 +1139,128 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetPassword",
 			Handler:    _Autowp_SetPassword_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+// UsersClient is the client API for Users service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type UsersClient interface {
+	CreateUser(ctx context.Context, in *APICreateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type usersClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewUsersClient(cc grpc.ClientConnInterface) UsersClient {
+	return &usersClient{cc}
+}
+
+func (c *usersClient) CreateUser(ctx context.Context, in *APICreateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/CreateUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/DeleteUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// UsersServer is the server API for Users service.
+// All implementations must embed UnimplementedUsersServer
+// for forward compatibility
+type UsersServer interface {
+	CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error)
+	DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error)
+	mustEmbedUnimplementedUsersServer()
+}
+
+// UnimplementedUsersServer must be embedded to have forward compatible implementations.
+type UnimplementedUsersServer struct {
+}
+
+func (UnimplementedUsersServer) CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
+}
+func (UnimplementedUsersServer) DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
+}
+func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
+
+// UnsafeUsersServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UsersServer will
+// result in compilation errors.
+type UnsafeUsersServer interface {
+	mustEmbedUnimplementedUsersServer()
+}
+
+func RegisterUsersServer(s grpc.ServiceRegistrar, srv UsersServer) {
+	s.RegisterService(&Users_ServiceDesc, srv)
+}
+
+func _Users_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APICreateUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).CreateUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/CreateUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).CreateUser(ctx, req.(*APICreateUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIDeleteUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).DeleteUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/DeleteUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).DeleteUser(ctx, req.(*APIDeleteUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Users_ServiceDesc is the grpc.ServiceDesc for Users service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Users_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Users",
+	HandlerType: (*UsersServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateUser",
+			Handler:    _Users_CreateUser_Handler,
+		},
+		{
+			MethodName: "DeleteUser",
+			Handler:    _Users_DeleteUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

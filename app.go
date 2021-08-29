@@ -50,10 +50,7 @@ func (s *Application) MigrateAutowp() error {
 		return err
 	}
 
-	config, err := s.container.GetConfig()
-	if err != nil {
-		return err
-	}
+	config := s.container.GetConfig()
 
 	err = applyAutowpMigrations(config.AutowpMigrations)
 	if err != nil && err != migrate.ErrNoChange {
@@ -97,10 +94,7 @@ func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 		return err
 	}
 
-	config, err := s.container.GetConfig()
-	if err != nil {
-		return err
-	}
+	config := s.container.GetConfig()
 
 	log.Println("DuplicateFinder listener started")
 	err = df.ListenAMQP(config.DuplicateFinder.RabbitMQ, config.DuplicateFinder.Queue, quit)
@@ -274,10 +268,7 @@ func (s *Application) MigrateTraffic() error {
 		return err
 	}
 
-	config, err := s.container.GetConfig()
-	if err != nil {
-		return err
-	}
+	config := s.container.GetConfig()
 
 	err = applyTrafficMigrations(config.TrafficMigrations)
 	if err != nil && err != migrate.ErrNoChange {
@@ -376,10 +367,7 @@ func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
 		return err
 	}
 
-	config, err := s.container.GetConfig()
-	if err != nil {
-		return err
-	}
+	config := s.container.GetConfig()
 
 	log.Println("Monitoring listener started")
 	err = traffic.Monitoring.Listen(config.RabbitMQ, config.MonitoringQueue, quit)

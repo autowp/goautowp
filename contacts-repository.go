@@ -2,7 +2,6 @@ package goautowp
 
 import (
 	"database/sql"
-	"fmt"
 )
 
 // ContactsRepository Main Object
@@ -11,17 +10,10 @@ type ContactsRepository struct {
 }
 
 // NewContactsRepository constructor
-func NewContactsRepository(db *sql.DB) (*ContactsRepository, error) {
-
-	if db == nil {
-		return nil, fmt.Errorf("database connection is nil")
-	}
-
-	s := &ContactsRepository{
+func NewContactsRepository(db *sql.DB) *ContactsRepository {
+	return &ContactsRepository{
 		autowpDB: db,
 	}
-
-	return s, nil
 }
 
 func (s *ContactsRepository) isExists(id int64, contactID int64) (bool, error) {
@@ -51,6 +43,20 @@ func (s *ContactsRepository) create(id int64, contactID int64) error {
 
 func (s *ContactsRepository) delete(id int64, contactID int64) error {
 	_, err := s.autowpDB.Exec("DELETE FROM contact WHERE user_id = ? AND contact_user_id = ?", id, contactID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ContactsRepository) deleteUserEverywhere(id int64) error {
+	_, err := s.autowpDB.Exec("DELETE FROM contact WHERE user_id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.autowpDB.Exec("DELETE FROM contact WHERE contact_user_id = ?", id)
 	if err != nil {
 		return err
 	}
