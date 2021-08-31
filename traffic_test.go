@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const adminAccessToken = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMyJ9.tI-wPZ4BSqmpsZN0-SgWXaokzvB8T-uYWLR9OQurxPFNoPC56U3op1gSE5n2H02GYfDGig0Eyp6U0NbDpsQaAg"
-
 func createTrafficService(t *testing.T) *Traffic {
 	config := LoadConfig()
 
@@ -139,7 +137,12 @@ func TestHttpBanPost(t *testing.T) {
 	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + adminAccessToken}))
+	config := LoadConfig()
+
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.OAuth.Secret)}),
+	)
 
 	_, err = srv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
 	require.NoError(t, err)
@@ -188,7 +191,12 @@ func TestTop(t *testing.T) {
 	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + adminAccessToken}))
+	config := LoadConfig()
+
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.OAuth.Secret)}),
+	)
 
 	top, err := srv.GetTrafficTop(ctx, &emptypb.Empty{})
 	require.NoError(t, err)

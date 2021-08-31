@@ -6,7 +6,6 @@ import (
 	"github.com/Nerzal/gocloak/v8"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
-	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -20,8 +19,6 @@ import (
 )
 
 const bufSize = 1024 * 1024
-
-const adminUserID = 3
 
 var lis *bufconn.Listener
 
@@ -123,23 +120,9 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, newName, dbNewName)
 
-	resp, err := client.DeleteUser(
+	_, err = client.DeleteUser(
 		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, config.OAuth.Secret)),
 		&APIDeleteUserRequest{UserId: userID, Password: password},
 	)
 	require.NoError(t, err)
-
-	log.Printf("Response: %+v", resp)
-	// Test for output here.
-}
-
-func createToken(t *testing.T, userID int64, secret string) string {
-	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"aud": "default",
-		"exp": time.Now().Add(time.Minute * 15).Unix(),
-		"sub": strconv.FormatInt(userID, 10),
-	}).SignedString([]byte(secret))
-	require.NoError(t, err)
-
-	return accessToken
 }
