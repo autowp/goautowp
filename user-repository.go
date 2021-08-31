@@ -502,8 +502,8 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 		emailVerified = false
 	}
 	username := login
-	if len(login) <= 0 && keyCloakEmail != nil {
-		login = *keyCloakEmail
+	if len(login) <= 0 && keyCloakEmail != nil && len(*keyCloakEmail) > 0 {
+		username = *keyCloakEmail
 	}
 	f := false
 	enabled := !deleted
