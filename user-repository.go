@@ -640,6 +640,9 @@ func (s *UserRepository) EmailChangeStart(userID int64, email string) ([]*errdet
 		UPDATE users SET email_to_check = ?, email_check_code = ?
 		WHERE id = ?
 	`, email, emailCheckCode, userID)
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, s.sendChangeConfirmEmail(email, emailCheckCode, name, language.Hostname)
 }
@@ -781,7 +784,7 @@ func (s *UserRepository) ValidateChangePassword(userID int64, oldPassword, newPa
 			&validation.IdenticalStrings{Pattern: newPassword},
 		},
 	}
-	newPasswordConfirm, problems, err = newPasswordConfirmInputFilter.IsValidString(newPasswordConfirm)
+	_, problems, err = newPasswordConfirmInputFilter.IsValidString(newPasswordConfirm)
 	if err != nil {
 		return nil, err
 	}
