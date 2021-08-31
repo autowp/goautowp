@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+const testUserID = 1
 const adminUserID = 3
 
 func createToken(t *testing.T, userID int64, secret string) string {
