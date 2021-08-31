@@ -521,7 +521,6 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 		}
 
 		s.grpcServer, err = NewGRPCServer(
-			s,
 			catalogue,
 			config.Recaptcha,
 			config.FileStorage,
@@ -575,6 +574,11 @@ func (s *Container) GetUsersGRPCServer() (*UsersGRPCServer, error) {
 			return nil, err
 		}
 
+		pr, err := s.GetPasswordRecovery()
+		if err != nil {
+			return nil, err
+		}
+
 		s.usersGrpcServer = NewUsersGRPCServer(
 			config.OAuth,
 			db,
@@ -584,6 +588,7 @@ func (s *Container) GetUsersGRPCServer() (*UsersGRPCServer, error) {
 			events,
 			config.Languages,
 			config.Captcha,
+			pr,
 		)
 	}
 

@@ -814,8 +814,33 @@ func (s *UserRepository) PasswordMatch(userID int64, password string) (bool, err
 
 func (s *UserRepository) DeleteUser(userID int64) (bool, error) {
 
+	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+	if err != nil {
+		return false, err
+	}
+
+	ctx := context.Background()
+	token, err := s.keyCloak.LoginClient(
+		ctx,
+		s.keyCloakConfig.ClientID,
+		s.keyCloakConfig.ClientSecret,
+		s.keyCloakConfig.Realm,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	f := false
+	err = s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+		ID:      &userGuid,
+		Enabled: &f,
+	})
+	if err != nil {
+		return false, err
+	}
+
 	var val int
-	err := s.autowpDB.QueryRow("SELECT 1 FROM users WHERE id = ? AND NOT deleted", userID).Scan(&val)
+	err = s.autowpDB.QueryRow("SELECT 1 FROM users WHERE id = ? AND NOT deleted", userID).Scan(&val)
 	if err == sql.ErrNoRows {
 		return false, nil
 	}
@@ -859,4 +884,76 @@ func (s *UserRepository) DeleteUser(userID int64) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (s *UserRepository) UpdateUser(ctx context.Context, userID int64, name string) ([]*errdetails.BadRequest_FieldViolation, error) {
+
+	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*errdetails.BadRequest_FieldViolation, 0)
+	var problems []string
+
+	nameInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{
+			&validation.StringTrimFilter{},
+			&validation.StringSingleSpaces{},
+		},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.StringLength{Min: 2, Max: 50},
+		},
+	}
+	name, problems, err = nameInputFilter.IsValidString(name)
+	if err != nil {
+		return nil, err
+	}
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "name",
+			Description: fv,
+		})
+	}
+
+	if len(result) > 0 {
+		return result, nil
+	}
+
+	oldName := ""
+	err = s.autowpDB.QueryRow("SELECT name FROM users WHERE id = ?", userID).Scan(&oldName)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = s.autowpDB.Exec("UPDATE users SET name = ? WHERE id = ?", name, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = s.autowpDB.Exec("INSERT INTO user_renames (user_id, old_name, new_name, date) VALUES (?, ?, ?, NOW())", userID, oldName, name)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := s.keyCloak.LoginClient(
+		ctx,
+		s.keyCloakConfig.ClientID,
+		s.keyCloakConfig.ClientSecret,
+		s.keyCloakConfig.Realm,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+		ID:        &userGuid,
+		FirstName: &name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/dpapathanasiou/go-recaptcha"
 	"net/mail"
+	"regexp"
 	"strings"
 )
 
@@ -59,6 +60,10 @@ type Callback struct {
 
 // StringTrimFilter filter
 type StringTrimFilter struct {
+}
+
+// StringSingleSpaces filter
+type StringSingleSpaces struct {
 }
 
 // IsValidString IsValidString
@@ -136,6 +141,24 @@ func (s *Callback) IsValidString(value string) ([]string, error) {
 // FilterString filter
 func (s *StringTrimFilter) FilterString(value string) string {
 	return strings.TrimSpace(value)
+}
+
+// FilterString filter
+func (s *StringSingleSpaces) FilterString(value string) string {
+
+	if len(value) <= 0 {
+		return ""
+	}
+
+	value = strings.ReplaceAll(value, "\r", "")
+	lines := strings.Split(value, "\n")
+	re := regexp.MustCompile("[[:space:]]+")
+	out := make([]string, len(lines))
+	for idx, line := range lines {
+		out[idx] = re.ReplaceAllString(line, " ")
+	}
+
+	return strings.Join(out, "\n")
 }
 
 type InputFilter struct {

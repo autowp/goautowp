@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/autowp/goautowp/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -15,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/dgrijalva/jwt-go"
 
 	"github.com/getsentry/sentry-go"
@@ -206,20 +204,8 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 		return 0, "", err
 	}
 
-	sqSelect := sq.Select("role").From("users").Where(sq.Eq{"id": id})
-
-	rows, err := sqSelect.RunWith(db).Query()
-	if err != nil {
-		panic(err.Error())
-	}
-	defer util.Close(rows)
-
-	if !rows.Next() {
-		return 0, "", fmt.Errorf("user `%v` not found", id)
-	}
-
 	role := ""
-	err = rows.Scan(&role)
+	err = db.QueryRow("SELECT role FROM users WHERE id = ?", id).Scan(&role)
 	if err == sql.ErrNoRows {
 		return 0, "", fmt.Errorf("user `%v` not found", id)
 	}

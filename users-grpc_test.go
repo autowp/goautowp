@@ -6,6 +6,7 @@ import (
 	"github.com/Nerzal/gocloak/v8"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
+	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -20,7 +21,7 @@ import (
 
 const bufSize = 1024 * 1024
 
-const adminAuthToken = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0IiwiZXhwIjoxODgwMDAwMDAwLCJzdWIiOiIzIn0.5l0HxtAvH9kmfpJXC85lpcEf2EzPucxFCLmXl1oatPwKEDb__YTIdEDaaINplD4oWg10HbOc0-vDJVoQngKn9g"
+const adminUserID = 3
 
 var lis *bufconn.Listener
 
@@ -35,13 +36,15 @@ func init() {
 
 	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
 
+	emailSender := &MockEmailSender{}
+
 	contactsRepository := NewContactsRepository(db)
 	userRepository := NewUserRepository(
 		db,
 		config.UsersSalt,
 		config.EmailSalt,
 		config.Languages,
-		&MockEmailSender{},
+		emailSender,
 		gocloak.NewClient(config.KeyCloak.URL),
 		config.KeyCloak,
 	)
@@ -57,6 +60,12 @@ func init() {
 		NewEvents(db),
 		config.Languages,
 		false,
+		NewPasswordRecovery(
+			db,
+			false,
+			config.Languages,
+			emailSender,
+		),
 	)
 	RegisterUsersServer(grpcServer, usersSrv)
 	go func() {
@@ -70,7 +79,7 @@ func bufDialer(context.Context, string) (net.Conn, error) {
 	return lis.Dial()
 }
 
-func TestDeleteUser(t *testing.T) {
+func TestCreateUpdateDeleteUser(t *testing.T) {
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
 	require.NoError(t, err)
@@ -80,11 +89,13 @@ func TestDeleteUser(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	email := "test" + strconv.Itoa(rand.Int()) + "@example.com"
 
+	name := "test"
+	newName := "test 2"
 	password := "password"
 
 	_, err = client.CreateUser(ctx, &APICreateUserRequest{
 		Email:           email,
-		Name:            "test",
+		Name:            name,
 		Password:        password,
 		PasswordConfirm: password,
 		Language:        "en",
@@ -101,12 +112,34 @@ func TestDeleteUser(t *testing.T) {
 	err = db.QueryRow("SELECT id FROM users WHERE email_to_check = ?", email).Scan(&userID)
 	require.NoError(t, err)
 
+	_, err = client.UpdateUser(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, userID, config.OAuth.Secret)),
+		&APIUpdateUserRequest{UserId: userID, Name: newName},
+	)
+	require.NoError(t, err)
+
+	dbNewName := ""
+	err = db.QueryRow("SELECT name FROM users WHERE id = ?", userID).Scan(&dbNewName)
+	require.NoError(t, err)
+	require.Equal(t, newName, dbNewName)
+
 	resp, err := client.DeleteUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminAuthToken),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, config.OAuth.Secret)),
 		&APIDeleteUserRequest{UserId: userID, Password: password},
 	)
 	require.NoError(t, err)
 
 	log.Printf("Response: %+v", resp)
 	// Test for output here.
+}
+
+func createToken(t *testing.T, userID int64, secret string) string {
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"aud": "default",
+		"exp": time.Now().Add(time.Minute * 15).Unix(),
+		"sub": strconv.FormatInt(userID, 10),
+	}).SignedString([]byte(secret))
+	require.NoError(t, err)
+
+	return accessToken
 }

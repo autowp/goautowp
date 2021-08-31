@@ -34,17 +34,18 @@ service Autowp {
   rpc GetTrafficTop(google.protobuf.Empty) returns (APITrafficTopResponse) {}
   rpc GetTrafficWhitelist(google.protobuf.Empty) returns (APITrafficWhitelistItems) {}
   rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
-  rpc PasswordRecovery(APIPasswordRecoveryRequest) returns (google.protobuf.Empty) {}
-  rpc PasswordRecoveryCheckCode(APIPasswordRecoveryCheckCodeRequest) returns (google.protobuf.Empty) {}
-  rpc PasswordRecoveryConfirm(APIPasswordRecoveryConfirmRequest) returns (APIPasswordRecoveryConfirmResponse) {}
-  rpc EmailChange(APIEmailChangeRequest) returns (google.protobuf.Empty) {}
-  rpc EmailChangeConfirm(APIEmailChangeConfirmRequest) returns (google.protobuf.Empty) {}
-  rpc SetPassword(APISetPasswordRequest) returns (google.protobuf.Empty) {}
 }
 
 service Users {
   rpc CreateUser(APICreateUserRequest) returns (google.protobuf.Empty) {}
+  rpc UpdateUser(APIUpdateUserRequest) returns (google.protobuf.Empty) {}
   rpc DeleteUser(APIDeleteUserRequest) returns (google.protobuf.Empty) {}
+  rpc EmailChange(APIEmailChangeRequest) returns (google.protobuf.Empty) {}
+  rpc EmailChangeConfirm(APIEmailChangeConfirmRequest) returns (google.protobuf.Empty) {}
+  rpc PasswordRecovery(APIPasswordRecoveryRequest) returns (google.protobuf.Empty) {}
+  rpc PasswordRecoveryCheckCode(APIPasswordRecoveryCheckCodeRequest) returns (google.protobuf.Empty) {}
+  rpc PasswordRecoveryConfirm(APIPasswordRecoveryConfirmRequest) returns (APIPasswordRecoveryConfirmResponse) {}
+  rpc SetPassword(APISetPasswordRequest) returns (google.protobuf.Empty) {}
 }
 
 message ErrorDetails {
@@ -324,4 +325,9 @@ message APISetPasswordRequest {
 message APIDeleteUserRequest {
   int64 user_id = 1;
   string password = 2;
+}
+
+message APIUpdateUserRequest {
+  int64 user_id = 1;
+  string name = 2;
 }

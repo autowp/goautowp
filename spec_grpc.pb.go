@@ -43,12 +43,6 @@ type AutowpClient interface {
 	GetTrafficTop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficTopResponse, error)
 	GetTrafficWhitelist(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficWhitelistItems, error)
 	GetVehicleTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VehicleTypeItems, error)
-	PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	PasswordRecoveryCheckCode(ctx context.Context, in *APIPasswordRecoveryCheckCodeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error)
-	EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	SetPassword(ctx context.Context, in *APISetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type autowpClient struct {
@@ -275,60 +269,6 @@ func (c *autowpClient) GetVehicleTypes(ctx context.Context, in *emptypb.Empty, o
 	return out, nil
 }
 
-func (c *autowpClient) PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/PasswordRecovery", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) PasswordRecoveryCheckCode(ctx context.Context, in *APIPasswordRecoveryCheckCodeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/PasswordRecoveryCheckCode", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error) {
-	out := new(APIPasswordRecoveryConfirmResponse)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/PasswordRecoveryConfirm", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/EmailChange", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/EmailChangeConfirm", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) SetPassword(ctx context.Context, in *APISetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/SetPassword", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // AutowpServer is the server API for Autowp service.
 // All implementations must embed UnimplementedAutowpServer
 // for forward compatibility
@@ -357,12 +297,6 @@ type AutowpServer interface {
 	GetTrafficTop(context.Context, *emptypb.Empty) (*APITrafficTopResponse, error)
 	GetTrafficWhitelist(context.Context, *emptypb.Empty) (*APITrafficWhitelistItems, error)
 	GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error)
-	PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error)
-	PasswordRecoveryCheckCode(context.Context, *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error)
-	PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error)
-	EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error)
-	EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error)
-	SetPassword(context.Context, *APISetPasswordRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAutowpServer()
 }
 
@@ -441,24 +375,6 @@ func (UnimplementedAutowpServer) GetTrafficWhitelist(context.Context, *emptypb.E
 }
 func (UnimplementedAutowpServer) GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVehicleTypes not implemented")
-}
-func (UnimplementedAutowpServer) PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecovery not implemented")
-}
-func (UnimplementedAutowpServer) PasswordRecoveryCheckCode(context.Context, *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecoveryCheckCode not implemented")
-}
-func (UnimplementedAutowpServer) PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecoveryConfirm not implemented")
-}
-func (UnimplementedAutowpServer) EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EmailChange not implemented")
-}
-func (UnimplementedAutowpServer) EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EmailChangeConfirm not implemented")
-}
-func (UnimplementedAutowpServer) SetPassword(context.Context, *APISetPasswordRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetPassword not implemented")
 }
 func (UnimplementedAutowpServer) mustEmbedUnimplementedAutowpServer() {}
 
@@ -905,114 +821,6 @@ func _Autowp_GetVehicleTypes_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autowp_PasswordRecovery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIPasswordRecoveryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).PasswordRecovery(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/PasswordRecovery",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).PasswordRecovery(ctx, req.(*APIPasswordRecoveryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_PasswordRecoveryCheckCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIPasswordRecoveryCheckCodeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).PasswordRecoveryCheckCode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/PasswordRecoveryCheckCode",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).PasswordRecoveryCheckCode(ctx, req.(*APIPasswordRecoveryCheckCodeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_PasswordRecoveryConfirm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIPasswordRecoveryConfirmRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).PasswordRecoveryConfirm(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/PasswordRecoveryConfirm",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).PasswordRecoveryConfirm(ctx, req.(*APIPasswordRecoveryConfirmRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_EmailChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIEmailChangeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).EmailChange(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/EmailChange",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).EmailChange(ctx, req.(*APIEmailChangeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_EmailChangeConfirm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIEmailChangeConfirmRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).EmailChangeConfirm(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/EmailChangeConfirm",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).EmailChangeConfirm(ctx, req.(*APIEmailChangeConfirmRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_SetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APISetPasswordRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).SetPassword(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/SetPassword",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).SetPassword(ctx, req.(*APISetPasswordRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Autowp_ServiceDesc is the grpc.ServiceDesc for Autowp service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1116,30 +924,6 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetVehicleTypes",
 			Handler:    _Autowp_GetVehicleTypes_Handler,
 		},
-		{
-			MethodName: "PasswordRecovery",
-			Handler:    _Autowp_PasswordRecovery_Handler,
-		},
-		{
-			MethodName: "PasswordRecoveryCheckCode",
-			Handler:    _Autowp_PasswordRecoveryCheckCode_Handler,
-		},
-		{
-			MethodName: "PasswordRecoveryConfirm",
-			Handler:    _Autowp_PasswordRecoveryConfirm_Handler,
-		},
-		{
-			MethodName: "EmailChange",
-			Handler:    _Autowp_EmailChange_Handler,
-		},
-		{
-			MethodName: "EmailChangeConfirm",
-			Handler:    _Autowp_EmailChangeConfirm_Handler,
-		},
-		{
-			MethodName: "SetPassword",
-			Handler:    _Autowp_SetPassword_Handler,
-		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "spec.proto",
@@ -1150,7 +934,14 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersClient interface {
 	CreateUser(ctx context.Context, in *APICreateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpdateUser(ctx context.Context, in *APIUpdateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	PasswordRecoveryCheckCode(ctx context.Context, in *APIPasswordRecoveryCheckCodeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error)
+	SetPassword(ctx context.Context, in *APISetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type usersClient struct {
@@ -1170,9 +961,72 @@ func (c *usersClient) CreateUser(ctx context.Context, in *APICreateUserRequest, 
 	return out, nil
 }
 
+func (c *usersClient) UpdateUser(ctx context.Context, in *APIUpdateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/UpdateUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *usersClient) DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/goautowp.Users/DeleteUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/EmailChange", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/EmailChangeConfirm", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/PasswordRecovery", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) PasswordRecoveryCheckCode(ctx context.Context, in *APIPasswordRecoveryCheckCodeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/PasswordRecoveryCheckCode", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error) {
+	out := new(APIPasswordRecoveryConfirmResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/PasswordRecoveryConfirm", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) SetPassword(ctx context.Context, in *APISetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/SetPassword", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1184,7 +1038,14 @@ func (c *usersClient) DeleteUser(ctx context.Context, in *APIDeleteUserRequest, 
 // for forward compatibility
 type UsersServer interface {
 	CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error)
+	UpdateUser(context.Context, *APIUpdateUserRequest) (*emptypb.Empty, error)
 	DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error)
+	EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error)
+	EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error)
+	PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error)
+	PasswordRecoveryCheckCode(context.Context, *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error)
+	PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error)
+	SetPassword(context.Context, *APISetPasswordRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -1195,8 +1056,29 @@ type UnimplementedUsersServer struct {
 func (UnimplementedUsersServer) CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
 }
+func (UnimplementedUsersServer) UpdateUser(context.Context, *APIUpdateUserRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
+}
 func (UnimplementedUsersServer) DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
+}
+func (UnimplementedUsersServer) EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EmailChange not implemented")
+}
+func (UnimplementedUsersServer) EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EmailChangeConfirm not implemented")
+}
+func (UnimplementedUsersServer) PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecovery not implemented")
+}
+func (UnimplementedUsersServer) PasswordRecoveryCheckCode(context.Context, *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecoveryCheckCode not implemented")
+}
+func (UnimplementedUsersServer) PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecoveryConfirm not implemented")
+}
+func (UnimplementedUsersServer) SetPassword(context.Context, *APISetPasswordRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPassword not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -1229,6 +1111,24 @@ func _Users_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Users_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIUpdateUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).UpdateUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/UpdateUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).UpdateUser(ctx, req.(*APIUpdateUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Users_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(APIDeleteUserRequest)
 	if err := dec(in); err != nil {
@@ -1247,6 +1147,114 @@ func _Users_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Users_EmailChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIEmailChangeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).EmailChange(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/EmailChange",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).EmailChange(ctx, req.(*APIEmailChangeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_EmailChangeConfirm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIEmailChangeConfirmRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).EmailChangeConfirm(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/EmailChangeConfirm",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).EmailChangeConfirm(ctx, req.(*APIEmailChangeConfirmRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_PasswordRecovery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIPasswordRecoveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).PasswordRecovery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/PasswordRecovery",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).PasswordRecovery(ctx, req.(*APIPasswordRecoveryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_PasswordRecoveryCheckCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIPasswordRecoveryCheckCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).PasswordRecoveryCheckCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/PasswordRecoveryCheckCode",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).PasswordRecoveryCheckCode(ctx, req.(*APIPasswordRecoveryCheckCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_PasswordRecoveryConfirm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIPasswordRecoveryConfirmRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).PasswordRecoveryConfirm(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/PasswordRecoveryConfirm",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).PasswordRecoveryConfirm(ctx, req.(*APIPasswordRecoveryConfirmRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_SetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APISetPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).SetPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/SetPassword",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).SetPassword(ctx, req.(*APISetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Users_ServiceDesc is the grpc.ServiceDesc for Users service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1259,8 +1267,36 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Users_CreateUser_Handler,
 		},
 		{
+			MethodName: "UpdateUser",
+			Handler:    _Users_UpdateUser_Handler,
+		},
+		{
 			MethodName: "DeleteUser",
 			Handler:    _Users_DeleteUser_Handler,
+		},
+		{
+			MethodName: "EmailChange",
+			Handler:    _Users_EmailChange_Handler,
+		},
+		{
+			MethodName: "EmailChangeConfirm",
+			Handler:    _Users_EmailChangeConfirm_Handler,
+		},
+		{
+			MethodName: "PasswordRecovery",
+			Handler:    _Users_PasswordRecovery_Handler,
+		},
+		{
+			MethodName: "PasswordRecoveryCheckCode",
+			Handler:    _Users_PasswordRecoveryCheckCode_Handler,
+		},
+		{
+			MethodName: "PasswordRecoveryConfirm",
+			Handler:    _Users_PasswordRecoveryConfirm_Handler,
+		},
+		{
+			MethodName: "SetPassword",
+			Handler:    _Users_SetPassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
