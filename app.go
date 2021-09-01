@@ -299,6 +299,17 @@ func (s *Application) SchedulerHourly() error {
 		return err
 	}
 
+	pr, err := s.container.GetPasswordRecovery()
+	if err != nil {
+		return err
+	}
+	count, err := pr.GC()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	log.Printf("`%d` password remind rows was deleted\n", count)
+
 	return nil
 }
 

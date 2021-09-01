@@ -250,3 +250,11 @@ func (s *PasswordRecovery) Finish(token string, password string, passwordConfirm
 
 	return nil, userId, nil
 }
+
+func (s *PasswordRecovery) GC() (int64, error) {
+	r, err := s.db.Exec("DELETE FROM user_password_remind WHERE created < DATE_SUB(NOW(), INTERVAL 10 DAY)")
+	if err != nil {
+		return 0, err
+	}
+	return r.RowsAffected()
+}
