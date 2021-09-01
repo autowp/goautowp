@@ -960,3 +960,8 @@ func (s *UserRepository) UpdateUser(ctx context.Context, userID int64, name stri
 
 	return nil, nil
 }
+
+func (s *UserRepository) UserRenamesGC() error {
+	_, err := s.autowpDB.Exec("DELETE FROM user_renames WHERE date < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
+	return err
+}

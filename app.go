@@ -178,7 +178,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 	}
 
 	role := ""
-	err = db.QueryRow("SELECT role FROM users WHERE id = ?", id).Scan(&role)
+	err = db.QueryRow("SELECT role FROM users WHERE id = ? AND not deleted", id).Scan(&role)
 	if err == sql.ErrNoRows {
 		return 0, "", fmt.Errorf("user `%v` not found", id)
 	}
@@ -284,6 +284,16 @@ func (s *Application) SchedulerHourly() error {
 	log.Printf("`%v` items of ban deleted\n", deleted)
 
 	err = traffic.AutoWhitelist()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return err
+	}
+	err = users.UserRenamesGC()
 	if err != nil {
 		log.Println(err.Error())
 		return err
