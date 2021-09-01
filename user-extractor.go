@@ -25,10 +25,7 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*User, err
 		longAway = date.After(*row.LastOnline)
 	}
 
-	enforcer, err := s.container.GetEnforcer()
-	if err != nil {
-		return nil, err
-	}
+	enforcer := s.container.GetEnforcer()
 
 	isGreen := row.Role != "" && enforcer.Enforce(row.Role, "status", "be-green")
 

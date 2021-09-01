@@ -140,11 +140,7 @@ func (s *Container) GetCatalogue() (*Catalogue, error) {
 			return nil, err
 		}
 
-		enforcer, err := s.GetEnforcer()
-		if err != nil {
-			return nil, err
-		}
-
+		enforcer := s.GetEnforcer()
 		config := s.GetConfig()
 
 		s.catalogue, err = NewCatalogue(db, enforcer, config.OAuth)
@@ -163,10 +159,7 @@ func (s *Container) GetComments() (*Comments, error) {
 			return nil, err
 		}
 
-		extractor, err := s.GetUserExtractor()
-		if err != nil {
-			return nil, err
-		}
+		extractor := s.GetUserExtractor()
 
 		s.comments = NewComments(db, extractor)
 	}
@@ -207,12 +200,12 @@ func (s *Container) GetDuplicateFinder() (*DuplicateFinder, error) {
 	return s.duplicateFinder, nil
 }
 
-func (s *Container) GetEnforcer() (*casbin.Enforcer, error) {
+func (s *Container) GetEnforcer() *casbin.Enforcer {
 	if s.enforcer == nil {
 		s.enforcer = casbin.NewEnforcer("model.conf", "policy.csv")
 	}
 
-	return s.enforcer, nil
+	return s.enforcer
 }
 
 func (s *Container) GetFeedback() (*Feedback, error) {
@@ -220,11 +213,9 @@ func (s *Container) GetFeedback() (*Feedback, error) {
 
 		config := s.GetConfig()
 
-		emailSender, err := s.GetEmailSender()
-		if err != nil {
-			return nil, err
-		}
+		emailSender := s.GetEmailSender()
 
+		var err error
 		s.feedback, err = NewFeedback(config.Feedback, config.Recaptcha, config.Captcha, emailSender)
 		if err != nil {
 			return nil, err
@@ -234,8 +225,8 @@ func (s *Container) GetFeedback() (*Feedback, error) {
 	return s.feedback, nil
 }
 
-func (s *Container) GetIPExtractor() (*IPExtractor, error) {
-	return NewIPExtractor(s), nil
+func (s *Container) GetIPExtractor() *IPExtractor {
+	return NewIPExtractor(s)
 }
 
 // GetLocation GetLocation
@@ -347,17 +338,10 @@ func (s *Container) GetTraffic() (*Traffic, error) {
 			return nil, err
 		}
 
-		enforcer, err := s.GetEnforcer()
-		if err != nil {
-			return nil, err
-		}
-
+		enforcer := s.GetEnforcer()
 		config := s.GetConfig()
 
-		userExtractor, err := s.GetUserExtractor()
-		if err != nil {
-			return nil, err
-		}
+		userExtractor := s.GetUserExtractor()
 
 		traffic, err := NewTraffic(db, autowpDB, enforcer, ban, userExtractor, config.OAuth)
 		if err != nil {
@@ -418,8 +402,8 @@ func (s *Container) GetTrafficDB() (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-func (s *Container) GetUserExtractor() (*UserExtractor, error) {
-	return NewUserExtractor(s), nil
+func (s *Container) GetUserExtractor() *UserExtractor {
+	return NewUserExtractor(s)
 }
 
 func (s *Container) GetUserRepository() (*UserRepository, error) {
@@ -432,23 +416,13 @@ func (s *Container) GetUserRepository() (*UserRepository, error) {
 
 		config := s.GetConfig()
 
-		keycloak, err := s.GetKeyCloak()
-		if err != nil {
-			return nil, err
-		}
-
-		emailSender, err := s.GetEmailSender()
-		if err != nil {
-			return nil, err
-		}
-
 		s.userRepository = NewUserRepository(
 			autowpDB,
 			config.UsersSalt,
 			config.EmailSalt,
 			config.Languages,
-			emailSender,
-			keycloak,
+			s.GetEmailSender(),
+			s.GetKeyCloak(),
 			config.KeyCloak,
 		)
 	}
@@ -470,10 +444,7 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
-		enforcer, err := s.GetEnforcer()
-		if err != nil {
-			return nil, err
-		}
+		enforcer := s.GetEnforcer()
 
 		contactsRepository, err := s.GetContactsRepository()
 		if err != nil {
@@ -485,10 +456,7 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
-		userExtractor, err := s.GetUserExtractor()
-		if err != nil {
-			return nil, err
-		}
+		userExtractor := s.GetUserExtractor()
 
 		comments, err := s.GetComments()
 		if err != nil {
@@ -500,10 +468,7 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
-		ipExtractor, err := s.GetIPExtractor()
-		if err != nil {
-			return nil, err
-		}
+		ipExtractor := s.GetIPExtractor()
 
 		feedback, err := s.GetFeedback()
 		if err != nil {
@@ -520,7 +485,7 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
-		s.grpcServer, err = NewGRPCServer(
+		s.grpcServer = NewGRPCServer(
 			catalogue,
 			config.Recaptcha,
 			config.FileStorage,
@@ -537,9 +502,6 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			forums,
 			messages,
 		)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return s.grpcServer, nil
@@ -554,10 +516,7 @@ func (s *Container) GetUsersGRPCServer() (*UsersGRPCServer, error) {
 			return nil, err
 		}
 
-		enforcer, err := s.GetEnforcer()
-		if err != nil {
-			return nil, err
-		}
+		enforcer := s.GetEnforcer()
 
 		contactsRepository, err := s.GetContactsRepository()
 		if err != nil {
@@ -621,7 +580,7 @@ func (s *Container) GetMessages() (*Messages, error) {
 	return s.messages, nil
 }
 
-func (s *Container) GetKeyCloak() (gocloak.GoCloak, error) {
+func (s *Container) GetKeyCloak() gocloak.GoCloak {
 	if s.keyCloak == nil {
 		config := s.GetConfig()
 
@@ -630,7 +589,7 @@ func (s *Container) GetKeyCloak() (gocloak.GoCloak, error) {
 		s.keyCloak = client
 	}
 
-	return s.keyCloak, nil
+	return s.keyCloak
 }
 
 func (s *Container) GetPasswordRecovery() (*PasswordRecovery, error) {
@@ -642,10 +601,7 @@ func (s *Container) GetPasswordRecovery() (*PasswordRecovery, error) {
 			return nil, err
 		}
 
-		emailSender, err := s.GetEmailSender()
-		if err != nil {
-			return nil, err
-		}
+		emailSender := s.GetEmailSender()
 
 		s.passwordRecovery = NewPasswordRecovery(autowpDB, config.Captcha, config.Languages, emailSender)
 	}
@@ -653,7 +609,7 @@ func (s *Container) GetPasswordRecovery() (*PasswordRecovery, error) {
 	return s.passwordRecovery, nil
 }
 
-func (s *Container) GetEmailSender() (EmailSender, error) {
+func (s *Container) GetEmailSender() EmailSender {
 	if s.emailSender == nil {
 		config := s.GetConfig()
 
@@ -664,7 +620,7 @@ func (s *Container) GetEmailSender() (EmailSender, error) {
 		}
 	}
 
-	return s.emailSender, nil
+	return s.emailSender
 }
 
 func (s *Container) SetEmailSender(emailSender EmailSender) {

@@ -50,7 +50,7 @@ func (s *Application) MigrateAutowp() error {
 
 	config := s.container.GetConfig()
 
-	err = applyAutowpMigrations(config.AutowpMigrations)
+	err = applyMigrations(config.AutowpMigrations)
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
@@ -116,33 +116,6 @@ func (s *Application) Close() error {
 	}
 
 	log.Println("Service closed")
-	return nil
-}
-
-func applyAutowpMigrations(config MigrationsConfig) error {
-	log.Println("Apply migrations")
-
-	dir := config.Dir
-	if dir == "" {
-		ex, err := os.Executable()
-		if err != nil {
-			return err
-		}
-		exPath := filepath.Dir(ex)
-		dir = exPath + "/migrations"
-	}
-
-	m, err := migrate.New("file://"+dir, config.DSN)
-	if err != nil {
-		return err
-	}
-
-	err = m.Up()
-	if err != nil {
-		return err
-	}
-	log.Println("Migrations applied")
-
 	return nil
 }
 
@@ -221,7 +194,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 	return id, role, nil
 }
 
-func applyTrafficMigrations(config MigrationsConfig) error {
+func applyMigrations(config MigrationsConfig) error {
 	log.Println("Apply migrations")
 
 	dir := config.Dir
@@ -256,7 +229,7 @@ func (s *Application) MigrateTraffic() error {
 
 	config := s.container.GetConfig()
 
-	err = applyTrafficMigrations(config.TrafficMigrations)
+	err = applyMigrations(config.TrafficMigrations)
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}

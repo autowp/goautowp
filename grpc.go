@@ -54,7 +54,7 @@ func NewGRPCServer(
 	feedback *Feedback,
 	forums *Forums,
 	messages *Messages,
-) (*GRPCServer, error) {
+) *GRPCServer {
 	return &GRPCServer{
 		catalogue:          catalogue,
 		reCaptchaConfig:    reCaptchaConfig,
@@ -71,7 +71,7 @@ func NewGRPCServer(
 		feedback:           feedback,
 		forums:             forums,
 		messages:           messages,
-	}, nil
+	}
 }
 
 func (s *GRPCServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error) {
