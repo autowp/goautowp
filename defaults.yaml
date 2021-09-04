@@ -43,11 +43,68 @@ smtp:
   hostname: localhost
   port: 465
 feedback:
-  captcha: true
   from: Robot autowp.ru <no-reply@autowp.ru>
   to:
   - autowp@gmail.com
   subject: AutoWP Feedback
+keycloak:
+  url: http://127.0.0.1:8081
+  realm: autowp
+  client-id: autowp
+  client-secret: c0fce0df-6105-4d1e-bc23-8e67239f7640
+email-salt: "salt"
+users-salt: "users-salt"
+languages:
+  en:
+    hostname: en.localhost
+    timezone: Europe/London
+    name    : English
+    flag    : flag-icon flag-icon-gb
+    aliases : []
+  zh:
+    hostname: zh.localhost
+    timezone: Asia/Shanghai
+    name    : 中文 (beta)
+    flag    : flag-icon flag-icon-cn
+    aliases : []
+  ru:
+    hostname: ru.localhost
+    timezone: Europe/Moscow
+    name    : Русский
+    flag    : flag-icon flag-icon-ru
+    aliases : []
+  pt-br:
+    hostname: br.localhost
+    timezone: Brazil/West
+    name    : Português brasileiro
+    flag    : flag-icon flag-icon-br
+    aliases : []
+  fr:
+    hostname: fr.localhost
+    timezone: Europe/Paris
+    name    : Français (beta)
+    flag    : flag-icon flag-icon-fr
+    aliases : []
+  be:
+    hostname: be.localhost
+    timezone: Europe/Minsk
+    name    : Беларуская
+    flag    : flag-icon flag-icon-by
+    aliases : []
+  uk:
+    hostname: uk.localhost
+    timezone: Europe/Kiev
+    name    : Українська (beta)
+    flag    : flag-icon flag-icon-ua
+    aliases : []
+  es:
+    hostname: es.localhost
+    timezone: Europe/Madrid
+    name    : Español (beta)
+    flag    : flag-icon flag-icon-es
+    aliases : []
+captcha: true
+mock-email-sender: true
 image-storage:
   dirs:
     format:

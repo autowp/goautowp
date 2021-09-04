@@ -11,7 +11,7 @@ services:
   - postgresql
 
 go:
-  - "1.16"
+  - "1.17"
 
 addons:
   sonarcloud:
@@ -30,7 +30,7 @@ before_script:
   - go mod verify
   - go mod download
 
-  - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
+  - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.1
   - go get -u github.com/mattn/goveralls
 
   - wget -q -O ./waitforit https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64 || travis_terminate 1;
@@ -39,7 +39,7 @@ before_script:
 script:
   - golangci-lint run ./... || travis_terminate 1;
 
-  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+  - echo "$DOCKER_PASSWORD" | docker login -u="$DOCKER_USERNAME" --password-stdin || travis_terminate 1;
   - docker-compose -f docker-compose-travis.yml up -d || travis_terminate 1;
 
   - ./waitforit -address tcp://localhost:5672 -timeout 30 || travis_terminate 1;

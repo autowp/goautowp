@@ -4,6 +4,7 @@ services:
   mysql:
     image: mysql:8
     container_name: goautowp_mysql_test
+    restart: always
     environment:
     - MYSQL_ROOT_PASSWORD=password
     - MYSQL_DATABASE=autowp
@@ -15,7 +16,23 @@ services:
   nginx:
     image: nginx
     container_name: goautowp_nginx_test
+    restart: always
     ports:
     - "80:80"
     volumes:
     - "./test:/usr/share/nginx/html:ro"
+
+  keycloak:
+    image: jboss/keycloak
+    container_name: goautowp_keycloak_test
+    restart: always
+    environment:
+      DB_VENDOR: h2
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: password
+      KEYCLOAK_IMPORT: /tmp/realm.json
+      JAVA_OPTS_APPEND: "-Dkeycloak.profile.feature.upload_scripts=enabled"
+    volumes:
+      - ./test/realm.json:/tmp/realm.json
+    ports:
+      - "8081:8080"

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/Nerzal/gocloak/v8"
 	"github.com/casbin/casbin"
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
@@ -39,6 +40,9 @@ type Container struct {
 	userRepository     *UserRepository
 	forums             *Forums
 	messages           *Messages
+	keyCloak           gocloak.GoCloak
+	passwordRecovery   *PasswordRecovery
+	emailSender        EmailSender
 	imageStorage       *storage.Storage
 }
 
@@ -225,7 +229,12 @@ func (s *Container) GetFeedback() (*Feedback, error) {
 			return nil, err
 		}
 
-		s.feedback, err = NewFeedback(config.Feedback, config.Recaptcha, config.SMTP)
+		emailSender, err := s.GetEmailSender()
+		if err != nil {
+			return nil, err
+		}
+
+		s.feedback, err = NewFeedback(config.Feedback, config.Recaptcha, config.Captcha, emailSender)
 		if err != nil {
 			return nil, err
 		}
@@ -435,7 +444,30 @@ func (s *Container) GetUserRepository() (*UserRepository, error) {
 			return nil, err
 		}
 
-		s.userRepository, err = NewUserRepository(autowpDB)
+		config, err := s.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		keycloak, err := s.GetKeyCloak()
+		if err != nil {
+			return nil, err
+		}
+
+		emailSender, err := s.GetEmailSender()
+		if err != nil {
+			return nil, err
+		}
+
+		s.userRepository, err = NewUserRepository(
+			autowpDB,
+			config.UsersSalt,
+			config.EmailSalt,
+			config.Languages,
+			emailSender,
+			keycloak,
+			config.KeyCloak,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -512,6 +544,7 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 		}
 
 		s.grpcServer, err = NewGRPCServer(
+			s,
 			catalogue,
 			config.Recaptcha,
 			config.FileStorage,
@@ -560,6 +593,65 @@ func (s *Container) GetMessages() (*Messages, error) {
 	}
 
 	return s.messages, nil
+}
+
+func (s *Container) GetKeyCloak() (gocloak.GoCloak, error) {
+	if s.keyCloak == nil {
+		config, err := s.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		client := gocloak.NewClient(config.KeyCloak.URL)
+
+		s.keyCloak = client
+	}
+
+	return s.keyCloak, nil
+}
+
+func (s *Container) GetPasswordRecovery() (*PasswordRecovery, error) {
+	if s.passwordRecovery == nil {
+		config, err := s.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		autowpDB, err := s.GetAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		emailSender, err := s.GetEmailSender()
+		if err != nil {
+			return nil, err
+		}
+
+		s.passwordRecovery = NewPasswordRecovery(autowpDB, config.Captcha, config.Languages, emailSender)
+	}
+
+	return s.passwordRecovery, nil
+}
+
+func (s *Container) GetEmailSender() (EmailSender, error) {
+	if s.emailSender == nil {
+		config, err := s.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		if s.config.MockEmailSender {
+			s.emailSender = &MockEmailSender{}
+		} else {
+			s.emailSender = &SmtpEmailSender{config: config.SMTP}
+		}
+	}
+
+	return s.emailSender, nil
+}
+
+func (s *Container) SetEmailSender(emailSender EmailSender) {
+	s.emailSender = emailSender
 }
 
 func (s *Container) GetImageStorage() (*storage.Storage, error) {

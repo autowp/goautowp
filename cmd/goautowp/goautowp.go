@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/autowp/goautowp"
 	"github.com/getsentry/sentry-go"
+	"github.com/jessevdk/go-flags"
 	"gopkg.in/gographics/imagick.v3/imagick"
 	"log"
 	"os"
@@ -48,9 +49,20 @@ func main() {
 		return
 	}
 
+	var opts struct {
+		Command string `short:"f" long:"file" description:"Input file" value-name:"FILE"`
+	}
+
+	args, err := flags.ParseArgs(&opts, os.Args)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+		os.Exit(1)
+		return
+	}
+
 	command := "usage"
-	if len(os.Args) > 1 {
-		command = os.Args[1]
+	if len(args) > 1 {
+		command = args[1]
 	}
 
 	app, err := goautowp.NewApplication(config)
