@@ -4,8 +4,8 @@ go 1.17
 
 require (
 	github.com/Masterminds/squirrel v1.5.0
-	github.com/aws/aws-sdk-go v1.38.40
 	github.com/Nerzal/gocloak/v8 v8.5.0
+	github.com/aws/aws-sdk-go v1.38.40
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.0.3
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
@@ -46,8 +46,7 @@ require (
 	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
-	gopkg.in/gographics/imagick.v2 v2.6.0
-	gopkg.in/gographics/imagick.v3 v3.4.0 // indirect
+	gopkg.in/gographics/imagick.v3 v3.4.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -71,6 +70,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/jackc/pgtype v1.7.0 // indirect
 	github.com/jackc/puddle v1.1.3 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
