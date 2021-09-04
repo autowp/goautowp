@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/autowp/goautowp/config"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -14,30 +15,30 @@ import (
 
 type UsersGRPCServer struct {
 	UnimplementedUsersServer
-	oauthConfig        OAuthConfig
+	oauthSecret        string
 	db                 *sql.DB
 	enforcer           *casbin.Enforcer
 	contactsRepository *ContactsRepository
 	userRepository     *UserRepository
 	events             *Events
-	languages          map[string]LanguageConfig
+	languages          map[string]config.LanguageConfig
 	captcha            bool
 	passwordRecovery   *PasswordRecovery
 }
 
 func NewUsersGRPCServer(
-	oauthConfig OAuthConfig,
+	oauthSecret string,
 	db *sql.DB,
 	enforcer *casbin.Enforcer,
 	contactsRepository *ContactsRepository,
 	userRepository *UserRepository,
 	events *Events,
-	languages map[string]LanguageConfig,
+	languages map[string]config.LanguageConfig,
 	captcha bool,
 	passwordRecovery *PasswordRecovery,
 ) *UsersGRPCServer {
 	return &UsersGRPCServer{
-		oauthConfig:        oauthConfig,
+		oauthSecret:        oauthSecret,
 		db:                 db,
 		enforcer:           enforcer,
 		contactsRepository: contactsRepository,
@@ -90,7 +91,7 @@ func (s *UsersGRPCServer) CreateUser(ctx context.Context, in *APICreateUserReque
 }
 
 func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -116,7 +117,7 @@ func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserReque
 }
 
 func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {
-	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -168,7 +169,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 }
 
 func (s *UsersGRPCServer) EmailChange(ctx context.Context, in *APIEmailChangeRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -199,7 +200,7 @@ func (s *UsersGRPCServer) EmailChangeConfirm(ctx context.Context, in *APIEmailCh
 }
 
 func (s *UsersGRPCServer) SetPassword(ctx context.Context, in *APISetPasswordRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}

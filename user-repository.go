@@ -8,6 +8,7 @@ import (
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/Nerzal/gocloak/v8"
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -70,7 +71,7 @@ type UserRepository struct {
 	autowpDB       *sql.DB
 	usersSalt      string
 	emailSalt      string
-	languages      map[string]LanguageConfig
+	languages      map[string]config.LanguageConfig
 	emailSender    EmailSender
 	keyCloak       gocloak.GoCloak
 	keyCloakConfig KeyCloakConfig
@@ -81,7 +82,7 @@ func NewUserRepository(
 	autowpDB *sql.DB,
 	usersSalt string,
 	emailSalt string,
-	languages map[string]LanguageConfig,
+	languages map[string]config.LanguageConfig,
 	emailSender EmailSender,
 	keyCloak gocloak.GoCloak,
 	keyCloakConfig KeyCloakConfig,

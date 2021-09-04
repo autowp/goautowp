@@ -3,6 +3,7 @@ package goautowp
 import (
 	"database/sql"
 	"fmt"
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/validation"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"math/rand"
@@ -12,11 +13,11 @@ import (
 type PasswordRecovery struct {
 	captchaEnabled bool
 	db             *sql.DB
-	languages      map[string]LanguageConfig
+	languages      map[string]config.LanguageConfig
 	emailSender    EmailSender
 }
 
-func NewPasswordRecovery(db *sql.DB, captchaEnabled bool, languages map[string]LanguageConfig, emailSender EmailSender) *PasswordRecovery {
+func NewPasswordRecovery(db *sql.DB, captchaEnabled bool, languages map[string]config.LanguageConfig, emailSender EmailSender) *PasswordRecovery {
 	return &PasswordRecovery{
 		captchaEnabled: captchaEnabled,
 		db:             db,

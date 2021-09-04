@@ -141,9 +141,8 @@ func (s *Container) GetCatalogue() (*Catalogue, error) {
 		}
 
 		enforcer := s.GetEnforcer()
-		config := s.GetConfig()
 
-		s.catalogue, err = NewCatalogue(db, enforcer, config.OAuth)
+		s.catalogue, err = NewCatalogue(db, enforcer)
 		if err != nil {
 			return nil, err
 		}
@@ -339,11 +338,10 @@ func (s *Container) GetTraffic() (*Traffic, error) {
 		}
 
 		enforcer := s.GetEnforcer()
-		config := s.GetConfig()
 
 		userExtractor := s.GetUserExtractor()
 
-		traffic, err := NewTraffic(db, autowpDB, enforcer, ban, userExtractor, config.OAuth)
+		traffic, err := NewTraffic(db, autowpDB, enforcer, ban, userExtractor)
 		if err != nil {
 			log.Println(err.Error())
 			return nil, err
@@ -491,7 +489,7 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			config.FileStorage,
 			db,
 			enforcer,
-			config.OAuth,
+			config.Auth.OAuth.Secret,
 			contactsRepository,
 			userRepository,
 			userExtractor,
@@ -539,7 +537,7 @@ func (s *Container) GetUsersGRPCServer() (*UsersGRPCServer, error) {
 		}
 
 		s.usersGrpcServer = NewUsersGRPCServer(
-			config.OAuth,
+			config.Auth.OAuth.Secret,
 			db,
 			enforcer,
 			contactsRepository,

@@ -53,7 +53,7 @@ func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 
 	config := LoadConfig()
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, testUserID, config.OAuth.Secret)}))
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, testUserID, config.Auth.OAuth.Secret)}))
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.Error(t, err)
@@ -65,7 +65,7 @@ func TestGetVehicleTypes(t *testing.T) {
 
 	config := LoadConfig()
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.OAuth.Secret)}))
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.Auth.OAuth.Secret)}))
 
 	result, err := srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.NoError(t, err)

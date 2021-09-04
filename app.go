@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/autowp/goautowp/auth"
+	"github.com/autowp/goautowp/config"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -48,9 +50,20 @@ func (s *Application) MigrateAutowp() error {
 		return err
 	}
 
-	config := s.container.GetConfig()
+	cfg := s.container.GetConfig()
 
-	err = applyMigrations(config.AutowpMigrations)
+	err = applyMigrations(cfg.AutowpMigrations)
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Application) MigrateAuth() error {
+	cfg := s.container.GetConfig()
+
+	err := applyMigrations(cfg.Auth.Migrations)
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
@@ -92,10 +105,10 @@ func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 		return err
 	}
 
-	config := s.container.GetConfig()
+	cfg := s.container.GetConfig()
 
 	log.Println("DuplicateFinder listener started")
-	err = df.ListenAMQP(config.DuplicateFinder.RabbitMQ, config.DuplicateFinder.Queue, quit)
+	err = df.ListenAMQP(cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
 	if err != nil {
 		log.Println(err.Error())
 		sentry.CaptureException(err)
@@ -119,7 +132,7 @@ func (s *Application) Close() error {
 	return nil
 }
 
-func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConfig) (int64, string, error) {
+func validateGRPCAuthorization(ctx context.Context, db *sql.DB, oauthSecret string) (int64, string, error) {
 	const bearerSchema = "Bearer"
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -135,10 +148,10 @@ func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConf
 
 	tokenString := strings.TrimPrefix(lines[0], bearerSchema+" ")
 
-	return validateTokenAuthorization(tokenString, db, config)
+	return validateTokenAuthorization(tokenString, db, oauthSecret)
 }
 
-func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConfig) (int64, string, error) {
+func validateTokenAuthorization(tokenString string, db *sql.DB, oauthSecret string) (int64, string, error) {
 	if len(tokenString) <= 0 {
 		return 0, "", fmt.Errorf("authorization token is invalid")
 	}
@@ -148,7 +161,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 			return nil, fmt.Errorf("invalid token alg %v", token.Header["alg"])
 
 		}
-		return []byte(config.Secret), nil
+		return []byte(oauthSecret), nil
 	})
 
 	if err != nil {
@@ -194,7 +207,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 	return id, role, nil
 }
 
-func applyMigrations(config MigrationsConfig) error {
+func applyMigrations(config config.MigrationsConfig) error {
 	log.Println("Apply migrations")
 
 	dir := config.Dir
@@ -227,12 +240,38 @@ func (s *Application) MigrateTraffic() error {
 		return err
 	}
 
-	config := s.container.GetConfig()
+	cfg := s.container.GetConfig()
 
-	err = applyMigrations(config.TrafficMigrations)
+	err = applyMigrations(cfg.TrafficMigrations)
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
+
+	return nil
+}
+
+func (s *Application) ServeAuth(quit chan bool) error {
+
+	appConfig := s.container.GetConfig()
+
+	cfg := s.container.GetConfig()
+
+	usersDB, err := s.container.GetAutowpDB()
+	if err != nil {
+		return err
+	}
+
+	service, err := auth.NewService(cfg.Auth, usersDB, appConfig.Languages, cfg.UsersSalt)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		<-quit
+		service.Close()
+	}()
+
+	service.ListenHTTP()
 
 	return nil
 }
@@ -347,10 +386,10 @@ func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
 		return err
 	}
 
-	config := s.container.GetConfig()
+	cfg := s.container.GetConfig()
 
 	log.Println("Monitoring listener started")
-	err = traffic.Monitoring.Listen(config.RabbitMQ, config.MonitoringQueue, quit)
+	err = traffic.Monitoring.Listen(cfg.RabbitMQ, cfg.MonitoringQueue, quit)
 	if err != nil {
 		log.Println(err.Error())
 		return err

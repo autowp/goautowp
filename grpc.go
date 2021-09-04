@@ -26,7 +26,7 @@ type GRPCServer struct {
 	fileStorageConfig  FileStorageConfig
 	db                 *sql.DB
 	enforcer           *casbin.Enforcer
-	oauthConfig        OAuthConfig
+	oauthSecret        string
 	contactsRepository *ContactsRepository
 	userRepository     *UserRepository
 	userExtractor      *UserExtractor
@@ -44,7 +44,7 @@ func NewGRPCServer(
 	fileStorageConfig FileStorageConfig,
 	db *sql.DB,
 	enforcer *casbin.Enforcer,
-	oauthConfig OAuthConfig,
+	oauthSecret string,
 	contactsRepository *ContactsRepository,
 	userRepository *UserRepository,
 	userExtractor *UserExtractor,
@@ -61,7 +61,7 @@ func NewGRPCServer(
 		fileStorageConfig:  fileStorageConfig,
 		db:                 db,
 		enforcer:           enforcer,
-		oauthConfig:        oauthConfig,
+		oauthSecret:        oauthSecret,
 		contactsRepository: contactsRepository,
 		userRepository:     userRepository,
 		userExtractor:      userExtractor,
@@ -140,7 +140,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 
 func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*AclEnforceResult, error) {
 
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -151,7 +151,7 @@ func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*Ac
 }
 
 func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*VehicleTypeItems, error) {
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -184,7 +184,7 @@ func (s *GRPCServer) GetBrandVehicleTypes(_ context.Context, in *GetBrandVehicle
 }
 
 func (s *GRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -216,7 +216,7 @@ func (s *GRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest
 }
 
 func (s *GRPCServer) DeleteContact(ctx context.Context, in *DeleteContactRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -234,7 +234,7 @@ func (s *GRPCServer) DeleteContact(ctx context.Context, in *DeleteContactRequest
 }
 
 func (s *GRPCServer) GetContact(ctx context.Context, in *GetContactRequest) (*Contact, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -262,7 +262,7 @@ func (s *GRPCServer) GetContact(ctx context.Context, in *GetContactRequest) (*Co
 }
 
 func (s *GRPCServer) GetContacts(ctx context.Context, in *GetContactsRequest) (*ContactItems, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -431,7 +431,7 @@ func (s *GRPCServer) getUser(id int) (*DBUser, error) {
 
 func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, error) {
 
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -482,7 +482,7 @@ func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRe
 
 func (s *GRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error) {
 
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -505,7 +505,7 @@ func (s *GRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteF
 }
 
 func (s *GRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error) {
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -528,7 +528,7 @@ func (s *GRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteF
 }
 
 func (s *GRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest) (*emptypb.Empty, error) {
-	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -553,7 +553,7 @@ func (s *GRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddToTraffic
 }
 
 func (s *GRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest) (*emptypb.Empty, error) {
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -581,7 +581,7 @@ func (s *GRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddToTraffic
 }
 
 func (s *GRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) (*APITrafficWhitelistItems, error) {
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -601,7 +601,7 @@ func (s *GRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) 
 }
 
 func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty) (*APIForumsUserSummary, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -621,7 +621,7 @@ func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty)
 }
 
 func (s *GRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) (*APIMessageNewCount, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -641,7 +641,7 @@ func (s *GRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) 
 }
 
 func (s *GRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (*APIMessageSummary, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthConfig)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}

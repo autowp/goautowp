@@ -49,7 +49,7 @@ func init() {
 	lis = bufconn.Listen(bufSize)
 	grpcServer := grpc.NewServer()
 	usersSrv := NewUsersGRPCServer(
-		config.OAuth,
+		config.Auth.OAuth.Secret,
 		db,
 		enforcer,
 		contactsRepository,
@@ -110,7 +110,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.UpdateUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, userID, config.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, userID, config.Auth.OAuth.Secret)),
 		&APIUpdateUserRequest{UserId: userID, Name: newName},
 	)
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.Equal(t, newName, dbNewName)
 
 	_, err = client.DeleteUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, config.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, config.Auth.OAuth.Secret)),
 		&APIDeleteUserRequest{UserId: userID, Password: password},
 	)
 	require.NoError(t, err)

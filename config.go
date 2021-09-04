@@ -2,16 +2,12 @@ package goautowp
 
 import (
 	"fmt"
+	"github.com/autowp/goautowp/auth"
+	"github.com/autowp/goautowp/config"
 	"log"
 
 	"github.com/spf13/viper"
 )
-
-// MigrationsConfig MigrationsConfig
-type MigrationsConfig struct {
-	DSN string `yaml:"dsn" mapstructure:"dsn"`
-	Dir string `yaml:"dir" mapstructure:"dir"`
-}
 
 // SentryConfig SentryConfig
 type SentryConfig struct {
@@ -50,11 +46,6 @@ type RestConfig struct {
 	Listen string `mapstructure:"listen"`
 }
 
-// OAuthConfig OAuthConfig
-type OAuthConfig struct {
-	Secret string `yaml:"secret" mapstructure:"secret"`
-}
-
 // RecaptchaConfig RecaptchaConfig
 type RecaptchaConfig struct {
 	PublicKey  string `yaml:"public-key"  mapstructure:"public-key"`
@@ -84,45 +75,36 @@ type KeyCloakConfig struct {
 	Realm        string `yaml:"realm"         mapstructure:"realm"`
 }
 
-// LanguageConfig LanguageConfig
-type LanguageConfig struct {
-	Hostname string   `yaml:"hostname" mapstructure:"hostname"`
-	Timezone string   `yaml:"timezone" mapstructure:"timezone"`
-	Name     string   `yaml:"name"     mapstructure:"name"`
-	Flag     string   `yaml:"flag"     mapstructure:"flag"`
-	Aliases  []string `yaml:"aliases"  mapstructure:"aliases"`
-}
-
 // Config Application config definition
 type Config struct {
-	GinMode           string                    `yaml:"gin-mode"           mapstructure:"gin-mode"`
-	PublicRest        RestConfig                `yaml:"public-rest"        mapstructure:"public-rest"`
-	DuplicateFinder   DuplicateFinderConfig     `yaml:"duplicate_finder"   mapstructure:"duplicate_finder"`
-	AutowpDSN         string                    `yaml:"autowp-dsn"         mapstructure:"autowp-dsn"`
-	AutowpMigrations  MigrationsConfig          `yaml:"autowp-migrations"  mapstructure:"autowp-migrations"`
-	Sentry            SentryConfig              `yaml:"sentry"             mapstructure:"sentry"`
-	FileStorage       FileStorageConfig         `yaml:"file_storage"       mapstructure:"file_storage"`
-	OAuth             OAuthConfig               `yaml:"oauth"              mapstructure:"oauth"`
-	RabbitMQ          string                    `yaml:"rabbitmq"           mapstructure:"rabbitmq"`
-	MonitoringQueue   string                    `yaml:"monitoring_queue"   mapstructure:"monitoring_queue"`
-	PrivateRest       RestConfig                `yaml:"private-rest"       mapstructure:"private-rest"`
-	TrafficDSN        string                    `yaml:"traffic-dsn"        mapstructure:"traffic-dsn"`
-	TrafficMigrations MigrationsConfig          `yaml:"traffic-migrations" mapstructure:"traffic-migrations"`
-	Recaptcha         RecaptchaConfig           `yaml:"recaptcha"          mapstructure:"recaptcha"`
-	MockEmailSender   bool                      `yaml:"mock-email-sender"  mapstructure:"mock-email-sender"`
-	SMTP              SMTPConfig                `yaml:"smtp"               mapstructure:"smtp"`
-	Feedback          FeedbackConfig            `yaml:"feedback"           mapstructure:"feedback"`
-	KeyCloak          KeyCloakConfig            `yaml:"keycloak"           mapstructure:"keycloak"`
-	UsersSalt         string                    `yaml:"users-salt"         mapstructure:"users-salt"`
-	EmailSalt         string                    `yaml:"email-salt"         mapstructure:"email-salt"`
-	Languages         map[string]LanguageConfig `yaml:"languages"          mapstructure:"languages"`
-	Captcha           bool                      `yaml:"captcha"            mapstructure:"captcha"`
+	GinMode           string                           `yaml:"gin-mode"           mapstructure:"gin-mode"`
+	PublicRest        RestConfig                       `yaml:"public-rest"        mapstructure:"public-rest"`
+	DuplicateFinder   DuplicateFinderConfig            `yaml:"duplicate_finder"   mapstructure:"duplicate_finder"`
+	AutowpDSN         string                           `yaml:"autowp-dsn"         mapstructure:"autowp-dsn"`
+	AutowpMigrations  config.MigrationsConfig          `yaml:"autowp-migrations"  mapstructure:"autowp-migrations"`
+	Sentry            SentryConfig                     `yaml:"sentry"             mapstructure:"sentry"`
+	FileStorage       FileStorageConfig                `yaml:"file_storage"       mapstructure:"file_storage"`
+	RabbitMQ          string                           `yaml:"rabbitmq"           mapstructure:"rabbitmq"`
+	MonitoringQueue   string                           `yaml:"monitoring_queue"   mapstructure:"monitoring_queue"`
+	PrivateRest       RestConfig                       `yaml:"private-rest"       mapstructure:"private-rest"`
+	TrafficDSN        string                           `yaml:"traffic-dsn"        mapstructure:"traffic-dsn"`
+	TrafficMigrations config.MigrationsConfig          `yaml:"traffic-migrations" mapstructure:"traffic-migrations"`
+	Recaptcha         RecaptchaConfig                  `yaml:"recaptcha"          mapstructure:"recaptcha"`
+	MockEmailSender   bool                             `yaml:"mock-email-sender"  mapstructure:"mock-email-sender"`
+	SMTP              SMTPConfig                       `yaml:"smtp"               mapstructure:"smtp"`
+	Feedback          FeedbackConfig                   `yaml:"feedback"           mapstructure:"feedback"`
+	KeyCloak          KeyCloakConfig                   `yaml:"keycloak"           mapstructure:"keycloak"`
+	UsersSalt         string                           `yaml:"users-salt"         mapstructure:"users-salt"`
+	EmailSalt         string                           `yaml:"email-salt"         mapstructure:"email-salt"`
+	Languages         map[string]config.LanguageConfig `yaml:"languages"          mapstructure:"languages"`
+	Captcha           bool                             `yaml:"captcha"            mapstructure:"captcha"`
+	Auth              auth.Config                      `yaml:"auth"               mapstructure:"auth"`
 }
 
 // LoadConfig LoadConfig
 func LoadConfig() Config {
 
-	config := Config{}
+	cfg := Config{}
 
 	viper.SetConfigName("defaults")
 	viper.SetConfigType("yaml")
@@ -139,12 +121,12 @@ func LoadConfig() Config {
 		panic(err)
 	}
 
-	err = viper.Unmarshal(&config)
+	err = viper.Unmarshal(&cfg)
 	if err != nil {
 		panic(fmt.Errorf("fatal error unmarshal config: %s", err))
 	}
 
-	return config
+	return cfg
 }
 
 // ValidateConfig ValidateConfig

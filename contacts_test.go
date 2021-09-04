@@ -16,7 +16,7 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	ctx = metadata.NewIncomingContext(
 		ctx,
-		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.OAuth.Secret)}),
+		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.Auth.OAuth.Secret)}),
 	)
 
 	// create
