@@ -89,6 +89,10 @@ func main() {
 		cmdErr = app.MigrateTraffic()
 	case "scheduler-hourly":
 		cmdErr = app.SchedulerHourly()
+	case "scheduler-daily":
+		cmdErr = app.SchedulerDaily()
+	case "scheduler-midnight":
+		cmdErr = app.SchedulerMidnight()
 	case "serve-public":
 		cmdErr = app.MigrateAutowp()
 		if cmdErr != nil {

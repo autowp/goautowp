@@ -1014,3 +1014,70 @@ func (s *Repository) UserRenamesGC() error {
 	_, err := s.autowpDB.Exec("DELETE FROM user_renames WHERE date < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
 	return err
 }
+
+func (s *Repository) RestoreVotes() error {
+	_, err := s.autowpDB.Exec(
+		"UPDATE users SET votes_left = votes_per_day WHERE votes_left < votes_per_day AND not deleted",
+	)
+	return err
+}
+
+func (s *Repository) UpdateVotesLimits() (int, error) {
+
+	rows, err := s.autowpDB.Query(
+		"SELECT id FROM users WHERE NOT deleted AND last_online > DATE_SUB(NOW(), INTERVAL 3 MONTH)",
+	)
+	if err != nil {
+		return 0, err
+	}
+	defer util.Close(rows)
+
+	affected := 0
+
+	for rows.Next() {
+		var userID int64
+		err = rows.Scan(&userID)
+		if err != nil {
+			return 0, err
+		}
+		err = s.UpdateUserVoteLimit(userID)
+		if err != nil {
+			return 0, err
+		}
+		affected++
+	}
+
+	return affected, nil
+}
+
+func (s *Repository) UpdateSpecsVolumes() error {
+
+	rows, err := s.autowpDB.Query(`
+		SELECT id, count(attrs_user_values.user_id)
+		FROM users
+			LEFT JOIN attrs_user_values ON attrs_user_values.user_id = users.id
+		WHERE NOT not users.specs_volume_valid AND NOT users.deleted
+		GROUP BY users.id
+	`)
+	if err != nil {
+		return err
+	}
+	defer util.Close(rows)
+
+	for rows.Next() {
+		var userID int64
+		var count int
+		err = rows.Scan(&userID, &count)
+		if err != nil {
+			return err
+		}
+		_, err = s.autowpDB.Exec(
+			"UPDATE users SET specs_volume = ?, specs_volume_valid = 1 WHERE id = ?",
+			userID, count,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

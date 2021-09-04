@@ -333,11 +333,22 @@ func (s *Application) SchedulerHourly() error {
 		return err
 	}
 
+	return nil
+}
+
+func (s *Application) SchedulerDaily() error {
 	users, err := s.container.GetUserRepository()
 	if err != nil {
 		return err
 	}
+
 	err = users.UserRenamesGC()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	err = users.UpdateSpecsVolumes()
 	if err != nil {
 		log.Println(err.Error())
 		return err
@@ -353,6 +364,28 @@ func (s *Application) SchedulerHourly() error {
 		return err
 	}
 	log.Printf("`%d` password remind rows was deleted\n", count)
+
+	return nil
+}
+
+func (s *Application) SchedulerMidnight() error {
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return err
+	}
+
+	err = users.RestoreVotes()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	affected, err := users.UpdateVotesLimits()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	fmt.Printf("Updated %d users vote limits\n", affected)
 
 	return nil
 }

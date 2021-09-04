@@ -40,6 +40,7 @@ COPY --from=builder /etc/group /etc/group
 COPY --from=builder /app /app
 COPY migrations /migrations
 COPY traffic-migrations /traffic-migrations
+COPY auth/migrations /auth/migrations
 COPY defaults.yaml /defaults.yaml
 
 USER appuser:appuser
