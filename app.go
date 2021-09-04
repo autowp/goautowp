@@ -261,7 +261,12 @@ func (s *Application) ServeAuth(quit chan bool) error {
 		return err
 	}
 
-	service, err := auth.NewService(cfg.Auth, usersDB, appConfig.Languages, cfg.UsersSalt)
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return err
+	}
+
+	service, err := auth.NewService(cfg.Auth, usersDB, appConfig.Languages, users)
 	if err != nil {
 		return err
 	}

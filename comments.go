@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"database/sql"
+	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 )
 
@@ -22,8 +23,8 @@ type Comments struct {
 }
 
 type getVotesResult struct {
-	PositiveVotes []DBUser
-	NegativeVotes []DBUser
+	PositiveVotes []users.DBUser
+	NegativeVotes []users.DBUser
 }
 
 // NewComments constructor
@@ -48,10 +49,10 @@ func (s *Comments) getVotes(id int) (*getVotesResult, error) {
 	}
 	defer util.Close(rows)
 
-	positiveVotes := make([]DBUser, 0)
-	negativeVotes := make([]DBUser, 0)
+	positiveVotes := make([]users.DBUser, 0)
+	negativeVotes := make([]users.DBUser, 0)
 	for rows.Next() {
-		var r DBUser
+		var r users.DBUser
 		var vote int
 		err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &vote)
 		if err != nil {

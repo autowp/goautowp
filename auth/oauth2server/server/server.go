@@ -100,7 +100,8 @@ func (s *Server) ValidationTokenRequest(c *gin.Context, trd *oauth2server.TokenR
 		userID, err := s.PasswordAuthorizationHandler(trd.Username, trd.Password)
 		if err != nil {
 			return "", nil, "", err
-		} else if userID == 0 {
+		}
+		if userID == 0 {
 			return "", nil, "", errors.ErrInvalidGrant
 		}
 		tgr.UserID = userID
@@ -113,7 +114,8 @@ func (s *Server) ValidationTokenRequest(c *gin.Context, trd *oauth2server.TokenR
 		userID, redirectURI, err = s.SocialAuthorizationHandler(trd.Code, trd.State, trd.ClientIP)
 		if err != nil {
 			return "", nil, "", err
-		} else if userID == 0 {
+		}
+		if userID == 0 {
 			return "", nil, "", errors.ErrInvalidGrant
 		}
 		tgr.UserID = userID

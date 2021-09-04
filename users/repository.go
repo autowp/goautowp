@@ -1,4 +1,4 @@
-package goautowp
+package users
 
 import (
 	"context"
@@ -9,12 +9,14 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/Nerzal/gocloak/v8"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"math"
 	"math/rand"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -66,29 +68,29 @@ type CreateUserOptions struct {
 	Captcha         string `json:"captcha"`
 }
 
-// UserRepository Main Object
-type UserRepository struct {
+// Repository Main Object
+type Repository struct {
 	autowpDB       *sql.DB
 	usersSalt      string
 	emailSalt      string
 	languages      map[string]config.LanguageConfig
-	emailSender    EmailSender
+	emailSender    email.Sender
 	keyCloak       gocloak.GoCloak
-	keyCloakConfig KeyCloakConfig
+	keyCloakConfig config.KeyCloakConfig
 }
 
-// NewUserRepository constructor
-func NewUserRepository(
+// NewRepository constructor
+func NewRepository(
 	autowpDB *sql.DB,
 	usersSalt string,
 	emailSalt string,
 	languages map[string]config.LanguageConfig,
-	emailSender EmailSender,
+	emailSender email.Sender,
 	keyCloak gocloak.GoCloak,
-	keyCloakConfig KeyCloakConfig,
-) *UserRepository {
+	keyCloakConfig config.KeyCloakConfig,
+) *Repository {
 
-	return &UserRepository{
+	return &Repository{
 		autowpDB:       autowpDB,
 		usersSalt:      usersSalt,
 		emailSalt:      emailSalt,
@@ -99,7 +101,7 @@ func NewUserRepository(
 	}
 }
 
-func (s *UserRepository) GetUser(options GetUsersOptions) (*DBUser, error) {
+func (s *Repository) GetUser(options GetUsersOptions) (*DBUser, error) {
 
 	users, err := s.GetUsers(options)
 	if err != nil {
@@ -113,7 +115,7 @@ func (s *UserRepository) GetUser(options GetUsersOptions) (*DBUser, error) {
 	return &users[0], nil
 }
 
-func (s *UserRepository) GetUsers(options GetUsersOptions) ([]DBUser, error) {
+func (s *Repository) GetUsers(options GetUsersOptions) ([]DBUser, error) {
 
 	result := make([]DBUser, 0)
 
@@ -176,7 +178,7 @@ func (s *UserRepository) GetUsers(options GetUsersOptions) ([]DBUser, error) {
 	return result, nil
 }
 
-func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEnabled bool, ip string) ([]*errdetails.BadRequest_FieldViolation, error) {
+func (s *Repository) ValidateCreateUser(options CreateUserOptions, captchaEnabled bool, ip string) ([]*errdetails.BadRequest_FieldViolation, error) {
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
 	var err error
@@ -287,12 +289,12 @@ func (s *UserRepository) ValidateCreateUser(options CreateUserOptions, captchaEn
 	return result, nil
 }
 
-func (s *UserRepository) emailChangeCode(email string) string {
+func (s *Repository) emailChangeCode(email string) string {
 	md5Bytes := md5.Sum([]byte(fmt.Sprintf("%s%s%d", s.emailSalt, email, rand.Int())))
 	return hex.EncodeToString(md5Bytes[:])
 }
 
-func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
+func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
 
 	ctx := context.Background()
 	token, err := s.keyCloak.LoginClient(
@@ -384,7 +386,7 @@ func (s *UserRepository) CreateUser(options CreateUserOptions) (int64, error) {
 	return userID, nil
 }
 
-func (s *UserRepository) sendRegistrationConfirmEmail(email string, code string, name string, hostname string) error {
+func (s *Repository) sendRegistrationConfirmEmail(email string, code string, name string, hostname string) error {
 	if len(email) <= 0 || len(code) <= 0 {
 		return nil
 	}
@@ -408,7 +410,7 @@ func (s *UserRepository) sendRegistrationConfirmEmail(email string, code string,
 	return s.emailSender.Send(fromStr+" <no-reply@autowp.ru>", []string{name + " <" + email + ">"}, subject, message, "")
 }
 
-func (s *UserRepository) UpdateUserVoteLimit(userId int64) error {
+func (s *Repository) UpdateUserVoteLimit(userId int64) error {
 
 	var age int
 	err := s.autowpDB.QueryRow("SELECT TIMESTAMPDIFF(YEAR, reg_date, NOW()) FROM users WHERE id = ?", userId).Scan(&age)
@@ -442,13 +444,13 @@ func (s *UserRepository) UpdateUserVoteLimit(userId int64) error {
 	return nil
 }
 
-func (s *UserRepository) GetUserAvgVote(userId int64) (float64, error) {
+func (s *Repository) GetUserAvgVote(userId int64) (float64, error) {
 	var result float64
 	err := s.autowpDB.QueryRow("SELECT IFNULL(avg(vote), 0) FROM comment_message WHERE author_id = ? AND vote <> 0", userId).Scan(&result)
 	return result, err
 }
 
-func (s *UserRepository) RefreshUserConflicts(userId int64) error {
+func (s *Repository) RefreshUserConflicts(userId int64) error {
 	_, err := s.autowpDB.Exec(`
 		UPDATE users 
 		SET users.specs_weight = (1.5 * ((1 + IFNULL((
@@ -461,7 +463,7 @@ func (s *UserRepository) RefreshUserConflicts(userId int64) error {
 	return err
 }
 
-func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, error) {
+func (s *Repository) ensureUserExportedToKeyCloak(userID int64) (string, error) {
 	var userGuid string
 	err := s.autowpDB.QueryRow(`
 		SELECT external_id FROM user_account WHERE service_id = ? AND user_id = ?
@@ -475,13 +477,13 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 	}
 
 	var deleted bool
-	var email sql.NullString
+	var userEmail sql.NullString
 	var emailToCheck sql.NullString
 	var login string
 	var name string
 	err = s.autowpDB.QueryRow(`
 			SELECT deleted, e_mail, email_to_check, login, name FROM users WHERE id = ?
-		`, userID).Scan(&deleted, &email, &emailToCheck, &login, &name)
+		`, userID).Scan(&deleted, &userEmail, &emailToCheck, &login, &name)
 	if err != nil {
 		return "", err
 	}
@@ -496,9 +498,9 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 		return "", err
 	}
 
-	var keyCloakEmail = &email.String
+	var keyCloakEmail = &userEmail.String
 	emailVerified := true
-	if !email.Valid || len(email.String) <= 0 {
+	if !userEmail.Valid || len(userEmail.String) <= 0 {
 		keyCloakEmail = &emailToCheck.String
 		emailVerified = false
 	}
@@ -532,35 +534,14 @@ func (s *UserRepository) ensureUserExportedToKeyCloak(userID int64) (string, err
 	return userGuid, err
 }
 
-func (s *UserRepository) SetPassword(userID int64, password string) error {
+func (s *Repository) SetPassword(ctx context.Context, userID int64, password string) error {
 
 	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-	token, err := s.keyCloak.LoginClient(
-		ctx,
-		s.keyCloakConfig.ClientID,
-		s.keyCloakConfig.ClientSecret,
-		s.keyCloakConfig.Realm,
-	)
-	if err != nil {
-		return err
-	}
-
-	credentialsType := "PASSWORD"
-	credentials := []gocloak.CredentialRepresentation{
-		{
-			Type:  &credentialsType,
-			Value: &password,
-		},
-	}
-	err = s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
-		ID:          &userGuid,
-		Credentials: &credentials,
-	})
+	err = s.setUserKeyCloakPassword(ctx, userGuid, password)
 	if err != nil {
 		return err
 	}
@@ -575,22 +556,22 @@ func (s *UserRepository) SetPassword(userID int64, password string) error {
 	return err
 }
 
-func (s *UserRepository) GetLogin(userID int64) (string, error) {
+func (s *Repository) GetLogin(userID int64) (string, error) {
 	var login string
-	var email string
-	err := s.autowpDB.QueryRow("SELECT login, e_mail FROM users WHERE id = ?", userID).Scan(&login, &email)
+	var userEmail string
+	err := s.autowpDB.QueryRow("SELECT login, e_mail FROM users WHERE id = ?", userID).Scan(&login, &userEmail)
 	if err != nil {
 		return "", err
 	}
 
-	if len(email) > 0 {
-		return email, nil
+	if len(userEmail) > 0 {
+		return userEmail, nil
 	}
 
 	return login, nil
 }
 
-func (s *UserRepository) EmailChangeStart(userID int64, email string) ([]*errdetails.BadRequest_FieldViolation, error) {
+func (s *Repository) EmailChangeStart(userID int64, email string) ([]*errdetails.BadRequest_FieldViolation, error) {
 
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
@@ -648,20 +629,20 @@ func (s *UserRepository) EmailChangeStart(userID int64, email string) ([]*errdet
 	return nil, s.sendChangeConfirmEmail(email, emailCheckCode, name, language.Hostname)
 }
 
-func (s *UserRepository) EmailChangeFinish(ctx context.Context, code string) error {
+func (s *Repository) EmailChangeFinish(ctx context.Context, code string) error {
 	if len(code) <= 0 {
 		return fmt.Errorf("token is invalid")
 	}
 
 	var userID int64
-	var email string
+	var userEmail string
 	err := s.autowpDB.QueryRow(`
 		SELECT id, email_to_check FROM users
 		WHERE not deleted AND
 		      email_check_code = ? AND
 		      LENGTH(email_check_code) > 0 AND
 		      LENGTH(email_to_check) > 0
-	`, code).Scan(&userID, &email)
+	`, code).Scan(&userID, &userEmail)
 	if err != nil {
 		return err
 	}
@@ -691,12 +672,12 @@ func (s *UserRepository) EmailChangeFinish(ctx context.Context, code string) err
 
 	return s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
 		ID:       &userGuid,
-		Email:    &email,
-		Username: &email,
+		Email:    &userEmail,
+		Username: &userEmail,
 	})
 }
 
-func (s *UserRepository) sendChangeConfirmEmail(email string, code string, name string, hostname string) error {
+func (s *Repository) sendChangeConfirmEmail(email string, code string, name string, hostname string) error {
 	if len(email) <= 0 || len(code) <= 0 {
 		return nil
 	}
@@ -718,7 +699,7 @@ func (s *UserRepository) sendChangeConfirmEmail(email string, code string, name 
 	return s.emailSender.Send(fromStr+" <no-reply@autowp.ru>", []string{name + " <" + email + ">"}, subject, message, "")
 }
 
-func (s *UserRepository) ValidateChangePassword(userID int64, oldPassword, newPassword, newPasswordConfirm string) ([]*errdetails.BadRequest_FieldViolation, error) {
+func (s *Repository) ValidateChangePassword(userID int64, oldPassword, newPassword, newPasswordConfirm string) ([]*errdetails.BadRequest_FieldViolation, error) {
 
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
@@ -799,7 +780,7 @@ func (s *UserRepository) ValidateChangePassword(userID int64, oldPassword, newPa
 	return result, nil
 }
 
-func (s *UserRepository) PasswordMatch(userID int64, password string) (bool, error) {
+func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) {
 	var exists bool
 	err := s.autowpDB.QueryRow(`
 		SELECT 1 FROM users 
@@ -816,7 +797,74 @@ func (s *UserRepository) PasswordMatch(userID int64, password string) (bool, err
 	return true, nil
 }
 
-func (s *UserRepository) DeleteUser(userID int64) (bool, error) {
+// GetUserByCredentials GetUserByCredentials
+func (s *Repository) GetUserByCredentials(username string, password string) (int64, error) {
+	if username == "" || password == "" {
+		return 0, nil
+	}
+
+	column := "login"
+	if strings.Contains(username, "@") {
+		column = "e_mail"
+	}
+
+	var userID int64
+
+	err := s.autowpDB.QueryRow(
+		fmt.Sprintf(
+			`
+				SELECT id FROM users
+				WHERE NOT deleted AND %s = ? AND password = MD5(CONCAT(?, ?))
+			`,
+			column,
+		),
+		username, s.usersSalt, password,
+	).Scan(&userID)
+
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+
+	if err != nil && userID != 0 {
+		userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+		if err != nil {
+			return 0, err
+		}
+		err = s.setUserKeyCloakPassword(context.Background(), userGuid, password)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return userID, err
+}
+
+func (s *Repository) setUserKeyCloakPassword(ctx context.Context, userGuid string, password string) error {
+	token, err := s.keyCloak.LoginClient(
+		ctx,
+		s.keyCloakConfig.ClientID,
+		s.keyCloakConfig.ClientSecret,
+		s.keyCloakConfig.Realm,
+	)
+	if err != nil {
+		return err
+	}
+
+	credentialsType := "PASSWORD"
+	credentials := []gocloak.CredentialRepresentation{
+		{
+			Type:  &credentialsType,
+			Value: &password,
+		},
+	}
+	err = s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+		ID:          &userGuid,
+		Credentials: &credentials,
+	})
+	return err
+}
+
+func (s *Repository) DeleteUser(userID int64) (bool, error) {
 
 	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
 	if err != nil {
@@ -890,7 +938,7 @@ func (s *UserRepository) DeleteUser(userID int64) (bool, error) {
 	return true, nil
 }
 
-func (s *UserRepository) UpdateUser(ctx context.Context, userID int64, name string) ([]*errdetails.BadRequest_FieldViolation, error) {
+func (s *Repository) UpdateUser(ctx context.Context, userID int64, name string) ([]*errdetails.BadRequest_FieldViolation, error) {
 
 	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
 	if err != nil {
@@ -962,7 +1010,7 @@ func (s *UserRepository) UpdateUser(ctx context.Context, userID int64, name stri
 	return nil, nil
 }
 
-func (s *UserRepository) UserRenamesGC() error {
+func (s *Repository) UserRenamesGC() error {
 	_, err := s.autowpDB.Exec("DELETE FROM user_renames WHERE date < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
 	return err
 }

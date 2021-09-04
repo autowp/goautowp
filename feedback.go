@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"fmt"
+	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/validation"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
@@ -11,7 +12,7 @@ type Feedback struct {
 	captchaEnabled  bool
 	config          FeedbackConfig
 	recaptchaConfig RecaptchaConfig
-	emailSender     EmailSender
+	emailSender     email.Sender
 }
 
 // CreateFeedbackRequest CreateFeedbackRequest
@@ -24,7 +25,7 @@ type CreateFeedbackRequest struct {
 }
 
 // NewFeedback constructor
-func NewFeedback(config FeedbackConfig, recaptchaConfig RecaptchaConfig, captchaEnabled bool, emailSender EmailSender) (*Feedback, error) {
+func NewFeedback(config FeedbackConfig, recaptchaConfig RecaptchaConfig, captchaEnabled bool, emailSender email.Sender) (*Feedback, error) {
 
 	s := &Feedback{
 		config:          config,

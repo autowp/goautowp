@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/Nerzal/gocloak/v8"
+	"github.com/autowp/goautowp/email"
+	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
@@ -36,12 +38,12 @@ type Container struct {
 	publicRouter       http.HandlerFunc
 	traffic            *Traffic
 	trafficDB          *pgxpool.Pool
-	userRepository     *UserRepository
+	userRepository     *users.Repository
 	forums             *Forums
 	messages           *Messages
 	keyCloak           gocloak.GoCloak
 	passwordRecovery   *PasswordRecovery
-	emailSender        EmailSender
+	emailSender        email.Sender
 	events             *Events
 	usersGrpcServer    *UsersGRPCServer
 }
@@ -404,7 +406,7 @@ func (s *Container) GetUserExtractor() *UserExtractor {
 	return NewUserExtractor(s)
 }
 
-func (s *Container) GetUserRepository() (*UserRepository, error) {
+func (s *Container) GetUserRepository() (*users.Repository, error) {
 
 	if s.userRepository == nil {
 		autowpDB, err := s.GetAutowpDB()
@@ -414,7 +416,7 @@ func (s *Container) GetUserRepository() (*UserRepository, error) {
 
 		config := s.GetConfig()
 
-		s.userRepository = NewUserRepository(
+		s.userRepository = users.NewRepository(
 			autowpDB,
 			config.UsersSalt,
 			config.EmailSalt,
@@ -607,21 +609,21 @@ func (s *Container) GetPasswordRecovery() (*PasswordRecovery, error) {
 	return s.passwordRecovery, nil
 }
 
-func (s *Container) GetEmailSender() EmailSender {
+func (s *Container) GetEmailSender() email.Sender {
 	if s.emailSender == nil {
-		config := s.GetConfig()
+		cfg := s.GetConfig()
 
 		if s.config.MockEmailSender {
-			s.emailSender = &MockEmailSender{}
+			s.emailSender = &email.MockSender{}
 		} else {
-			s.emailSender = &SmtpEmailSender{config: config.SMTP}
+			s.emailSender = &email.SmtpSender{Config: cfg.SMTP}
 		}
 	}
 
 	return s.emailSender
 }
 
-func (s *Container) SetEmailSender(emailSender EmailSender) {
+func (s *Container) SetEmailSender(emailSender email.Sender) {
 	s.emailSender = emailSender
 }
 

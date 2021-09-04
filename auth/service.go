@@ -7,8 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
 	"io/ioutil"
 	"log"
 	"math"
@@ -20,14 +18,13 @@ import (
 
 	"github.com/autowp/goautowp/auth/oauth2server"
 	"github.com/autowp/goautowp/auth/oauth2server/errors"
-
 	"github.com/autowp/goautowp/auth/oauth2server/generates"
-
-	"github.com/autowp/goautowp/auth/oauth2server/server"
-
-	"github.com/autowp/goautowp/auth/oauth2server/store"
-
 	"github.com/autowp/goautowp/auth/oauth2server/manage"
+	"github.com/autowp/goautowp/auth/oauth2server/server"
+	"github.com/autowp/goautowp/auth/oauth2server/store"
+	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/getsentry/sentry-go"
@@ -60,7 +57,7 @@ type Service struct {
 }
 
 // NewService constructor
-func NewService(config Config, usersDB *sql.DB, hosts map[string]config.LanguageConfig, salt string) (*Service, error) {
+func NewService(config Config, usersDB *sql.DB, hosts map[string]config.LanguageConfig, userRepository *users.Repository) (*Service, error) {
 
 	var err error
 
@@ -76,9 +73,7 @@ func NewService(config Config, usersDB *sql.DB, hosts map[string]config.Language
 		return nil, err
 	}
 
-	userStore := NewUserStore(usersDB, salt)
-
-	oauthServer := initOAuthServer(db, userStore, config.OAuth)
+	oauthServer := initOAuthServer(db, userRepository, config.OAuth)
 	// defer tokenStore.Close()
 
 	s := &Service{
@@ -294,7 +289,7 @@ func connectDb(driverName string, dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
-func initOAuthServer(db *sql.DB, userStore *UserStore, cfg OAuthConfig) *server.Server {
+func initOAuthServer(db *sql.DB, userRepository *users.Repository, cfg OAuthConfig) *server.Server {
 	manager := manage.NewManager()
 	manager.SetPasswordTokenCfg(&manage.Config{
 		AccessTokenExp:    time.Duration(cfg.AccessTokenExpiresIn) * time.Minute,
@@ -326,15 +321,8 @@ func initOAuthServer(db *sql.DB, userStore *UserStore, cfg OAuthConfig) *server.
 
 	srv := server.NewServer(manager)
 
-	srv.SetPasswordAuthorizationHandler(func(username, password string) (userID int64, err error) {
-		user, err := userStore.GetUserByCredentials(username, password)
-		if err != nil {
-			return 0, err
-		}
-		if user != nil {
-			return user.ID, nil
-		}
-		return 0, nil
+	srv.SetPasswordAuthorizationHandler(func(username, password string) (int64, error) {
+		return userRepository.GetUserByCredentials(username, password)
 	})
 
 	srv.SetInternalErrorHandler(func(err error) (re *errors.Response) {
@@ -350,7 +338,7 @@ func initOAuthServer(db *sql.DB, userStore *UserStore, cfg OAuthConfig) *server.
 }
 
 func randomBase64String(l int) (string, error) {
-	buff := make([]byte, int(math.Round(float64(l)/float64(1.33333333333))))
+	buff := make([]byte, int(math.Round(float64(l)/1.33333333333)))
 	_, err := rand.Read(buff)
 	if err != nil {
 		return "", err
@@ -369,12 +357,12 @@ func (s *Service) getUserIDFromRequest(c *gin.Context) (int64, error) {
 	bearerToken := strings.Split(authorizationHeader, " ")
 
 	if len(bearerToken) != 2 || bearerToken[0] != "Bearer" {
-		return 0, fmt.Errorf("Invalid authorization token")
+		return 0, fmt.Errorf("invalid authorization token")
 	}
 
 	token, err := jwt.Parse(bearerToken[1], func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("There was an error")
+			return nil, fmt.Errorf("there was an error")
 		}
 		return []byte(s.config.OAuth.Secret), nil
 	})
@@ -383,7 +371,7 @@ func (s *Service) getUserIDFromRequest(c *gin.Context) (int64, error) {
 	}
 
 	if !token.Valid {
-		return 0, fmt.Errorf("Invalid authorization token")
+		return 0, fmt.Errorf("invalid authorization token")
 	}
 
 	var claims jwt.StandardClaims

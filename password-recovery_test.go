@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"github.com/Nerzal/gocloak/v8"
+	"github.com/autowp/goautowp/email"
+	"github.com/autowp/goautowp/users"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"regexp"
@@ -14,7 +16,7 @@ import (
 
 func TestRestorePassword(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	email := "test" + strconv.Itoa(rand.Int()) + "@example.com"
+	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com"
 	password := "password"
 	newPassword := "password2"
 	name := "User, who restore password"
@@ -26,9 +28,9 @@ func TestRestorePassword(t *testing.T) {
 
 	keycloak := gocloak.NewClient(config.KeyCloak.URL)
 
-	emailSender := MockEmailSender{}
+	emailSender := email.MockSender{}
 
-	users := NewUserRepository(
+	usersRep := users.NewRepository(
 		db,
 		config.UsersSalt,
 		config.EmailSalt,
@@ -38,8 +40,8 @@ func TestRestorePassword(t *testing.T) {
 		config.KeyCloak,
 	)
 
-	userID, err := users.CreateUser(CreateUserOptions{
-		Email:           email,
+	userID, err := usersRep.CreateUser(users.CreateUserOptions{
+		Email:           userEmail,
 		Password:        password,
 		PasswordConfirm: password,
 		Name:            name,
@@ -55,14 +57,14 @@ func TestRestorePassword(t *testing.T) {
 	require.NotEmpty(t, matches)
 	token := matches[1]
 
-	err = users.EmailChangeFinish(context.Background(), token)
+	err = usersRep.EmailChangeFinish(context.Background(), token)
 	require.NoError(t, err)
 
 	pr := NewPasswordRecovery(db, false, config.Languages, &emailSender)
 	require.NoError(t, err)
 
 	// request email message
-	fv, err := pr.Start(email, "", "127.0.0.1")
+	fv, err := pr.Start(userEmail, "", "127.0.0.1")
 	require.NoError(t, err)
 	require.Nil(t, fv)
 
@@ -83,6 +85,6 @@ func TestRestorePassword(t *testing.T) {
 	require.NotZero(t, userID)
 	require.Nil(t, fv)
 
-	err = users.SetPassword(userID, newPassword)
+	err = usersRep.SetPassword(context.Background(), userID, newPassword)
 	require.NoError(t, err)
 }

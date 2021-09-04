@@ -52,27 +52,11 @@ type RecaptchaConfig struct {
 	PrivateKey string `yaml:"private-key" mapstructure:"private-key"`
 }
 
-// SMTPConfig SMTPConfig
-type SMTPConfig struct {
-	Hostname string `yaml:"hostname" mapstructure:"hostname"`
-	Port     int    `yaml:"port"     mapstructure:"port"`
-	Username string `yaml:"username" mapstructure:"username"`
-	Password string `yaml:"password" mapstructure:"password"`
-}
-
 // FeedbackConfig FeedbackConfig
 type FeedbackConfig struct {
 	From    string   `yaml:"from"    mapstructure:"from"`
 	To      []string `yaml:"to"      mapstructure:"to"`
 	Subject string   `yaml:"subject" mapstructure:"subject"`
-}
-
-// KeyCloakConfig KeyCloakConfig
-type KeyCloakConfig struct {
-	URL          string `yaml:"url"           mapstructure:"url"`
-	ClientID     string `yaml:"client-id"     mapstructure:"client-id"`
-	ClientSecret string `yaml:"client-secret" mapstructure:"client-secret"`
-	Realm        string `yaml:"realm"         mapstructure:"realm"`
 }
 
 // Config Application config definition
@@ -91,9 +75,9 @@ type Config struct {
 	TrafficMigrations config.MigrationsConfig          `yaml:"traffic-migrations" mapstructure:"traffic-migrations"`
 	Recaptcha         RecaptchaConfig                  `yaml:"recaptcha"          mapstructure:"recaptcha"`
 	MockEmailSender   bool                             `yaml:"mock-email-sender"  mapstructure:"mock-email-sender"`
-	SMTP              SMTPConfig                       `yaml:"smtp"               mapstructure:"smtp"`
+	SMTP              config.SMTPConfig                `yaml:"smtp"               mapstructure:"smtp"`
 	Feedback          FeedbackConfig                   `yaml:"feedback"           mapstructure:"feedback"`
-	KeyCloak          KeyCloakConfig                   `yaml:"keycloak"           mapstructure:"keycloak"`
+	KeyCloak          config.KeyCloakConfig            `yaml:"keycloak"           mapstructure:"keycloak"`
 	UsersSalt         string                           `yaml:"users-salt"         mapstructure:"users-salt"`
 	EmailSalt         string                           `yaml:"email-salt"         mapstructure:"email-salt"`
 	Languages         map[string]config.LanguageConfig `yaml:"languages"          mapstructure:"languages"`

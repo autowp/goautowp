@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -19,7 +20,7 @@ type UsersGRPCServer struct {
 	db                 *sql.DB
 	enforcer           *casbin.Enforcer
 	contactsRepository *ContactsRepository
-	userRepository     *UserRepository
+	userRepository     *users.Repository
 	events             *Events
 	languages          map[string]config.LanguageConfig
 	captcha            bool
@@ -31,7 +32,7 @@ func NewUsersGRPCServer(
 	db *sql.DB,
 	enforcer *casbin.Enforcer,
 	contactsRepository *ContactsRepository,
-	userRepository *UserRepository,
+	userRepository *users.Repository,
 	events *Events,
 	languages map[string]config.LanguageConfig,
 	captcha bool,
@@ -63,7 +64,7 @@ func (s *UsersGRPCServer) CreateUser(ctx context.Context, in *APICreateUserReque
 		return nil, status.Errorf(codes.InvalidArgument, "language `%s` is not defined", in.Language)
 	}
 
-	user := CreateUserOptions{
+	user := users.CreateUserOptions{
 		Name:            in.Name,
 		Email:           in.Email,
 		Timezone:        language.Timezone,
@@ -218,7 +219,7 @@ func (s *UsersGRPCServer) SetPassword(ctx context.Context, in *APISetPasswordReq
 		return nil, wrapFieldViolations(fv)
 	}
 
-	err = s.userRepository.SetPassword(userID, in.NewPassword)
+	err = s.userRepository.SetPassword(ctx, userID, in.NewPassword)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -264,7 +265,7 @@ func (s *UsersGRPCServer) PasswordRecoveryCheckCode(_ context.Context, in *APIPa
 	return &emptypb.Empty{}, nil
 }
 
-func (s *UsersGRPCServer) PasswordRecoveryConfirm(_ context.Context, in *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error) {
+func (s *UsersGRPCServer) PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error) {
 
 	fv, userId, err := s.passwordRecovery.Finish(in.Code, in.Password, in.PasswordConfirm)
 	if err != nil {
@@ -274,7 +275,7 @@ func (s *UsersGRPCServer) PasswordRecoveryConfirm(_ context.Context, in *APIPass
 		return nil, wrapFieldViolations(fv)
 	}
 
-	err = s.userRepository.SetPassword(userId, in.Password)
+	err = s.userRepository.SetPassword(ctx, userId, in.Password)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}

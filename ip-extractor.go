@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"github.com/autowp/goautowp/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"net"
@@ -66,7 +67,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 					return nil, err
 				}
 
-				user, err := userRepository.GetUser(GetUsersOptions{ID: ban.ByUserID})
+				user, err := userRepository.GetUser(users.GetUsersOptions{ID: ban.ByUserID})
 				if err != nil {
 					return nil, err
 				}

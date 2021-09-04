@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -28,7 +29,7 @@ type GRPCServer struct {
 	enforcer           *casbin.Enforcer
 	oauthSecret        string
 	contactsRepository *ContactsRepository
-	userRepository     *UserRepository
+	userRepository     *users.Repository
 	userExtractor      *UserExtractor
 	comments           *Comments
 	traffic            *Traffic
@@ -46,7 +47,7 @@ func NewGRPCServer(
 	enforcer *casbin.Enforcer,
 	oauthSecret string,
 	contactsRepository *ContactsRepository,
-	userRepository *UserRepository,
+	userRepository *users.Repository,
 	userExtractor *UserExtractor,
 	comments *Comments,
 	traffic *Traffic,
@@ -198,7 +199,7 @@ func (s *GRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest
 	}
 
 	deleted := false
-	user, err := s.userRepository.GetUser(GetUsersOptions{ID: int(in.UserId), Deleted: &deleted})
+	user, err := s.userRepository.GetUser(users.GetUsersOptions{ID: int(in.UserId), Deleted: &deleted})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
@@ -277,7 +278,7 @@ func (s *GRPCServer) GetContacts(ctx context.Context, in *GetContactsRequest) (*
 		m[e] = true
 	}
 
-	userRows, err := s.userRepository.GetUsers(GetUsersOptions{
+	userRows, err := s.userRepository.GetUsers(users.GetUsersOptions{
 		InContacts: userID,
 		Order:      []string{"users.deleted", "users.name"},
 		Fields:     m,
@@ -365,7 +366,7 @@ func (s *GRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITra
 			return nil, status.Errorf(codes.Internal, err.Error())
 		}
 
-		var user *DBUser
+		var user *users.DBUser
 		var topItemBan *APIBanItem
 
 		if ban != nil {
@@ -401,7 +402,7 @@ func (s *GRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITra
 	}, nil
 }
 
-func (s *GRPCServer) getUser(id int) (*DBUser, error) {
+func (s *GRPCServer) getUser(id int) (*users.DBUser, error) {
 	rows, err := s.db.Query(`
 		SELECT id, name, deleted, identity, last_online, role
 		FROM users
@@ -420,7 +421,7 @@ func (s *GRPCServer) getUser(id int) (*DBUser, error) {
 		return nil, nil
 	}
 
-	var r DBUser
+	var r users.DBUser
 	err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role)
 	if err != nil {
 		return nil, err

@@ -3,6 +3,7 @@ package goautowp
 import (
 	"crypto/md5"
 	"fmt"
+	"github.com/autowp/goautowp/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"net/url"
 	"time"
@@ -18,7 +19,7 @@ func NewUserExtractor(container *Container) *UserExtractor {
 	}
 }
 
-func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*User, error) {
+func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*User, error) {
 	longAway := true
 	if row.LastOnline != nil {
 		date := time.Now().AddDate(0, -6, 0)

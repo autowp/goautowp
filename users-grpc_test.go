@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"github.com/Nerzal/gocloak/v8"
+	"github.com/autowp/goautowp/email"
+	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"github.com/stretchr/testify/require"
@@ -33,10 +35,10 @@ func init() {
 
 	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
 
-	emailSender := &MockEmailSender{}
+	emailSender := &email.MockSender{}
 
 	contactsRepository := NewContactsRepository(db)
-	userRepository := NewUserRepository(
+	userRepository := users.NewRepository(
 		db,
 		config.UsersSalt,
 		config.EmailSalt,
@@ -84,14 +86,14 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	rand.Seed(time.Now().UnixNano())
-	email := "test" + strconv.Itoa(rand.Int()) + "@example.com"
+	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com"
 
 	name := "test"
 	newName := "test 2"
 	password := "password"
 
 	_, err = client.CreateUser(ctx, &APICreateUserRequest{
-		Email:           email,
+		Email:           userEmail,
 		Name:            name,
 		Password:        password,
 		PasswordConfirm: password,
@@ -106,7 +108,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	db, err := sql.Open("mysql", config.AutowpDSN)
 	require.NoError(t, err)
-	err = db.QueryRow("SELECT id FROM users WHERE email_to_check = ?", email).Scan(&userID)
+	err = db.QueryRow("SELECT id FROM users WHERE email_to_check = ?", userEmail).Scan(&userID)
 	require.NoError(t, err)
 
 	_, err = client.UpdateUser(
