@@ -649,10 +649,7 @@ func (s *Container) GetImageStorage() (*storage.Storage, error) {
 			return nil, err
 		}
 
-		config, err := s.GetConfig()
-		if err != nil {
-			return nil, err
-		}
+		config := s.GetConfig()
 
 		imageStorage, err := storage.NewStorage(db, config.ImageStorage)
 		if err != nil {

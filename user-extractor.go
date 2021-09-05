@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/users"
@@ -83,9 +84,10 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*Use
 
 		case "gravatar":
 			if row.EMail != nil {
+				hash := md5.Sum([]byte(*row.EMail))
 				str := fmt.Sprintf(
 					"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
-					md5.Sum([]byte(*row.EMail)),
+					hex.EncodeToString(hash[:]),
 					url.PathEscape("https://www.autowp.ru/_.gif"),
 				)
 				user.Gravatar = str
