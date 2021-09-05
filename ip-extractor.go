@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"github.com/autowp/goautowp/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"net"
@@ -36,10 +37,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 	_, ok = fields["blacklist"]
 	if ok {
 
-		enforcer, err := s.container.GetEnforcer()
-		if err != nil {
-			return nil, err
-		}
+		enforcer := s.container.GetEnforcer()
 
 		canView := len(role) > 0 && enforcer.Enforce(role, "global", "moderate")
 
@@ -69,16 +67,13 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 					return nil, err
 				}
 
-				user, err := userRepository.GetUser(GetUsersOptions{ID: ban.ByUserID})
+				user, err := userRepository.GetUser(users.GetUsersOptions{ID: ban.ByUserID})
 				if err != nil {
 					return nil, err
 				}
 
 				if user != nil {
-					userExtractor, err := s.container.GetUserExtractor()
-					if err != nil {
-						return nil, err
-					}
+					userExtractor := s.container.GetUserExtractor()
 
 					result.Blacklist.ByUser, err = userExtractor.Extract(user, map[string]bool{})
 					if err != nil {
@@ -92,10 +87,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 
 	_, ok = fields["rights"]
 	if ok {
-		enforcer, err := s.container.GetEnforcer()
-		if err != nil {
-			return nil, err
-		}
+		enforcer := s.container.GetEnforcer()
 
 		canBan := len(role) > 0 && enforcer.Enforce(role, "user", "ban")
 

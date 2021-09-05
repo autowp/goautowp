@@ -93,13 +93,17 @@ func main() {
 		cmdErr = app.MigrateTraffic()
 	case "scheduler-hourly":
 		cmdErr = app.SchedulerHourly()
+	case "scheduler-daily":
+		cmdErr = app.SchedulerDaily()
+	case "scheduler-midnight":
+		cmdErr = app.SchedulerMidnight()
 	case "serve-public":
 		cmdErr = app.MigrateAutowp()
-		if err != nil {
+		if cmdErr != nil {
 			break
 		}
 		cmdErr = app.MigrateTraffic()
-		if err != nil {
+		if cmdErr != nil {
 			break
 		}
 		quit := captureOsInterrupt()
@@ -107,6 +111,13 @@ func main() {
 	case "serve-private":
 		quit := captureOsInterrupt()
 		cmdErr = app.ServePrivate(quit)
+	case "serve-auth":
+		cmdErr = app.MigrateAuth()
+		if cmdErr != nil {
+			break
+		}
+		quit := captureOsInterrupt()
+		cmdErr = app.ServeAuth(quit)
 	}
 
 	exitCode := 0

@@ -10,7 +10,7 @@ func TestTrafficMigrations(t *testing.T) {
 
 	config := LoadConfig()
 
-	err := applyTrafficMigrations(config.TrafficMigrations)
+	err := applyMigrations(config.TrafficMigrations)
 	if err != migrate.ErrNoChange {
 		require.NoError(t, err)
 	}
@@ -20,7 +20,7 @@ func TestAutowpMigrations(t *testing.T) {
 
 	config := LoadConfig()
 
-	err := applyAutowpMigrations(config.AutowpMigrations)
+	err := applyMigrations(config.AutowpMigrations)
 	if err != migrate.ErrNoChange {
 		require.NoError(t, err)
 	}

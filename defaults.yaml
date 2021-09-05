@@ -105,6 +105,38 @@ languages:
     aliases : []
 captcha: true
 mock-email-sender: true
+auth:
+  listen: ":8080"
+  migrations:
+    dir: ./auth/migrations
+    dsn: postgres://auth:password@127.0.0.1:5433/auth?sslmode=disable
+  oauth:
+    driver: pgx
+    dsn: postgres://auth:password@127.0.0.1:5433/auth?sslmode=disable
+    clients:
+      - id: default
+        secret: secret
+        domain: http://localhost
+    access_token_expires_in: 120
+    refresh_token_expires_in: 262800
+    secret: example_secret
+  services:
+    redirect_uri: https://en.wheelsage.org/api/oauth/service-callback
+    google:
+      client_id: "client_id"
+      client_secret: "client_secret"
+      scopes:
+        - "https://www.googleapis.com/auth/userinfo.profile"
+    facebook:
+      client_id: "client_id"
+      client_secret: "client_secret"
+      scopes:
+        - "public_profile"
+    vk:
+      client_id: "client_id"
+      client_secret: "client_secret"
+      scopes:
+        - "status"
 image-storage:
   dirs:
     format:

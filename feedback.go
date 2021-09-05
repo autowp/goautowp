@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"fmt"
+	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/validation"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
@@ -11,7 +12,7 @@ type Feedback struct {
 	captchaEnabled  bool
 	config          FeedbackConfig
 	recaptchaConfig RecaptchaConfig
-	emailSender     EmailSender
+	emailSender     email.Sender
 }
 
 // CreateFeedbackRequest CreateFeedbackRequest
@@ -24,7 +25,7 @@ type CreateFeedbackRequest struct {
 }
 
 // NewFeedback constructor
-func NewFeedback(config FeedbackConfig, recaptchaConfig RecaptchaConfig, captchaEnabled bool, emailSender EmailSender) (*Feedback, error) {
+func NewFeedback(config FeedbackConfig, recaptchaConfig RecaptchaConfig, captchaEnabled bool, emailSender email.Sender) (*Feedback, error) {
 
 	s := &Feedback{
 		config:          config,
@@ -58,12 +59,16 @@ func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*err
 
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
+	var err error
 
 	nameInputFilter := validation.InputFilter{
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}},
 	}
-	s.Name, problems = nameInputFilter.IsValidString(s.Name)
+	s.Name, problems, err = nameInputFilter.IsValidString(s.Name)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "name",
@@ -75,7 +80,10 @@ func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*err
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}, &validation.EmailAddress{}},
 	}
-	s.Email, problems = emailInputFilter.IsValidString(s.Email)
+	s.Email, problems, err = emailInputFilter.IsValidString(s.Email)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "email",
@@ -87,7 +95,10 @@ func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*err
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}},
 	}
-	s.Message, problems = messageInputFilter.IsValidString(s.Message)
+	s.Message, problems, err = messageInputFilter.IsValidString(s.Message)
+	if err != nil {
+		return nil, err
+	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "message",
@@ -105,7 +116,10 @@ func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*err
 				},
 			},
 		}
-		s.Captcha, problems = captchaInputFilter.IsValidString(s.Captcha)
+		s.Captcha, problems, err = captchaInputFilter.IsValidString(s.Captcha)
+		if err != nil {
+			return nil, err
+		}
 		for _, fv := range problems {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "captcha",

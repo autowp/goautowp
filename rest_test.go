@@ -51,7 +51,9 @@ func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ"}))
+	config := LoadConfig()
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, testUserID, config.Auth.OAuth.Secret)}))
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.Error(t, err)
@@ -61,7 +63,9 @@ func TestGetVehicleTypes(t *testing.T) {
 	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMyJ9.tI-wPZ4BSqmpsZN0-SgWXaokzvB8T-uYWLR9OQurxPFNoPC56U3op1gSE5n2H02GYfDGig0Eyp6U0NbDpsQaAg"}))
+	config := LoadConfig()
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.Auth.OAuth.Secret)}))
 
 	result, err := srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.NoError(t, err)

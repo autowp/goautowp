@@ -38,7 +38,7 @@ func (s *Messages) fetchCount(query string, args ...interface{}) (int, error) {
 	return result, nil
 }
 
-func (s *Messages) GetUserNewMessagesCount(userID int) (int, error) {
+func (s *Messages) GetUserNewMessagesCount(userID int64) (int, error) {
 	return s.fetchCount(`
 		SELECT count(1)
 		FROM personal_messages
@@ -46,7 +46,7 @@ func (s *Messages) GetUserNewMessagesCount(userID int) (int, error) {
 	`, userID)
 }
 
-func (s *Messages) GetInboxCount(userID int) (int, error) {
+func (s *Messages) GetInboxCount(userID int64) (int, error) {
 	return s.fetchCount(`
 		SELECT count(1)
 		FROM personal_messages
@@ -54,7 +54,7 @@ func (s *Messages) GetInboxCount(userID int) (int, error) {
 	`, userID)
 }
 
-func (s *Messages) GetInboxNewCount(userID int) (int, error) {
+func (s *Messages) GetInboxNewCount(userID int64) (int, error) {
 	return s.fetchCount(`
 		SELECT count(1)
 		FROM personal_messages
@@ -62,7 +62,7 @@ func (s *Messages) GetInboxNewCount(userID int) (int, error) {
 	`, userID)
 }
 
-func (s *Messages) GetSentCount(userID int) (int, error) {
+func (s *Messages) GetSentCount(userID int64) (int, error) {
 	return s.fetchCount(`
 		SELECT count(1)
 		FROM personal_messages
@@ -70,7 +70,7 @@ func (s *Messages) GetSentCount(userID int) (int, error) {
 	`, userID)
 }
 
-func (s *Messages) GetSystemCount(userID int) (int, error) {
+func (s *Messages) GetSystemCount(userID int64) (int, error) {
 	return s.fetchCount(`
 		SELECT count(1)
 		FROM personal_messages
@@ -78,7 +78,7 @@ func (s *Messages) GetSystemCount(userID int) (int, error) {
 	`, userID)
 }
 
-func (s *Messages) GetSystemNewCount(userID int) (int, error) {
+func (s *Messages) GetSystemNewCount(userID int64) (int, error) {
 	return s.fetchCount(`
 		SELECT count(1)
 		FROM personal_messages

@@ -16,7 +16,7 @@ func NewForums(db *sql.DB) *Forums {
 	}
 }
 
-func (s *Forums) GetUserSummary(userID int) (int, error) {
+func (s *Forums) GetUserSummary(userID int64) (int, error) {
 	rows, err := s.db.Query(`
 		SELECT count(1)
 		FROM forums_topics

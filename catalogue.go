@@ -14,13 +14,12 @@ import (
 
 // Catalogue service
 type Catalogue struct {
-	db          *sql.DB
-	enforcer    *casbin.Enforcer
-	oauthConfig OAuthConfig
+	db       *sql.DB
+	enforcer *casbin.Enforcer
 }
 
 // NewCatalogue constructor
-func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, oauthConfig OAuthConfig) (*Catalogue, error) {
+func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer) (*Catalogue, error) {
 
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
@@ -29,9 +28,8 @@ func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer, oauthConfig OAuthConfig
 	rand.Seed(time.Now().Unix())
 
 	return &Catalogue{
-		db:          db,
-		enforcer:    enforcer,
-		oauthConfig: oauthConfig,
+		db:       db,
+		enforcer: enforcer,
 	}, nil
 }
 

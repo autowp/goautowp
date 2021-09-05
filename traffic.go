@@ -21,7 +21,6 @@ type Traffic struct {
 	Ban           *BanRepository
 	autowpDB      *sql.DB
 	enforcer      *casbin.Enforcer
-	oauthConfig   OAuthConfig
 	userExtractor *UserExtractor
 }
 
@@ -73,7 +72,7 @@ type APITrafficWhitelistPostRequestBody struct {
 }
 
 // NewTraffic constructor
-func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer, ban *BanRepository, userExtractor *UserExtractor, oauthConfig OAuthConfig) (*Traffic, error) {
+func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer, ban *BanRepository, userExtractor *UserExtractor) (*Traffic, error) {
 
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
@@ -93,7 +92,6 @@ func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer,
 		Ban:           ban,
 		autowpDB:      autowpDB,
 		enforcer:      enforcer,
-		oauthConfig:   oauthConfig,
 		userExtractor: userExtractor,
 	}
 

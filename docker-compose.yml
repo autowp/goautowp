@@ -41,6 +41,16 @@ services:
     ports:
       - "5432:5432"
 
+  auth-postgres:
+    image: postgres:13
+    container_name: goautowp_auth_postgres_test
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=auth
+      - POSTGRES_DB=auth
+    ports:
+      - "5433:5432"
+
   keycloak:
     image: jboss/keycloak
     container_name: goautowp_keycloak_test

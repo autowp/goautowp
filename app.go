@@ -4,7 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/autowp/goautowp/util"
+	"github.com/autowp/goautowp/auth"
+	"github.com/autowp/goautowp/config"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -15,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/dgrijalva/jwt-go"
 
 	"github.com/getsentry/sentry-go"
@@ -50,12 +50,20 @@ func (s *Application) MigrateAutowp() error {
 		return err
 	}
 
-	config, err := s.container.GetConfig()
-	if err != nil {
+	cfg := s.container.GetConfig()
+
+	err = applyMigrations(cfg.AutowpMigrations)
+	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
 
-	err = applyAutowpMigrations(config.AutowpMigrations)
+	return nil
+}
+
+func (s *Application) MigrateAuth() error {
+	cfg := s.container.GetConfig()
+
+	err := applyMigrations(cfg.Auth.Migrations)
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
@@ -97,13 +105,10 @@ func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 		return err
 	}
 
-	config, err := s.container.GetConfig()
-	if err != nil {
-		return err
-	}
+	cfg := s.container.GetConfig()
 
 	log.Println("DuplicateFinder listener started")
-	err = df.ListenAMQP(config.DuplicateFinder.RabbitMQ, config.DuplicateFinder.Queue, quit)
+	err = df.ListenAMQP(cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
 	if err != nil {
 		log.Println(err.Error())
 		sentry.CaptureException(err)
@@ -127,34 +132,7 @@ func (s *Application) Close() error {
 	return nil
 }
 
-func applyAutowpMigrations(config MigrationsConfig) error {
-	log.Println("Apply migrations")
-
-	dir := config.Dir
-	if dir == "" {
-		ex, err := os.Executable()
-		if err != nil {
-			return err
-		}
-		exPath := filepath.Dir(ex)
-		dir = exPath + "/migrations"
-	}
-
-	m, err := migrate.New("file://"+dir, config.DSN)
-	if err != nil {
-		return err
-	}
-
-	err = m.Up()
-	if err != nil {
-		return err
-	}
-	log.Println("Migrations applied")
-
-	return nil
-}
-
-func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConfig) (int, string, error) {
+func validateGRPCAuthorization(ctx context.Context, db *sql.DB, oauthSecret string) (int64, string, error) {
 	const bearerSchema = "Bearer"
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -170,10 +148,10 @@ func validateGRPCAuthorization(ctx context.Context, db *sql.DB, config OAuthConf
 
 	tokenString := strings.TrimPrefix(lines[0], bearerSchema+" ")
 
-	return validateTokenAuthorization(tokenString, db, config)
+	return validateTokenAuthorization(tokenString, db, oauthSecret)
 }
 
-func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConfig) (int, string, error) {
+func validateTokenAuthorization(tokenString string, db *sql.DB, oauthSecret string) (int64, string, error) {
 	if len(tokenString) <= 0 {
 		return 0, "", fmt.Errorf("authorization token is invalid")
 	}
@@ -183,7 +161,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 			return nil, fmt.Errorf("invalid token alg %v", token.Header["alg"])
 
 		}
-		return []byte(config.Secret), nil
+		return []byte(oauthSecret), nil
 	})
 
 	if err != nil {
@@ -207,25 +185,13 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 	claims := token.Claims.(jwt.MapClaims)
 	idStr := claims["sub"].(string)
 
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		return 0, "", err
 	}
 
-	sqSelect := sq.Select("role").From("users").Where(sq.Eq{"id": id})
-
-	rows, err := sqSelect.RunWith(db).Query()
-	if err != nil {
-		panic(err.Error())
-	}
-	defer util.Close(rows)
-
-	if !rows.Next() {
-		return 0, "", fmt.Errorf("user `%v` not found", id)
-	}
-
 	role := ""
-	err = rows.Scan(&role)
+	err = db.QueryRow("SELECT role FROM users WHERE id = ? AND not deleted", id).Scan(&role)
 	if err == sql.ErrNoRows {
 		return 0, "", fmt.Errorf("user `%v` not found", id)
 	}
@@ -241,7 +207,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, config OAuthConf
 	return id, role, nil
 }
 
-func applyTrafficMigrations(config MigrationsConfig) error {
+func applyMigrations(config config.MigrationsConfig) error {
 	log.Println("Apply migrations")
 
 	dir := config.Dir
@@ -274,15 +240,43 @@ func (s *Application) MigrateTraffic() error {
 		return err
 	}
 
-	config, err := s.container.GetConfig()
+	cfg := s.container.GetConfig()
+
+	err = applyMigrations(cfg.TrafficMigrations)
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Application) ServeAuth(quit chan bool) error {
+
+	appConfig := s.container.GetConfig()
+
+	cfg := s.container.GetConfig()
+
+	usersDB, err := s.container.GetAutowpDB()
 	if err != nil {
 		return err
 	}
 
-	err = applyTrafficMigrations(config.TrafficMigrations)
-	if err != nil && err != migrate.ErrNoChange {
+	users, err := s.container.GetUserRepository()
+	if err != nil {
 		return err
 	}
+
+	service, err := auth.NewService(cfg.Auth, usersDB, appConfig.Languages, users)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		<-quit
+		service.Close()
+	}()
+
+	service.ListenHTTP()
 
 	return nil
 }
@@ -342,6 +336,60 @@ func (s *Application) SchedulerHourly() error {
 	return nil
 }
 
+func (s *Application) SchedulerDaily() error {
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return err
+	}
+
+	err = users.UserRenamesGC()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	err = users.UpdateSpecsVolumes()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	pr, err := s.container.GetPasswordRecovery()
+	if err != nil {
+		return err
+	}
+	count, err := pr.GC()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	log.Printf("`%d` password remind rows was deleted\n", count)
+
+	return nil
+}
+
+func (s *Application) SchedulerMidnight() error {
+	users, err := s.container.GetUserRepository()
+	if err != nil {
+		return err
+	}
+
+	err = users.RestoreVotes()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	affected, err := users.UpdateVotesLimits()
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	fmt.Printf("Updated %d users vote limits\n", affected)
+
+	return nil
+}
+
 func (s *Application) Autoban(quit chan bool) error {
 
 	traffic, err := s.container.GetTraffic()
@@ -376,13 +424,10 @@ func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
 		return err
 	}
 
-	config, err := s.container.GetConfig()
-	if err != nil {
-		return err
-	}
+	cfg := s.container.GetConfig()
 
 	log.Println("Monitoring listener started")
-	err = traffic.Monitoring.Listen(config.RabbitMQ, config.MonitoringQueue, quit)
+	err = traffic.Monitoring.Listen(cfg.RabbitMQ, cfg.MonitoringQueue, quit)
 	if err != nil {
 		log.Println(err.Error())
 		return err

@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"net/url"
 	"time"
@@ -32,17 +33,14 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	}
 }
 
-func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*User, error) {
+func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*User, error) {
 	longAway := true
 	if row.LastOnline != nil {
 		date := time.Now().AddDate(0, -6, 0)
 		longAway = date.After(*row.LastOnline)
 	}
 
-	enforcer, err := s.container.GetEnforcer()
-	if err != nil {
-		return nil, err
-	}
+	enforcer := s.container.GetEnforcer()
 
 	isGreen := row.Role != "" && enforcer.Enforce(row.Role, "status", "be-green")
 

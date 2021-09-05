@@ -14,7 +14,10 @@ func TestCreateDeleteContact(t *testing.T) {
 	srv, err := container.GetGRPCServer()
 	require.NoError(t, err)
 
-	ctx = metadata.NewIncomingContext(ctx, metadata.New(map[string]string{"authorization": "Bearer " + adminAccessToken}))
+	ctx = metadata.NewIncomingContext(
+		ctx,
+		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.Auth.OAuth.Secret)}),
+	)
 
 	// create
 	_, err = srv.CreateContact(ctx, &CreateContactRequest{UserId: 1})
