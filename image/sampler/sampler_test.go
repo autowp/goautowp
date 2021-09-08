@@ -697,7 +697,7 @@ func TestHighest(t *testing.T) {
 	require.NoError(t, err)
 
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
-		Highest: 1.0 / 1.0,
+		Highest: 1.0,
 	})
 	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
 	require.NoError(t, err)

@@ -35,7 +35,7 @@ type NamingStrategyPattern struct {
 }
 
 func normalizePattern(pattern string) string {
-	a := regexp.MustCompile("[/\\\\]+")
+	a := regexp.MustCompile(`[/\\]+`)
 	patternComponents := a.Split(pattern, -1)
 
 	result := make([]string, 0)

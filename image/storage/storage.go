@@ -351,6 +351,9 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 	}
 
 	mw, err = s.sampler.ConvertImage(mw, crop, *format)
+	if err != nil {
+		return 0, err
+	}
 
 	/*foreach ($cFormat->getProcessors() as $processorName) {
 		$processor = $this->processors->get($processorName);
@@ -510,25 +513,26 @@ func (s *Storage) generateLockWrite(dirName string, options GenerateOptions, wid
 			var res sql.Result
 
 			destFileName, insertAttemptException = s.createImagePath(dirName, opt)
-
-			// store to db
-			res, insertAttemptException = s.db.Exec(`
+			if insertAttemptException == nil {
+				// store to db
+				res, insertAttemptException = s.db.Exec(`
 				INSERT INTO image (width, height, dir, filesize, filepath, date_add, crop_left, crop_top, crop_width, crop_height, s3)
 				VALUES (?, ?, ?, 0, ?, NOW(), 0, 0, 0, 0, 1)
 			`,
-				width,
-				height,
-				dirName,
-				destFileName,
-			)
+					width,
+					height,
+					dirName,
+					destFileName,
+				)
 
-			if insertAttemptException == nil {
-				var id int64
-				id, insertAttemptException = res.LastInsertId()
 				if insertAttemptException == nil {
-					insertAttemptException = callback(destFileName)
+					var id int64
+					id, insertAttemptException = res.LastInsertId()
+					if insertAttemptException == nil {
+						insertAttemptException = callback(destFileName)
 
-					imageId = int(id)
+						imageId = int(id)
+					}
 				}
 			}
 		}
@@ -744,8 +748,6 @@ func (s *Storage) ChangeImageName(imageId int, options GenerateOptions) error {
 		if err != nil {
 			return nil
 		}
-
-		insertAttemptException = nil
 
 		if destFileName == r.Filepath() {
 			return fmt.Errorf("trying to rename to self")

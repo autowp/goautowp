@@ -35,6 +35,7 @@ func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
 	require.Contains(t, imageInfo.Src(), "folder/file")
 
 	resp, err := http.Get(imageInfo.Src())
+	require.NoError(t, err)
 	defer util.Close(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -128,6 +129,7 @@ func TestAddImageAndCrop(t *testing.T) {
 	require.NoError(t, err)
 
 	resp, err := http.Get(imageInfo.Src())
+	require.NoError(t, err)
 	defer util.Close(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
