@@ -74,7 +74,7 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*Use
 					return nil, err
 				}
 
-				avatar, err := is.GetFormatedImage(*row.Img, "avatar")
+				avatar, err := is.GetFormattedImage(*row.Img, "avatar")
 				if err != nil {
 					return nil, err
 				}

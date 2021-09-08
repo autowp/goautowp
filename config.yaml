@@ -1,0 +1,38 @@
+image-storage:
+  s3:
+    region: "us-east-1"
+    endpoint: http://127.0.0.1:9000
+    credentials:
+      key: "AKIAIOSFODNN7EXAMPLE"
+      secret: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  dirs:
+    test:
+      naming-strategy:
+        strategy: 'serial'
+        options:
+          deep: 2
+      bucket: 'test'
+    naming:
+      naming-strategy:
+        strategy: 'pattern'
+      bucket: 'naming'
+  formats:
+    test:
+      fitType: 0
+      width: 160
+      height: 120
+      background: '#fff'
+      strip: true
+#    picture-gallery:
+#      fitType: 2
+#      width: 1024
+#      height: 768
+#      reduceOnly: true
+#      strip: true
+#      format: 'jpeg'
+#    with-processor:
+#      fitType: 0
+#      width: 160
+#      height: 120
+#      background: '#fff'
+#      strip: true

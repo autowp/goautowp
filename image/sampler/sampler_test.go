@@ -1,6 +1,7 @@
 package sampler
 
 import (
+	"github.com/autowp/goautowp/config"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/gographics/imagick.v3/imagick"
 	"testing"
@@ -13,8 +14,8 @@ func TestShouldResizeOddWidthPictureStrictlyToTargetWidthByOuterFitType(t *testi
 	defer mw.Destroy()
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      102,
 		Height:     149,
 		Background: "red",
@@ -31,8 +32,8 @@ func TestShouldResizeOddHeightPictureStrictlyToTargetHeightByOuterFitType(t *tes
 	defer mw.Destroy()
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      101,
 		Height:     150,
 		Background: "red",
@@ -50,8 +51,8 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	// both size less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      150,
 		Height:     200,
 		ReduceOnly: true,
@@ -65,8 +66,8 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	// width less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      150,
 		Height:     100,
 		ReduceOnly: true,
@@ -80,8 +81,8 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	// height less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      50,
 		Height:     200,
 		ReduceOnly: true,
@@ -95,8 +96,8 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      50,
 		Height:     100,
 		ReduceOnly: true,
@@ -110,8 +111,8 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	// both size less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      150,
 		Height:     200,
 		ReduceOnly: false,
@@ -125,8 +126,8 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	// width less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      150,
 		Height:     100,
 		ReduceOnly: false,
@@ -140,8 +141,8 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	// height less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      50,
 		Height:     200,
 		ReduceOnly: false,
@@ -155,8 +156,8 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      50,
 		Height:     100,
 		ReduceOnly: false,
@@ -177,8 +178,8 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// both size less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      150,
 		Height:     200,
 		ReduceOnly: true,
@@ -192,8 +193,8 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// width less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      150,
 		Height:     100,
 		ReduceOnly: true,
@@ -207,8 +208,8 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// height less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      50,
 		Height:     200,
 		ReduceOnly: true,
@@ -222,8 +223,8 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      50,
 		Height:     100,
 		ReduceOnly: true,
@@ -237,8 +238,8 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// both size less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      150,
 		Height:     200,
 		ReduceOnly: false,
@@ -252,8 +253,8 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// width less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      150,
 		Height:     100,
 		ReduceOnly: false,
@@ -267,8 +268,8 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// height less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      50,
 		Height:     200,
 		ReduceOnly: false,
@@ -282,8 +283,8 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeOuter,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeOuter,
 		Width:      50,
 		Height:     100,
 		ReduceOnly: false,
@@ -304,8 +305,8 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// both size less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
-		FitType:    FitTypeMaximum,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeMaximum,
 		Width:      150,
 		Height:     200,
 		ReduceOnly: true,
@@ -319,8 +320,8 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// width less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeMaximum,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeMaximum,
 		Width:      150,
 		Height:     100,
 		ReduceOnly: true,
@@ -334,8 +335,8 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// height less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeMaximum,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeMaximum,
 		Width:      50,
 		Height:     200,
 		ReduceOnly: true,
@@ -349,8 +350,8 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeMaximum,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeMaximum,
 		Width:      50,
 		Height:     100,
 		ReduceOnly: true,
@@ -364,8 +365,8 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// both size less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeMaximum,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeMaximum,
 		Width:      150,
 		Height:     200,
 		ReduceOnly: false,
@@ -379,8 +380,8 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// width less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeMaximum,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeMaximum,
 		Width:      150,
 		Height:     100,
 		ReduceOnly: false,
@@ -394,8 +395,8 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// height less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeMaximum,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeMaximum,
 		Width:      50,
 		Height:     200,
 		ReduceOnly: false,
@@ -409,8 +410,8 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
-		FitType:    FitTypeMaximum,
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeMaximum,
 		Width:      50,
 		Height:     100,
 		ReduceOnly: false,
@@ -431,7 +432,7 @@ func TestReduceOnlyByWidthWorks(t *testing.T) {
 	// width less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		Width:      150,
 		ReduceOnly: true,
 	})
@@ -444,7 +445,7 @@ func TestReduceOnlyByWidthWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Width:      50,
 		ReduceOnly: true,
 	})
@@ -457,7 +458,7 @@ func TestReduceOnlyByWidthWorks(t *testing.T) {
 	// width less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Width:      150,
 		ReduceOnly: false,
 	})
@@ -470,7 +471,7 @@ func TestReduceOnlyByWidthWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Width:      50,
 		ReduceOnly: false,
 	})
@@ -490,7 +491,7 @@ func TestReduceOnlyByHeightWorks(t *testing.T) {
 	// height less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		Height:     200,
 		ReduceOnly: true,
 	})
@@ -503,7 +504,7 @@ func TestReduceOnlyByHeightWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Height:     100,
 		ReduceOnly: true,
 	})
@@ -516,7 +517,7 @@ func TestReduceOnlyByHeightWorks(t *testing.T) {
 	// height less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Height:     200,
 		ReduceOnly: false,
 	})
@@ -529,7 +530,7 @@ func TestReduceOnlyByHeightWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
-	format = NewFormat(FormatConfig{
+	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Height:     100,
 		ReduceOnly: false,
 	})
@@ -548,8 +549,8 @@ func TestAnimationPreservedDueResample(t *testing.T) {
 
 	sampler := NewSampler()
 
-	format := NewFormat(FormatConfig{
-		FitType: FitTypeInner,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType: config.FitTypeInner,
 		Width:   200,
 		Height:  200,
 	})
@@ -572,8 +573,8 @@ func TestResizeGif(t *testing.T) {
 
 	sampler := NewSampler()
 
-	format := NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      80,
 		Height:     80,
 		Background: "transparent",
@@ -597,8 +598,8 @@ func TestResizeGifWithProportionsConstraints(t *testing.T) {
 
 	sampler := NewSampler()
 
-	format := NewFormat(FormatConfig{
-		FitType:    FitTypeInner,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:    config.FitTypeInner,
 		Width:      456,
 		Background: "",
 		Widest:     16.0 / 9.0,
@@ -624,8 +625,8 @@ func TestVerticalProportional(t *testing.T) {
 	// both size less
 	err := mw.ReadImage("./_files/mazda3_sedan_us-spec_11.jpg")
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
-		FitType:          FitTypeInner,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:          config.FitTypeInner,
 		Width:            200,
 		Height:           200,
 		ReduceOnly:       true,
@@ -648,8 +649,8 @@ func TestHorizontalProportional(t *testing.T) {
 	// both size less
 	err := mw.ReadImage("./_files/mazda3_sedan_us-spec_11.jpg")
 	require.NoError(t, err)
-	format := NewFormat(FormatConfig{
-		FitType:          FitTypeInner,
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		FitType:          config.FitTypeInner,
 		Width:            400,
 		Height:           200,
 		ReduceOnly:       true,
@@ -676,7 +677,7 @@ func TestWidest(t *testing.T) {
 	err := mw.ReadImage("./_files/wide-image.png") //1000x229
 	require.NoError(t, err)
 
-	format := NewFormat(FormatConfig{
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		Widest: 4.0 / 3.0,
 	})
 	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
@@ -695,7 +696,7 @@ func TestHighest(t *testing.T) {
 	err := mw.ReadImage("./_files/Towers_Schiphol_small.jpg") //101x149
 	require.NoError(t, err)
 
-	format := NewFormat(FormatConfig{
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		Highest: 1.0 / 1.0,
 	})
 	mw, err = sampler.ConvertImage(mw, Crop{}, *format)

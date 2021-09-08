@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"github.com/autowp/goautowp/config"
+	"github.com/aws/aws-sdk-go/private/protocol/rest"
 	"image"
 	"io"
 	"math"
@@ -41,13 +43,14 @@ const defaultExtension = "jpg"
 var publicRead = "public-read"
 
 var formats2ContentType = map[string]string{
-	"GIF": "image/gif",
-	"PNG": "image/png",
-	"JPG": "image/jpeg",
+	"GIF":  "image/gif",
+	"PNG":  "image/png",
+	"JPG":  "image/jpeg",
+	"JPEG": "image/jpeg",
 }
 
 type Storage struct {
-	config                Config
+	config                config.ImageStorageConfig
 	db                    *sql.DB
 	dirs                  map[string]*Dir
 	formats               map[string]*sampler.Format
@@ -80,7 +83,7 @@ type FlushOptions struct {
 	Format string
 }
 
-func NewStorage(db *sql.DB, config Config) (*Storage, error) {
+func NewStorage(db *sql.DB, config config.ImageStorageConfig) (*Storage, error) {
 	dirs := make(map[string]*Dir)
 	for dirName, dirConfig := range config.Dirs {
 		dir, err := NewDir(dirConfig.Bucket, dirConfig.NamingStrategy)
@@ -106,14 +109,12 @@ func NewStorage(db *sql.DB, config Config) (*Storage, error) {
 }
 
 func (s *Storage) GetImage(id int) (*Image, error) {
-	row := s.db.QueryRow(`
-		SELECT id, width, height, filesize, filepath
+	var r Image
+	err := s.db.QueryRow(`
+		SELECT id, width, height, filesize, filepath, dir
 		FROM image
 		WHERE id = ?
-	`, id)
-
-	var r Image
-	err := row.Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath)
+	`, id).Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -121,25 +122,54 @@ func (s *Storage) GetImage(id int) (*Image, error) {
 		return nil, err
 	}
 
-	return &r, nil
-}
-
-func (s *Storage) GetFormatedImage(id int, formatName string) (*Image, error) {
-
-	rows, err := s.db.Query(`
-		SELECT image.id, image.width, image.height, image.filesize, image.filepath
-		FROM image
-			INNER JOIN formated_image ON image.id = formated_image.formated_image_id
-		WHERE formated_image.image_id = ? AND formated_image.format = ?
-	`, id, formatName)
+	err = s.populateSrc(&r)
 	if err != nil {
 		return nil, err
 	}
-	defer util.Close(rows)
 
-	for rows.Next() {
-		var r Image
-		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize)
+	return &r, nil
+}
+
+func (s *Storage) populateSrc(r *Image) error {
+
+	dir := s.getDir(r.dir)
+	if dir == nil {
+		return fmt.Errorf("dir '%s' not defined", r.dir)
+	}
+
+	bucket := dir.Bucket()
+
+	s3Client, err := s.getS3Client()
+	if err != nil {
+		return err
+	}
+
+	req, _ := s3Client.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &r.filepath,
+	})
+	rest.Build(req)
+	r.src = req.HTTPRequest.URL.String()
+
+	return nil
+}
+
+func (s *Storage) GetFormattedImage(id int, formatName string) (*Image, error) {
+	var r Image
+	err := s.db.QueryRow(`
+		SELECT image.id, image.width, image.height, image.filesize, image.filepath, image.dir
+		FROM image
+			INNER JOIN formated_image ON image.id = formated_image.formated_image_id
+		WHERE formated_image.image_id = ? AND formated_image.format = ?
+	`, id, formatName).Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir)
+
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	if err == nil {
+
+		err = s.populateSrc(&r)
 		if err != nil {
 			return nil, err
 		}
@@ -147,11 +177,11 @@ func (s *Storage) GetFormatedImage(id int, formatName string) (*Image, error) {
 		return &r, nil
 	}
 
-	formatedImageId, err := s.doFormatImage(id, formatName)
+	formattedImageId, err := s.doFormatImage(id, formatName)
 	if err != nil {
 		return nil, err
 	}
-	return s.GetImage(formatedImageId)
+	return s.GetImage(formattedImageId)
 }
 
 func (s *Storage) getDir(dirName string) *Dir {
@@ -167,7 +197,7 @@ func (s *Storage) getS3Client() (*s3.S3, error) {
 		Region:           &s.config.S3.Region,
 		Endpoint:         &s.config.S3.Endpoint,
 		S3ForcePathStyle: &s.config.S3.UsePathStyleEndpoint,
-		Credentials:      credentials.NewStaticCredentials(s.config.S3.Credentials.Key, s.config.S3.Credentials.Key, s.config.S3.Credentials.Secret),
+		Credentials:      credentials.NewStaticCredentials(s.config.S3.Credentials.Key, s.config.S3.Credentials.Secret, ""),
 	}))
 	svc := s3.New(sess)
 
@@ -205,15 +235,15 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 		WHERE id = ?
 	`, imageId)
 
-	var imageRow imageRow
-	err := row.Scan(&imageRow.ID, &imageRow.Width, &imageRow.Height, &imageRow.Filepath, &imageRow.Dir, &imageRow.CropLeft, &imageRow.CropTop, &imageRow.CropWidth, &imageRow.CropHeight)
+	var iRow imageRow
+	err := row.Scan(&iRow.ID, &iRow.Width, &iRow.Height, &iRow.Filepath, &iRow.Dir, &iRow.CropLeft, &iRow.CropTop, &iRow.CropWidth, &iRow.CropHeight)
 	if err != nil {
 		return 0, err
 	}
 
-	dir := s.getDir(imageRow.Dir)
+	dir := s.getDir(iRow.Dir)
 	if dir == nil {
-		return 0, fmt.Errorf("dir '%s' not defined", imageRow.Dir)
+		return 0, fmt.Errorf("dir '%s' not defined", iRow.Dir)
 	}
 
 	bucket := dir.Bucket()
@@ -223,8 +253,9 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 	}
 	object, err := s3Client.GetObject(&s3.GetObjectInput{
 		Bucket: &bucket,
-		Key:    &imageRow.Filepath,
+		Key:    &iRow.Filepath,
 	})
+
 	if err != nil {
 		return 0, err
 	}
@@ -264,16 +295,22 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 
 		// wait until done
 		done := false
-		var formatedImageRow formattedImageRow
+		var fiRow formattedImageRow
 
 		for i := 0; i < maxInsertAttempts && !done; i++ {
-			row := s.db.QueryRow("SELECT formated_image_id, status FROM formated_image WHERE id = ?", imageId)
-			err := row.Scan(&formatedImageRow.FormattedImageID, &formatedImageRow.Status)
+			var id sql.NullInt32
+			err = s.db.QueryRow("SELECT formated_image_id, status FROM formated_image WHERE image_id = ?", imageId).
+				Scan(&id, &fiRow.Status)
 			if err != nil {
 				return 0, err
 			}
 
-			done = formatedImageRow.Status != StatusProcessing
+			fiRow.FormattedImageID = 0
+			if id.Valid {
+				fiRow.FormattedImageID = int(id.Int32)
+			}
+
+			done = fiRow.Status != StatusProcessing
 			if !done {
 				time.Sleep(time.Second)
 			}
@@ -281,7 +318,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 
 		if !done {
 			// mark as failed
-			_, err := s.db.Exec(
+			_, err = s.db.Exec(
 				"UPDATE formated_image SET status = ? WHERE format = ? AND image_id = ? AND status = ?",
 				StatusFailed,
 				formatName,
@@ -293,24 +330,24 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 			}
 		}
 
-		if formatedImageRow.FormattedImageID == 0 {
+		if fiRow.FormattedImageID == 0 {
 			return 0, fmt.Errorf("failed to format image")
 		}
 
-		return formatedImageRow.FormattedImageID, nil
+		return fiRow.FormattedImageID, nil
 	}
 
-	var formatedImageId int
+	var formattedImageId int
 	// try {
-	// $crop = $this->getRowCrop(imageRow);
+	// $crop = $this->getRowCrop(iRow);
 
-	cropSuffix := getCropSuffix(imageRow)
+	cropSuffix := getCropSuffix(iRow)
 
 	crop := sampler.Crop{
-		Left:   imageRow.CropLeft,
-		Top:    imageRow.CropTop,
-		Width:  imageRow.CropWidth,
-		Height: imageRow.CropHeight,
+		Left:   iRow.CropLeft,
+		Top:    iRow.CropTop,
+		Width:  iRow.CropWidth,
+		Height: iRow.CropHeight,
 	}
 
 	mw, err = s.sampler.ConvertImage(mw, crop, *format)
@@ -322,9 +359,9 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 
 	// store result
 	newPath := strings.Join([]string{
-		imageRow.Dir,
+		iRow.Dir,
 		formatName,
-		imageRow.Filepath,
+		iRow.Filepath,
 	}, "/")
 	formatExt, err := format.FormatExtension()
 	if err != nil {
@@ -334,7 +371,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 	if formatExt == "" {
 		extension = strings.TrimLeft(filepath.Ext(newPath), ".")
 	}
-	formatedImageId, err = s.addImageFromImagick(
+	formattedImageId, err = s.addImageFromImagick(
 		mw,
 		s.formattedImageDirName,
 		GenerateOptions{
@@ -348,7 +385,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 
 	_, err = s.db.Exec(
 		"UPDATE formated_image SET formated_image_id = ?, status = ? WHERE format = ? AND image_id = ?",
-		formatedImageId,
+		formattedImageId,
 		StatusDefault,
 		formatName,
 		imageId,
@@ -371,7 +408,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 	// throw $e;
 	// }
 
-	return formatedImageId, nil
+	return formattedImageId, nil
 }
 
 func (s *Storage) getFormat(name string) *sampler.Format {
@@ -649,20 +686,22 @@ func (s *Storage) Flush(options FlushOptions) error {
 	defer util.Close(rows)
 
 	for rows.Next() {
-		var r formattedImageRow
-		err = rows.Scan(&r.ImageID, &r.Format, &r.FormattedImageID)
+		var iID int
+		var f string
+		var fiID sql.NullInt32
+		err = rows.Scan(&iID, &f, &fiID)
 		if err != nil {
 			return err
 		}
 
-		if r.FormattedImageID > 0 {
-			err = s.RemoveImage(r.FormattedImageID)
+		if fiID.Valid && fiID.Int32 > 0 {
+			err = s.RemoveImage(int(fiID.Int32))
 			if err != nil {
 				return err
 			}
 		}
 
-		_, err = s.db.Exec("DELETE FROM formated_image WHERE image_id = ? AND format = ?", r.ImageID, r.Format)
+		_, err = s.db.Exec("DELETE FROM formated_image WHERE image_id = ? AND format = ?", iID, f)
 		if err != nil {
 			return err
 		}
@@ -794,6 +833,12 @@ func (s *Storage) AddImageFromFile(file string, dirName string, options Generate
 			if err != nil {
 				return err
 			}
+
+			handle, err := os.Open(file)
+			if err != nil {
+				return err
+			}
+			defer util.Close(handle)
 
 			_, err = s3c.PutObject(&s3.PutObjectInput{
 				Key:         &fileName,
@@ -1053,11 +1098,11 @@ func (s *Storage) GetImageCrop(imageId int) (*sampler.Crop, error) {
 }
 
 func (s *Storage) GetImages(imageIds []int) (map[int]Image, error) {
-	rows, err := s.db.Query(`
-		SELECT id, width, height, filesize, filepath
-		FROM image
-		WHERE id IN (?)
-	`, imageIds)
+	sqSelect := sq.Select("id, width, height, filesize, filepath, dir").
+		From("image").
+		Where(sq.Eq{"id": imageIds})
+
+	rows, err := sqSelect.RunWith(s.db).Query()
 	if err == sql.ErrNoRows {
 		return make(map[int]Image), nil
 	}
@@ -1070,7 +1115,12 @@ func (s *Storage) GetImages(imageIds []int) (map[int]Image, error) {
 
 	for rows.Next() {
 		var r Image
-		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize)
+		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir)
+		if err != nil {
+			return nil, err
+		}
+
+		err = s.populateSrc(&r)
 		if err != nil {
 			return nil, err
 		}
@@ -1083,12 +1133,13 @@ func (s *Storage) GetImages(imageIds []int) (map[int]Image, error) {
 
 func (s *Storage) GetFormattedImages(imageIds []int, formatName string) (map[int]Image, error) {
 
-	rows, err := s.db.Query(`
-		SELECT image.id, image.width, image.height, image.filesize, image.filepath
-		FROM image
-			INNER JOIN formated_image ON image.id = formated_image.formated_image_id
-		WHERE formated_image.image_id IN (?) AND formated_image.format = ?
-	`, imageIds, formatName)
+	sqSelect := sq.Select("image.id, image.width, image.height, image.filesize, image.filepath, image.dir, formated_image.image_id").
+		From("image").
+		Join("formated_image ON image.id = formated_image.formated_image_id").
+		Where(sq.Eq{"formated_image.image_id": imageIds}).
+		Where(sq.Eq{"formated_image.format": formatName})
+
+	rows, err := sqSelect.RunWith(s.db).Query()
 	if err == sql.ErrNoRows {
 		return make(map[int]Image), nil
 	}
@@ -1101,24 +1152,33 @@ func (s *Storage) GetFormattedImages(imageIds []int, formatName string) (map[int
 
 	for rows.Next() {
 		var r Image
-		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize)
+		var srcImageID int
+		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir, &srcImageID)
 		if err != nil {
 			return nil, err
 		}
 
-		result[r.id] = r
+		err = s.populateSrc(&r)
+		if err != nil {
+			return nil, err
+		}
+
+		result[srcImageID] = r
 	}
 
 	for _, imageId := range imageIds {
-		formattedImageId, err := s.doFormatImage(imageId, formatName)
-		if err != nil {
-			return nil, err
+		_, ok := result[imageId]
+		if !ok {
+			formattedImageId, err := s.doFormatImage(imageId, formatName)
+			if err != nil {
+				return nil, err
+			}
+			img, err := s.GetImage(formattedImageId)
+			if err != nil {
+				return nil, err
+			}
+			result[imageId] = *img
 		}
-		img, err := s.GetImage(formattedImageId)
-		if err != nil {
-			return nil, err
-		}
-		result[imageId] = *img
 	}
 
 	return result, nil

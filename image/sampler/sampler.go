@@ -2,6 +2,7 @@ package sampler
 
 import (
 	"fmt"
+	"github.com/autowp/goautowp/config"
 	"gopkg.in/gographics/imagick.v3/imagick"
 	"math"
 )
@@ -86,17 +87,17 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 
 	if fWidth > 0 && fHeight > 0 {
 		switch format.FitType() {
-		case FitTypeInner:
+		case config.FitTypeInner:
 			err := s.convertByInnerFit(decomposited, format)
 			if err != nil {
 				return nil, err
 			}
-		case FitTypeOuter:
+		case config.FitTypeOuter:
 			err := s.convertByOuterFit(decomposited, format)
 			if err != nil {
 				return nil, err
 			}
-		case FitTypeMaximum:
+		case config.FitTypeMaximum:
 			err := s.convertByMaximumFit(decomposited, format)
 			if err != nil {
 				return nil, err

@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/autowp/goautowp/config"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 	"testing"
@@ -9,14 +10,14 @@ import (
 
 func TestCreateDeleteContact(t *testing.T) {
 	ctx := context.Background()
-	config := LoadConfig()
-	container := NewContainer(config)
+	cfg := config.LoadConfig(".")
+	container := NewContainer(cfg)
 	srv, err := container.GetGRPCServer()
 	require.NoError(t, err)
 
 	ctx = metadata.NewIncomingContext(
 		ctx,
-		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.Auth.OAuth.Secret)}),
+		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, cfg.Auth.OAuth.Secret)}),
 	)
 
 	// create

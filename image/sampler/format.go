@@ -1,28 +1,9 @@
 package sampler
 
-import "fmt"
-
-type FitType int
-
-const (
-	FitTypeInner   FitType = 0
-	FitTypeOuter   FitType = 1
-	FitTypeMaximum FitType = 2
+import (
+	"fmt"
+	"github.com/autowp/goautowp/config"
 )
-
-type FormatConfig struct {
-	FitType          FitType `mapstructure:"fit-type"`
-	Width            int     `mapstructure:"width"`
-	Height           int     `mapstructure:"height"`
-	Background       string  `mapstructure:"background"`
-	Strip            bool    `mapstructure:"strip"`
-	ReduceOnly       bool    `mapstructure:"reduce-only"`
-	ProportionalCrop bool    `mapstructure:"proportional-crop"`
-	Format           string  `mapstructure:"format"`
-	IgnoreCrop       bool    `mapstructure:"ignore-crop"`
-	Widest           float64 `mapstructure:"widest"`
-	Highest          float64 `mapstructure:"highest"`
-}
 
 type Format struct {
 	format             string
@@ -33,24 +14,24 @@ type Format struct {
 	highest            float64
 	isProportionalCrop bool
 	background         string
-	fitType            FitType
+	fitType            config.FitType
 	isStrip            bool
 	isReduceOnly       bool
 }
 
-func NewFormat(config FormatConfig) *Format {
+func NewFormat(cfg config.ImageStorageSamplerFormatConfig) *Format {
 	return &Format{
-		format:             config.Format,
-		isIgnoreCrop:       config.IgnoreCrop,
-		width:              config.Width,
-		height:             config.Height,
-		isProportionalCrop: config.ProportionalCrop,
-		background:         config.Background,
-		fitType:            config.FitType,
-		isStrip:            config.Strip,
-		isReduceOnly:       config.ReduceOnly,
-		widest:             config.Widest,
-		highest:            config.Highest,
+		format:             cfg.Format,
+		isIgnoreCrop:       cfg.IgnoreCrop,
+		width:              cfg.Width,
+		height:             cfg.Height,
+		isProportionalCrop: cfg.ProportionalCrop,
+		background:         cfg.Background,
+		fitType:            cfg.FitType,
+		isStrip:            cfg.Strip,
+		isReduceOnly:       cfg.ReduceOnly,
+		widest:             cfg.Widest,
+		highest:            cfg.Highest,
 	}
 }
 
@@ -112,7 +93,7 @@ func (f *Format) GetBackground() string {
 	return f.background
 }
 
-func (f *Format) FitType() FitType {
+func (f *Format) FitType() config.FitType {
 	return f.fitType
 }
 

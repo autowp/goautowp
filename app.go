@@ -33,13 +33,13 @@ type Application struct {
 }
 
 // NewApplication constructor
-func NewApplication(config Config) (*Application, error) {
+func NewApplication(cfg config.Config) (*Application, error) {
 
 	s := &Application{
-		container: NewContainer(config),
+		container: NewContainer(cfg),
 	}
 
-	gin.SetMode(config.GinMode)
+	gin.SetMode(cfg.GinMode)
 
 	return s, nil
 }

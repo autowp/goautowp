@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/autowp/goautowp/config"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"net"
@@ -12,9 +13,7 @@ import (
 )
 
 func createTrafficService(t *testing.T) *Traffic {
-	config := LoadConfig()
-
-	container := NewContainer(config)
+	container := NewContainer(config.LoadConfig("."))
 
 	s, err := container.GetTraffic()
 	require.NoError(t, err)
@@ -134,14 +133,14 @@ func TestWhitelistedNotBanned(t *testing.T) {
 }
 
 func TestHttpBanPost(t *testing.T) {
-	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
-	require.NoError(t, err)
+	cfg := config.LoadConfig(".")
 
-	config := LoadConfig()
+	srv, err := NewContainer(cfg).GetGRPCServer()
+	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.Auth.OAuth.Secret)}),
+		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, cfg.Auth.OAuth.Secret)}),
 	)
 
 	_, err = srv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
@@ -188,14 +187,14 @@ func TestTop(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
-	require.NoError(t, err)
+	cfg := config.LoadConfig(".")
 
-	config := LoadConfig()
+	srv, err := NewContainer(cfg).GetGRPCServer()
+	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.Auth.OAuth.Secret)}),
+		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, cfg.Auth.OAuth.Secret)}),
 	)
 
 	top, err := srv.GetTrafficTop(ctx, &emptypb.Empty{})

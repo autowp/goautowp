@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/Nerzal/gocloak/v8"
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
@@ -26,9 +27,9 @@ var lis *bufconn.Listener
 
 func init() {
 
-	config := LoadConfig()
+	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", config.AutowpDSN)
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	if err != nil {
 		panic(err)
 	}
@@ -40,29 +41,29 @@ func init() {
 	contactsRepository := NewContactsRepository(db)
 	userRepository := users.NewRepository(
 		db,
-		config.UsersSalt,
-		config.EmailSalt,
-		config.Languages,
+		cfg.UsersSalt,
+		cfg.EmailSalt,
+		cfg.Languages,
 		emailSender,
-		gocloak.NewClient(config.KeyCloak.URL),
-		config.KeyCloak,
+		gocloak.NewClient(cfg.KeyCloak.URL),
+		cfg.KeyCloak,
 	)
 
 	lis = bufconn.Listen(bufSize)
 	grpcServer := grpc.NewServer()
 	usersSrv := NewUsersGRPCServer(
-		config.Auth.OAuth.Secret,
+		cfg.Auth.OAuth.Secret,
 		db,
 		enforcer,
 		contactsRepository,
 		userRepository,
 		NewEvents(db),
-		config.Languages,
+		cfg.Languages,
 		false,
 		NewPasswordRecovery(
 			db,
 			false,
-			config.Languages,
+			cfg.Languages,
 			emailSender,
 		),
 	)
@@ -102,17 +103,17 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	config := LoadConfig()
+	cfg := config.LoadConfig(".")
 
 	var userID int64
 
-	db, err := sql.Open("mysql", config.AutowpDSN)
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 	err = db.QueryRow("SELECT id FROM users WHERE email_to_check = ?", userEmail).Scan(&userID)
 	require.NoError(t, err)
 
 	_, err = client.UpdateUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, userID, config.Auth.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, userID, cfg.Auth.OAuth.Secret)),
 		&APIUpdateUserRequest{UserId: userID, Name: newName},
 	)
 	require.NoError(t, err)
@@ -123,7 +124,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.Equal(t, newName, dbNewName)
 
 	_, err = client.DeleteUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, config.Auth.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, cfg.Auth.OAuth.Secret)),
 		&APIDeleteUserRequest{UserId: userID, Password: password},
 	)
 	require.NoError(t, err)

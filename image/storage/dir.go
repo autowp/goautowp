@@ -1,6 +1,9 @@
 package storage
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/autowp/goautowp/config"
+)
 
 type Dir struct {
 	bucket         string
@@ -15,7 +18,7 @@ func (d *Dir) NamingStrategy() NamingStrategy {
 	return d.namingStrategy
 }
 
-func NewDir(bucket string, config NamingStrategyConfig) (*Dir, error) {
+func NewDir(bucket string, config config.ImageStorageNamingStrategyConfig) (*Dir, error) {
 
 	var strategy NamingStrategy
 	switch config.Strategy {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/autowp/goautowp"
+	"github.com/autowp/goautowp/config"
 	"github.com/getsentry/sentry-go"
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/gographics/imagick.v3/imagick"
@@ -34,13 +35,13 @@ func main() {
 	imagick.Initialize()
 	defer imagick.Terminate()
 
-	config := goautowp.LoadConfig()
+	cfg := config.LoadConfig(".")
 
-	goautowp.ValidateConfig(config)
+	config.ValidateConfig(cfg)
 
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn:         config.Sentry.DSN,
-		Environment: config.Sentry.Environment,
+		Dsn:         cfg.Sentry.DSN,
+		Environment: cfg.Sentry.Environment,
 	})
 
 	if err != nil {
@@ -65,7 +66,7 @@ func main() {
 		command = args[1]
 	}
 
-	app, err := goautowp.NewApplication(config)
+	app, err := goautowp.NewApplication(cfg)
 
 	if err != nil {
 		log.Printf("Error: %v\n", err)

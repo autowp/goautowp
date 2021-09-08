@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
@@ -23,8 +24,8 @@ import (
 type GRPCServer struct {
 	UnimplementedAutowpServer
 	catalogue          *Catalogue
-	reCaptchaConfig    RecaptchaConfig
-	fileStorageConfig  FileStorageConfig
+	reCaptchaConfig    config.RecaptchaConfig
+	fileStorageConfig  config.FileStorageConfig
 	db                 *sql.DB
 	enforcer           *casbin.Enforcer
 	oauthSecret        string
@@ -41,8 +42,8 @@ type GRPCServer struct {
 
 func NewGRPCServer(
 	catalogue *Catalogue,
-	reCaptchaConfig RecaptchaConfig,
-	fileStorageConfig FileStorageConfig,
+	reCaptchaConfig config.RecaptchaConfig,
+	fileStorageConfig config.FileStorageConfig,
 	db *sql.DB,
 	enforcer *casbin.Enforcer,
 	oauthSecret string,

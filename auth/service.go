@@ -44,7 +44,7 @@ import (
 
 // Service Main Object
 type Service struct {
-	config      Config
+	config      config.AuthConfig
 	db          *sql.DB
 	usersDB     *sql.DB
 	oauthServer *server.Server
@@ -57,7 +57,7 @@ type Service struct {
 }
 
 // NewService constructor
-func NewService(config Config, usersDB *sql.DB, hosts map[string]config.LanguageConfig, userRepository *users.Repository) (*Service, error) {
+func NewService(config config.AuthConfig, usersDB *sql.DB, hosts map[string]config.LanguageConfig, userRepository *users.Repository) (*Service, error) {
 
 	var err error
 
@@ -289,7 +289,7 @@ func connectDb(driverName string, dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
-func initOAuthServer(db *sql.DB, userRepository *users.Repository, cfg OAuthConfig) *server.Server {
+func initOAuthServer(db *sql.DB, userRepository *users.Repository, cfg config.OAuthConfig) *server.Server {
 	manager := manage.NewManager()
 	manager.SetPasswordTokenCfg(&manage.Config{
 		AccessTokenExp:    time.Duration(cfg.AccessTokenExpiresIn) * time.Minute,

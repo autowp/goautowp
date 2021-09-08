@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/Nerzal/gocloak/v8"
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/users"
 	"github.com/stretchr/testify/require"
@@ -21,23 +22,23 @@ func TestRestorePassword(t *testing.T) {
 	newPassword := "password2"
 	name := "User, who restore password"
 
-	config := LoadConfig()
+	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", config.AutowpDSN)
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	keycloak := gocloak.NewClient(config.KeyCloak.URL)
+	keycloak := gocloak.NewClient(cfg.KeyCloak.URL)
 
 	emailSender := email.MockSender{}
 
 	usersRep := users.NewRepository(
 		db,
-		config.UsersSalt,
-		config.EmailSalt,
-		config.Languages,
+		cfg.UsersSalt,
+		cfg.EmailSalt,
+		cfg.Languages,
 		&emailSender,
 		keycloak,
-		config.KeyCloak,
+		cfg.KeyCloak,
 	)
 
 	userID, err := usersRep.CreateUser(users.CreateUserOptions{
@@ -60,7 +61,7 @@ func TestRestorePassword(t *testing.T) {
 	err = usersRep.EmailChangeFinish(context.Background(), token)
 	require.NoError(t, err)
 
-	pr := NewPasswordRecovery(db, false, config.Languages, &emailSender)
+	pr := NewPasswordRecovery(db, false, cfg.Languages, &emailSender)
 	require.NoError(t, err)
 
 	// request email message

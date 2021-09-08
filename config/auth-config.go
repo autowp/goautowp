@@ -1,8 +1,7 @@
-package auth
+package config
 
 import (
 	"github.com/autowp/goautowp/auth/oauth2server/models"
-	"github.com/autowp/goautowp/config"
 )
 
 // OAuthConfig OAuthConfig
@@ -30,10 +29,10 @@ type ServicesConfig struct {
 	VK          ServiceConfig `yaml:"vk"           mapstructure:"vk"`
 }
 
-// Config Application config definition
-type Config struct {
-	Listen     string                  `yaml:"listen"`
-	Migrations config.MigrationsConfig `yaml:"migrations"`
-	OAuth      OAuthConfig             `yaml:"oauth"`
-	Services   ServicesConfig          `yaml:"services"`
+// AuthConfig Application config definition
+type AuthConfig struct {
+	Listen     string           `yaml:"listen"`
+	Migrations MigrationsConfig `yaml:"migrations"`
+	OAuth      OAuthConfig      `yaml:"oauth"`
+	Services   ServicesConfig   `yaml:"services"`
 }
