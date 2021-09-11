@@ -63,7 +63,7 @@ func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, r
 
 // Remove IP from list of banned
 func (s *BanRepository) Remove(ip net.IP) error {
-
+	log.Println(ip.String() + ": unban")
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE ip = $1", ip)
 
 	return err

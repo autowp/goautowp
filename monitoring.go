@@ -89,7 +89,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 			}
 
 			var message MonitoringInputMessage
-			err := json.Unmarshal(d.Body, &message)
+			err = json.Unmarshal(d.Body, &message)
 			if err != nil {
 				log.Printf("failed to parse json `%v`: %s\n", err, d.Body)
 				continue
@@ -150,6 +150,7 @@ func (s *Monitoring) Clear() error {
 
 // ClearIP removes all data collected for IP
 func (s *Monitoring) ClearIP(ip net.IP) error {
+	log.Println(ip.String() + ": clear monitoring")
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE ip = $1", ip)
 
 	return err
