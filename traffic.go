@@ -142,7 +142,7 @@ func (s *Traffic) AutoWhitelist() error {
 
 	for _, item := range items {
 		log.Printf("Check IP %v\n", item.IP)
-		if err := s.AutoWhitelistIP(item.IP); err != nil {
+		if err = s.AutoWhitelistIP(item.IP); err != nil {
 			return err
 		}
 	}
@@ -153,8 +153,6 @@ func (s *Traffic) AutoWhitelist() error {
 func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
 	ipText := ip.String()
 
-	log.Print(ipText + ": ")
-
 	inWhitelist, err := s.Whitelist.Exists(ip)
 	if err != nil {
 		return err
@@ -163,27 +161,26 @@ func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
 	match, desc := s.Whitelist.MatchAuto(ip)
 
 	if !match {
-		log.Println("")
 		return nil
 	}
 
 	if inWhitelist {
-		log.Println("whitelist, skip")
+		log.Println(ipText + ": already in whitelist, skip")
 	} else {
-		if err := s.Whitelist.Add(ip, desc); err != nil {
+		if err = s.Whitelist.Add(ip, desc); err != nil {
 			return err
 		}
 	}
 
-	if err := s.Ban.Remove(ip); err != nil {
+	if err = s.Ban.Remove(ip); err != nil {
 		return err
 	}
 
-	if err := s.Monitoring.ClearIP(ip); err != nil {
+	if err = s.Monitoring.ClearIP(ip); err != nil {
 		return err
 	}
 
-	log.Println(" whitelisted")
+	log.Println(ipText + ": whitelisted")
 
 	return nil
 }
