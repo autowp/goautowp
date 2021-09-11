@@ -62,7 +62,7 @@ func connectRabbitMQ(config string) (*amqp.Connection, error) {
 			return nil, err
 		}
 
-		fmt.Print(".")
+		log.Print(".")
 		time.Sleep(100 * time.Millisecond)
 	}
 

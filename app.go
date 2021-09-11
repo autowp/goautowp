@@ -385,7 +385,7 @@ func (s *Application) SchedulerMidnight() error {
 		log.Println(err.Error())
 		return err
 	}
-	fmt.Printf("Updated %d users vote limits\n", affected)
+	log.Printf("Updated %d users vote limits\n", affected)
 
 	return nil
 }

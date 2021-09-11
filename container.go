@@ -3,7 +3,6 @@ package goautowp
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/Nerzal/gocloak/v8"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
@@ -113,7 +112,7 @@ func (s *Container) GetAutowpDB() (*sql.DB, error) {
 			return nil, err
 		}
 
-		fmt.Print(".")
+		log.Print(".")
 		time.Sleep(100 * time.Millisecond)
 	}
 
@@ -396,7 +395,7 @@ func (s *Container) GetTrafficDB() (*pgxpool.Pool, error) {
 		}
 
 		log.Println(err)
-		fmt.Print(".")
+		log.Print(".")
 		time.Sleep(100 * time.Millisecond)
 	}
 

@@ -68,7 +68,7 @@ func NewService(config config.AuthConfig, usersDB *sql.DB, hosts map[string]conf
 
 	db, err := connectDb(config.OAuth.Driver, config.OAuth.DSN)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		sentry.CaptureException(err)
 		return nil, err
 	}
@@ -281,8 +281,8 @@ func connectDb(driverName string, dsn string) (*sql.DB, error) {
 			return nil, err
 		}
 
-		fmt.Print(".")
-		fmt.Println(err)
+		log.Print(".")
+		log.Println(err)
 		time.Sleep(100 * time.Millisecond)
 	}
 

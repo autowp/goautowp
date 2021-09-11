@@ -2,7 +2,6 @@ package goautowp
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/casbin/casbin"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -154,7 +153,7 @@ func (s *Traffic) AutoWhitelist() error {
 func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
 	ipText := ip.String()
 
-	fmt.Print(ipText + ": ")
+	log.Print(ipText + ": ")
 
 	inWhitelist, err := s.Whitelist.Exists(ip)
 	if err != nil {
@@ -164,12 +163,12 @@ func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
 	match, desc := s.Whitelist.MatchAuto(ip)
 
 	if !match {
-		fmt.Println("")
+		log.Println("")
 		return nil
 	}
 
 	if inWhitelist {
-		fmt.Println("whitelist, skip")
+		log.Println("whitelist, skip")
 	} else {
 		if err := s.Whitelist.Add(ip, desc); err != nil {
 			return err
@@ -184,7 +183,7 @@ func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
 		return err
 	}
 
-	fmt.Println(" whitelisted")
+	log.Println(" whitelisted")
 
 	return nil
 }

@@ -3,9 +3,9 @@ package goautowp
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"log"
 	"net"
 	"strings"
 )
@@ -50,7 +50,7 @@ func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
 
 	for _, host := range hosts {
 
-		fmt.Print(host + " ")
+		log.Print(host + " ")
 
 		if host == msnHost {
 			return true, "msnbot autodetect"
