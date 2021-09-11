@@ -75,7 +75,7 @@ func (s *Whitelist) Add(ip net.IP, desc string) error {
 		INSERT INTO ip_whitelist (ip, description)
 		VALUES ($1, $2)
 		ON CONFLICT (ip) DO UPDATE SET description=EXCLUDED.description
-	`, ip, desc)
+	`, ip.String(), desc)
 
 	return err
 }
@@ -87,7 +87,7 @@ func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 		SELECT ip, description
 		FROM ip_whitelist
 		WHERE ip = $1
-	`, ip).Scan(&item.IP, item.Description)
+	`, ip.String()).Scan(&item.IP, item.Description)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -130,7 +130,7 @@ func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 		SELECT true
 		FROM ip_whitelist
 		WHERE ip = $1
-	`, ip).Scan(&exists)
+	`, ip.String()).Scan(&exists)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return false, nil
@@ -144,6 +144,6 @@ func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 
 // Remove IP from whitelist
 func (s *Whitelist) Remove(ip net.IP) error {
-	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_whitelist WHERE ip = $1", ip)
+	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_whitelist WHERE ip = $1", ip.String())
 	return err
 }

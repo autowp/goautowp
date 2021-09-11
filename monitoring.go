@@ -124,7 +124,7 @@ func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
 			1
 		)
 		ON CONFLICT(ip,day_date,hour,tenminute,minute) DO UPDATE SET count=ip_monitoring.count+1
-	`, timestamp, ip)
+	`, timestamp, ip.String())
 
 	return err
 }
@@ -151,7 +151,7 @@ func (s *Monitoring) Clear() error {
 // ClearIP removes all data collected for IP
 func (s *Monitoring) ClearIP(ip net.IP) error {
 	log.Println(ip.String() + ": clear monitoring")
-	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE ip = $1", ip)
+	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE ip = $1", ip.String())
 
 	return err
 }
@@ -226,7 +226,7 @@ func (s *Monitoring) ExistsIP(ip net.IP) (bool, error) {
 		FROM ip_monitoring
 		WHERE ip = $1
 		LIMIT 1
-	`, ip).Scan(&exists)
+	`, ip.String()).Scan(&exists)
 	if err != nil {
 		if err != pgx.ErrNoRows {
 			return false, err
