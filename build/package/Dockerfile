@@ -1,19 +1,28 @@
-FROM golang:1.17-alpine as builder
+FROM ubuntu:focal as builder
 
-RUN apk update && apk add --no-cache git ca-certificates && update-ca-certificates
+ENV DEBIAN_FRONTEND=non-interactive \
+    PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
+    GOPATH=$HOME/go
 
-ENV USER=appuser
-ENV UID=10001
+RUN apt-get update -qqy && \
+    apt-get dist-upgrade -qqy && \
+    apt-get install -qqy \
+        ca-certificates \
+        gcc \
+        git \
+        pkg-config \
+        gcc \
+        git \
+        imagemagick \
+        libmagickwand-dev \
+        libc-dev \
+        wget \
+    && \
+    update-ca-certificates && \
+    wget -q https://golang.org/dl/go1.17.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-amd64.tar.gz && \
+    rm go1.17.linux-amd64.tar.gz
 
-# See https://stackoverflow.com/a/55757473/12429735RUN
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    "${USER}"
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
 
 # Populate the module cache based on the go.{mod,sum} files.
@@ -23,26 +32,50 @@ RUN go mod download && \
 
 COPY . $GOPATH/src/github.com/autowp/goautowp/
 
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
+RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
 
 ############################
-FROM scratch
+FROM ubuntu:focal
 
 LABEL app_name="autowp.goautowp" \
       maintainer="dmitry@pereslegin.ru"
 
+ENV DEBIAN_FRONTEND=non-interactive \
+    USER=appuser \
+    UID=10001
+
 EXPOSE 8080
 
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
+ENTRYPOINT ["/app"]
 
-COPY --from=builder /app /app
-COPY migrations /migrations
-COPY traffic-migrations /traffic-migrations
-COPY auth/migrations /auth/migrations
-COPY defaults.yaml /defaults.yaml
+WORKDIR /
+
+RUN apt-get update -qqy && \
+    apt-get dist-upgrade -qqy && \
+    apt-get install -qqy \
+        ca-certificates \
+        imagemagick \
+        xmlstarlet \
+    && \
+    update-ca-certificates && \
+    cat /etc/ImageMagick-6/policy.xml | \
+            xmlstarlet ed -u "/policymap/policy[@domain='resource'][@name='memory']/@value" -v "2GiB" | \
+            xmlstarlet ed -u "/policymap/policy[@domain='resource'][@name='disk']/@value" -v "10GiB" > /etc/ImageMagick-6/policy2.xml \
+    && \
+    # See https://stackoverflow.com/a/55757473/12429735RUN
+    adduser \
+        --disabled-password \
+        --gecos "" \
+        --home "/nonexistent" \
+        --shell "/sbin/nologin" \
+        --no-create-home \
+        --uid "${UID}" \
+        "${USER}"
 
 USER appuser:appuser
 
-ENTRYPOINT ["/app"]
+COPY --from=builder /app /app
+COPY auth/migrations /auth/migrations
+COPY migrations /migrations
+COPY traffic-migrations /traffic-migrations
+COPY defaults.yaml /defaults.yaml

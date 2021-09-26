@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"github.com/autowp/goautowp/config"
 	"io"
 	"os"
 	"path"
@@ -97,9 +98,9 @@ func addPicture(t *testing.T, db *sql.DB, filepath string) int {
 
 func TestDuplicateFinder(t *testing.T) {
 
-	config := LoadConfig()
+	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", config.AutowpDSN)
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
 	df, err := NewDuplicateFinder(db)

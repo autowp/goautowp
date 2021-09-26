@@ -2,8 +2,7 @@ package auth
 
 import (
 	"database/sql"
-	"log"
-	"os"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/autowp/goautowp/auth/oauth2server"
@@ -14,7 +13,6 @@ import (
 // TokenStore PostgreSQL token store
 type TokenStore struct {
 	adapter *sql.DB
-	logger  *log.Logger
 
 	gcDisabled bool
 	gcInterval time.Duration
@@ -36,7 +34,6 @@ type TokenStoreItem struct {
 func NewTokenStore(adapter *sql.DB, options ...TokenStoreOption) (*TokenStore, error) {
 	store := &TokenStore{
 		adapter:    adapter,
-		logger:     log.New(os.Stderr, "[OAUTH2-PG-ERROR]", log.LstdFlags),
 		gcInterval: 10 * time.Minute,
 	}
 
@@ -72,7 +69,7 @@ func (s *TokenStore) clean() {
 	now := time.Now()
 	_, err := s.adapter.Exec("DELETE FROM tokens WHERE expires_at <= $1", now)
 	if err != nil {
-		s.logger.Printf("Error while cleaning out outdated entities: %+v", err)
+		logrus.Errorf("Error while cleaning out outdated entities: %+v", err)
 	}
 }
 

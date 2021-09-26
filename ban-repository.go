@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
 	"time"
@@ -15,7 +15,7 @@ import (
 type BanItem struct {
 	IP       net.IP    `json:"ip"`
 	Until    time.Time `json:"up_to"`
-	ByUserID int       `json:"by_user_id"`
+	ByUserID int64     `json:"by_user_id"`
 	Reason   string    `json:"reason"`
 }
 
@@ -47,7 +47,7 @@ func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, r
 		INSERT INTO ip_ban (ip, until, by_user_id, reason)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT(ip) DO UPDATE SET until=EXCLUDED.until, by_user_id=EXCLUDED.by_user_id, reason=EXCLUDED.reason
-	`, ip, upTo, byUserID, reason)
+	`, ip.String(), upTo, byUserID, reason)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, r
 	affected := ct.RowsAffected()
 
 	if affected == 1 {
-		log.Printf("%v was banned. Reason: %s\n", ip.String(), reason)
+		logrus.Infof("%v was banned. Reason: %s", ip.String(), reason)
 	}
 
 	return nil
@@ -63,8 +63,8 @@ func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, r
 
 // Remove IP from list of banned
 func (s *BanRepository) Remove(ip net.IP) error {
-
-	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE ip = $1", ip)
+	logrus.Info(ip.String() + ": unban")
+	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE ip = $1", ip.String())
 
 	return err
 }
@@ -77,16 +77,12 @@ func (s *BanRepository) Exists(ip net.IP) (bool, error) {
 		SELECT true
 		FROM ip_ban
 		WHERE ip = $1 AND until >= NOW()
-	`, ip).Scan(&exists)
-	if err != nil {
-		if err != pgx.ErrNoRows {
-			return false, err
-		}
-
-		return false, nil
+	`, ip.String()).Scan(&exists)
+	if err != nil && err != pgx.ErrNoRows {
+		return false, err
 	}
 
-	return true, nil
+	return err != pgx.ErrNoRows, nil
 }
 
 // Get ban info
@@ -97,7 +93,7 @@ func (s *BanRepository) Get(ip net.IP) (*BanItem, error) {
 		SELECT ip, until, reason, by_user_id
 		FROM ip_ban
 		WHERE ip = $1 AND until >= NOW()
-	`, ip).Scan(&item.IP, &item.Until, &item.Reason, &item.ByUserID)
+	`, ip.String()).Scan(&item.IP, &item.Until, &item.Reason, &item.ByUserID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

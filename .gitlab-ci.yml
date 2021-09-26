@@ -21,7 +21,7 @@ test:
   script:
     - go mod verify
     - go mod download
-    - golangci-lint run ./...
+    - golangci-lint run ./... -v --timeout 10m
 
     - waitforit -address=tcp://docker:2375 -timeout=30
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u="$CI_REGISTRY_USER" --password-stdin
@@ -33,11 +33,13 @@ test:
     - go test -run TestAutowpMigrations
     - go test -run TestTrafficMigrations
     - docker exec -t goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql"
-    - gotestsum --junitfile report.xml --format testname -- -race -coverprofile=cov.out
+    - gotestsum --junitfile report.xml --format testname -- -coverprofile=cov.out -covermode count
+    - gocover-cobertura < cov.out > coverage.xml
     - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN
   artifacts:
     reports:
       junit: report.xml
+      cobertura: coverage.xml
 
 publish:
   stage: publish

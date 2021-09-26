@@ -25,6 +25,7 @@ type UsersGRPCServer struct {
 	languages          map[string]config.LanguageConfig
 	captcha            bool
 	passwordRecovery   *PasswordRecovery
+	userExtractor      *UserExtractor
 }
 
 func NewUsersGRPCServer(
@@ -37,6 +38,7 @@ func NewUsersGRPCServer(
 	languages map[string]config.LanguageConfig,
 	captcha bool,
 	passwordRecovery *PasswordRecovery,
+	userExtractor *UserExtractor,
 ) *UsersGRPCServer {
 	return &UsersGRPCServer{
 		oauthSecret:        oauthSecret,
@@ -48,6 +50,7 @@ func NewUsersGRPCServer(
 		languages:          languages,
 		captcha:            captcha,
 		passwordRecovery:   passwordRecovery,
+		userExtractor:      userExtractor,
 	}
 }
 
@@ -85,29 +88,50 @@ func (s *UsersGRPCServer) CreateUser(ctx context.Context, in *APICreateUserReque
 
 	_, err = s.userRepository.CreateUser(user)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil
 }
 
+func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*APIUser, error) {
+	fields := in.Fields
+	m := make(map[string]bool)
+	for _, e := range fields {
+		m[e] = true
+	}
+
+	dbUser, err := s.userRepository.GetUser(users.GetUsersOptions{
+		ID:     in.UserId,
+		Fields: m,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if dbUser == nil {
+		return nil, status.Error(codes.NotFound, "User not found")
+	}
+
+	return s.userExtractor.Extract(dbUser, m)
+}
+
 func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserRequest) (*emptypb.Empty, error) {
 	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userID == 0 {
-		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+		return nil, status.Error(codes.Unauthenticated, "Unauthenticated")
 	}
 
 	if userID != in.UserId {
-		return nil, status.Errorf(codes.Internal, "Forbidden")
+		return nil, status.Error(codes.Internal, "Forbidden")
 	}
 
 	fv, err := s.userRepository.UpdateUser(ctx, userID, in.Name)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if len(fv) > 0 {
@@ -120,7 +144,7 @@ func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserReque
 func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {
 	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userID == 0 {
@@ -134,7 +158,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 
 		match, err := s.userRepository.PasswordMatch(in.UserId, in.Password)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		if !match {
@@ -147,13 +171,13 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 
 	success, err := s.userRepository.DeleteUser(in.UserId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if success {
 		err = s.contactsRepository.deleteUserEverywhere(in.UserId)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		err = s.events.Add(Event{
@@ -162,7 +186,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 			Users:   []int64{in.UserId},
 		})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
@@ -172,7 +196,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 func (s *UsersGRPCServer) EmailChange(ctx context.Context, in *APIEmailChangeRequest) (*emptypb.Empty, error) {
 	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userID == 0 {
@@ -181,7 +205,7 @@ func (s *UsersGRPCServer) EmailChange(ctx context.Context, in *APIEmailChangeReq
 
 	fv, err := s.userRepository.EmailChangeStart(userID, in.Email)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if len(fv) > 0 {
@@ -194,7 +218,7 @@ func (s *UsersGRPCServer) EmailChange(ctx context.Context, in *APIEmailChangeReq
 func (s *UsersGRPCServer) EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
 	err := s.userRepository.EmailChangeFinish(ctx, in.Code)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil
@@ -203,7 +227,7 @@ func (s *UsersGRPCServer) EmailChangeConfirm(ctx context.Context, in *APIEmailCh
 func (s *UsersGRPCServer) SetPassword(ctx context.Context, in *APISetPasswordRequest) (*emptypb.Empty, error) {
 	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userID == 0 {
@@ -212,7 +236,7 @@ func (s *UsersGRPCServer) SetPassword(ctx context.Context, in *APISetPasswordReq
 
 	fv, err := s.userRepository.ValidateChangePassword(userID, in.OldPassword, in.NewPassword, in.NewPasswordConfirm)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if len(fv) > 0 {
@@ -221,7 +245,7 @@ func (s *UsersGRPCServer) SetPassword(ctx context.Context, in *APISetPasswordReq
 
 	err = s.userRepository.SetPassword(ctx, userID, in.NewPassword)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil
@@ -237,7 +261,7 @@ func (s *UsersGRPCServer) PasswordRecovery(ctx context.Context, in *APIPasswordR
 
 	fv, err := s.passwordRecovery.Start(in.Email, in.Captcha, remoteAddr)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if len(fv) > 0 {
@@ -255,7 +279,7 @@ func (s *UsersGRPCServer) PasswordRecoveryCheckCode(_ context.Context, in *APIPa
 
 	userId, err := s.passwordRecovery.GetUserID(in.Code)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userId == 0 {
@@ -269,7 +293,7 @@ func (s *UsersGRPCServer) PasswordRecoveryConfirm(ctx context.Context, in *APIPa
 
 	fv, userId, err := s.passwordRecovery.Finish(in.Code, in.Password, in.PasswordConfirm)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if len(fv) > 0 {
 		return nil, wrapFieldViolations(fv)
@@ -277,12 +301,12 @@ func (s *UsersGRPCServer) PasswordRecoveryConfirm(ctx context.Context, in *APIPa
 
 	err = s.userRepository.SetPassword(ctx, userId, in.Password)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	login, err := s.userRepository.GetLogin(userId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &APIPasswordRecoveryConfirmResponse{

@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"image"
 	_ "image/jpeg" // support JPEG decoding
 	_ "image/png"  // support PNG decoding
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -47,14 +47,14 @@ func connectRabbitMQ(config string) (*amqp.Connection, error) {
 	start := time.Now()
 	timeout := 60 * time.Second
 
-	log.Println("Waiting for rabbitMQ")
+	logrus.Info("Waiting for rabbitMQ")
 
 	var rabbitMQ *amqp.Connection
 	var err error
 	for {
 		rabbitMQ, err = amqp.Dial(config)
 		if err == nil {
-			log.Println("Started.")
+			logrus.Info("Started.")
 			break
 		}
 
@@ -62,7 +62,7 @@ func connectRabbitMQ(config string) (*amqp.Connection, error) {
 			return nil, err
 		}
 
-		fmt.Print(".")
+		logrus.Info(".")
 		time.Sleep(100 * time.Millisecond)
 	}
 
@@ -74,7 +74,7 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 
 	rabbitMQ, err := connectRabbitMQ(url)
 	if err != nil {
-		log.Println(err)
+		logrus.Error(err)
 		return err
 	}
 
@@ -113,7 +113,7 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 	for !done {
 		select {
 		case <-quitChan:
-			log.Println("DuplicateFinder got quit signal")
+			logrus.Info("DuplicateFinder got quit signal")
 			done = true
 			break
 		case d := <-msgs:
@@ -136,14 +136,14 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 		}
 	}
 
-	log.Println("Disconnecting RabbitMQ")
+	logrus.Info("Disconnecting RabbitMQ")
 	return rabbitMQ.Close()
 }
 
 // Index picture image
 // #nosec G107
 func (s *DuplicateFinder) Index(id int, url string) error {
-	log.Printf("Indexing picture %v\n", id)
+	logrus.Infof("Indexing picture %v", id)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -151,7 +151,7 @@ func (s *DuplicateFinder) Index(id int, url string) error {
 	}
 	defer util.Close(resp.Body)
 
-	log.Printf("Calculate hash for %v\n", url)
+	logrus.Infof("Calculate hash for %v", url)
 
 	hash, err := getFileHash(resp.Body)
 	if err != nil {

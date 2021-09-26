@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
 	"time"
@@ -44,7 +44,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 
 	conn, err := connectRabbitMQ(url)
 	if err != nil {
-		log.Println(err)
+		logrus.Error(err)
 		return err
 	}
 
@@ -84,20 +84,20 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 		select {
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
-				log.Printf("unexpected mime `%s`\n", d.ContentType)
+				logrus.Errorf("unexpected mime `%s`", d.ContentType)
 				continue
 			}
 
 			var message MonitoringInputMessage
-			err := json.Unmarshal(d.Body, &message)
+			err = json.Unmarshal(d.Body, &message)
 			if err != nil {
-				log.Printf("failed to parse json `%v`: %s\n", err, d.Body)
+				logrus.Errorf("failed to parse json `%v`: %s", err, d.Body)
 				continue
 			}
 
 			err = s.Add(message.IP, message.Timestamp)
 			if err != nil {
-				log.Println(err.Error())
+				logrus.Error(err.Error())
 			}
 
 		case <-quitChan:
@@ -105,7 +105,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 		}
 	}
 
-	log.Println("Disconnecting RabbitMQ")
+	logrus.Info("Disconnecting RabbitMQ")
 	return conn.Close()
 
 }
@@ -124,7 +124,7 @@ func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
 			1
 		)
 		ON CONFLICT(ip,day_date,hour,tenminute,minute) DO UPDATE SET count=ip_monitoring.count+1
-	`, timestamp, ip)
+	`, timestamp, ip.String())
 
 	return err
 }
@@ -150,7 +150,8 @@ func (s *Monitoring) Clear() error {
 
 // ClearIP removes all data collected for IP
 func (s *Monitoring) ClearIP(ip net.IP) error {
-	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE ip = $1", ip)
+	logrus.Info(ip.String() + ": clear monitoring")
+	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE ip = $1", ip.String())
 
 	return err
 }
@@ -225,7 +226,7 @@ func (s *Monitoring) ExistsIP(ip net.IP) (bool, error) {
 		FROM ip_monitoring
 		WHERE ip = $1
 		LIMIT 1
-	`, ip).Scan(&exists)
+	`, ip.String()).Scan(&exists)
 	if err != nil {
 		if err != pgx.ErrNoRows {
 			return false, err
