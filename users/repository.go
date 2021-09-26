@@ -426,12 +426,12 @@ func (s *Repository) UpdateUserVoteLimit(userId int64) error {
 	}
 
 	var picturesExists int
-	err = s.autowpDB.QueryRow("SELECT 1 FROM pictures WHERE owner_id = ? AND status = ? LIMIT 1", userId, "accepted").Scan(&picturesExists)
+	err = s.autowpDB.QueryRow("SELECT count(1) FROM pictures WHERE owner_id = ? AND status = ? LIMIT 1", userId, "accepted").Scan(&picturesExists)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 
-	value := math.Round((avgVote + float64(def+age+picturesExists)) / 100)
+	value := math.Round(avgVote + float64(def+age+picturesExists/100))
 	if value < 0 {
 		value = 0
 	}
