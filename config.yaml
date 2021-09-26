@@ -1,4 +1,7 @@
 image-storage:
+  src-override:
+    host: 127.0.0.1:9000
+    scheme: http
   s3:
     region: "us-east-1"
     endpoint: http://127.0.0.1:9000

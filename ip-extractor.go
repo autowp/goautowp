@@ -2,8 +2,8 @@ package goautowp
 
 import (
 	"github.com/autowp/goautowp/users"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"log"
 	"net"
 )
 
@@ -26,7 +26,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 	if ok {
 		host, err := net.LookupAddr(ip.String())
 		if err != nil {
-			log.Printf("LookupAddr error: %v", err.Error())
+			logrus.Errorf("LookupAddr error: %v", err.Error())
 		}
 
 		if len(host) > 0 {
@@ -57,7 +57,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 			if ban != nil {
 				result.Blacklist = &APIBanItem{
 					Until:    timestamppb.New(ban.Until),
-					ByUserId: int32(ban.ByUserID),
+					ByUserId: ban.ByUserID,
 					ByUser:   nil,
 					Reason:   ban.Reason,
 				}

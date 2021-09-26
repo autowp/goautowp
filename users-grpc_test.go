@@ -3,81 +3,19 @@ package goautowp
 import (
 	"context"
 	"database/sql"
-	"github.com/Nerzal/gocloak/v8"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/email"
-	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/util"
-	"github.com/casbin/casbin"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/test/bufconn"
-	"log"
 	"math/rand"
-	"net"
 	"strconv"
 	"testing"
 	"time"
 )
 
-const bufSize = 1024 * 1024
-
-var lis *bufconn.Listener
-
-func init() {
-
-	cfg := config.LoadConfig(".")
-
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
-	if err != nil {
-		panic(err)
-	}
-
-	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
-
-	emailSender := &email.MockSender{}
-
-	contactsRepository := NewContactsRepository(db)
-	userRepository := users.NewRepository(
-		db,
-		cfg.UsersSalt,
-		cfg.EmailSalt,
-		cfg.Languages,
-		emailSender,
-		gocloak.NewClient(cfg.KeyCloak.URL),
-		cfg.KeyCloak,
-	)
-
-	lis = bufconn.Listen(bufSize)
-	grpcServer := grpc.NewServer()
-	usersSrv := NewUsersGRPCServer(
-		cfg.Auth.OAuth.Secret,
-		db,
-		enforcer,
-		contactsRepository,
-		userRepository,
-		NewEvents(db),
-		cfg.Languages,
-		false,
-		NewPasswordRecovery(
-			db,
-			false,
-			cfg.Languages,
-			emailSender,
-		),
-	)
-	RegisterUsersServer(grpcServer, usersSrv)
-	go func() {
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("Server exited with error: %v", err)
-		}
-	}()
-}
-
-func bufDialer(context.Context, string) (net.Conn, error) {
-	return lis.Dial()
-}
+const TestImageFile = "./image/storage/_files/Towers_Schiphol_small.jpg"
 
 func TestCreateUpdateDeleteUser(t *testing.T) {
 	ctx := context.Background()
@@ -109,6 +47,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
+	defer util.Close(db)
 	err = db.QueryRow("SELECT id FROM users WHERE email_to_check = ?", userEmail).Scan(&userID)
 	require.NoError(t, err)
 
@@ -118,10 +57,21 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	dbNewName := ""
-	err = db.QueryRow("SELECT name FROM users WHERE id = ?", userID).Scan(&dbNewName)
+	// set avatar
+	imageStorage, err := storage.NewStorage(db, cfg.ImageStorage)
 	require.NoError(t, err)
-	require.Equal(t, newName, dbNewName)
+
+	imageID, err := imageStorage.AddImageFromFile(TestImageFile, "user", storage.GenerateOptions{})
+	require.NoError(t, err)
+	_, err = db.Exec("UPDATE users SET img = ? WHERE id = ?", imageID, userID)
+	require.NoError(t, err)
+
+	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: userID, Fields: []string{"avatar", "gravatar"}})
+	require.NoError(t, err)
+	require.NotEmpty(t, user)
+	// require.NotEmpty(t, user.Gravatar)
+	require.NotEmpty(t, user.Avatar.Src)
+	require.Equal(t, newName, user.Name)
 
 	_, err = client.DeleteUser(
 		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, cfg.Auth.OAuth.Secret)),

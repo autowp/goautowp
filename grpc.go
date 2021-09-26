@@ -23,21 +23,20 @@ import (
 
 type GRPCServer struct {
 	UnimplementedAutowpServer
-	catalogue          *Catalogue
-	reCaptchaConfig    config.RecaptchaConfig
-	fileStorageConfig  config.FileStorageConfig
-	db                 *sql.DB
-	enforcer           *casbin.Enforcer
-	oauthSecret        string
-	contactsRepository *ContactsRepository
-	userRepository     *users.Repository
-	userExtractor      *UserExtractor
-	comments           *Comments
-	traffic            *Traffic
-	ipExtractor        *IPExtractor
-	feedback           *Feedback
-	forums             *Forums
-	messages           *Messages
+	catalogue         *Catalogue
+	reCaptchaConfig   config.RecaptchaConfig
+	fileStorageConfig config.FileStorageConfig
+	db                *sql.DB
+	enforcer          *casbin.Enforcer
+	oauthSecret       string
+	userRepository    *users.Repository
+	userExtractor     *UserExtractor
+	comments          *Comments
+	traffic           *Traffic
+	ipExtractor       *IPExtractor
+	feedback          *Feedback
+	forums            *Forums
+	messages          *Messages
 }
 
 func NewGRPCServer(
@@ -47,7 +46,6 @@ func NewGRPCServer(
 	db *sql.DB,
 	enforcer *casbin.Enforcer,
 	oauthSecret string,
-	contactsRepository *ContactsRepository,
 	userRepository *users.Repository,
 	userExtractor *UserExtractor,
 	comments *Comments,
@@ -58,21 +56,20 @@ func NewGRPCServer(
 	messages *Messages,
 ) *GRPCServer {
 	return &GRPCServer{
-		catalogue:          catalogue,
-		reCaptchaConfig:    reCaptchaConfig,
-		fileStorageConfig:  fileStorageConfig,
-		db:                 db,
-		enforcer:           enforcer,
-		oauthSecret:        oauthSecret,
-		contactsRepository: contactsRepository,
-		userRepository:     userRepository,
-		userExtractor:      userExtractor,
-		comments:           comments,
-		traffic:            traffic,
-		ipExtractor:        ipExtractor,
-		feedback:           feedback,
-		forums:             forums,
-		messages:           messages,
+		catalogue:         catalogue,
+		reCaptchaConfig:   reCaptchaConfig,
+		fileStorageConfig: fileStorageConfig,
+		db:                db,
+		enforcer:          enforcer,
+		oauthSecret:       oauthSecret,
+		userRepository:    userRepository,
+		userExtractor:     userExtractor,
+		comments:          comments,
+		traffic:           traffic,
+		ipExtractor:       ipExtractor,
+		feedback:          feedback,
+		forums:            forums,
+		messages:          messages,
 	}
 }
 
@@ -144,7 +141,7 @@ func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*Ac
 
 	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &AclEnforceResult{
@@ -155,7 +152,7 @@ func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*Ac
 func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*VehicleTypeItems, error) {
 	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
@@ -165,7 +162,7 @@ func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*Ve
 	items, err := s.catalogue.getVehicleTypesTree(0)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &VehicleTypeItems{
@@ -177,131 +174,10 @@ func (s *GRPCServer) GetBrandVehicleTypes(_ context.Context, in *GetBrandVehicle
 	items, err := s.catalogue.getBrandVehicleTypes(in.BrandId)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &BrandVehicleTypeItems{
-		Items: items,
-	}, nil
-}
-
-func (s *GRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	if userID == 0 {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
-	}
-
-	if int64(in.UserId) == userID {
-		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
-	}
-
-	deleted := false
-	user, err := s.userRepository.GetUser(users.GetUsersOptions{ID: int(in.UserId), Deleted: &deleted})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	if user == nil {
-		return nil, status.Errorf(codes.NotFound, "NotFound")
-	}
-
-	err = s.contactsRepository.create(userID, int64(in.UserId))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (s *GRPCServer) DeleteContact(ctx context.Context, in *DeleteContactRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	if userID == 0 {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
-	}
-
-	err = s.contactsRepository.delete(userID, int64(in.UserId))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (s *GRPCServer) GetContact(ctx context.Context, in *GetContactRequest) (*Contact, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	if userID == 0 {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
-	}
-
-	if int64(in.UserId) == userID {
-		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
-	}
-
-	exists, err := s.contactsRepository.isExists(userID, int64(in.UserId))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	if !exists {
-		return nil, status.Errorf(codes.NotFound, "NotFound")
-	}
-
-	return &Contact{
-		ContactUserId: in.UserId,
-	}, nil
-}
-
-func (s *GRPCServer) GetContacts(ctx context.Context, in *GetContactsRequest) (*ContactItems, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	if userID == 0 {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
-	}
-
-	fields := in.Fields
-	m := make(map[string]bool)
-	for _, e := range fields {
-		m[e] = true
-	}
-
-	userRows, err := s.userRepository.GetUsers(users.GetUsersOptions{
-		InContacts: userID,
-		Order:      []string{"users.deleted", "users.name"},
-		Fields:     m,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	items := make([]*Contact, len(userRows))
-	for idx, userRow := range userRows {
-		user, err := s.userExtractor.Extract(&userRow, m)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
-		}
-
-		items[idx] = &Contact{
-			ContactUserId: user.Id,
-			User:          user,
-		}
-	}
-
-	return &ContactItems{
 		Items: items,
 	}, nil
 }
@@ -310,7 +186,7 @@ func (s *GRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVotesReque
 	votes, err := s.comments.getVotes(int(in.CommentId))
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if votes == nil {
@@ -322,7 +198,7 @@ func (s *GRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVotesReque
 	for _, user := range votes.PositiveVotes {
 		extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 		result = append(result, &CommentVote{
 			Value: CommentVote_POSITIVE,
@@ -333,7 +209,7 @@ func (s *GRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVotesReque
 	for _, user := range votes.NegativeVotes {
 		extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 		result = append(result, &CommentVote{
 			Value: CommentVote_NEGATIVE,
@@ -351,7 +227,7 @@ func (s *GRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITra
 	items, err := s.traffic.Monitoring.ListOfTop(50)
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	result := make([]*APITrafficTopItem, len(items))
@@ -359,12 +235,12 @@ func (s *GRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITra
 
 		ban, err := s.traffic.Ban.Get(item.IP)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		inWhitelist, err := s.traffic.Whitelist.Exists(item.IP)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		var user *users.DBUser
@@ -373,17 +249,17 @@ func (s *GRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITra
 		if ban != nil {
 			user, err = s.getUser(ban.ByUserID)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			extractedUser, err := s.userExtractor.Extract(user, map[string]bool{})
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			topItemBan = &APIBanItem{
 				Until:    timestamppb.New(ban.Until),
-				ByUserId: int32(ban.ByUserID),
+				ByUserId: ban.ByUserID,
 				ByUser:   extractedUser,
 				Reason:   ban.Reason,
 			}
@@ -403,7 +279,7 @@ func (s *GRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITra
 	}, nil
 }
 
-func (s *GRPCServer) getUser(id int) (*users.DBUser, error) {
+func (s *GRPCServer) getUser(id int64) (*users.DBUser, error) {
 	rows, err := s.db.Query(`
 		SELECT id, name, deleted, identity, last_online, role
 		FROM users
@@ -435,7 +311,7 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 
 	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	ip := net.ParseIP(in.Ip)
@@ -450,7 +326,7 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 
 	result, err := s.ipExtractor.Extract(ip, m, role)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return result, nil
@@ -472,7 +348,7 @@ func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRe
 		IP:      remoteAddr,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if len(fv) > 0 {
@@ -486,7 +362,7 @@ func (s *GRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteF
 
 	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if res := s.enforcer.Enforce(role, "user", "ban"); !res {
@@ -500,7 +376,7 @@ func (s *GRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteF
 
 	err = s.traffic.Ban.Remove(ip)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil
@@ -509,7 +385,7 @@ func (s *GRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteF
 func (s *GRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error) {
 	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
@@ -523,7 +399,7 @@ func (s *GRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteF
 
 	err = s.traffic.Whitelist.Remove(ip)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil
@@ -532,7 +408,7 @@ func (s *GRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteF
 func (s *GRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest) (*emptypb.Empty, error) {
 	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if res := s.enforcer.Enforce(role, "user", "ban"); !res {
@@ -548,7 +424,7 @@ func (s *GRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddToTraffic
 
 	err = s.traffic.Ban.Add(ip, duration, userID, in.Reason)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil
@@ -557,7 +433,7 @@ func (s *GRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddToTraffic
 func (s *GRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest) (*emptypb.Empty, error) {
 	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
@@ -571,12 +447,12 @@ func (s *GRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddToTraffic
 
 	err = s.traffic.Whitelist.Add(ip, "manual click")
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	err = s.traffic.Ban.Remove(ip)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil
@@ -585,7 +461,7 @@ func (s *GRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddToTraffic
 func (s *GRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) (*APITrafficWhitelistItems, error) {
 	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
@@ -594,7 +470,7 @@ func (s *GRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) 
 
 	list, err := s.traffic.Whitelist.List()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &APITrafficWhitelistItems{
@@ -605,7 +481,7 @@ func (s *GRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) 
 func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty) (*APIForumsUserSummary, error) {
 	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userID == 0 {
@@ -614,7 +490,7 @@ func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty)
 
 	subscriptionsCount, err := s.forums.GetUserSummary(userID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &APIForumsUserSummary{
@@ -625,7 +501,7 @@ func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty)
 func (s *GRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) (*APIMessageNewCount, error) {
 	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userID == 0 {
@@ -634,7 +510,7 @@ func (s *GRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) 
 
 	count, err := s.messages.GetUserNewMessagesCount(userID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &APIMessageNewCount{
@@ -645,7 +521,7 @@ func (s *GRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) 
 func (s *GRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (*APIMessageSummary, error) {
 	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userID == 0 {
@@ -654,27 +530,27 @@ func (s *GRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (
 
 	inbox, err := s.messages.GetInboxCount(userID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	inboxNew, err := s.messages.GetInboxNewCount(userID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	sent, err := s.messages.GetSentCount(userID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	system, err := s.messages.GetSystemCount(userID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	systemNew, err := s.messages.GetSystemNewCount(userID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &APIMessageSummary{
@@ -694,7 +570,7 @@ func wrapFieldViolations(fv []*errdetails.BadRequest_FieldViolation) error {
 	}
 	st, err := st.WithDetails(br)
 	if err != nil {
-		return status.Errorf(codes.Internal, err.Error())
+		return status.Error(codes.Internal, err.Error())
 	}
 
 	return st.Err()

@@ -1,19 +1,28 @@
-FROM golang:1.17-alpine as builder
+FROM ubuntu:focal as builder
 
-RUN apk update && apk add --no-cache gcc git ca-certificates imagemagick imagemagick-dev libc-dev xmlstarlet && update-ca-certificates
+ENV DEBIAN_FRONTEND=non-interactive \
+    PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
+    GOPATH=$HOME/go
 
-ENV USER=appuser
-ENV UID=10001
+RUN apt-get update -qqy && \
+    apt-get dist-upgrade -qqy && \
+    apt-get install -qqy \
+        ca-certificates \
+        gcc \
+        git \
+        pkg-config \
+        gcc \
+        git \
+        imagemagick \
+        libmagickwand-dev \
+        libc-dev \
+        wget \
+    && \
+    update-ca-certificates && \
+    wget -q https://golang.org/dl/go1.17.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-amd64.tar.gz && \
+    rm go1.17.linux-amd64.tar.gz
 
-# See https://stackoverflow.com/a/55757473/12429735RUN
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    "${USER}"
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
 
 # Populate the module cache based on the go.{mod,sum} files.
@@ -25,35 +34,47 @@ COPY . $GOPATH/src/github.com/autowp/goautowp/
 
 RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
 
-RUN cat /etc/ImageMagick-7/policy.xml | \
-        xmlstarlet ed -u "/policymap/policy[@domain='resource'][@name='memory']/@value" -v "2GiB" | \
-        xmlstarlet ed -u "/policymap/policy[@domain='resource'][@name='disk']/@value" -v "10GiB" > /etc/ImageMagick-7/policy2.xml && \
-    cat /etc/ImageMagick-7/policy2.xml > /etc/ImageMagick-7/policy.xml
-
-RUN ls -lah /etc
-
 ############################
-FROM scratch
+FROM ubuntu:focal
 
 LABEL app_name="autowp.goautowp" \
       maintainer="dmitry@pereslegin.ru"
 
-EXPOSE 8080
+ENV DEBIAN_FRONTEND=non-interactive \
+    USER=appuser \
+    UID=10001
 
-USER appuser:appuser
+EXPOSE 8080
 
 ENTRYPOINT ["/app"]
 
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
-COPY --from=builder /etc/fonts /etc/fonts
-COPY --from=builder /etc/ssl /etc/ssl
-COPY --from=builder /etc/ImageMagick-7 /etc/ImageMagick-7
-COPY --from=builder /usr/lib /usr/lib
-COPY --from=builder /usr/share /usr/share
-COPY --from=builder /lib /lib
-COPY --from=builder /app /app
+WORKDIR /
 
+RUN apt-get update -qqy && \
+    apt-get dist-upgrade -qqy && \
+    apt-get install -qqy \
+        ca-certificates \
+        imagemagick \
+        xmlstarlet \
+    && \
+    update-ca-certificates && \
+    cat /etc/ImageMagick-6/policy.xml | \
+            xmlstarlet ed -u "/policymap/policy[@domain='resource'][@name='memory']/@value" -v "2GiB" | \
+            xmlstarlet ed -u "/policymap/policy[@domain='resource'][@name='disk']/@value" -v "10GiB" > /etc/ImageMagick-6/policy2.xml \
+    && \
+    # See https://stackoverflow.com/a/55757473/12429735RUN
+    adduser \
+        --disabled-password \
+        --gecos "" \
+        --home "/nonexistent" \
+        --shell "/sbin/nologin" \
+        --no-create-home \
+        --uid "${UID}" \
+        "${USER}"
+
+USER appuser:appuser
+
+COPY --from=builder /app /app
 COPY auth/migrations /auth/migrations
 COPY migrations /migrations
 COPY traffic-migrations /traffic-migrations

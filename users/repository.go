@@ -23,7 +23,7 @@ import (
 const KeyCloakExternalAccountID = "keycloak"
 
 type GetUsersOptions struct {
-	ID         int
+	ID         int64
 	InContacts int64
 	Order      []string
 	Fields     map[string]bool
@@ -46,7 +46,7 @@ type APIUser struct {
 
 // DBUser DBUser
 type DBUser struct {
-	ID         int
+	ID         int64
 	Name       string
 	Deleted    bool
 	Identity   *string
@@ -479,7 +479,7 @@ func (s *Repository) ensureUserExportedToKeyCloak(userID int64) (string, error) 
 	var deleted bool
 	var userEmail sql.NullString
 	var emailToCheck sql.NullString
-	var login string
+	var login sql.NullString
 	var name string
 	err = s.autowpDB.QueryRow(`
 			SELECT deleted, e_mail, email_to_check, login, name FROM users WHERE id = ?
@@ -504,8 +504,8 @@ func (s *Repository) ensureUserExportedToKeyCloak(userID int64) (string, error) 
 		keyCloakEmail = &emailToCheck.String
 		emailVerified = false
 	}
-	username := login
-	if len(login) <= 0 && keyCloakEmail != nil && len(*keyCloakEmail) > 0 {
+	username := login.String
+	if (!login.Valid || len(login.String) <= 0) && keyCloakEmail != nil && len(*keyCloakEmail) > 0 {
 		username = *keyCloakEmail
 	}
 	f := false

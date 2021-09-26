@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
 	"time"
@@ -15,7 +15,7 @@ import (
 type BanItem struct {
 	IP       net.IP    `json:"ip"`
 	Until    time.Time `json:"up_to"`
-	ByUserID int       `json:"by_user_id"`
+	ByUserID int64     `json:"by_user_id"`
 	Reason   string    `json:"reason"`
 }
 
@@ -55,7 +55,7 @@ func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, r
 	affected := ct.RowsAffected()
 
 	if affected == 1 {
-		log.Printf("%v was banned. Reason: %s\n", ip.String(), reason)
+		logrus.Infof("%v was banned. Reason: %s", ip.String(), reason)
 	}
 
 	return nil
@@ -63,7 +63,7 @@ func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, r
 
 // Remove IP from list of banned
 func (s *BanRepository) Remove(ip net.IP) error {
-	log.Println(ip.String() + ": unban")
+	logrus.Info(ip.String() + ": unban")
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE ip = $1", ip.String())
 
 	return err

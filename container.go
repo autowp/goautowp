@@ -12,10 +12,13 @@ import (
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"log"
 	"net/http"
 	"time"
 )
@@ -48,6 +51,7 @@ type Container struct {
 	events             *Events
 	usersGrpcServer    *UsersGRPCServer
 	imageStorage       *storage.Storage
+	contactsGrpcServer *ContactsGRPCServer
 }
 
 // NewContainer constructor
@@ -70,7 +74,7 @@ func (s *Container) Close() error {
 	if s.autowpDB != nil {
 		err := s.autowpDB.Close()
 		if err != nil {
-			log.Println(err.Error())
+			logrus.Error(err.Error())
 			sentry.CaptureException(err)
 		}
 		s.autowpDB = nil
@@ -92,7 +96,7 @@ func (s *Container) GetAutowpDB() (*sql.DB, error) {
 	start := time.Now()
 	timeout := 60 * time.Second
 
-	log.Println("Waiting for mysql")
+	logrus.Info("Waiting for mysql")
 
 	var db *sql.DB
 	var err error
@@ -104,7 +108,7 @@ func (s *Container) GetAutowpDB() (*sql.DB, error) {
 
 		err = db.Ping()
 		if err == nil {
-			log.Println("Started.")
+			logrus.Info("Started.")
 			break
 		}
 
@@ -112,7 +116,7 @@ func (s *Container) GetAutowpDB() (*sql.DB, error) {
 			return nil, err
 		}
 
-		log.Print(".")
+		logrus.Info(".")
 		time.Sleep(100 * time.Millisecond)
 	}
 
@@ -313,9 +317,29 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 		return nil, err
 	}
 
-	grpcServer := grpc.NewServer()
+	contactsSrv, err := s.GetContactsGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
+	logrusLogger := logrus.New()
+	logrusEntry := logrus.NewEntry(logrusLogger)
+
+	grpc_logrus.ReplaceGrpcLogger(logrusEntry)
+
+	grpcServer := grpc.NewServer(
+		grpc_middleware.WithUnaryServerChain(
+			grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
+			grpc_logrus.UnaryServerInterceptor(logrusEntry),
+		),
+		grpc_middleware.WithStreamServerChain(
+			grpc_ctxtags.StreamServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
+			grpc_logrus.StreamServerInterceptor(logrusEntry),
+		),
+	)
 	RegisterAutowpServer(grpcServer, srv)
 	RegisterUsersServer(grpcServer, usersSrv)
+	RegisterContactsServer(grpcServer, contactsSrv)
 
 	wrappedGrpc := grpcweb.WrapServer(grpcServer)
 
@@ -347,7 +371,7 @@ func (s *Container) GetTraffic() (*Traffic, error) {
 
 		traffic, err := NewTraffic(db, autowpDB, enforcer, ban, userExtractor)
 		if err != nil {
-			log.Println(err.Error())
+			logrus.Error(err.Error())
 			return nil, err
 		}
 
@@ -368,7 +392,7 @@ func (s *Container) GetTrafficDB() (*pgxpool.Pool, error) {
 	start := time.Now()
 	timeout := 60 * time.Second
 
-	log.Println("Waiting for postgres")
+	logrus.Info("Waiting for postgres")
 
 	var pool *pgxpool.Pool
 	var err error
@@ -386,7 +410,7 @@ func (s *Container) GetTrafficDB() (*pgxpool.Pool, error) {
 		err = db.Conn().Ping(context.Background())
 		db.Release()
 		if err == nil {
-			log.Println("Started.")
+			logrus.Info("Started.")
 			break
 		}
 
@@ -394,8 +418,8 @@ func (s *Container) GetTrafficDB() (*pgxpool.Pool, error) {
 			return nil, err
 		}
 
-		log.Println(err)
-		log.Print(".")
+		logrus.Error(err)
+		logrus.Info(".")
 		time.Sleep(100 * time.Millisecond)
 	}
 
@@ -448,17 +472,10 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 
 		enforcer := s.GetEnforcer()
 
-		contactsRepository, err := s.GetContactsRepository()
-		if err != nil {
-			return nil, err
-		}
-
 		userRepository, err := s.GetUserRepository()
 		if err != nil {
 			return nil, err
 		}
-
-		userExtractor := s.GetUserExtractor()
 
 		comments, err := s.GetComments()
 		if err != nil {
@@ -494,9 +511,8 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			db,
 			enforcer,
 			cfg.Auth.OAuth.Secret,
-			contactsRepository,
 			userRepository,
-			userExtractor,
+			s.GetUserExtractor(),
 			comments,
 			traffic,
 			ipExtractor,
@@ -550,10 +566,42 @@ func (s *Container) GetUsersGRPCServer() (*UsersGRPCServer, error) {
 			cfg.Languages,
 			cfg.Captcha,
 			pr,
+			s.GetUserExtractor(),
 		)
 	}
 
 	return s.usersGrpcServer, nil
+}
+
+func (s *Container) GetContactsGRPCServer() (*ContactsGRPCServer, error) {
+	if s.contactsGrpcServer == nil {
+		cfg := s.GetConfig()
+
+		db, err := s.GetAutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		contactsRepository, err := s.GetContactsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		userRepository, err := s.GetUserRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.contactsGrpcServer = NewContactsGRPCServer(
+			cfg.Auth.OAuth.Secret,
+			db,
+			contactsRepository,
+			userRepository,
+			s.GetUserExtractor(),
+		)
+	}
+
+	return s.contactsGrpcServer, nil
 }
 
 func (s *Container) GetForums() (*Forums, error) {

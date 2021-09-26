@@ -3,7 +3,7 @@ package sampler
 import (
 	"fmt"
 	"github.com/autowp/goautowp/config"
-	"gopkg.in/gographics/imagick.v3/imagick"
+	"gopkg.in/gographics/imagick.v2/imagick"
 	"math"
 )
 

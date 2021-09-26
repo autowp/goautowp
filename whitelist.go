@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
 )
@@ -50,7 +50,7 @@ func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
 
 	for _, host := range hosts {
 
-		log.Print(host + " ")
+		logrus.Info(host + " ")
 
 		if host == msnHost {
 			return true, "msnbot autodetect"

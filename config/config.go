@@ -2,8 +2,8 @@ package config
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"log"
 )
 
 // MigrationsConfig MigrationsConfig
@@ -147,18 +147,18 @@ func LoadConfig(path string) Config {
 // ValidateConfig ValidateConfig
 func ValidateConfig(config Config) {
 	if config.DuplicateFinder.RabbitMQ == "" {
-		log.Fatalln("Address not provided")
+		logrus.Error("Address not provided")
 	}
 
 	if config.DuplicateFinder.Queue == "" {
-		log.Fatalln("DuplicateFinderQueue not provided")
+		logrus.Error("DuplicateFinderQueue not provided")
 	}
 
 	if config.RabbitMQ == "" {
-		log.Fatalln("Address not provided")
+		logrus.Error("Address not provided")
 	}
 
 	if config.MonitoringQueue == "" {
-		log.Fatalln("MonitoringQueue not provided")
+		logrus.Error("MonitoringQueue not provided")
 	}
 }

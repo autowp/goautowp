@@ -3,7 +3,7 @@ package sampler
 import (
 	"github.com/autowp/goautowp/config"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/gographics/imagick.v3/imagick"
+	"gopkg.in/gographics/imagick.v2/imagick"
 	"testing"
 )
 
@@ -704,4 +704,26 @@ func TestHighest(t *testing.T) {
 	require.EqualValues(t, mw.GetImageWidth(), 101)
 	require.EqualValues(t, mw.GetImageHeight(), 101)
 	mw.Clear()
+}
+
+func TestPngAvatar(t *testing.T) {
+	sampler := NewSampler()
+
+	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+	// height less
+	err := mw.ReadImage("./_files/test.png")
+	require.NoError(t, err)
+	defer mw.Clear()
+
+	format := NewFormat(config.ImageStorageSamplerFormatConfig{
+		Width:      70,
+		Height:     70,
+		Background: "transparent",
+		Strip:      true,
+	})
+	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
+	require.NoError(t, err)
+	require.EqualValues(t, mw.GetImageWidth(), 70)
+	require.EqualValues(t, mw.GetImageHeight(), 70)
 }

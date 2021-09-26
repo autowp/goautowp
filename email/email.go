@@ -2,8 +2,8 @@ package email
 
 import (
 	"github.com/autowp/goautowp/config"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/gomail.v2"
-	"log"
 	"strings"
 )
 
@@ -34,7 +34,7 @@ func (s *SmtpSender) Send(from string, to []string, subject, body, replyTo strin
 }
 
 func (s *MockSender) Send(from string, to []string, subject, body, _ string) error {
-	log.Printf("Subject: %s\nFrom: %s\nTo: %s\n%s", subject, from, strings.Join(to, ", "), body)
+	logrus.Debug("Subject: %s\nFrom: %s\nTo: %s\n%s", subject, from, strings.Join(to, ", "), body)
 	s.Body = body
 	return nil
 }

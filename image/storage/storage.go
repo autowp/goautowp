@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/autowp/goautowp/config"
 	"github.com/aws/aws-sdk-go/private/protocol/rest"
+	"github.com/sirupsen/logrus"
 	"image"
 	"io"
 	"math"
@@ -23,7 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/go-sql-driver/mysql"
-	"gopkg.in/gographics/imagick.v3/imagick"
+	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
 import _ "image/png"
@@ -109,6 +110,7 @@ func NewStorage(db *sql.DB, config config.ImageStorageConfig) (*Storage, error) 
 }
 
 func (s *Storage) GetImage(id int) (*Image, error) {
+	logrus.Debugf("GetImage %d", id)
 	var r Image
 	err := s.db.QueryRow(`
 		SELECT id, width, height, filesize, filepath, dir
@@ -149,12 +151,23 @@ func (s *Storage) populateSrc(r *Image) error {
 		Key:    &r.filepath,
 	})
 	rest.Build(req)
-	r.src = req.HTTPRequest.URL.String()
+
+	url := req.HTTPRequest.URL
+
+	if len(s.config.SrcOverride.Host) > 0 {
+		url.Host = s.config.SrcOverride.Host
+	}
+	if len(s.config.SrcOverride.Scheme) > 0 {
+		url.Scheme = s.config.SrcOverride.Scheme
+	}
+
+	r.src = url.String()
 
 	return nil
 }
 
 func (s *Storage) GetFormattedImage(id int, formatName string) (*Image, error) {
+	logrus.Debugf("GetFormattedImage %d, %s", id, formatName)
 	var r Image
 	err := s.db.QueryRow(`
 		SELECT image.id, image.width, image.height, image.filesize, image.filepath, image.dir
@@ -228,6 +241,7 @@ func fileNameWithoutExtension(fileName string) string {
 }
 
 func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
+	logrus.Debugf("doFormatImage %d, %s", imageId, formatName)
 	// find source image
 	row := s.db.QueryRow(`
 		SELECT id, width, height, filepath, dir, crop_left, crop_top, crop_width, crop_height
@@ -294,6 +308,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 		}
 
 		// wait until done
+		logrus.Debug("Wait until image processing done")
 		done := false
 		var fiRow formattedImageRow
 
@@ -350,6 +365,8 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 		Height: iRow.CropHeight,
 	}
 
+	b := mw.GetImagesBlob()
+	fmt.Printf("BLOB IS %v\n", len(b))
 	mw, err = s.sampler.ConvertImage(mw, crop, *format)
 	if err != nil {
 		return 0, err
@@ -374,6 +391,8 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 	if formatExt == "" {
 		extension = strings.TrimLeft(filepath.Ext(newPath), ".")
 	}
+	b2 := mw.GetImagesBlob()
+	fmt.Printf("BLOB2 IS %v\n", len(b2))
 	formattedImageId, err = s.addImageFromImagick(
 		mw,
 		s.formattedImageDirName,

@@ -32,6 +32,10 @@ type ImageStorageConfig struct {
 		} `mapstructure:"credentials"`
 		UsePathStyleEndpoint bool `mapstructure:"use_path_style_endpoint"`
 	} `mapstructure:"s3"`
+	SrcOverride struct {
+		Host   string `mapstructure:"host"`
+		Scheme string `mapstructure:"scheme"`
+	} `mapstructure:"src-override"`
 }
 
 type ImageStorageSamplerFormatConfig struct {

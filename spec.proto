@@ -13,16 +13,12 @@ service Autowp {
   rpc AclEnforce(AclEnforceRequest) returns (AclEnforceResult) {}
   rpc AddToTrafficBlacklist(AddToTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
   rpc AddToTrafficWhitelist(AddToTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
-  rpc CreateContact(CreateContactRequest) returns (google.protobuf.Empty) {}
   rpc CreateFeedback(APICreateFeedbackRequest) returns (google.protobuf.Empty) {}
-  rpc DeleteContact(DeleteContactRequest) returns (google.protobuf.Empty) {}
   rpc DeleteFromTrafficBlacklist(DeleteFromTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
   rpc DeleteFromTrafficWhitelist(DeleteFromTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
   rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
   rpc GetBrandVehicleTypes(GetBrandVehicleTypesRequest) returns (BrandVehicleTypeItems) {}
   rpc GetCommentVotes(GetCommentVotesRequest) returns (CommentVoteItems) {}
-  rpc GetContact(GetContactRequest) returns (Contact) {}
-  rpc GetContacts(GetContactsRequest) returns (ContactItems) {}
   rpc GetForumsUserSummary(google.protobuf.Empty) returns (APIForumsUserSummary) {}
   rpc GetIP(APIGetIPRequest) returns (APIIP) {}
   rpc GetMessagesNewCount(google.protobuf.Empty) returns (APIMessageNewCount) {}
@@ -36,10 +32,18 @@ service Autowp {
   rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
 }
 
+service Contacts {
+  rpc CreateContact(CreateContactRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteContact(DeleteContactRequest) returns (google.protobuf.Empty) {}
+  rpc GetContact(GetContactRequest) returns (Contact) {}
+  rpc GetContacts(GetContactsRequest) returns (ContactItems) {}
+}
+
 service Users {
   rpc CreateUser(APICreateUserRequest) returns (google.protobuf.Empty) {}
   rpc UpdateUser(APIUpdateUserRequest) returns (google.protobuf.Empty) {}
   rpc DeleteUser(APIDeleteUserRequest) returns (google.protobuf.Empty) {}
+  rpc GetUser(APIGetUserRequest) returns (APIUser) {}
   rpc EmailChange(APIEmailChangeRequest) returns (google.protobuf.Empty) {}
   rpc EmailChangeConfirm(APIEmailChangeConfirmRequest) returns (google.protobuf.Empty) {}
   rpc PasswordRecovery(APIPasswordRecoveryRequest) returns (google.protobuf.Empty) {}
@@ -139,15 +143,15 @@ message BrandVehicleType {
 }
 
 message CreateContactRequest {
-  int32 user_id = 1;
+  int64 user_id = 1;
 }
 
 message DeleteContactRequest {
-  int32 user_id = 1;
+  int64 user_id = 1;
 }
 
 message GetContactRequest {
-  int32 user_id = 1;
+  int64 user_id = 1;
 }
 
 message APIImage {
@@ -158,8 +162,8 @@ message APIImage {
   int32 filesize = 5;
 }
 
-message User {
-  int32 id = 1;
+message APIUser {
+  int64 id = 1;
   string name = 2;
   bool deleted = 3;
   bool long_away = 4;
@@ -172,8 +176,8 @@ message User {
 }
 
 message Contact {
-  int32 contact_user_id = 1;
-  User user = 2;
+  int64 contact_user_id = 1;
+  APIUser user = 2;
 }
 
 message ContactItems {
@@ -199,13 +203,13 @@ message CommentVote {
     NEGATIVE = 1;
   }
   VoteValue value = 1;
-  User user = 2;
+  APIUser user = 2;
 }
 
 message APIBanItem {
   google.protobuf.Timestamp until = 1;
-  int32 by_user_id = 2;
-  User by_user = 3;
+  int64 by_user_id = 2;
+  APIUser by_user = 3;
   string reason = 4;
 }
 
@@ -338,4 +342,9 @@ message APIDeleteUserRequest {
 message APIUpdateUserRequest {
   int64 user_id = 1;
   string name = 2;
+}
+
+message APIGetUserRequest {
+  int64 user_id = 1;
+  repeated string fields = 2;
 }

@@ -34,7 +34,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	}
 }
 
-func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*User, error) {
+func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*APIUser, error) {
 	longAway := true
 	if row.LastOnline != nil {
 		date := time.Now().AddDate(0, -6, 0)
@@ -55,8 +55,8 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*Use
 		identity = *row.Identity
 	}
 
-	user := User{
-		Id:       int32(row.ID),
+	user := APIUser{
+		Id:       row.ID,
 		Name:     row.Name,
 		Deleted:  row.Deleted,
 		LongAway: longAway,
