@@ -33,7 +33,7 @@ type Application struct {
 }
 
 // NewApplication constructor
-func NewApplication(cfg config.Config) (*Application, error) {
+func NewApplication(cfg config.Config) *Application {
 
 	s := &Application{
 		container: NewContainer(cfg),
@@ -41,7 +41,7 @@ func NewApplication(cfg config.Config) (*Application, error) {
 
 	gin.SetMode(cfg.GinMode)
 
-	return s, nil
+	return s
 }
 
 func (s *Application) MigrateAutowp() error {

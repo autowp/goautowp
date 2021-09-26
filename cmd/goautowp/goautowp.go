@@ -174,7 +174,7 @@ func mainReturnWithCode() int {
 		sentry.Flush(time.Second * 5)
 	}()
 
-	app, err = goautowp.NewApplication(cfg)
+	app = goautowp.NewApplication(cfg)
 	defer util.Close(app)
 
 	var opts struct {
