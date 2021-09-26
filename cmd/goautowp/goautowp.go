@@ -139,7 +139,7 @@ func captureOsInterrupt() chan bool {
 		c := make(chan os.Signal, 2)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 		for sig := range c {
-			logrus.Info("captured %v, stopping and exiting.", sig)
+			logrus.Infof("captured %v, stopping and exiting.", sig)
 
 			quit <- true
 			close(quit)

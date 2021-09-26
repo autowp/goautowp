@@ -34,7 +34,7 @@ func (s *SmtpSender) Send(from string, to []string, subject, body, replyTo strin
 }
 
 func (s *MockSender) Send(from string, to []string, subject, body, _ string) error {
-	logrus.Debug("Subject: %s\nFrom: %s\nTo: %s\n%s", subject, from, strings.Join(to, ", "), body)
+	logrus.Debugf("Subject: %s\nFrom: %s\nTo: %s\n%s", subject, from, strings.Join(to, ", "), body)
 	s.Body = body
 	return nil
 }
