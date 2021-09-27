@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/autowp/goautowp/auth"
 	"github.com/autowp/goautowp/config"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -33,15 +33,15 @@ type Application struct {
 }
 
 // NewApplication constructor
-func NewApplication(config Config) (*Application, error) {
+func NewApplication(cfg config.Config) *Application {
 
 	s := &Application{
-		container: NewContainer(config),
+		container: NewContainer(cfg),
 	}
 
-	gin.SetMode(config.GinMode)
+	gin.SetMode(cfg.GinMode)
 
-	return s, nil
+	return s
 }
 
 func (s *Application) MigrateAutowp() error {
@@ -81,19 +81,19 @@ func (s *Application) ServePublic(quit chan bool) error {
 		<-quit
 		err := httpServer.Shutdown(context.Background())
 		if err != nil {
-			log.Println(err.Error())
+			logrus.Error(err.Error())
 		}
 	}()
 
-	log.Println("public HTTP listener started")
+	logrus.Println("public HTTP listener started")
 
 	err = httpServer.ListenAndServe()
 	if err != nil {
 		// cannot panic, because this probably is an intentional close
-		log.Printf("Httpserver: ListenAndServe() error: %s", err)
+		logrus.Printf("Httpserver: ListenAndServe() error: %s", err)
 	}
 
-	log.Println("public HTTP listener stopped")
+	logrus.Println("public HTTP listener stopped")
 
 	return nil
 }
@@ -107,28 +107,28 @@ func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 
 	cfg := s.container.GetConfig()
 
-	log.Println("DuplicateFinder listener started")
+	logrus.Println("DuplicateFinder listener started")
 	err = df.ListenAMQP(cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		sentry.CaptureException(err)
 		return err
 	}
-	log.Println("DuplicateFinder listener stopped")
+	logrus.Println("DuplicateFinder listener stopped")
 
 	return nil
 }
 
 // Close Destructor
 func (s *Application) Close() error {
-	log.Println("Closing service")
+	logrus.Println("Closing service")
 
 	err := s.container.Close()
 	if err != nil {
 		return err
 	}
 
-	log.Println("Service closed")
+	logrus.Println("Service closed")
 	return nil
 }
 
@@ -172,14 +172,12 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, oauthSecret stri
 		if ve, ok := err.(*jwt.ValidationError); ok {
 			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
 				return 0, "", fmt.Errorf("that's not even a token")
-			} else if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-				return 0, "", fmt.Errorf("timing is everything")
-			} else {
-				return 0, "", err
 			}
-		} else {
-			return 0, "", err
+			if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
+				return 0, "", fmt.Errorf("timing is everything")
+			}
 		}
+		return 0, "", err
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
@@ -208,7 +206,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, oauthSecret stri
 }
 
 func applyMigrations(config config.MigrationsConfig) error {
-	log.Println("Apply migrations")
+	logrus.Info("Apply migrations")
 
 	dir := config.Dir
 	if dir == "" {
@@ -229,7 +227,7 @@ func applyMigrations(config config.MigrationsConfig) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Migrations applied")
+	logrus.Info("Migrations applied")
 
 	return nil
 }
@@ -292,17 +290,17 @@ func (s *Application) ServePrivate(quit chan bool) error {
 		<-quit
 		err := httpServer.Shutdown(context.Background())
 		if err != nil {
-			log.Println(err.Error())
+			logrus.Error(err.Error())
 		}
 	}()
 
-	log.Println("HTTP server started")
+	logrus.Info("HTTP server started")
 	err = httpServer.ListenAndServe()
 	if err != nil {
 		// cannot panic, because this probably is an intentional close
-		log.Printf("Httpserver: ListenAndServe() error: %s", err)
+		logrus.Infof("Httpserver: ListenAndServe() error: %s", err)
 	}
-	log.Println("HTTP server stopped")
+	logrus.Info("HTTP server stopped")
 
 	return nil
 }
@@ -315,21 +313,21 @@ func (s *Application) SchedulerHourly() error {
 
 	deleted, err := traffic.Monitoring.GC()
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
-	log.Printf("`%v` items of monitoring deleted\n", deleted)
+	logrus.Infof("`%v` items of monitoring deleted", deleted)
 
 	deleted, err = traffic.Ban.GC()
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
-	log.Printf("`%v` items of ban deleted\n", deleted)
+	logrus.Infof("`%v` items of ban deleted", deleted)
 
 	err = traffic.AutoWhitelist()
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
 
@@ -344,13 +342,13 @@ func (s *Application) SchedulerDaily() error {
 
 	err = users.UserRenamesGC()
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
 
 	err = users.UpdateSpecsVolumes()
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
 
@@ -360,10 +358,10 @@ func (s *Application) SchedulerDaily() error {
 	}
 	count, err := pr.GC()
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
-	log.Printf("`%d` password remind rows was deleted\n", count)
+	logrus.Infof("`%d` password remind rows was deleted", count)
 
 	return nil
 }
@@ -376,16 +374,16 @@ func (s *Application) SchedulerMidnight() error {
 
 	err = users.RestoreVotes()
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
 
 	affected, err := users.UpdateVotesLimits()
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
-	fmt.Printf("Updated %d users vote limits\n", affected)
+	logrus.Infof("Updated %d users vote limits", affected)
 
 	return nil
 }
@@ -398,14 +396,14 @@ func (s *Application) Autoban(quit chan bool) error {
 	}
 
 	banTicker := time.NewTicker(time.Minute)
-	log.Println("AutoBan scheduler started")
+	logrus.Info("AutoBan scheduler started")
 loop:
 	for {
 		select {
 		case <-banTicker.C:
 			err := traffic.AutoBan()
 			if err != nil {
-				log.Println(err.Error())
+				logrus.Error(err.Error())
 			}
 		case <-quit:
 			banTicker.Stop()
@@ -413,7 +411,7 @@ loop:
 		}
 	}
 
-	log.Println("AutoBan scheduler stopped")
+	logrus.Info("AutoBan scheduler stopped")
 
 	return nil
 }
@@ -426,13 +424,39 @@ func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
 
 	cfg := s.container.GetConfig()
 
-	log.Println("Monitoring listener started")
+	logrus.Info("Monitoring listener started")
 	err = traffic.Monitoring.Listen(cfg.RabbitMQ, cfg.MonitoringQueue, quit)
 	if err != nil {
-		log.Println(err.Error())
+		logrus.Error(err.Error())
 		return err
 	}
-	log.Println("Monitoring listener stopped")
+	logrus.Info("Monitoring listener stopped")
 
 	return nil
+}
+
+func (s *Application) ImageStorageGetImage(imageID int) (*APIImage, error) {
+	is, err := s.container.GetImageStorage()
+	if err != nil {
+		return nil, err
+	}
+	img, err := is.GetImage(imageID)
+	if err != nil {
+		return nil, err
+	}
+
+	return ImageToAPIImage(img), nil
+}
+
+func (s *Application) ImageStorageGetFormattedImage(imageID int, format string) (*APIImage, error) {
+	is, err := s.container.GetImageStorage()
+	if err != nil {
+		return nil, err
+	}
+	img, err := is.GetFormattedImage(imageID, format)
+	if err != nil {
+		return nil, err
+	}
+
+	return ImageToAPIImage(img), nil
 }

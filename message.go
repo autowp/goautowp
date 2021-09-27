@@ -2,7 +2,6 @@ package goautowp
 
 import (
 	"database/sql"
-	"github.com/autowp/goautowp/util"
 )
 
 // Messages Main Object
@@ -17,22 +16,10 @@ func NewMessages(db *sql.DB) *Messages {
 }
 
 func (s *Messages) fetchCount(query string, args ...interface{}) (int, error) {
-	rows, err := s.db.Query(query, args...)
+	result := 0
+	err := s.db.QueryRow(query, args...).Scan(&result)
 	if err != nil {
 		return 0, err
-	}
-	if err == sql.ErrNoRows {
-		return 0, nil
-	}
-
-	defer util.Close(rows)
-
-	result := 0
-	if rows.Next() {
-		err = rows.Scan(&result)
-		if err != nil {
-			return 0, err
-		}
 	}
 
 	return result, nil

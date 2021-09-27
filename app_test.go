@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"github.com/autowp/goautowp/config"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -8,9 +9,9 @@ import (
 
 func TestTrafficMigrations(t *testing.T) {
 
-	config := LoadConfig()
+	cfg := config.LoadConfig(".")
 
-	err := applyMigrations(config.TrafficMigrations)
+	err := applyMigrations(cfg.TrafficMigrations)
 	if err != migrate.ErrNoChange {
 		require.NoError(t, err)
 	}
@@ -18,9 +19,9 @@ func TestTrafficMigrations(t *testing.T) {
 
 func TestAutowpMigrations(t *testing.T) {
 
-	config := LoadConfig()
+	cfg := config.LoadConfig(".")
 
-	err := applyMigrations(config.AutowpMigrations)
+	err := applyMigrations(cfg.AutowpMigrations)
 	if err != migrate.ErrNoChange {
 		require.NoError(t, err)
 	}

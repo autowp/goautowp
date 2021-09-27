@@ -7,8 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -44,20 +44,19 @@ import (
 
 // Service Main Object
 type Service struct {
-	config      Config
+	config      config.AuthConfig
 	db          *sql.DB
 	usersDB     *sql.DB
 	oauthServer *server.Server
 	Loc         *time.Location
 	httpServer  *http.Server
 	router      *gin.Engine
-	logger      *log.Logger
 	stateMap    *StateMap
 	hosts       map[string]config.LanguageConfig
 }
 
 // NewService constructor
-func NewService(config Config, usersDB *sql.DB, hosts map[string]config.LanguageConfig, userRepository *users.Repository) (*Service, error) {
+func NewService(config config.AuthConfig, usersDB *sql.DB, hosts map[string]config.LanguageConfig, userRepository *users.Repository) (*Service, error) {
 
 	var err error
 
@@ -68,7 +67,7 @@ func NewService(config Config, usersDB *sql.DB, hosts map[string]config.Language
 
 	db, err := connectDb(config.OAuth.Driver, config.OAuth.DSN)
 	if err != nil {
-		fmt.Println(err)
+		logrus.Error(err)
 		sentry.CaptureException(err)
 		return nil, err
 	}
@@ -261,7 +260,7 @@ func connectDb(driverName string, dsn string) (*sql.DB, error) {
 	start := time.Now()
 	timeout := 60 * time.Second
 
-	log.Println("Waiting for database via " + driverName + ": " + dsn)
+	logrus.Infof("Waiting for database via " + driverName + ": " + dsn)
 
 	var db *sql.DB
 	var err error
@@ -273,7 +272,7 @@ func connectDb(driverName string, dsn string) (*sql.DB, error) {
 
 		err = db.Ping()
 		if err == nil {
-			log.Println("Started.")
+			logrus.Info("Started.")
 			break
 		}
 
@@ -281,15 +280,15 @@ func connectDb(driverName string, dsn string) (*sql.DB, error) {
 			return nil, err
 		}
 
-		fmt.Print(".")
-		fmt.Println(err)
+		logrus.Info(".")
+		logrus.Error(err)
 		time.Sleep(100 * time.Millisecond)
 	}
 
 	return db, nil
 }
 
-func initOAuthServer(db *sql.DB, userRepository *users.Repository, cfg OAuthConfig) *server.Server {
+func initOAuthServer(db *sql.DB, userRepository *users.Repository, cfg config.OAuthConfig) *server.Server {
 	manager := manage.NewManager()
 	manager.SetPasswordTokenCfg(&manage.Config{
 		AccessTokenExp:    time.Duration(cfg.AccessTokenExpiresIn) * time.Minute,
@@ -326,12 +325,12 @@ func initOAuthServer(db *sql.DB, userRepository *users.Repository, cfg OAuthConf
 	})
 
 	srv.SetInternalErrorHandler(func(err error) (re *errors.Response) {
-		log.Println("Internal Error:", err.Error())
+		logrus.Errorf("Internal Error: %v ", err.Error())
 		return
 	})
 
 	srv.SetResponseErrorHandler(func(re *errors.Response) {
-		log.Println("Response Error:", re.Error.Error())
+		logrus.Errorf("Response Error: %v", re.Error.Error())
 	})
 
 	return srv
@@ -640,15 +639,15 @@ func (s *Service) ListenHTTP() {
 
 	s.httpServer = &http.Server{Addr: s.config.Listen, Handler: s.router}
 
-	log.Println("HTTP listener started")
+	logrus.Info("HTTP listener started")
 
 	err := s.httpServer.ListenAndServe()
 	if err != nil {
 		// cannot panic, because this probably is an intentional close
-		log.Printf("Httpserver: ListenAndServe() error: %s", err)
+		logrus.Errorf("Httpserver: ListenAndServe() error: %s", err)
 	}
 
-	log.Println("HTTP listener stopped")
+	logrus.Info("HTTP listener stopped")
 }
 
 // Close Destructor
@@ -663,14 +662,14 @@ func (s *Service) Close() {
 	if s.db != nil {
 		err := s.db.Close()
 		if err != nil {
-			s.logger.Println(err)
+			logrus.Error(err)
 		}
 	}
 
 	if s.usersDB != nil {
 		err := s.usersDB.Close()
 		if err != nil {
-			s.logger.Println(err)
+			logrus.Error(err)
 		}
 	}
 }

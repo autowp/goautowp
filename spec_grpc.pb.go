@@ -22,16 +22,12 @@ type AutowpClient interface {
 	AclEnforce(ctx context.Context, in *AclEnforceRequest, opts ...grpc.CallOption) (*AclEnforceResult, error)
 	AddToTrafficBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AddToTrafficWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	CreateContact(ctx context.Context, in *CreateContactRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DeleteContact(ctx context.Context, in *DeleteContactRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteFromTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error)
 	GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error)
 	GetCommentVotes(ctx context.Context, in *GetCommentVotesRequest, opts ...grpc.CallOption) (*CommentVoteItems, error)
-	GetContact(ctx context.Context, in *GetContactRequest, opts ...grpc.CallOption) (*Contact, error)
-	GetContacts(ctx context.Context, in *GetContactsRequest, opts ...grpc.CallOption) (*ContactItems, error)
 	GetForumsUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error)
 	GetIP(ctx context.Context, in *APIGetIPRequest, opts ...grpc.CallOption) (*APIIP, error)
 	GetMessagesNewCount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageNewCount, error)
@@ -80,27 +76,9 @@ func (c *autowpClient) AddToTrafficWhitelist(ctx context.Context, in *AddToTraff
 	return out, nil
 }
 
-func (c *autowpClient) CreateContact(ctx context.Context, in *CreateContactRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/CreateContact", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *autowpClient) CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/CreateFeedback", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) DeleteContact(ctx context.Context, in *DeleteContactRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/DeleteContact", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -146,24 +124,6 @@ func (c *autowpClient) GetBrandVehicleTypes(ctx context.Context, in *GetBrandVeh
 func (c *autowpClient) GetCommentVotes(ctx context.Context, in *GetCommentVotesRequest, opts ...grpc.CallOption) (*CommentVoteItems, error) {
 	out := new(CommentVoteItems)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetCommentVotes", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) GetContact(ctx context.Context, in *GetContactRequest, opts ...grpc.CallOption) (*Contact, error) {
-	out := new(Contact)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetContact", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) GetContacts(ctx context.Context, in *GetContactsRequest, opts ...grpc.CallOption) (*ContactItems, error) {
-	out := new(ContactItems)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetContacts", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -276,16 +236,12 @@ type AutowpServer interface {
 	AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error)
 	AddToTrafficBlacklist(context.Context, *AddToTrafficBlacklistRequest) (*emptypb.Empty, error)
 	AddToTrafficWhitelist(context.Context, *AddToTrafficWhitelistRequest) (*emptypb.Empty, error)
-	CreateContact(context.Context, *CreateContactRequest) (*emptypb.Empty, error)
 	CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error)
-	DeleteContact(context.Context, *DeleteContactRequest) (*emptypb.Empty, error)
 	DeleteFromTrafficBlacklist(context.Context, *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error)
 	DeleteFromTrafficWhitelist(context.Context, *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error)
 	GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error)
 	GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error)
 	GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error)
-	GetContact(context.Context, *GetContactRequest) (*Contact, error)
-	GetContacts(context.Context, *GetContactsRequest) (*ContactItems, error)
 	GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error)
 	GetIP(context.Context, *APIGetIPRequest) (*APIIP, error)
 	GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error)
@@ -313,14 +269,8 @@ func (UnimplementedAutowpServer) AddToTrafficBlacklist(context.Context, *AddToTr
 func (UnimplementedAutowpServer) AddToTrafficWhitelist(context.Context, *AddToTrafficWhitelistRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddToTrafficWhitelist not implemented")
 }
-func (UnimplementedAutowpServer) CreateContact(context.Context, *CreateContactRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateContact not implemented")
-}
 func (UnimplementedAutowpServer) CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFeedback not implemented")
-}
-func (UnimplementedAutowpServer) DeleteContact(context.Context, *DeleteContactRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteContact not implemented")
 }
 func (UnimplementedAutowpServer) DeleteFromTrafficBlacklist(context.Context, *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFromTrafficBlacklist not implemented")
@@ -336,12 +286,6 @@ func (UnimplementedAutowpServer) GetBrandVehicleTypes(context.Context, *GetBrand
 }
 func (UnimplementedAutowpServer) GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCommentVotes not implemented")
-}
-func (UnimplementedAutowpServer) GetContact(context.Context, *GetContactRequest) (*Contact, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetContact not implemented")
-}
-func (UnimplementedAutowpServer) GetContacts(context.Context, *GetContactsRequest) (*ContactItems, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetContacts not implemented")
 }
 func (UnimplementedAutowpServer) GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetForumsUserSummary not implemented")
@@ -443,24 +387,6 @@ func _Autowp_AddToTrafficWhitelist_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autowp_CreateContact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateContactRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).CreateContact(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/CreateContact",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).CreateContact(ctx, req.(*CreateContactRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Autowp_CreateFeedback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(APICreateFeedbackRequest)
 	if err := dec(in); err != nil {
@@ -475,24 +401,6 @@ func _Autowp_CreateFeedback_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutowpServer).CreateFeedback(ctx, req.(*APICreateFeedbackRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_DeleteContact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteContactRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).DeleteContact(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/DeleteContact",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).DeleteContact(ctx, req.(*DeleteContactRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -583,42 +491,6 @@ func _Autowp_GetCommentVotes_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutowpServer).GetCommentVotes(ctx, req.(*GetCommentVotesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_GetContact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetContactRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).GetContact(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetContact",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetContact(ctx, req.(*GetContactRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_GetContacts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetContactsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).GetContacts(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetContacts",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetContacts(ctx, req.(*GetContactsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -841,16 +713,8 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Autowp_AddToTrafficWhitelist_Handler,
 		},
 		{
-			MethodName: "CreateContact",
-			Handler:    _Autowp_CreateContact_Handler,
-		},
-		{
 			MethodName: "CreateFeedback",
 			Handler:    _Autowp_CreateFeedback_Handler,
-		},
-		{
-			MethodName: "DeleteContact",
-			Handler:    _Autowp_DeleteContact_Handler,
 		},
 		{
 			MethodName: "DeleteFromTrafficBlacklist",
@@ -871,14 +735,6 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCommentVotes",
 			Handler:    _Autowp_GetCommentVotes_Handler,
-		},
-		{
-			MethodName: "GetContact",
-			Handler:    _Autowp_GetContact_Handler,
-		},
-		{
-			MethodName: "GetContacts",
-			Handler:    _Autowp_GetContacts_Handler,
 		},
 		{
 			MethodName: "GetForumsUserSummary",
@@ -929,6 +785,200 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 	Metadata: "spec.proto",
 }
 
+// ContactsClient is the client API for Contacts service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ContactsClient interface {
+	CreateContact(ctx context.Context, in *CreateContactRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteContact(ctx context.Context, in *DeleteContactRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetContact(ctx context.Context, in *GetContactRequest, opts ...grpc.CallOption) (*Contact, error)
+	GetContacts(ctx context.Context, in *GetContactsRequest, opts ...grpc.CallOption) (*ContactItems, error)
+}
+
+type contactsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewContactsClient(cc grpc.ClientConnInterface) ContactsClient {
+	return &contactsClient{cc}
+}
+
+func (c *contactsClient) CreateContact(ctx context.Context, in *CreateContactRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Contacts/CreateContact", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contactsClient) DeleteContact(ctx context.Context, in *DeleteContactRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Contacts/DeleteContact", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contactsClient) GetContact(ctx context.Context, in *GetContactRequest, opts ...grpc.CallOption) (*Contact, error) {
+	out := new(Contact)
+	err := c.cc.Invoke(ctx, "/goautowp.Contacts/GetContact", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contactsClient) GetContacts(ctx context.Context, in *GetContactsRequest, opts ...grpc.CallOption) (*ContactItems, error) {
+	out := new(ContactItems)
+	err := c.cc.Invoke(ctx, "/goautowp.Contacts/GetContacts", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ContactsServer is the server API for Contacts service.
+// All implementations must embed UnimplementedContactsServer
+// for forward compatibility
+type ContactsServer interface {
+	CreateContact(context.Context, *CreateContactRequest) (*emptypb.Empty, error)
+	DeleteContact(context.Context, *DeleteContactRequest) (*emptypb.Empty, error)
+	GetContact(context.Context, *GetContactRequest) (*Contact, error)
+	GetContacts(context.Context, *GetContactsRequest) (*ContactItems, error)
+	mustEmbedUnimplementedContactsServer()
+}
+
+// UnimplementedContactsServer must be embedded to have forward compatible implementations.
+type UnimplementedContactsServer struct {
+}
+
+func (UnimplementedContactsServer) CreateContact(context.Context, *CreateContactRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateContact not implemented")
+}
+func (UnimplementedContactsServer) DeleteContact(context.Context, *DeleteContactRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteContact not implemented")
+}
+func (UnimplementedContactsServer) GetContact(context.Context, *GetContactRequest) (*Contact, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetContact not implemented")
+}
+func (UnimplementedContactsServer) GetContacts(context.Context, *GetContactsRequest) (*ContactItems, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetContacts not implemented")
+}
+func (UnimplementedContactsServer) mustEmbedUnimplementedContactsServer() {}
+
+// UnsafeContactsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ContactsServer will
+// result in compilation errors.
+type UnsafeContactsServer interface {
+	mustEmbedUnimplementedContactsServer()
+}
+
+func RegisterContactsServer(s grpc.ServiceRegistrar, srv ContactsServer) {
+	s.RegisterService(&Contacts_ServiceDesc, srv)
+}
+
+func _Contacts_CreateContact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateContactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContactsServer).CreateContact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Contacts/CreateContact",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContactsServer).CreateContact(ctx, req.(*CreateContactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Contacts_DeleteContact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteContactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContactsServer).DeleteContact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Contacts/DeleteContact",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContactsServer).DeleteContact(ctx, req.(*DeleteContactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Contacts_GetContact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetContactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContactsServer).GetContact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Contacts/GetContact",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContactsServer).GetContact(ctx, req.(*GetContactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Contacts_GetContacts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetContactsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContactsServer).GetContacts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Contacts/GetContacts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContactsServer).GetContacts(ctx, req.(*GetContactsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Contacts_ServiceDesc is the grpc.ServiceDesc for Contacts service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Contacts_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Contacts",
+	HandlerType: (*ContactsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateContact",
+			Handler:    _Contacts_CreateContact_Handler,
+		},
+		{
+			MethodName: "DeleteContact",
+			Handler:    _Contacts_DeleteContact_Handler,
+		},
+		{
+			MethodName: "GetContact",
+			Handler:    _Contacts_GetContact_Handler,
+		},
+		{
+			MethodName: "GetContacts",
+			Handler:    _Contacts_GetContacts_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
 // UsersClient is the client API for Users service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
@@ -936,6 +986,7 @@ type UsersClient interface {
 	CreateUser(ctx context.Context, in *APICreateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdateUser(ctx context.Context, in *APIUpdateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetUser(ctx context.Context, in *APIGetUserRequest, opts ...grpc.CallOption) (*APIUser, error)
 	EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -973,6 +1024,15 @@ func (c *usersClient) UpdateUser(ctx context.Context, in *APIUpdateUserRequest, 
 func (c *usersClient) DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/goautowp.Users/DeleteUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) GetUser(ctx context.Context, in *APIGetUserRequest, opts ...grpc.CallOption) (*APIUser, error) {
+	out := new(APIUser)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/GetUser", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1040,6 +1100,7 @@ type UsersServer interface {
 	CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error)
 	UpdateUser(context.Context, *APIUpdateUserRequest) (*emptypb.Empty, error)
 	DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error)
+	GetUser(context.Context, *APIGetUserRequest) (*APIUser, error)
 	EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error)
 	EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error)
 	PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error)
@@ -1061,6 +1122,9 @@ func (UnimplementedUsersServer) UpdateUser(context.Context, *APIUpdateUserReques
 }
 func (UnimplementedUsersServer) DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
+}
+func (UnimplementedUsersServer) GetUser(context.Context, *APIGetUserRequest) (*APIUser, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
 }
 func (UnimplementedUsersServer) EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EmailChange not implemented")
@@ -1143,6 +1207,24 @@ func _Users_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UsersServer).DeleteUser(ctx, req.(*APIDeleteUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).GetUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/GetUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).GetUser(ctx, req.(*APIGetUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1273,6 +1355,10 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteUser",
 			Handler:    _Users_DeleteUser_Handler,
+		},
+		{
+			MethodName: "GetUser",
+			Handler:    _Users_GetUser_Handler,
 		},
 		{
 			MethodName: "EmailChange",

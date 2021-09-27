@@ -2,7 +2,9 @@ package goautowp
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"net/url"
@@ -19,7 +21,20 @@ func NewUserExtractor(container *Container) *UserExtractor {
 	}
 }
 
-func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*User, error) {
+func ImageToAPIImage(i *storage.Image) *APIImage {
+	if i == nil {
+		return nil
+	}
+	return &APIImage{
+		Id:       int32(i.Id()),
+		Width:    int32(i.Width()),
+		Height:   int32(i.Height()),
+		Filesize: int32(i.FileSize()),
+		Src:      i.Src(),
+	}
+}
+
+func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*APIUser, error) {
 	longAway := true
 	if row.LastOnline != nil {
 		date := time.Now().AddDate(0, -6, 0)
@@ -40,8 +55,8 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*Use
 		identity = *row.Identity
 	}
 
-	user := User{
-		Id:       int32(row.ID),
+	user := APIUser{
+		Id:       row.ID,
 		Name:     row.Name,
 		Deleted:  row.Deleted,
 		LongAway: longAway,
@@ -53,12 +68,26 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*Use
 	for field := range fields {
 		switch field {
 		case "avatar":
-			// TODO
+			if row.Img != nil {
+				is, err := s.container.GetImageStorage()
+				if err != nil {
+					return nil, err
+				}
+
+				avatar, err := is.GetFormattedImage(*row.Img, "avatar")
+				if err != nil {
+					return nil, err
+				}
+
+				user.Avatar = ImageToAPIImage(avatar)
+			}
+
 		case "gravatar":
 			if row.EMail != nil {
+				hash := md5.Sum([]byte(*row.EMail))
 				str := fmt.Sprintf(
 					"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
-					md5.Sum([]byte(*row.EMail)),
+					hex.EncodeToString(hash[:]),
 					url.PathEscape("https://www.autowp.ru/_.gif"),
 				)
 				user.Gravatar = str

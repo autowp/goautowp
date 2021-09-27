@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/autowp/goautowp/config"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"testing"
@@ -10,7 +11,7 @@ import (
 )
 
 func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
-	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
 	require.NoError(t, err)
 
 	_, err = srv.GetVehicleTypes(context.Background(), &emptypb.Empty{})
@@ -18,7 +19,7 @@ func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
-	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer "}))
@@ -28,7 +29,7 @@ func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
-	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer abc"}))
@@ -38,7 +39,7 @@ func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
-	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ"}))
@@ -48,24 +49,24 @@ func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
-	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
+	cfg := config.LoadConfig(".")
+
+	srv, err := NewContainer(cfg).GetGRPCServer()
 	require.NoError(t, err)
 
-	config := LoadConfig()
-
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, testUserID, config.Auth.OAuth.Secret)}))
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, testUserID, cfg.Auth.OAuth.Secret)}))
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.Error(t, err)
 }
 
 func TestGetVehicleTypes(t *testing.T) {
-	srv, err := NewContainer(LoadConfig()).GetGRPCServer()
+	cfg := config.LoadConfig(".")
+
+	srv, err := NewContainer(cfg).GetGRPCServer()
 	require.NoError(t, err)
 
-	config := LoadConfig()
-
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, config.Auth.OAuth.Secret)}))
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, cfg.Auth.OAuth.Secret)}))
 
 	result, err := srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.NoError(t, err)

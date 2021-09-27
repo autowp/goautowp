@@ -2,11 +2,10 @@ package goautowp
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/casbin/casbin"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 	"time"
@@ -76,13 +75,13 @@ func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer,
 
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
-		log.Println(err)
+		logrus.Error(err)
 		return nil, err
 	}
 
 	whitelist, err := NewWhitelist(pool)
 	if err != nil {
-		log.Println(err)
+		logrus.Error(err)
 		return nil, err
 	}
 
@@ -114,7 +113,7 @@ func (s *Traffic) AutoBanByProfile(profile AutobanProfile) error {
 			continue
 		}
 
-		log.Printf("%s %v\n", profile.Reason, ip)
+		logrus.Infof("%s %v", profile.Reason, ip)
 
 		if err := s.Ban.Add(ip, profile.Time, banByUserID, profile.Reason); err != nil {
 			return err
@@ -142,8 +141,8 @@ func (s *Traffic) AutoWhitelist() error {
 	}
 
 	for _, item := range items {
-		log.Printf("Check IP %v\n", item.IP)
-		if err := s.AutoWhitelistIP(item.IP); err != nil {
+		logrus.Infof("Check IP %v", item.IP)
+		if err = s.AutoWhitelistIP(item.IP); err != nil {
 			return err
 		}
 	}
@@ -154,8 +153,6 @@ func (s *Traffic) AutoWhitelist() error {
 func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
 	ipText := ip.String()
 
-	fmt.Print(ipText + ": ")
-
 	inWhitelist, err := s.Whitelist.Exists(ip)
 	if err != nil {
 		return err
@@ -164,27 +161,26 @@ func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
 	match, desc := s.Whitelist.MatchAuto(ip)
 
 	if !match {
-		fmt.Println("")
 		return nil
 	}
 
 	if inWhitelist {
-		fmt.Println("whitelist, skip")
+		logrus.Info(ipText + ": already in whitelist, skip")
 	} else {
-		if err := s.Whitelist.Add(ip, desc); err != nil {
+		if err = s.Whitelist.Add(ip, desc); err != nil {
 			return err
 		}
 	}
 
-	if err := s.Ban.Remove(ip); err != nil {
+	if err = s.Ban.Remove(ip); err != nil {
 		return err
 	}
 
-	if err := s.Monitoring.ClearIP(ip); err != nil {
+	if err = s.Monitoring.ClearIP(ip); err != nil {
 		return err
 	}
 
-	fmt.Println(" whitelisted")
+	logrus.Info(ipText + ": whitelisted")
 
 	return nil
 }
@@ -199,7 +195,7 @@ func (s *Traffic) SetupPrivateRouter(r *gin.Engine) {
 
 		ban, err := s.Ban.Get(ip)
 		if err != nil {
-			log.Println(err.Error())
+			logrus.Error(err.Error())
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}

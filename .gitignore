@@ -6,3 +6,6 @@
 /images/*
 /.idea
 /minio
+cov.out
+coverage.xml
+/app

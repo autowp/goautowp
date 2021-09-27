@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/autowp/goautowp/config"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 	"net"
@@ -10,9 +11,9 @@ import (
 )
 
 func createMonitoringService(t *testing.T) *Monitoring {
-	config := LoadConfig()
+	cfg := config.LoadConfig(".")
 
-	pool, err := pgxpool.Connect(context.Background(), config.TrafficDSN)
+	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
 	require.NoError(t, err)
 
 	s, err := NewMonitoring(pool)
