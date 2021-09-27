@@ -5,18 +5,21 @@ go 1.17
 require (
 	github.com/Masterminds/squirrel v1.5.0
 	github.com/Nerzal/gocloak/v8 v8.6.0
+	github.com/aws/aws-sdk-go v1.40.50
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.0.3
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dpapathanasiou/go-recaptcha v0.0.0-20190121160230-be5090b17804
+	github.com/fiam/gounidecode v0.0.0-20150629112515-8deddbd03fec
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-playground/validator/v10 v10.9.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang-migrate/migrate/v4 v4.15.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/improbable-eng/grpc-web v0.14.1
@@ -31,6 +34,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/rs/cors v1.8.0 // indirect
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -39,7 +43,7 @@ require (
 	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
-	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023 // indirect
+	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 	golang.org/x/sys v0.0.0-20210908233432-aa78b53d3365 // indirect
 	google.golang.org/api v0.57.0
@@ -47,6 +51,7 @@ require (
 	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/gographics/imagick.v2 v2.6.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.63.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -72,6 +77,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/jackc/pgtype v1.8.1 // indirect
 	github.com/jackc/puddle v1.1.4 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
