@@ -11,7 +11,7 @@ import (
 	"github.com/autowp/goautowp/auth/oauth2server"
 	"github.com/autowp/goautowp/auth/oauth2server/errors"
 	"github.com/autowp/goautowp/auth/oauth2server/utils/uuid"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 )
 
 // JWTAccessClaims jwt claims

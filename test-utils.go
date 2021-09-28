@@ -1,7 +1,7 @@
 package goautowp
 
 import (
-	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/require"
 	"strconv"
 	"testing"

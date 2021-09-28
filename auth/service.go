@@ -26,9 +26,9 @@ import (
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/facebook"
