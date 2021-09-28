@@ -3,7 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
-	"github.com/Nerzal/gocloak/v8"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/image/storage"
@@ -12,9 +12,9 @@ import (
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
@@ -325,16 +325,16 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 	logrusLogger := logrus.New()
 	logrusEntry := logrus.NewEntry(logrusLogger)
 
-	grpc_logrus.ReplaceGrpcLogger(logrusEntry)
+	grpclogrus.ReplaceGrpcLogger(logrusEntry)
 
 	grpcServer := grpc.NewServer(
-		grpc_middleware.WithUnaryServerChain(
-			grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
-			grpc_logrus.UnaryServerInterceptor(logrusEntry),
+		grpcmiddleware.WithUnaryServerChain(
+			grpcctxtags.UnaryServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
+			grpclogrus.UnaryServerInterceptor(logrusEntry),
 		),
-		grpc_middleware.WithStreamServerChain(
-			grpc_ctxtags.StreamServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
-			grpc_logrus.StreamServerInterceptor(logrusEntry),
+		grpcmiddleware.WithStreamServerChain(
+			grpcctxtags.StreamServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
+			grpclogrus.StreamServerInterceptor(logrusEntry),
 		),
 	)
 	RegisterAutowpServer(grpcServer, srv)

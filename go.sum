@@ -73,8 +73,8 @@ github.com/Masterminds/squirrel v1.5.0 h1:JukIZisrUXadA9pl3rMkjhiamxiB0cXiu+HGp/
 github.com/Masterminds/squirrel v1.5.0/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=
 github.com/Microsoft/go-winio v0.4.16 h1:FtSW/jqD+l4ba5iPBj9CODVtgfYAD8w2wS923g/cFDk=
 github.com/Microsoft/go-winio v0.4.16/go.mod h1:XB6nPKklQyQ7GC9LdcBEcBl8PF76WugXOPRXwdLnMv0=
-github.com/Nerzal/gocloak/v8 v8.6.0 h1:bd//9rDw71Hrdre75lnmi5tDyKx/kktbLMSG1qfRY6o=
-github.com/Nerzal/gocloak/v8 v8.6.0/go.mod h1:q/yHRzdBorMXNdLLUFO2IO0/6aeitxfOc0dPnT7f33c=
+github.com/Nerzal/gocloak/v9 v9.0.2 h1:B+vwpW9sgXgyvT6j1Dr6zz/IOReLoitiGXyl2eeP/So=
+github.com/Nerzal/gocloak/v9 v9.0.2/go.mod h1:AmXlpCliq31R1r/18ei7/ML5mfJDmJ1pTBoFU79DDZg=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/Shopify/goreferrer v0.0.0-20181106222321-ec9c9a553398/go.mod h1:a1uqRtAwp2Xwc6WNPJEufxJ7fx3npB4UV/JOLmbu5I0=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=

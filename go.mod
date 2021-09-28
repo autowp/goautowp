@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/Masterminds/squirrel v1.5.0
-	github.com/Nerzal/gocloak/v8 v8.6.0
+	github.com/Nerzal/gocloak/v9 v9.0.2
 	github.com/aws/aws-sdk-go v1.40.50
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.0.3

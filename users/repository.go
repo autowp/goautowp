@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
-	"github.com/Nerzal/gocloak/v8"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/util"
