@@ -109,8 +109,8 @@ func NewStorage(db *sql.DB, config config.ImageStorageConfig) (*Storage, error) 
 	}, nil
 }
 
-func (s *Storage) GetImage(id int) (*Image, error) {
-	logrus.Debugf("GetImage %d", id)
+func (s *Storage) Image(id int) (*Image, error) {
+	logrus.Debugf("Image %d", id)
 	var r Image
 	err := s.db.QueryRow(`
 		SELECT id, width, height, filesize, filepath, dir
@@ -134,14 +134,14 @@ func (s *Storage) GetImage(id int) (*Image, error) {
 
 func (s *Storage) populateSrc(r *Image) error {
 
-	dir := s.getDir(r.dir)
+	dir := s.dir(r.dir)
 	if dir == nil {
 		return fmt.Errorf("dir '%s' not defined", r.dir)
 	}
 
 	bucket := dir.Bucket()
 
-	s3Client, err := s.getS3Client()
+	s3Client, err := s.s3Client()
 	if err != nil {
 		return err
 	}
@@ -166,8 +166,8 @@ func (s *Storage) populateSrc(r *Image) error {
 	return nil
 }
 
-func (s *Storage) GetFormattedImage(id int, formatName string) (*Image, error) {
-	logrus.Debugf("GetFormattedImage %d, %s", id, formatName)
+func (s *Storage) FormattedImage(id int, formatName string) (*Image, error) {
+	logrus.Debugf("FormattedImage %d, %s", id, formatName)
 	var r Image
 	err := s.db.QueryRow(`
 		SELECT image.id, image.width, image.height, image.filesize, image.filepath, image.dir
@@ -194,10 +194,10 @@ func (s *Storage) GetFormattedImage(id int, formatName string) (*Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.GetImage(formattedImageId)
+	return s.Image(formattedImageId)
 }
 
-func (s *Storage) getDir(dirName string) *Dir {
+func (s *Storage) dir(dirName string) *Dir {
 	dir, ok := s.dirs[dirName]
 	if ok {
 		return dir
@@ -205,7 +205,7 @@ func (s *Storage) getDir(dirName string) *Dir {
 	return nil
 }
 
-func (s *Storage) getS3Client() (*s3.S3, error) {
+func (s *Storage) s3Client() (*s3.S3, error) {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region:           &s.config.S3.Region,
 		Endpoint:         &s.config.S3.Endpoint,
@@ -255,13 +255,13 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 		return 0, err
 	}
 
-	dir := s.getDir(iRow.Dir)
+	dir := s.dir(iRow.Dir)
 	if dir == nil {
 		return 0, fmt.Errorf("dir '%s' not defined", iRow.Dir)
 	}
 
 	bucket := dir.Bucket()
-	s3Client, err := s.getS3Client()
+	s3Client, err := s.s3Client()
 	if err != nil {
 		return 0, err
 	}
@@ -288,7 +288,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 	}
 
 	// format
-	format := s.getFormat(formatName)
+	format := s.format(formatName)
 	if format == nil {
 		return 0, fmt.Errorf("format `%s` not found", formatName)
 	}
@@ -433,7 +433,7 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 	return formattedImageId, nil
 }
 
-func (s *Storage) getFormat(name string) *sampler.Format {
+func (s *Storage) format(name string) *sampler.Format {
 	format, ok := s.formats[name]
 	if ok {
 		return format
@@ -462,7 +462,7 @@ func (s *Storage) addImageFromImagick(mw *imagick.MagickWand, dirName string, op
 		return 0, fmt.Errorf("unsupported image type `%v`", format)
 	}
 
-	dir := s.getDir(dirName)
+	dir := s.dir(dirName)
 	if dir == nil {
 		return 0, fmt.Errorf("dir '%v' not defined", dirName)
 	}
@@ -474,7 +474,7 @@ func (s *Storage) addImageFromImagick(mw *imagick.MagickWand, dirName string, op
 		width,
 		height,
 		func(fileName string) error {
-			s3c, err := s.getS3Client()
+			s3c, err := s.s3Client()
 			if err != nil {
 				return err
 			}
@@ -585,7 +585,7 @@ func (s *Storage) incDirCounter(dirName string) error {
 	return nil
 }
 
-func (s *Storage) getDirCounter(dirName string) (int, error) {
+func (s *Storage) dirCounter(dirName string) (int, error) {
 	var r int
 	err := s.db.QueryRow("SELECT count FROM image_dir WHERE dir = ?", dirName).Scan(&r)
 
@@ -602,14 +602,14 @@ func indexByAttempt(attempt int) int {
 }
 
 func (s *Storage) createImagePath(dirName string, options GenerateOptions) (string, error) {
-	dir := s.getDir(dirName)
+	dir := s.dir(dirName)
 	if dir == nil {
 		return "", fmt.Errorf("dir '%v' not defined", dirName)
 	}
 
 	namingStrategy := dir.NamingStrategy()
 
-	c, err := s.getDirCounter(dirName)
+	c, err := s.dirCounter(dirName)
 	if err != nil {
 		return "", err
 	}
@@ -663,12 +663,12 @@ func (s *Storage) RemoveImage(imageId int) error {
 		return err
 	}
 
-	dir := s.getDir(r.Dir())
+	dir := s.dir(r.Dir())
 	if dir == nil {
 		return fmt.Errorf("dir '%s' not defined", r.Dir())
 	}
 
-	s3c, err := s.getS3Client()
+	s3c, err := s.s3Client()
 	if err != nil {
 		return err
 	}
@@ -745,7 +745,7 @@ func (s *Storage) ChangeImageName(imageId int, options GenerateOptions) error {
 		return err
 	}
 
-	dir := s.getDir(r.Dir())
+	dir := s.dir(r.Dir())
 	if dir == nil {
 		return fmt.Errorf("dir '%v' not defined", r.Dir())
 	}
@@ -756,7 +756,7 @@ func (s *Storage) ChangeImageName(imageId int, options GenerateOptions) error {
 
 	var insertAttemptException error
 
-	s3c, err := s.getS3Client()
+	s3c, err := s.s3Client()
 	if err != nil {
 		return err
 	}
@@ -833,7 +833,7 @@ func (s *Storage) AddImageFromFile(file string, dirName string, options Generate
 		options.Extension = ext
 	}
 
-	dir := s.getDir(dirName)
+	dir := s.dir(dirName)
 	if dir == nil {
 		return 0, fmt.Errorf("dir '%v' not defined", dirName)
 	}
@@ -844,7 +844,7 @@ func (s *Storage) AddImageFromFile(file string, dirName string, options Generate
 		imageInfo.Width,
 		imageInfo.Height,
 		func(fileName string) error {
-			s3c, err := s.getS3Client()
+			s3c, err := s.s3Client()
 			if err != nil {
 				return err
 			}
@@ -930,7 +930,7 @@ func (s *Storage) Flop(imageId int) error {
 		return err
 	}
 
-	dir := s.getDir(r.Dir())
+	dir := s.dir(r.Dir())
 	if dir == nil {
 		return fmt.Errorf("dir '%v' not defined", r.Dir())
 	}
@@ -938,7 +938,7 @@ func (s *Storage) Flop(imageId int) error {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 
-	s3c, err := s.getS3Client()
+	s3c, err := s.s3Client()
 	if err != nil {
 		return err
 	}
@@ -1003,7 +1003,7 @@ func (s *Storage) Normalize(imageId int) error {
 		return err
 	}
 
-	dir := s.getDir(r.Dir())
+	dir := s.dir(r.Dir())
 	if dir == nil {
 		return fmt.Errorf("dir '%v' not defined", r.Dir())
 	}
@@ -1011,7 +1011,7 @@ func (s *Storage) Normalize(imageId int) error {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 
-	s3c, err := s.getS3Client()
+	s3c, err := s.s3Client()
 	if err != nil {
 		return err
 	}
@@ -1099,7 +1099,7 @@ func (s *Storage) SetImageCrop(imageId int, crop sampler.Crop) error {
 	return nil
 }
 
-func (s *Storage) GetImageCrop(imageId int) (*sampler.Crop, error) {
+func (s *Storage) imageCrop(imageId int) (*sampler.Crop, error) {
 	var crop sampler.Crop
 	err := s.db.QueryRow(`
 		SELECT crop_left, crop_top, crop_width, crop_height
@@ -1118,7 +1118,7 @@ func (s *Storage) GetImageCrop(imageId int) (*sampler.Crop, error) {
 	return &crop, nil
 }
 
-func (s *Storage) GetImages(imageIds []int) (map[int]Image, error) {
+func (s *Storage) images(imageIds []int) (map[int]Image, error) {
 	sqSelect := sq.Select("id, width, height, filesize, filepath, dir").
 		From("image").
 		Where(sq.Eq{"id": imageIds})
@@ -1152,7 +1152,7 @@ func (s *Storage) GetImages(imageIds []int) (map[int]Image, error) {
 	return result, nil
 }
 
-func (s *Storage) GetFormattedImages(imageIds []int, formatName string) (map[int]Image, error) {
+func (s *Storage) FormattedImages(imageIds []int, formatName string) (map[int]Image, error) {
 
 	sqSelect := sq.Select("image.id, image.width, image.height, image.filesize, image.filepath, image.dir, formated_image.image_id").
 		From("image").
@@ -1194,7 +1194,7 @@ func (s *Storage) GetFormattedImages(imageIds []int, formatName string) (map[int
 			if err != nil {
 				return nil, err
 			}
-			img, err := s.GetImage(formattedImageId)
+			img, err := s.Image(formattedImageId)
 			if err != nil {
 				return nil, err
 			}

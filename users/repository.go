@@ -101,9 +101,9 @@ func NewRepository(
 	}
 }
 
-func (s *Repository) GetUser(options GetUsersOptions) (*DBUser, error) {
+func (s *Repository) User(options GetUsersOptions) (*DBUser, error) {
 
-	users, err := s.GetUsers(options)
+	users, err := s.Users(options)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (s *Repository) GetUser(options GetUsersOptions) (*DBUser, error) {
 	return &users[0], nil
 }
 
-func (s *Repository) GetUsers(options GetUsersOptions) ([]DBUser, error) {
+func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 
 	result := make([]DBUser, 0)
 
@@ -420,7 +420,7 @@ func (s *Repository) UpdateUserVoteLimit(userId int64) error {
 
 	def := 10
 
-	avgVote, err := s.GetUserAvgVote(userId)
+	avgVote, err := s.UserAvgVote(userId)
 	if err != nil {
 		return err
 	}
@@ -444,7 +444,7 @@ func (s *Repository) UpdateUserVoteLimit(userId int64) error {
 	return nil
 }
 
-func (s *Repository) GetUserAvgVote(userId int64) (float64, error) {
+func (s *Repository) UserAvgVote(userId int64) (float64, error) {
 	var result float64
 	err := s.autowpDB.QueryRow("SELECT IFNULL(avg(vote), 0) FROM comment_message WHERE author_id = ? AND vote <> 0", userId).Scan(&result)
 	return result, err
@@ -797,8 +797,8 @@ func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) 
 	return true, nil
 }
 
-// GetUserByCredentials GetUserByCredentials
-func (s *Repository) GetUserByCredentials(username string, password string) (int64, error) {
+// UserByCredentials UserByCredentials
+func (s *Repository) UserByCredentials(username string, password string) (int64, error) {
 	if username == "" || password == "" {
 		return 0, nil
 	}

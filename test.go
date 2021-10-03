@@ -6,7 +6,9 @@ import (
 	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/users"
+	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -78,6 +80,12 @@ func init() {
 		userExtractor,
 	)
 	RegisterUsersServer(grpcServer, usersSrv)
+
+	itemsSrv := NewItemsGRPCServer(
+		items.NewRepository(db),
+		memcache.New(cfg.Memcached...),
+	)
+	RegisterItemsServer(grpcServer, itemsSrv)
 
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {

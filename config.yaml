@@ -39,3 +39,5 @@ image-storage:
 #      height: 120
 #      background: '#fff'
 #      strip: true
+memcached:
+  - "127.0.0.1:11211"

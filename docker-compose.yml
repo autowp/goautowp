@@ -66,6 +66,15 @@ services:
     ports:
       - "8081:8080"
 
+  memcached:
+    image: memcached
+    container_name: goautowp_test_memcached
+    restart: always
+    expose:
+      - "11211"
+    ports:
+      - "11211:11211"
+
   minio:
     image: quay.io/minio/minio
     container_name: goautowp_test_minio

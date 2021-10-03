@@ -10,7 +10,7 @@ import (
 )
 
 func TestFeedbackNoBody(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
@@ -20,7 +20,7 @@ func TestFeedbackNoBody(t *testing.T) {
 }
 
 func TestFeedbackEmptyValues(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
@@ -34,7 +34,7 @@ func TestFeedbackEmptyValues(t *testing.T) {
 }
 
 func TestFeedbackEmptyName(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
@@ -48,7 +48,7 @@ func TestFeedbackEmptyName(t *testing.T) {
 }
 
 func TestFeedbackEmptyEmail(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
@@ -62,7 +62,7 @@ func TestFeedbackEmptyEmail(t *testing.T) {
 }
 
 func TestFeedbackEmptyMessage(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
@@ -78,7 +78,7 @@ func TestFeedbackEmptyMessage(t *testing.T) {
 /*func TestFeedbackMessage(t *testing.T) {
 	config := LoadConfig()
 	config.Feedback.Captcha = false
-	srv, err := NewContainer(config).GetGRPCServer()
+	srv, err := NewContainer(config).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})

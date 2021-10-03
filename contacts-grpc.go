@@ -49,7 +49,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 	}
 
 	deleted := false
-	user, err := s.userRepository.GetUser(users.GetUsersOptions{ID: in.UserId, Deleted: &deleted})
+	user, err := s.userRepository.User(users.GetUsersOptions{ID: in.UserId, Deleted: &deleted})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -128,7 +128,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsReq
 		m[e] = true
 	}
 
-	userRows, err := s.userRepository.GetUsers(users.GetUsersOptions{
+	userRows, err := s.userRepository.Users(users.GetUsersOptions{
 		InContacts: userID,
 		Order:      []string{"users.deleted", "users.name"},
 		Fields:     m,

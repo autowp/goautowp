@@ -29,7 +29,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 	}
 
 	// fit by widest
-	widest := format.GetWidest()
+	widest := format.Widest()
 	if widest > 0 {
 		err := s.cropToWidest(decomposited, widest)
 		if err != nil {
@@ -38,7 +38,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 	}
 
 	// fit by highest
-	highest := format.GetHighest()
+	highest := format.Highest()
 	if highest > 0 {
 		err := s.cropToHighest(decomposited, highest)
 		if err != nil {
@@ -70,7 +70,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 		}
 	}
 
-	background := format.GetBackground()
+	background := format.Background()
 	if background != "" {
 		pw := imagick.NewPixelWand()
 		defer pw.Destroy()

@@ -37,14 +37,14 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 	_, ok = fields["blacklist"]
 	if ok {
 
-		enforcer := s.container.GetEnforcer()
+		enforcer := s.container.Enforcer()
 
 		canView := len(role) > 0 && enforcer.Enforce(role, "global", "moderate")
 
 		if canView {
 			result.Blacklist = nil
 
-			banRepository, err := s.container.GetBanRepository()
+			banRepository, err := s.container.BanRepository()
 			if err != nil {
 				return nil, err
 			}
@@ -62,18 +62,18 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 					Reason:   ban.Reason,
 				}
 
-				userRepository, err := s.container.GetUserRepository()
+				userRepository, err := s.container.UsersRepository()
 				if err != nil {
 					return nil, err
 				}
 
-				user, err := userRepository.GetUser(users.GetUsersOptions{ID: ban.ByUserID})
+				user, err := userRepository.User(users.GetUsersOptions{ID: ban.ByUserID})
 				if err != nil {
 					return nil, err
 				}
 
 				if user != nil {
-					userExtractor := s.container.GetUserExtractor()
+					userExtractor := s.container.UserExtractor()
 
 					result.Blacklist.ByUser, err = userExtractor.Extract(user, map[string]bool{})
 					if err != nil {
@@ -87,7 +87,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 
 	_, ok = fields["rights"]
 	if ok {
-		enforcer := s.container.GetEnforcer()
+		enforcer := s.container.Enforcer()
 
 		canBan := len(role) > 0 && enforcer.Enforce(role, "user", "ban")
 

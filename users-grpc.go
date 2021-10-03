@@ -101,7 +101,7 @@ func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*AP
 		m[e] = true
 	}
 
-	dbUser, err := s.userRepository.GetUser(users.GetUsersOptions{
+	dbUser, err := s.userRepository.User(users.GetUsersOptions{
 		ID:     in.UserId,
 		Fields: m,
 	})

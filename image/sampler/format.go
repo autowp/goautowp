@@ -77,11 +77,11 @@ func (f Format) IsIgnoreCrop() bool {
 	return f.isIgnoreCrop
 }
 
-func (f Format) GetWidest() float64 {
+func (f Format) Widest() float64 {
 	return f.widest
 }
 
-func (f Format) GetHighest() float64 {
+func (f Format) Highest() float64 {
 	return f.highest
 }
 
@@ -89,7 +89,7 @@ func (f *Format) IsProportionalCrop() bool {
 	return f.isProportionalCrop
 }
 
-func (f *Format) GetBackground() string {
+func (f *Format) Background() string {
 	return f.background
 }
 

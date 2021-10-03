@@ -15,7 +15,7 @@ import (
 func createTrafficService(t *testing.T) *Traffic {
 	container := NewContainer(config.LoadConfig("."))
 
-	s, err := container.GetTraffic()
+	s, err := container.Traffic()
 	require.NoError(t, err)
 
 	return s
@@ -135,7 +135,7 @@ func TestWhitelistedNotBanned(t *testing.T) {
 func TestHttpBanPost(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
-	srv, err := NewContainer(cfg).GetGRPCServer()
+	srv, err := NewContainer(cfg).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
@@ -189,7 +189,7 @@ func TestTop(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	srv, err := NewContainer(cfg).GetGRPCServer()
+	srv, err := NewContainer(cfg).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(

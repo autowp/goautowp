@@ -29,7 +29,7 @@ func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, imageId)
 
-	imageInfo, err := mw.GetImage(imageId)
+	imageInfo, err := mw.Image(imageId)
 	require.NoError(t, err)
 
 	require.Contains(t, imageInfo.Src(), "folder/file")
@@ -52,7 +52,7 @@ func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
 	err = mw.RemoveImage(imageId)
 	require.NoError(t, err)
 
-	result, err := mw.GetImage(imageId)
+	result, err := mw.Image(imageId)
 	require.NoError(t, err)
 	require.Nil(t, result)
 }
@@ -72,7 +72,7 @@ func TestAddImageFromBlobAndFormat(t *testing.T) {
 
 	require.NotEmpty(t, imageId)
 
-	formattedImage, err := mw.GetFormattedImage(imageId, "test")
+	formattedImage, err := mw.FormattedImage(imageId, "test")
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())
@@ -95,7 +95,7 @@ func TestS3AddImageWithPreferredName(t *testing.T) {
 
 	require.NotEmpty(t, imageId)
 
-	image, err := mw.GetImage(imageId)
+	image, err := mw.Image(imageId)
 	require.NoError(t, err)
 	require.NotEmpty(t, image.src)
 	require.NotEmpty(t, image.height)
@@ -120,12 +120,12 @@ func TestAddImageAndCrop(t *testing.T) {
 	err = mw.SetImageCrop(imageId, crop)
 	require.NoError(t, err)
 
-	c, err := mw.GetImageCrop(imageId)
+	c, err := mw.imageCrop(imageId)
 	require.NoError(t, err)
 
 	require.EqualValues(t, crop, *c)
 
-	imageInfo, err := mw.GetImage(imageId)
+	imageInfo, err := mw.Image(imageId)
 	require.NoError(t, err)
 
 	resp, err := http.Get(imageInfo.Src())
@@ -139,7 +139,7 @@ func TestAddImageAndCrop(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, filesize.Size(), len(body))
 
-	formattedImage, err := mw.GetFormattedImage(imageId, "picture-gallery")
+	formattedImage, err := mw.FormattedImage(imageId, "picture-gallery")
 	require.NoError(t, err)
 
 	require.EqualValues(t, 1020, formattedImage.Width())
@@ -171,17 +171,17 @@ func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 	err = mw.Normalize(imageId2)
 	require.NoError(t, err)
 
-	images, err := mw.GetImages([]int{imageId1, imageId2})
+	images, err := mw.images([]int{imageId1, imageId2})
 	require.NoError(t, err)
 
 	require.EqualValues(t, 2, len(images))
 
-	formattedImages, err := mw.GetFormattedImages([]int{imageId1, imageId2}, "test")
+	formattedImages, err := mw.FormattedImages([]int{imageId1, imageId2}, "test")
 	require.NoError(t, err)
 	require.EqualValues(t, 2, len(formattedImages))
 
 	// re-request
-	formattedImages, err = mw.GetFormattedImages([]int{imageId1, imageId2}, "test")
+	formattedImages, err = mw.FormattedImages([]int{imageId1, imageId2}, "test")
 	require.NoError(t, err)
 	require.EqualValues(t, 2, len(formattedImages))
 }
@@ -199,7 +199,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 
 	formatName := "test"
 
-	formattedImage, err := mw.GetFormattedImage(imageId, formatName)
+	formattedImage, err := mw.FormattedImage(imageId, formatName)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())
@@ -207,7 +207,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 	require.True(t, formattedImage.FileSize() > 0)
 	require.NotEmpty(t, formattedImage.Src())
 
-	formattedImage, err = mw.GetFormattedImage(imageId, formatName)
+	formattedImage, err = mw.FormattedImage(imageId, formatName)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())
@@ -238,7 +238,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 		"formated_image_id": nil,
 	})
 
-	formattedImage, err := mw.GetFormattedImage(imageId, formatName)
+	formattedImage, err := mw.FormattedImage(imageId, formatName)
 	require.NoError(t, err)
 
 	require.Empty(t, formattedImage)
@@ -258,7 +258,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 
 	formatName := "with-processor"
 
-	formattedImage, err := mw.GetFormattedImage(imageId, formatName)
+	formattedImage, err := mw.FormattedImage(imageId, formatName)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())

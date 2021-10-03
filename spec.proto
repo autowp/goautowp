@@ -52,6 +52,10 @@ service Users {
   rpc SetPassword(APISetPasswordRequest) returns (google.protobuf.Empty) {}
 }
 
+service Items {
+  rpc GetTopBrandsList(GetTopBrandsListRequest) returns (APITopBrandsList) {}
+}
+
 message ErrorDetails {
   google.rpc.RetryInfo retryInfo = 1;
   google.rpc.DebugInfo debugInfo = 2;
@@ -347,4 +351,21 @@ message APIUpdateUserRequest {
 message APIGetUserRequest {
   int64 user_id = 1;
   repeated string fields = 2;
+}
+
+message GetTopBrandsListRequest {
+  string language = 1;
+}
+
+message APITopBrandsList {
+  repeated APITopBrandsListItem brands = 1;
+  int32 total = 2;
+}
+
+message APITopBrandsListItem {
+  int32 id = 1;
+  string catname = 2;
+  string name = 3;
+  int32 items_count = 4;
+  int32 new_items_count = 5;
 }

@@ -7,7 +7,9 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/users"
+	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
@@ -30,28 +32,31 @@ type Container struct {
 	catalogue          *Catalogue
 	comments           *Comments
 	config             config.Config
+	contactsGrpcServer *ContactsGRPCServer
 	contactsRepository *ContactsRepository
 	duplicateFinder    *DuplicateFinder
+	emailSender        email.Sender
 	enforcer           *casbin.Enforcer
+	events             *Events
 	feedback           *Feedback
+	forums             *Forums
 	grpcServer         *GRPCServer
+	imageStorage       *storage.Storage
+	itemsGrpcServer    *ItemsGRPCServer
+	itemsRepository    *items.Repository
+	keyCloak           gocloak.GoCloak
 	location           *time.Location
+	messages           *Messages
+	passwordRecovery   *PasswordRecovery
 	privateHttpServer  *http.Server
 	privateRouter      *gin.Engine
 	publicHttpServer   *http.Server
 	publicRouter       http.HandlerFunc
 	traffic            *Traffic
 	trafficDB          *pgxpool.Pool
-	userRepository     *users.Repository
-	forums             *Forums
-	messages           *Messages
-	keyCloak           gocloak.GoCloak
-	passwordRecovery   *PasswordRecovery
-	emailSender        email.Sender
-	events             *Events
+	usersRepository    *users.Repository
 	usersGrpcServer    *UsersGRPCServer
-	imageStorage       *storage.Storage
-	contactsGrpcServer *ContactsGRPCServer
+	memcached          *memcache.Client
 }
 
 // NewContainer constructor
@@ -68,7 +73,7 @@ func (s *Container) Close() error {
 	s.contactsRepository = nil
 	s.duplicateFinder = nil
 	s.traffic = nil
-	s.userRepository = nil
+	s.usersRepository = nil
 	s.feedback = nil
 
 	if s.autowpDB != nil {
@@ -88,7 +93,7 @@ func (s *Container) Close() error {
 	return nil
 }
 
-func (s *Container) GetAutowpDB() (*sql.DB, error) {
+func (s *Container) AutowpDB() (*sql.DB, error) {
 	if s.autowpDB != nil {
 		return s.autowpDB, nil
 	}
@@ -125,9 +130,9 @@ func (s *Container) GetAutowpDB() (*sql.DB, error) {
 	return s.autowpDB, nil
 }
 
-func (s *Container) GetBanRepository() (*BanRepository, error) {
+func (s *Container) BanRepository() (*BanRepository, error) {
 	if s.banRepository == nil {
-		db, err := s.GetTrafficDB()
+		db, err := s.TrafficDB()
 		if err != nil {
 			return nil, err
 		}
@@ -141,14 +146,14 @@ func (s *Container) GetBanRepository() (*BanRepository, error) {
 	return s.banRepository, nil
 }
 
-func (s *Container) GetCatalogue() (*Catalogue, error) {
+func (s *Container) Catalogue() (*Catalogue, error) {
 	if s.catalogue == nil {
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		enforcer := s.GetEnforcer()
+		enforcer := s.Enforcer()
 
 		s.catalogue, err = NewCatalogue(db, enforcer)
 		if err != nil {
@@ -159,14 +164,14 @@ func (s *Container) GetCatalogue() (*Catalogue, error) {
 	return s.catalogue, nil
 }
 
-func (s *Container) GetComments() (*Comments, error) {
+func (s *Container) Comments() (*Comments, error) {
 	if s.comments == nil {
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		extractor := s.GetUserExtractor()
+		extractor := s.UserExtractor()
 
 		s.comments = NewComments(db, extractor)
 	}
@@ -174,13 +179,13 @@ func (s *Container) GetComments() (*Comments, error) {
 	return s.comments, nil
 }
 
-func (s *Container) GetConfig() config.Config {
+func (s *Container) Config() config.Config {
 	return s.config
 }
 
-func (s *Container) GetContactsRepository() (*ContactsRepository, error) {
+func (s *Container) ContactsRepository() (*ContactsRepository, error) {
 	if s.contactsRepository == nil {
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
@@ -191,9 +196,9 @@ func (s *Container) GetContactsRepository() (*ContactsRepository, error) {
 	return s.contactsRepository, nil
 }
 
-func (s *Container) GetDuplicateFinder() (*DuplicateFinder, error) {
+func (s *Container) DuplicateFinder() (*DuplicateFinder, error) {
 	if s.duplicateFinder == nil {
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
@@ -207,7 +212,7 @@ func (s *Container) GetDuplicateFinder() (*DuplicateFinder, error) {
 	return s.duplicateFinder, nil
 }
 
-func (s *Container) GetEnforcer() *casbin.Enforcer {
+func (s *Container) Enforcer() *casbin.Enforcer {
 	if s.enforcer == nil {
 		s.enforcer = casbin.NewEnforcer("model.conf", "policy.csv")
 	}
@@ -215,12 +220,12 @@ func (s *Container) GetEnforcer() *casbin.Enforcer {
 	return s.enforcer
 }
 
-func (s *Container) GetFeedback() (*Feedback, error) {
+func (s *Container) Feedback() (*Feedback, error) {
 	if s.feedback == nil {
 
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
-		emailSender := s.GetEmailSender()
+		emailSender := s.EmailSender()
 
 		var err error
 		s.feedback, err = NewFeedback(cfg.Feedback, cfg.Recaptcha, cfg.Captcha, emailSender)
@@ -232,12 +237,12 @@ func (s *Container) GetFeedback() (*Feedback, error) {
 	return s.feedback, nil
 }
 
-func (s *Container) GetIPExtractor() *IPExtractor {
+func (s *Container) IPExtractor() *IPExtractor {
 	return NewIPExtractor(s)
 }
 
-// GetLocation GetLocation
-func (s *Container) GetLocation() (*time.Location, error) {
+// Location Location
+func (s *Container) Location() (*time.Location, error) {
 	if s.location == nil {
 		loc, err := time.LoadLocation("UTC")
 		if err != nil {
@@ -250,11 +255,11 @@ func (s *Container) GetLocation() (*time.Location, error) {
 	return s.location, nil
 }
 
-func (s *Container) GetPrivateHttpServer() (*http.Server, error) {
+func (s *Container) PrivateHttpServer() (*http.Server, error) {
 	if s.privateHttpServer == nil {
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
-		router, err := s.GetPrivateRouter()
+		router, err := s.PrivateRouter()
 		if err != nil {
 			return nil, err
 		}
@@ -265,12 +270,12 @@ func (s *Container) GetPrivateHttpServer() (*http.Server, error) {
 	return s.privateHttpServer, nil
 }
 
-func (s *Container) GetPrivateRouter() (*gin.Engine, error) {
+func (s *Container) PrivateRouter() (*gin.Engine, error) {
 	if s.privateRouter != nil {
 		return s.privateRouter, nil
 	}
 
-	traffic, err := s.GetTraffic()
+	traffic, err := s.Traffic()
 	if err != nil {
 		return nil, err
 	}
@@ -286,11 +291,11 @@ func (s *Container) GetPrivateRouter() (*gin.Engine, error) {
 	return s.privateRouter, nil
 }
 
-func (s *Container) GetPublicHttpServer() (*http.Server, error) {
+func (s *Container) PublicHttpServer() (*http.Server, error) {
 	if s.publicHttpServer == nil {
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
-		r, err := s.GetPublicRouter()
+		r, err := s.PublicRouter()
 		if err != nil {
 			return nil, err
 		}
@@ -301,23 +306,28 @@ func (s *Container) GetPublicHttpServer() (*http.Server, error) {
 	return s.publicHttpServer, nil
 }
 
-func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
+func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 
 	if s.publicRouter != nil {
 		return s.publicRouter, nil
 	}
 
-	srv, err := s.GetGRPCServer()
+	srv, err := s.GRPCServer()
 	if err != nil {
 		return nil, err
 	}
 
-	usersSrv, err := s.GetUsersGRPCServer()
+	usersSrv, err := s.UsersGRPCServer()
 	if err != nil {
 		return nil, err
 	}
 
-	contactsSrv, err := s.GetContactsGRPCServer()
+	contactsSrv, err := s.ContactsGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
+	itemsSrv, err := s.ItemsGRPCServer()
 	if err != nil {
 		return nil, err
 	}
@@ -340,6 +350,7 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 	RegisterAutowpServer(grpcServer, srv)
 	RegisterUsersServer(grpcServer, usersSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
+	RegisterItemsServer(grpcServer, itemsSrv)
 
 	wrappedGrpc := grpcweb.WrapServer(grpcServer)
 
@@ -348,26 +359,26 @@ func (s *Container) GetPublicRouter() (http.HandlerFunc, error) {
 	return s.publicRouter, nil
 }
 
-func (s *Container) GetTraffic() (*Traffic, error) {
+func (s *Container) Traffic() (*Traffic, error) {
 	if s.traffic == nil {
-		db, err := s.GetTrafficDB()
+		db, err := s.TrafficDB()
 		if err != nil {
 			return nil, err
 		}
 
-		autowpDB, err := s.GetAutowpDB()
+		autowpDB, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		ban, err := s.GetBanRepository()
+		ban, err := s.BanRepository()
 		if err != nil {
 			return nil, err
 		}
 
-		enforcer := s.GetEnforcer()
+		enforcer := s.Enforcer()
 
-		userExtractor := s.GetUserExtractor()
+		userExtractor := s.UserExtractor()
 
 		traffic, err := NewTraffic(db, autowpDB, enforcer, ban, userExtractor)
 		if err != nil {
@@ -381,13 +392,13 @@ func (s *Container) GetTraffic() (*Traffic, error) {
 	return s.traffic, nil
 }
 
-func (s *Container) GetTrafficDB() (*pgxpool.Pool, error) {
+func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
 
 	if s.trafficDB != nil {
 		return s.trafficDB, nil
 	}
 
-	cfg := s.GetConfig()
+	cfg := s.Config()
 
 	start := time.Now()
 	timeout := 60 * time.Second
@@ -428,78 +439,94 @@ func (s *Container) GetTrafficDB() (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-func (s *Container) GetUserExtractor() *UserExtractor {
+func (s *Container) UserExtractor() *UserExtractor {
 	return NewUserExtractor(s)
 }
 
-func (s *Container) GetUserRepository() (*users.Repository, error) {
+func (s *Container) UsersRepository() (*users.Repository, error) {
 
-	if s.userRepository == nil {
-		autowpDB, err := s.GetAutowpDB()
+	if s.usersRepository == nil {
+		autowpDB, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
-		s.userRepository = users.NewRepository(
+		s.usersRepository = users.NewRepository(
 			autowpDB,
 			cfg.UsersSalt,
 			cfg.EmailSalt,
 			cfg.Languages,
-			s.GetEmailSender(),
-			s.GetKeyCloak(),
+			s.EmailSender(),
+			s.KeyCloak(),
 			cfg.KeyCloak,
 		)
 	}
 
-	return s.userRepository, nil
+	return s.usersRepository, nil
 }
 
-func (s *Container) GetGRPCServer() (*GRPCServer, error) {
+func (s *Container) ItemsRepository() (*items.Repository, error) {
+
+	if s.itemsRepository == nil {
+		autowpDB, err := s.AutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.itemsRepository = items.NewRepository(
+			autowpDB,
+		)
+	}
+
+	return s.itemsRepository, nil
+}
+
+func (s *Container) GRPCServer() (*GRPCServer, error) {
 	if s.grpcServer == nil {
-		catalogue, err := s.GetCatalogue()
+		catalogue, err := s.Catalogue()
 		if err != nil {
 			return nil, err
 		}
 
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		enforcer := s.GetEnforcer()
+		enforcer := s.Enforcer()
 
-		userRepository, err := s.GetUserRepository()
+		userRepository, err := s.UsersRepository()
 		if err != nil {
 			return nil, err
 		}
 
-		comments, err := s.GetComments()
+		comments, err := s.Comments()
 		if err != nil {
 			return nil, err
 		}
 
-		traffic, err := s.GetTraffic()
+		traffic, err := s.Traffic()
 		if err != nil {
 			return nil, err
 		}
 
-		ipExtractor := s.GetIPExtractor()
+		ipExtractor := s.IPExtractor()
 
-		feedback, err := s.GetFeedback()
+		feedback, err := s.Feedback()
 		if err != nil {
 			return nil, err
 		}
 
-		forums, err := s.GetForums()
+		forums, err := s.Forums()
 		if err != nil {
 			return nil, err
 		}
 
-		messages, err := s.GetMessages()
+		messages, err := s.Messages()
 		if err != nil {
 			return nil, err
 		}
@@ -512,7 +539,7 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 			enforcer,
 			cfg.Auth.OAuth.Secret,
 			userRepository,
-			s.GetUserExtractor(),
+			s.UserExtractor(),
 			comments,
 			traffic,
 			ipExtractor,
@@ -525,33 +552,33 @@ func (s *Container) GetGRPCServer() (*GRPCServer, error) {
 	return s.grpcServer, nil
 }
 
-func (s *Container) GetUsersGRPCServer() (*UsersGRPCServer, error) {
+func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 	if s.usersGrpcServer == nil {
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		enforcer := s.GetEnforcer()
+		enforcer := s.Enforcer()
 
-		contactsRepository, err := s.GetContactsRepository()
+		contactsRepository, err := s.ContactsRepository()
 		if err != nil {
 			return nil, err
 		}
 
-		userRepository, err := s.GetUserRepository()
+		userRepository, err := s.UsersRepository()
 		if err != nil {
 			return nil, err
 		}
 
-		events, err := s.GetEvents()
+		events, err := s.Events()
 		if err != nil {
 			return nil, err
 		}
 
-		pr, err := s.GetPasswordRecovery()
+		pr, err := s.PasswordRecovery()
 		if err != nil {
 			return nil, err
 		}
@@ -566,28 +593,41 @@ func (s *Container) GetUsersGRPCServer() (*UsersGRPCServer, error) {
 			cfg.Languages,
 			cfg.Captcha,
 			pr,
-			s.GetUserExtractor(),
+			s.UserExtractor(),
 		)
 	}
 
 	return s.usersGrpcServer, nil
 }
 
-func (s *Container) GetContactsGRPCServer() (*ContactsGRPCServer, error) {
+func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
+	if s.itemsGrpcServer == nil {
+		r, err := s.ItemsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.itemsGrpcServer = NewItemsGRPCServer(r, s.Memcached())
+	}
+
+	return s.itemsGrpcServer, nil
+}
+
+func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 	if s.contactsGrpcServer == nil {
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		contactsRepository, err := s.GetContactsRepository()
+		contactsRepository, err := s.ContactsRepository()
 		if err != nil {
 			return nil, err
 		}
 
-		userRepository, err := s.GetUserRepository()
+		userRepository, err := s.UsersRepository()
 		if err != nil {
 			return nil, err
 		}
@@ -597,16 +637,16 @@ func (s *Container) GetContactsGRPCServer() (*ContactsGRPCServer, error) {
 			db,
 			contactsRepository,
 			userRepository,
-			s.GetUserExtractor(),
+			s.UserExtractor(),
 		)
 	}
 
 	return s.contactsGrpcServer, nil
 }
 
-func (s *Container) GetForums() (*Forums, error) {
+func (s *Container) Forums() (*Forums, error) {
 	if s.forums == nil {
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
@@ -617,9 +657,9 @@ func (s *Container) GetForums() (*Forums, error) {
 	return s.forums, nil
 }
 
-func (s *Container) GetMessages() (*Messages, error) {
+func (s *Container) Messages() (*Messages, error) {
 	if s.messages == nil {
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
@@ -630,9 +670,9 @@ func (s *Container) GetMessages() (*Messages, error) {
 	return s.messages, nil
 }
 
-func (s *Container) GetKeyCloak() gocloak.GoCloak {
+func (s *Container) KeyCloak() gocloak.GoCloak {
 	if s.keyCloak == nil {
-		client := gocloak.NewClient(s.GetConfig().KeyCloak.URL)
+		client := gocloak.NewClient(s.Config().KeyCloak.URL)
 
 		s.keyCloak = client
 	}
@@ -640,16 +680,16 @@ func (s *Container) GetKeyCloak() gocloak.GoCloak {
 	return s.keyCloak
 }
 
-func (s *Container) GetPasswordRecovery() (*PasswordRecovery, error) {
+func (s *Container) PasswordRecovery() (*PasswordRecovery, error) {
 	if s.passwordRecovery == nil {
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
-		autowpDB, err := s.GetAutowpDB()
+		autowpDB, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		emailSender := s.GetEmailSender()
+		emailSender := s.EmailSender()
 
 		s.passwordRecovery = NewPasswordRecovery(autowpDB, cfg.Captcha, cfg.Languages, emailSender)
 	}
@@ -657,9 +697,9 @@ func (s *Container) GetPasswordRecovery() (*PasswordRecovery, error) {
 	return s.passwordRecovery, nil
 }
 
-func (s *Container) GetEmailSender() email.Sender {
+func (s *Container) EmailSender() email.Sender {
 	if s.emailSender == nil {
-		cfg := s.GetConfig()
+		cfg := s.Config()
 
 		if s.config.MockEmailSender {
 			s.emailSender = &email.MockSender{}
@@ -675,9 +715,9 @@ func (s *Container) SetEmailSender(emailSender email.Sender) {
 	s.emailSender = emailSender
 }
 
-func (s *Container) GetEvents() (*Events, error) {
+func (s *Container) Events() (*Events, error) {
 	if s.events == nil {
-		autowpDB, err := s.GetAutowpDB()
+		autowpDB, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
@@ -688,14 +728,14 @@ func (s *Container) GetEvents() (*Events, error) {
 	return s.events, nil
 }
 
-func (s *Container) GetImageStorage() (*storage.Storage, error) {
+func (s *Container) ImageStorage() (*storage.Storage, error) {
 	if s.imageStorage == nil {
-		db, err := s.GetAutowpDB()
+		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		imageStorage, err := storage.NewStorage(db, s.GetConfig().ImageStorage)
+		imageStorage, err := storage.NewStorage(db, s.Config().ImageStorage)
 		if err != nil {
 			return nil, err
 		}
@@ -704,4 +744,12 @@ func (s *Container) GetImageStorage() (*storage.Storage, error) {
 	}
 
 	return s.imageStorage, nil
+}
+
+func (s *Container) Memcached() *memcache.Client {
+	if s.memcached == nil {
+		s.memcached = memcache.New(s.Config().Memcached...)
+	}
+
+	return s.memcached
 }

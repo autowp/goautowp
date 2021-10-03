@@ -45,12 +45,12 @@ func NewApplication(cfg config.Config) *Application {
 }
 
 func (s *Application) MigrateAutowp() error {
-	_, err := s.container.GetAutowpDB()
+	_, err := s.container.AutowpDB()
 	if err != nil {
 		return err
 	}
 
-	cfg := s.container.GetConfig()
+	cfg := s.container.Config()
 
 	err = applyMigrations(cfg.AutowpMigrations)
 	if err != nil && err != migrate.ErrNoChange {
@@ -61,7 +61,7 @@ func (s *Application) MigrateAutowp() error {
 }
 
 func (s *Application) MigrateAuth() error {
-	cfg := s.container.GetConfig()
+	cfg := s.container.Config()
 
 	err := applyMigrations(cfg.Auth.Migrations)
 	if err != nil && err != migrate.ErrNoChange {
@@ -72,7 +72,7 @@ func (s *Application) MigrateAuth() error {
 }
 
 func (s *Application) ServePublic(quit chan bool) error {
-	httpServer, err := s.container.GetPublicHttpServer()
+	httpServer, err := s.container.PublicHttpServer()
 	if err != nil {
 		return err
 	}
@@ -100,12 +100,12 @@ func (s *Application) ServePublic(quit chan bool) error {
 
 func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 
-	df, err := s.container.GetDuplicateFinder()
+	df, err := s.container.DuplicateFinder()
 	if err != nil {
 		return err
 	}
 
-	cfg := s.container.GetConfig()
+	cfg := s.container.Config()
 
 	logrus.Println("DuplicateFinder listener started")
 	err = df.ListenAMQP(cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
@@ -233,12 +233,12 @@ func applyMigrations(config config.MigrationsConfig) error {
 }
 
 func (s *Application) MigrateTraffic() error {
-	_, err := s.container.GetTrafficDB()
+	_, err := s.container.TrafficDB()
 	if err != nil {
 		return err
 	}
 
-	cfg := s.container.GetConfig()
+	cfg := s.container.Config()
 
 	err = applyMigrations(cfg.TrafficMigrations)
 	if err != nil && err != migrate.ErrNoChange {
@@ -250,16 +250,16 @@ func (s *Application) MigrateTraffic() error {
 
 func (s *Application) ServeAuth(quit chan bool) error {
 
-	appConfig := s.container.GetConfig()
+	appConfig := s.container.Config()
 
-	cfg := s.container.GetConfig()
+	cfg := s.container.Config()
 
-	usersDB, err := s.container.GetAutowpDB()
+	usersDB, err := s.container.AutowpDB()
 	if err != nil {
 		return err
 	}
 
-	users, err := s.container.GetUserRepository()
+	users, err := s.container.UsersRepository()
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func (s *Application) ServeAuth(quit chan bool) error {
 
 func (s *Application) ServePrivate(quit chan bool) error {
 
-	httpServer, err := s.container.GetPrivateHttpServer()
+	httpServer, err := s.container.PrivateHttpServer()
 	if err != nil {
 		return err
 	}
@@ -306,7 +306,7 @@ func (s *Application) ServePrivate(quit chan bool) error {
 }
 
 func (s *Application) SchedulerHourly() error {
-	traffic, err := s.container.GetTraffic()
+	traffic, err := s.container.Traffic()
 	if err != nil {
 		return err
 	}
@@ -335,7 +335,7 @@ func (s *Application) SchedulerHourly() error {
 }
 
 func (s *Application) SchedulerDaily() error {
-	users, err := s.container.GetUserRepository()
+	users, err := s.container.UsersRepository()
 	if err != nil {
 		return err
 	}
@@ -352,7 +352,7 @@ func (s *Application) SchedulerDaily() error {
 		return err
 	}
 
-	pr, err := s.container.GetPasswordRecovery()
+	pr, err := s.container.PasswordRecovery()
 	if err != nil {
 		return err
 	}
@@ -367,7 +367,7 @@ func (s *Application) SchedulerDaily() error {
 }
 
 func (s *Application) SchedulerMidnight() error {
-	users, err := s.container.GetUserRepository()
+	users, err := s.container.UsersRepository()
 	if err != nil {
 		return err
 	}
@@ -390,7 +390,7 @@ func (s *Application) SchedulerMidnight() error {
 
 func (s *Application) Autoban(quit chan bool) error {
 
-	traffic, err := s.container.GetTraffic()
+	traffic, err := s.container.Traffic()
 	if err != nil {
 		return err
 	}
@@ -417,12 +417,12 @@ loop:
 }
 
 func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
-	traffic, err := s.container.GetTraffic()
+	traffic, err := s.container.Traffic()
 	if err != nil {
 		return err
 	}
 
-	cfg := s.container.GetConfig()
+	cfg := s.container.Config()
 
 	logrus.Info("Monitoring listener started")
 	err = traffic.Monitoring.Listen(cfg.RabbitMQ, cfg.MonitoringQueue, quit)
@@ -436,11 +436,11 @@ func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
 }
 
 func (s *Application) ImageStorageGetImage(imageID int) (*APIImage, error) {
-	is, err := s.container.GetImageStorage()
+	is, err := s.container.ImageStorage()
 	if err != nil {
 		return nil, err
 	}
-	img, err := is.GetImage(imageID)
+	img, err := is.Image(imageID)
 	if err != nil {
 		return nil, err
 	}
@@ -449,11 +449,11 @@ func (s *Application) ImageStorageGetImage(imageID int) (*APIImage, error) {
 }
 
 func (s *Application) ImageStorageGetFormattedImage(imageID int, format string) (*APIImage, error) {
-	is, err := s.container.GetImageStorage()
+	is, err := s.container.ImageStorage()
 	if err != nil {
 		return nil, err
 	}
-	img, err := is.GetFormattedImage(imageID, format)
+	img, err := is.FormattedImage(imageID, format)
 	if err != nil {
 		return nil, err
 	}

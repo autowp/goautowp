@@ -41,7 +41,7 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*API
 		longAway = date.After(*row.LastOnline)
 	}
 
-	enforcer := s.container.GetEnforcer()
+	enforcer := s.container.Enforcer()
 
 	isGreen := row.Role != "" && enforcer.Enforce(row.Role, "status", "be-green")
 
@@ -69,12 +69,12 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*API
 		switch field {
 		case "avatar":
 			if row.Img != nil {
-				is, err := s.container.GetImageStorage()
+				is, err := s.container.ImageStorage()
 				if err != nil {
 					return nil, err
 				}
 
-				avatar, err := is.GetFormattedImage(*row.Img, "avatar")
+				avatar, err := is.FormattedImage(*row.Img, "avatar")
 				if err != nil {
 					return nil, err
 				}

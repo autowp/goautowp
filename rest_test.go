@@ -11,7 +11,7 @@ import (
 )
 
 func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	_, err = srv.GetVehicleTypes(context.Background(), &emptypb.Empty{})
@@ -19,7 +19,7 @@ func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer "}))
@@ -29,7 +29,7 @@ func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer abc"}))
@@ -39,7 +39,7 @@ func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
-	srv, err := NewContainer(config.LoadConfig(".")).GetGRPCServer()
+	srv, err := NewContainer(config.LoadConfig(".")).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ"}))
@@ -51,7 +51,7 @@ func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
 func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
-	srv, err := NewContainer(cfg).GetGRPCServer()
+	srv, err := NewContainer(cfg).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, testUserID, cfg.Auth.OAuth.Secret)}))
@@ -63,7 +63,7 @@ func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 func TestGetVehicleTypes(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
-	srv, err := NewContainer(cfg).GetGRPCServer()
+	srv, err := NewContainer(cfg).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, cfg.Auth.OAuth.Secret)}))

@@ -321,7 +321,7 @@ func initOAuthServer(db *sql.DB, userRepository *users.Repository, cfg config.OA
 	srv := server.NewServer(manager)
 
 	srv.SetPasswordAuthorizationHandler(func(username, password string) (int64, error) {
-		return userRepository.GetUserByCredentials(username, password)
+		return userRepository.UserByCredentials(username, password)
 	})
 
 	srv.SetInternalErrorHandler(func(err error) (re *errors.Response) {
@@ -346,7 +346,7 @@ func randomBase64String(l int) (string, error) {
 	return str[:l], nil // strip 1 extra character we get from odd length results
 }
 
-func (s *Service) getUserIDFromRequest(c *gin.Context) (int64, error) {
+func (s *Service) userIDFromRequest(c *gin.Context) (int64, error) {
 	authorizationHeader := c.GetHeader("Authorization")
 
 	if authorizationHeader == "" {
@@ -438,7 +438,7 @@ func (s *Service) setupRouter() {
 
 		apiGroup.GET("/service", func(c *gin.Context) {
 
-			userID, err := s.getUserIDFromRequest(c)
+			userID, err := s.userIDFromRequest(c)
 			if err != nil {
 				c.String(http.StatusBadRequest, err.Error())
 				return

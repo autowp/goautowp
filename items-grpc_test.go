@@ -1,0 +1,25 @@
+package goautowp
+
+import (
+	"context"
+	"github.com/autowp/goautowp/util"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"testing"
+)
+
+func TestTopBrandsList(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
+	require.NoError(t, err)
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	r, err := client.GetTopBrandsList(ctx, &GetTopBrandsListRequest{
+		Language: "ru",
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, r)
+	require.NotEmpty(t, r.Brands)
+	require.Greater(t, r.Total, int32(0))
+}

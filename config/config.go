@@ -112,6 +112,7 @@ type Config struct {
 	Captcha           bool                      `yaml:"captcha"            mapstructure:"captcha"`
 	Auth              AuthConfig                `yaml:"auth"               mapstructure:"auth"`
 	ImageStorage      ImageStorageConfig        `yaml:"image-storage"      mapstructure:"image-storage"`
+	Memcached         []string                  `yaml:"memcached"          mapstructure:"memcached"`
 }
 
 // LoadConfig LoadConfig

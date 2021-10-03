@@ -211,11 +211,16 @@ VALUES
 (202,   'test car 202',1909,1910,'',NULL,1, 5563,1,0,0,'2016-11-25 18:31:47', 8,   7,NULL,NULL,1910,1910,0,0,0,NULL,1,1,NULL,NULL,0,NULL),
 (203,   'test car 203',1911,1918,'',NULL,1,67707,0,0,1,'2016-11-25 18:31:47', 7,   9,NULL,NULL,1912,1918,0,0,0,NULL,1,1,NULL,NULL,0,NULL),
 (204,            'BMW',NULL,NULL,'',NULL,1, NULL,0,0,NULL,              NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,0,0,NULL,1,5,'bmw',NULL,0,NULL),
-(205,     'Test brand',NULL,NULL,'',NULL,1, NULL,0,0,NULL,              NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,0,0,NULL,1,5,'test-brand',NULL,0,NULL);
+(205,     'Test brand',NULL,NULL,'',NULL,1, NULL,0,0,NULL,              NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,0,0,NULL,1,5,'test-brand',NULL,0,NULL),
+(206,         'Abarth',NULL,NULL,'',NULL,1, NULL,0,0,NULL,              NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,0,0,NULL,1,5,'abarth',NULL,0,NULL),
+(207,            'ГАЗ',NULL,NULL,'',NULL,1, NULL,0,0,NULL,              NULL,NULL,NULL,NULL,NULL,NULL,NULL,1,0,0,NULL,1,5,'gaz',NULL,0,NULL);
 /*!40000 ALTER TABLE `item` ENABLE KEYS */;
 
 INSERT INTO item_language (item_id, language, name)
-VALUES (1, 'xx', 'test car'), (2, 'xx', 'test concept car');
+VALUES (1, 'xx', 'test car'), (2, 'xx', 'test concept car'),
+       (204, 'en', 'BMW'),    (204, 'zh', '宝马'),   (204, 'ru', 'BMW'),
+       (206, 'en', 'Abarth'), (206, 'zh', '阿巴特'), (206, 'ru', 'Abarth'),
+       (207, 'en', 'GAZ'),    (207, 'zh', '嘎斯'),   (207, 'ru', 'ГАЗ');
 
 /*!40000 ALTER TABLE `item_parent` DISABLE KEYS */;
 INSERT INTO `item_parent` (`item_id`, `parent_id`, `is_primary`, `catname`, `type`, `timestamp`, `manual_catname`) VALUES
