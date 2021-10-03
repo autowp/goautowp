@@ -27,14 +27,14 @@ var languagePriority = map[string][]string{
 
 const (
 	VEHICLE   int = 1
-	ENGINE        = 2
-	CATEGORY      = 3
-	TWINS         = 4
-	BRAND         = 5
-	FACTORY       = 6
-	MUSEUM        = 7
-	PERSON        = 8
-	COPYRIGHT     = 9
+	ENGINE    int = 2
+	CATEGORY  int = 3
+	TWINS     int = 4
+	BRAND     int = 5
+	FACTORY   int = 6
+	MUSEUM    int = 7
+	PERSON    int = 8
+	COPYRIGHT int = 9
 )
 
 // Repository Main Object
