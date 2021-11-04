@@ -86,12 +86,13 @@ func (s *Repository) TopBrandList(lang string) (*TopBrandsListResult, error) {
 		    FROM item AS product1
 		    	JOIN item_parent_cache ON product1.id = item_parent_cache.item_id
 			WHERE item_parent_cache.parent_id = item.id
+				AND item_parent_cache.item_id <> item_parent_cache.parent_id
 		    LIMIT 1
 		) AS cars_count, (
 			SELECT count(distinct product2.id)
 			FROM item AS product2
 				JOIN item_parent_cache ON product2.id = item_parent_cache.item_id
-			WHERE item_parent_cache.parent_id = product2.id
+			WHERE item_parent_cache.parent_id = item.id
 			  	AND item_parent_cache.item_id <> item_parent_cache.parent_id
 				AND product2.add_datetime > DATE_SUB(NOW(), INTERVAL ? DAY)
 		), (
