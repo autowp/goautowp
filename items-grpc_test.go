@@ -23,3 +23,35 @@ func TestTopBrandsList(t *testing.T) {
 	require.NotEmpty(t, r.Brands)
 	require.Greater(t, r.Total, int32(0))
 }
+
+func TestTopPersonsAuthorList(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
+	require.NoError(t, err)
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	r, err := client.GetTopPersonsList(ctx, &GetTopPersonsListRequest{
+		Language:        "ru",
+		PictureItemType: GetTopPersonsListRequest_PICTURE_AUTHOR,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, r)
+	//require.NotEmpty(t, r.Items)
+}
+
+func TestTopPersonsContentList(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
+	require.NoError(t, err)
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	r, err := client.GetTopPersonsList(ctx, &GetTopPersonsListRequest{
+		Language:        "ru",
+		PictureItemType: GetTopPersonsListRequest_PICTURE_CONTENT,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, r)
+	//require.NotEmpty(t, r.Items)
+}

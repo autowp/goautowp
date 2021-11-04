@@ -3,6 +3,7 @@ package items
 import (
 	"database/sql"
 	"fmt"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/util"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
@@ -11,8 +12,9 @@ import (
 	"strings"
 )
 
-const TopCount = 150
+const TopBrandsCount = 150
 const NewDays = 7
+const TopPersonsCount = 5
 
 var languagePriority = map[string][]string{
 	"xx":    {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
@@ -56,6 +58,16 @@ type TopBrandsListResult struct {
 	Total  int
 }
 
+type TopPersonsListItem struct {
+	ID   int64
+	Name string
+}
+
+type TopPersonsListResult struct {
+	Items []TopPersonsListItem
+	Total int
+}
+
 // NewRepository constructor
 func NewRepository(
 	autowpDB *sql.DB,
@@ -78,7 +90,7 @@ func (s *Repository) TopBrandList(lang string) (*TopBrandsListResult, error) {
 		queryArgs = append(queryArgs, l)
 	}
 	queryArgs = append(queryArgs, BRAND)
-	queryArgs = append(queryArgs, TopCount)
+	queryArgs = append(queryArgs, TopBrandsCount)
 
 	rows, err := s.db.Query(`
 		SELECT id, catname, name, (
@@ -198,5 +210,60 @@ func (s *Repository) TopBrandList(lang string) (*TopBrandsListResult, error) {
 	return &TopBrandsListResult{
 		Brands: result,
 		Total:  total,
+	}, nil
+}
+
+func (s *Repository) TopPersonsList(lang string, pictureItemType pictures.PictureItemType) (*TopPersonsListResult, error) {
+
+	langPriority, ok := languagePriority[lang]
+	if !ok {
+		return nil, fmt.Errorf("language `%s` not found", lang)
+	}
+
+	queryArgs := make([]interface{}, 0)
+	for _, l := range langPriority {
+		queryArgs = append(queryArgs, l)
+	}
+	queryArgs = append(queryArgs, PERSON, pictures.STATUS_ACCEPTED, pictureItemType, TopPersonsCount)
+
+	rows, err := s.db.Query(`
+		SELECT item.id, item.name, (
+		    SELECT name
+            FROM item_language
+            WHERE item_id = item.id AND length(name) > 0
+            ORDER BY FIELD(language`+strings.Repeat(", ?", len(langPriority))+`)
+            LIMIT 1
+		)
+		FROM item
+			INNER JOIN picture_item ON item.id = picture_item.item_id
+			INNER JOIN pictures ON picture_item.picture_id = pictures.id
+		WHERE item.item_type_id = ? AND pictures.status = ? AND picture_item.type = ?
+		GROUP BY item.id
+		ORDER BY COUNT(1) DESC
+		LIMIT ?
+	`, queryArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer util.Close(rows)
+
+	var result []TopPersonsListItem
+	for rows.Next() {
+		var r TopPersonsListItem
+		var langName sql.NullString
+		err = rows.Scan(&r.ID, &r.Name, &langName)
+		if err != nil {
+			return nil, err
+		}
+
+		if langName.Valid && len(langName.String) > 0 {
+			r.Name = langName.String
+		}
+
+		result = append(result, r)
+	}
+
+	return &TopPersonsListResult{
+		Items: result,
 	}, nil
 }
