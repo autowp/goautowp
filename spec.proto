@@ -55,6 +55,7 @@ service Users {
 service Items {
   rpc GetTopBrandsList(GetTopBrandsListRequest) returns (APITopBrandsList) {}
   rpc GetTopPersonsList(GetTopPersonsListRequest) returns (APITopPersonsList) {}
+  rpc List(ListItemsRequest) returns (APIItemList) {}
 }
 
 message ErrorDetails {
@@ -371,14 +372,43 @@ message APITopBrandsListItem {
   int32 new_items_count = 5;
 }
 
+enum PictureItemType {
+  PICTURE_UNKNOWN = 0;
+  PICTURE_CONTENT = 1;
+  PICTURE_AUTHOR = 2;
+  PICTURE_COPYRIGHTS = 3;
+}
+
+enum ItemType {
+  ITEM_TYPE_UNKNOWN    = 0;
+  ITEM_TYPE_VEHICLE    = 1;
+  ITEM_TYPE_ENGINE     = 2;
+  ITEM_TYPE_CATEGORY   = 3;
+  ITEM_TYPE_TWINS      = 4;
+  ITEM_TYPE_BRAND      = 5;
+  ITEM_TYPE_FACTORY    = 6;
+  ITEM_TYPE_MUSEUM     = 7;
+  ITEM_TYPE_PERSON     = 8;
+  ITEM_TYPE_COPYRIGHT  = 9;
+}
+
+enum PictureStatus {
+  PICTURE_STATUS_UNKNOWN  = 0;
+  PICTURE_STATUS_ACCEPTED = 1;
+  PICTURE_STATUS_REMOVING = 2;
+  PICTURE_STATUS_REMOVED  = 3;
+  PICTURE_STATUS_INBOX    = 4;
+}
+
+enum ItemPictureType {
+  ITEM_PICTURE_UNKNOWN    = 0;
+  ITEM_PICTURE_CONTENT    = 1;
+  ITEM_PICTURE_AUTHOR     = 2;
+  ITEM_PICTURE_COPYRIGHTS = 3;
+}
+
 message GetTopPersonsListRequest {
   string language = 1;
-  enum PictureItemType {
-    PICTURE_UNKNOWN = 0;
-    PICTURE_CONTENT = 1;
-    PICTURE_AUTHOR = 2;
-    PICTURE_COPYRIGHTS = 3;
-  }
   PictureItemType picture_item_type = 2;
 }
 
@@ -389,4 +419,52 @@ message APITopPersonsList {
 message APITopPersonsListItem {
   int64 id = 1;
   string name = 3;
+}
+
+message ItemPicturesRequest {
+  ItemPictureType type_id = 1;
+  PicturesRequest pictures = 2;
+  int32 perspective_id = 3;
+}
+
+message PicturesRequest {
+  PictureStatus status = 1;
+  ItemPicturesRequest item_picture = 2;
+}
+
+message PictureFields {
+  bool name_text = 1;
+}
+
+message PreviewPicturesFields {
+  bool route = 1;
+  PictureFields picture = 2;
+}
+
+message ItemFields {
+  bool name_html = 1;
+  bool name_default = 2;
+  bool description = 3;
+  bool has_text = 4;
+  PreviewPicturesFields preview_pictures = 5;
+  bool total_pictures = 6;
+}
+
+message ListItemsRequest {
+  string language = 1;
+  ItemFields fields = 2;
+  ItemType type_id = 3;
+  ItemPicturesRequest descendant_pictures = 4;
+  ItemPicturesRequest preview_pictures = 5;
+  uint64 limit = 6;
+}
+
+message APIItem {
+  int64 id = 1;
+  string catname = 2;
+  string name = 3;
+}
+
+message APIItemList {
+  repeated APIItem items = 1;
 }

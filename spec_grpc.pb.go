@@ -1395,6 +1395,7 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 type ItemsClient interface {
 	GetTopBrandsList(ctx context.Context, in *GetTopBrandsListRequest, opts ...grpc.CallOption) (*APITopBrandsList, error)
 	GetTopPersonsList(ctx context.Context, in *GetTopPersonsListRequest, opts ...grpc.CallOption) (*APITopPersonsList, error)
+	List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 }
 
 type itemsClient struct {
@@ -1423,12 +1424,22 @@ func (c *itemsClient) GetTopPersonsList(ctx context.Context, in *GetTopPersonsLi
 	return out, nil
 }
 
+func (c *itemsClient) List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error) {
+	out := new(APIItemList)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility
 type ItemsServer interface {
 	GetTopBrandsList(context.Context, *GetTopBrandsListRequest) (*APITopBrandsList, error)
 	GetTopPersonsList(context.Context, *GetTopPersonsListRequest) (*APITopPersonsList, error)
+	List(context.Context, *ListItemsRequest) (*APIItemList, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -1441,6 +1452,9 @@ func (UnimplementedItemsServer) GetTopBrandsList(context.Context, *GetTopBrandsL
 }
 func (UnimplementedItemsServer) GetTopPersonsList(context.Context, *GetTopPersonsListRequest) (*APITopPersonsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopPersonsList not implemented")
+}
+func (UnimplementedItemsServer) List(context.Context, *ListItemsRequest) (*APIItemList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 
@@ -1491,6 +1505,24 @@ func _Items_GetTopPersonsList_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).List(ctx, req.(*ListItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1505,6 +1537,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTopPersonsList",
 			Handler:    _Items_GetTopPersonsList_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _Items_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -3,6 +3,7 @@ package items
 import (
 	"database/sql"
 	"fmt"
+	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/util"
 	"golang.org/x/text/collate"
@@ -28,16 +29,18 @@ var languagePriority = map[string][]string{
 	"es":    {"es", "en", "it", "fr", "de", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
 }
 
+type ItemType int
+
 const (
-	VEHICLE   int = 1
-	ENGINE    int = 2
-	CATEGORY  int = 3
-	TWINS     int = 4
-	BRAND     int = 5
-	FACTORY   int = 6
-	MUSEUM    int = 7
-	PERSON    int = 8
-	COPYRIGHT int = 9
+	VEHICLE   ItemType = 1
+	ENGINE    ItemType = 2
+	CATEGORY  ItemType = 3
+	TWINS     ItemType = 4
+	BRAND     ItemType = 5
+	FACTORY   ItemType = 6
+	MUSEUM    ItemType = 7
+	PERSON    ItemType = 8
+	COPYRIGHT ItemType = 9
 )
 
 // Repository Main Object
@@ -58,14 +61,15 @@ type TopBrandsListResult struct {
 	Total  int
 }
 
-type TopPersonsListItem struct {
-	ID   int64
-	Name string
+type ListResult struct {
+	Items []Item
+	Total int
 }
 
-type TopPersonsListResult struct {
-	Items []TopPersonsListItem
-	Total int
+type Item struct {
+	ID      int64
+	Catname string
+	Name    string
 }
 
 // NewRepository constructor
@@ -213,57 +217,188 @@ func (s *Repository) TopBrandList(lang string) (*TopBrandsListResult, error) {
 	}, nil
 }
 
-func (s *Repository) TopPersonsList(lang string, pictureItemType pictures.PictureItemType) (*TopPersonsListResult, error) {
+type PicturesOptions struct {
+	Status      pictures.Status
+	ItemPicture *ItemPicturesOptions
+}
 
-	langPriority, ok := languagePriority[lang]
+type ItemPicturesOptions struct {
+	TypeID        pictures.ItemPictureType
+	Pictures      *PicturesOptions
+	PerspectiveID int32
+}
+
+type ListPreviewPicturesPictureFields struct {
+	NameText bool
+}
+
+type ListPreviewPicturesFields struct {
+	Route   bool
+	Picture ListPreviewPicturesPictureFields
+}
+
+type ListFields struct {
+	Name            bool
+	NameHtml        bool
+	NameDefault     bool
+	Description     bool
+	HasText         bool
+	PreviewPictures ListPreviewPicturesFields
+	TotalPictures   bool
+}
+
+type ListOptions struct {
+	Language           string
+	Fields             ListFields
+	TypeID             ItemType
+	DescendantPictures *ItemPicturesOptions
+	PreviewPictures    *ItemPicturesOptions
+	Limit              uint64
+	OrderBy            string
+}
+
+func applyPicture(alias string, sqSelect sq.SelectBuilder, options *PicturesOptions) sq.SelectBuilder {
+	joinPicture := false
+
+	pAlias := alias + "_p"
+
+	if options.Status != "" {
+		joinPicture = true
+		sqSelect = sqSelect.Where(sq.Eq{pAlias + ".status": options.Status})
+	}
+
+	if options.ItemPicture != nil {
+		joinPicture = true
+		sqSelect = applyItemPicture(pAlias, sqSelect, options.ItemPicture)
+	}
+
+	if joinPicture {
+		sqSelect = sqSelect.Join("pictures AS " + pAlias + " ON " + alias + ".picture_id = " + pAlias + ".id")
+	}
+
+	return sqSelect
+}
+
+func applyItemPicture(alias string, sqSelect sq.SelectBuilder, options *ItemPicturesOptions) sq.SelectBuilder {
+	piAlias := alias + "_pi"
+
+	sqSelect = sqSelect.Join("picture_item AS " + piAlias + " ON " + alias + ".id = " + piAlias + ".item_id")
+
+	if options.TypeID != 0 {
+		sqSelect = sqSelect.Where(sq.Eq{piAlias + ".type": options.TypeID})
+	}
+
+	if options.PerspectiveID != 0 {
+		sqSelect = sqSelect.Where(sq.Eq{piAlias + ".perspective_id": options.PerspectiveID})
+	}
+
+	if options.Pictures != nil {
+		sqSelect = applyPicture(piAlias, sqSelect, options.Pictures)
+	}
+
+	return sqSelect
+}
+
+func applyItem(alias string, sqSelect sq.SelectBuilder, options *ListOptions) (sq.SelectBuilder, error) {
+	if options.TypeID != 0 {
+		sqSelect = sqSelect.Where(sq.Eq{alias + ".item_type_id": options.TypeID})
+	}
+
+	if options.DescendantPictures != nil {
+		sqSelect = applyItemPicture(alias, sqSelect, options.DescendantPictures)
+	}
+
+	if options.Fields.Name {
+
+		langPriority, ok := languagePriority[options.Language]
+		if !ok {
+			return sqSelect, fmt.Errorf("language `%s` not found", options.Language)
+		}
+
+		s := make([]interface{}, len(langPriority))
+		for i, v := range langPriority {
+			s[i] = v
+		}
+
+		sqSelect = sqSelect.Column(`
+			IFNULL(
+				(SELECT name
+				FROM item_language
+				WHERE item_id = `+alias+`.id AND length(name) > 0
+				ORDER BY FIELD(language, `+sq.Placeholders(len(s))+`)
+				LIMIT 1),
+				`+alias+`.name
+			) AS name
+		`, s...)
+	}
+
+	return sqSelect, nil
+}
+
+func (s *Repository) List(options ListOptions) (*ListResult, error) {
+	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
-		return nil, fmt.Errorf("language `%s` not found", lang)
+		return nil, fmt.Errorf("language `%s` not found", options.Language)
+	}*/
+	var err error
+	sqSelect := sq.Select("i.id", "i.catname").From("item AS i").GroupBy("i.id")
+
+	sqSelect, err = applyItem("i", sqSelect, &options)
+	if err != nil {
+		return nil, err
 	}
 
-	queryArgs := make([]interface{}, 0)
-	for _, l := range langPriority {
-		queryArgs = append(queryArgs, l)
+	if len(options.OrderBy) > 0 {
+		sqSelect = sqSelect.OrderBy(options.OrderBy)
 	}
-	queryArgs = append(queryArgs, PERSON, pictures.STATUS_ACCEPTED, pictureItemType, TopPersonsCount)
+	if options.Limit > 0 {
+		sqSelect = sqSelect.Limit(options.Limit)
+	}
 
-	rows, err := s.db.Query(`
-		SELECT item.id, item.name, (
-		    SELECT name
-            FROM item_language
-            WHERE item_id = item.id AND length(name) > 0
-            ORDER BY FIELD(language`+strings.Repeat(", ?", len(langPriority))+`)
-            LIMIT 1
-		)
-		FROM item
-			INNER JOIN picture_item ON item.id = picture_item.item_id
-			INNER JOIN pictures ON picture_item.picture_id = pictures.id
-		WHERE item.item_type_id = ? AND pictures.status = ? AND picture_item.type = ?
-		GROUP BY item.id
-		ORDER BY COUNT(1) DESC
-		LIMIT ?
-	`, queryArgs...)
+	rows, err := sqSelect.RunWith(s.db).Query()
 	if err != nil {
 		return nil, err
 	}
 	defer util.Close(rows)
 
-	var result []TopPersonsListItem
+	columnNames, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []Item
 	for rows.Next() {
-		var r TopPersonsListItem
-		var langName sql.NullString
-		err = rows.Scan(&r.ID, &r.Name, &langName)
+
+		var r Item
+		var catname sql.NullString
+
+		pointers := make([]interface{}, len(columnNames))
+		for i, colName := range columnNames {
+			switch colName {
+			case "id":
+				pointers[i] = &r.ID
+			case "name":
+				pointers[i] = &r.Name
+			case "catname":
+				pointers[i] = &catname
+			default:
+				pointers[i] = nil
+			}
+		}
+
+		err = rows.Scan(pointers...)
 		if err != nil {
 			return nil, err
 		}
 
-		if langName.Valid && len(langName.String) > 0 {
-			r.Name = langName.String
+		if catname.Valid {
+			r.Catname = catname.String
 		}
 
 		result = append(result, r)
 	}
 
-	return &TopPersonsListResult{
+	return &ListResult{
 		Items: result,
 	}, nil
 }

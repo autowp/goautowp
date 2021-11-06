@@ -33,7 +33,7 @@ func TestTopPersonsAuthorList(t *testing.T) {
 
 	r, err := client.GetTopPersonsList(ctx, &GetTopPersonsListRequest{
 		Language:        "ru",
-		PictureItemType: GetTopPersonsListRequest_PICTURE_AUTHOR,
+		PictureItemType: PictureItemType_PICTURE_AUTHOR,
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
@@ -49,7 +49,7 @@ func TestTopPersonsContentList(t *testing.T) {
 
 	r, err := client.GetTopPersonsList(ctx, &GetTopPersonsListRequest{
 		Language:        "ru",
-		PictureItemType: GetTopPersonsListRequest_PICTURE_CONTENT,
+		PictureItemType: PictureItemType_PICTURE_CONTENT,
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
