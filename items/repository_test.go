@@ -14,11 +14,25 @@ func TestTopBrandsListRu(t *testing.T) {
 	require.NoError(t, err)
 
 	repository := NewRepository(db)
-	r, err := repository.TopBrandList("ru")
+	options := ListOptions{
+		Language: "ru",
+		Fields: ListFields{
+			Name:                true,
+			DescendantsCount:    true,
+			NewDescendantsCount: true,
+		},
+		TypeID:     BRAND,
+		Limit:      TopBrandsCount,
+		OrderBy:    "descendants_count DESC",
+		SortByName: true,
+	}
+	r, err := repository.List(options)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
-	require.NotEmpty(t, r.Brands)
-	require.Greater(t, r.Total, 0)
+	require.NotEmpty(t, r)
+
+	c, err := repository.Count(options)
+	require.Greater(t, c, 0)
 }
 
 func TestTopBrandsListZh(t *testing.T) {
@@ -27,9 +41,23 @@ func TestTopBrandsListZh(t *testing.T) {
 	require.NoError(t, err)
 
 	repository := NewRepository(db)
-	r, err := repository.TopBrandList("zh")
+	options := ListOptions{
+		Language: "zh",
+		Fields: ListFields{
+			Name:                true,
+			DescendantsCount:    true,
+			NewDescendantsCount: true,
+		},
+		TypeID:     BRAND,
+		Limit:      TopBrandsCount,
+		OrderBy:    "descendants_count DESC",
+		SortByName: true,
+	}
+	r, err := repository.List(options)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
-	require.NotEmpty(t, r.Brands)
-	require.Greater(t, r.Total, 0)
+	require.NotEmpty(t, r)
+
+	c, err := repository.Count(options)
+	require.Greater(t, c, 0)
 }
