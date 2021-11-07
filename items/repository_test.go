@@ -32,6 +32,7 @@ func TestTopBrandsListRu(t *testing.T) {
 	require.NotEmpty(t, r)
 
 	c, err := repository.Count(options)
+	require.NoError(t, err)
 	require.Greater(t, c, 0)
 }
 
@@ -59,5 +60,6 @@ func TestTopBrandsListZh(t *testing.T) {
 	require.NotEmpty(t, r)
 
 	c, err := repository.Count(options)
+	require.NoError(t, err)
 	require.Greater(t, c, 0)
 }
