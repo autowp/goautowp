@@ -55,6 +55,7 @@ service Users {
 service Items {
   rpc GetTopBrandsList(GetTopBrandsListRequest) returns (APITopBrandsList) {}
   rpc GetTopPersonsList(GetTopPersonsListRequest) returns (APITopPersonsList) {}
+  rpc GetTopFactoriesList(GetTopFactoriesListRequest) returns (APITopFactoriesList) {}
   rpc List(ListItemsRequest) returns (APIItemList) {}
 }
 
@@ -412,6 +413,10 @@ message GetTopPersonsListRequest {
   PictureItemType picture_item_type = 2;
 }
 
+message GetTopFactoriesListRequest {
+  string language = 1;
+}
+
 message APITopPersonsList {
   repeated APITopPersonsListItem items = 1;
 }
@@ -419,6 +424,17 @@ message APITopPersonsList {
 message APITopPersonsListItem {
   int64 id = 1;
   string name = 3;
+}
+
+message APITopFactoriesList {
+  repeated APITopFactoriesListItem items = 1;
+}
+
+message APITopFactoriesListItem {
+  int64 id = 1;
+  string name = 2;
+  int32 count = 3;
+  int32 new_count = 4;
 }
 
 message ItemPicturesRequest {

@@ -14,14 +14,14 @@ func TestTopBrandsListRu(t *testing.T) {
 	require.NoError(t, err)
 
 	repository := NewRepository(db)
-	options := ListOptions{
+	options := ItemsOptions{
 		Language: "ru",
 		Fields: ListFields{
 			Name:                true,
 			DescendantsCount:    true,
 			NewDescendantsCount: true,
 		},
-		TypeID:     BRAND,
+		TypeID:     []ItemType{BRAND},
 		Limit:      TopBrandsCount,
 		OrderBy:    "descendants_count DESC",
 		SortByName: true,
@@ -42,14 +42,14 @@ func TestTopBrandsListZh(t *testing.T) {
 	require.NoError(t, err)
 
 	repository := NewRepository(db)
-	options := ListOptions{
+	options := ItemsOptions{
 		Language: "zh",
 		Fields: ListFields{
 			Name:                true,
 			DescendantsCount:    true,
 			NewDescendantsCount: true,
 		},
-		TypeID:     BRAND,
+		TypeID:     []ItemType{BRAND},
 		Limit:      TopBrandsCount,
 		OrderBy:    "descendants_count DESC",
 		SortByName: true,

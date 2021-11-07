@@ -15,6 +15,7 @@ import (
 const TopBrandsCount = 150
 const NewDays = 7
 const TopPersonsCount = 5
+const TopFactoriesCount = 8
 
 var languagePriority = map[string][]string{
 	"xx":    {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
@@ -51,6 +52,8 @@ type Item struct {
 	ID                  int64
 	Catname             string
 	Name                string
+	ChildItemsCount     int32
+	NewChildItemsCount  int32
 	DescendantsCount    int32
 	NewDescendantsCount int32
 }
@@ -92,19 +95,22 @@ type ListFields struct {
 	HasText             bool
 	PreviewPictures     ListPreviewPicturesFields
 	TotalPictures       bool
+	ChildItemsCount     bool
+	NewChildItemsCount  bool
 	DescendantsCount    bool
 	NewDescendantsCount bool
 }
 
-type ListOptions struct {
+type ItemsOptions struct {
 	Language           string
 	Fields             ListFields
-	TypeID             ItemType
+	TypeID             []ItemType
 	DescendantPictures *ItemPicturesOptions
 	PreviewPictures    *ItemPicturesOptions
 	Limit              uint64
 	OrderBy            string
 	SortByName         bool
+	ChildItems         *ItemsOptions
 }
 
 func applyPicture(alias string, sqSelect sq.SelectBuilder, options *PicturesOptions) sq.SelectBuilder {
@@ -149,8 +155,10 @@ func applyItemPicture(alias string, sqSelect sq.SelectBuilder, options *ItemPict
 	return sqSelect
 }
 
-func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *ListOptions) (sq.SelectBuilder, error) {
-	if options.TypeID != 0 {
+func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *ItemsOptions) (sq.SelectBuilder, error) {
+	var err error
+
+	if options.TypeID != nil && len(options.TypeID) > 0 {
 		sqSelect = sqSelect.Where(sq.Eq{alias + ".item_type_id": options.TypeID})
 	}
 
@@ -158,7 +166,31 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 		sqSelect = applyItemPicture(alias, sqSelect, options.DescendantPictures)
 	}
 
+	ipAlias := alias + "_ip"
+	iAlias := ipAlias + "_i"
+
+	if options.ChildItems != nil {
+		sqSelect = sqSelect.
+			Join("item_parent AS " + ipAlias + " ON " + alias + ".id = " + ipAlias + ".parent_id").
+			Join("item AS " + iAlias + " ON " + ipAlias + ".item_id = " + iAlias + ".id")
+		sqSelect, err = applyItem(iAlias, sqSelect, false, options.ChildItems)
+		if err != nil {
+			return sqSelect, err
+		}
+	}
+
 	if fields {
+		if options.Fields.ChildItemsCount {
+			sqSelect = sqSelect.Column("count(distinct " + ipAlias + ".item_id) AS child_items_count")
+		}
+
+		if options.Fields.NewChildItemsCount {
+			sqSelect = sqSelect.Column(
+				"count(distinct IF("+ipAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+ipAlias+".item_id, NULL)) AS new_child_items_count",
+				NewDays,
+			)
+		}
+
 		if options.Fields.Name {
 
 			langPriority, ok := languagePriority[options.Language]
@@ -213,7 +245,7 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 	return sqSelect, nil
 }
 
-func (s *Repository) Count(options ListOptions) (int, error) {
+func (s *Repository) Count(options ItemsOptions) (int, error) {
 	var err error
 	sqSelect := sq.Select("COUNT(1)").From("item AS i")
 
@@ -231,7 +263,7 @@ func (s *Repository) Count(options ListOptions) (int, error) {
 	return count, nil
 }
 
-func (s *Repository) List(options ListOptions) ([]Item, error) {
+func (s *Repository) List(options ItemsOptions) ([]Item, error) {
 	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
 		return nil, fmt.Errorf("language `%s` not found", options.Language)
@@ -281,6 +313,10 @@ func (s *Repository) List(options ListOptions) ([]Item, error) {
 				pointers[i] = &r.DescendantsCount
 			case "new_descendants_count":
 				pointers[i] = &r.NewDescendantsCount
+			case "child_items_count":
+				pointers[i] = &r.ChildItemsCount
+			case "new_child_items_count":
+				pointers[i] = &r.NewChildItemsCount
 			default:
 				pointers[i] = nil
 			}

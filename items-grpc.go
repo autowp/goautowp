@@ -53,14 +53,14 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 	var cache BrandsCache
 
 	if err == memcache.ErrCacheMiss {
-		options := items.ListOptions{
+		options := items.ItemsOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name:                true,
 				DescendantsCount:    true,
 				NewDescendantsCount: true,
 			},
-			TypeID:     items.BRAND,
+			TypeID:     []items.ItemType{items.BRAND},
 			Limit:      items.TopBrandsCount,
 			OrderBy:    "descendants_count DESC",
 			SortByName: true,
@@ -141,12 +141,12 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 
 	if err == memcache.ErrCacheMiss {
 
-		res, err = s.repository.List(items.ListOptions{
+		res, err = s.repository.List(items.ItemsOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name: true,
 			},
-			TypeID: items.PERSON,
+			TypeID: []items.ItemType{items.PERSON},
 			DescendantPictures: &items.ItemPicturesOptions{
 				TypeID: pictureItemType,
 				Pictures: &items.PicturesOptions{
@@ -196,6 +196,75 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 	}, nil
 }
 
+func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFactoriesListRequest) (*APITopFactoriesList, error) {
+
+	key := fmt.Sprintf("GO_FACTORIES_%s", in.Language)
+
+	item, err := s.memcached.Get(key)
+	if err != nil && err != memcache.ErrCacheMiss {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var res []items.Item
+
+	if err == memcache.ErrCacheMiss {
+
+		res, err = s.repository.List(items.ItemsOptions{
+			Language: in.Language,
+			Fields: items.ListFields{
+				Name:               true,
+				ChildItemsCount:    true,
+				NewChildItemsCount: true,
+			},
+			TypeID: []items.ItemType{items.FACTORY},
+			ChildItems: &items.ItemsOptions{
+				TypeID: []items.ItemType{items.VEHICLE, items.ENGINE},
+			},
+			Limit:   items.TopFactoriesCount,
+			OrderBy: "COUNT(1) DESC",
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		b := new(bytes.Buffer)
+		err = gob.NewEncoder(b).Encode(res)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.memcached.Set(&memcache.Item{
+			Key:        key,
+			Value:      b.Bytes(),
+			Expiration: 180,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+	} else {
+		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
+		err = decoder.Decode(&res)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	is := make([]*APITopFactoriesListItem, len(res))
+	for idx, b := range res {
+		is[idx] = &APITopFactoriesListItem{
+			Id:       b.ID,
+			Name:     b.Name,
+			Count:    b.ChildItemsCount,
+			NewCount: b.NewChildItemsCount,
+		}
+	}
+
+	return &APITopFactoriesList{
+		Items: is,
+	}, nil
+}
+
 func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
 	switch request.Status {
 	case PictureStatus_PICTURE_STATUS_UNKNOWN:
@@ -233,7 +302,7 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 
 func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIItemList, error) {
 
-	options := items.ListOptions{
+	options := items.ItemsOptions{
 		Limit: in.Limit,
 		Fields: items.ListFields{
 			NameHtml:    in.Fields.NameHtml,
@@ -253,23 +322,23 @@ func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIIte
 	switch in.TypeId {
 	case ItemType_ITEM_TYPE_UNKNOWN:
 	case ItemType_ITEM_TYPE_VEHICLE:
-		options.TypeID = items.VEHICLE
+		options.TypeID = []items.ItemType{items.VEHICLE}
 	case ItemType_ITEM_TYPE_ENGINE:
-		options.TypeID = items.ENGINE
+		options.TypeID = []items.ItemType{items.ENGINE}
 	case ItemType_ITEM_TYPE_CATEGORY:
-		options.TypeID = items.CATEGORY
+		options.TypeID = []items.ItemType{items.CATEGORY}
 	case ItemType_ITEM_TYPE_TWINS:
-		options.TypeID = items.TWINS
+		options.TypeID = []items.ItemType{items.TWINS}
 	case ItemType_ITEM_TYPE_BRAND:
-		options.TypeID = items.BRAND
+		options.TypeID = []items.ItemType{items.BRAND}
 	case ItemType_ITEM_TYPE_FACTORY:
-		options.TypeID = items.FACTORY
+		options.TypeID = []items.ItemType{items.FACTORY}
 	case ItemType_ITEM_TYPE_MUSEUM:
-		options.TypeID = items.MUSEUM
+		options.TypeID = []items.ItemType{items.MUSEUM}
 	case ItemType_ITEM_TYPE_PERSON:
-		options.TypeID = items.PERSON
+		options.TypeID = []items.ItemType{items.PERSON}
 	case ItemType_ITEM_TYPE_COPYRIGHT:
-		options.TypeID = items.COPYRIGHT
+		options.TypeID = []items.ItemType{items.COPYRIGHT}
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Unexpected item_type")
 	}
