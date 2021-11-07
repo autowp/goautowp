@@ -18,6 +18,11 @@ type ItemsGRPCServer struct {
 	memcached  *memcache.Client
 }
 
+type BrandsCache struct {
+	Items []items.Item
+	Total int
+}
+
 func NewItemsGRPCServer(
 	repository *items.Repository,
 	memcached *memcache.Client,
@@ -38,23 +43,43 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 		return nil, status.Error(codes.Internal, "memcached not initialized")
 	}
 
-	key := "GO_TOPBRANDSLIST_" + in.Language
+	key := "GO_TOPBRANDSLIST_2_" + in.Language
 
 	item, err := s.memcached.Get(key)
 	if err != nil && err != memcache.ErrCacheMiss {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	var res *items.TopBrandsListResult
+	var cache BrandsCache
 
 	if err == memcache.ErrCacheMiss {
-		res, err = s.repository.TopBrandList(in.Language)
+		options := items.ListOptions{
+			Language: in.Language,
+			Fields: items.ListFields{
+				Name:                true,
+				DescendantsCount:    true,
+				NewDescendantsCount: true,
+			},
+			TypeID:     items.BRAND,
+			Limit:      items.TopBrandsCount,
+			OrderBy:    "descendants_count DESC",
+			SortByName: true,
+		}
+		list, err := s.repository.List(options)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
+		count, err := s.repository.Count(options)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		cache.Items = list
+		cache.Total = count
+
 		b := new(bytes.Buffer)
-		err = gob.NewEncoder(b).Encode(res)
+		err = gob.NewEncoder(b).Encode(cache)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -70,26 +95,26 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 
 	} else {
 		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
-		err = decoder.Decode(&res)
+		err = decoder.Decode(&cache)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
-	brands := make([]*APITopBrandsListItem, len(res.Brands))
-	for idx, b := range res.Brands {
+	brands := make([]*APITopBrandsListItem, len(cache.Items))
+	for idx, b := range cache.Items {
 		brands[idx] = &APITopBrandsListItem{
 			Id:            b.ID,
 			Catname:       b.Catname,
 			Name:          b.Name,
-			ItemsCount:    b.ItemsCount,
-			NewItemsCount: b.NewItemsCount,
+			ItemsCount:    b.DescendantsCount,
+			NewItemsCount: b.NewDescendantsCount,
 		}
 	}
 
 	return &APITopBrandsList{
 		Brands: brands,
-		Total:  int32(res.Total),
+		Total:  int32(cache.Total),
 	}, nil
 }
 
@@ -112,7 +137,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	var res *items.ListResult
+	var res []items.Item
 
 	if err == memcache.ErrCacheMiss {
 
@@ -158,8 +183,8 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 		}
 	}
 
-	is := make([]*APITopPersonsListItem, len(res.Items))
-	for idx, b := range res.Items {
+	is := make([]*APITopPersonsListItem, len(res))
+	for idx, b := range res {
 		is[idx] = &APITopPersonsListItem{
 			Id:   b.ID,
 			Name: b.Name,
@@ -256,17 +281,13 @@ func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIIte
 		mapItemPicturesRequest(in.PreviewPictures, options.PreviewPictures)
 	}
 
-	/**
-	fields: name_html,name_default,description,has_text,preview_pictures.route,preview_pictures.picture.name_text,total_pictures
-	*/
-
 	res, err := s.repository.List(options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	is := make([]*APIItem, len(res.Items))
-	for idx, i := range res.Items {
+	is := make([]*APIItem, len(res))
+	for idx, i := range res {
 		is[idx] = &APIItem{
 			Id:      i.ID,
 			Catname: i.Catname,

@@ -10,7 +10,6 @@ import (
 	"golang.org/x/text/language"
 	"regexp"
 	"sort"
-	"strings"
 )
 
 const TopBrandsCount = 150
@@ -48,28 +47,12 @@ type Repository struct {
 	db *sql.DB
 }
 
-type TopBrandsListItem struct {
-	ID            int32
-	Catname       string
-	Name          string
-	ItemsCount    int32
-	NewItemsCount int32
-}
-
-type TopBrandsListResult struct {
-	Brands []TopBrandsListItem
-	Total  int
-}
-
-type ListResult struct {
-	Items []Item
-	Total int
-}
-
 type Item struct {
-	ID      int64
-	Catname string
-	Name    string
+	ID                  int64
+	Catname             string
+	Name                string
+	DescendantsCount    int32
+	NewDescendantsCount int32
 }
 
 // NewRepository constructor
@@ -79,142 +62,6 @@ func NewRepository(
 	return &Repository{
 		db: autowpDB,
 	}
-}
-
-func (s *Repository) TopBrandList(lang string) (*TopBrandsListResult, error) {
-
-	langPriority, ok := languagePriority[lang]
-	if !ok {
-		return nil, fmt.Errorf("language `%s` not found", lang)
-	}
-
-	queryArgs := make([]interface{}, 0)
-	queryArgs = append(queryArgs, NewDays)
-	for _, l := range langPriority {
-		queryArgs = append(queryArgs, l)
-	}
-	queryArgs = append(queryArgs, BRAND)
-	queryArgs = append(queryArgs, TopBrandsCount)
-
-	rows, err := s.db.Query(`
-		SELECT id, catname, name, (
-		    SELECT count(distinct product1.id)
-		    FROM item AS product1
-		    	JOIN item_parent_cache ON product1.id = item_parent_cache.item_id
-			WHERE item_parent_cache.parent_id = item.id
-				AND item_parent_cache.item_id <> item_parent_cache.parent_id
-		    LIMIT 1
-		) AS cars_count, (
-			SELECT count(distinct product2.id)
-			FROM item AS product2
-				JOIN item_parent_cache ON product2.id = item_parent_cache.item_id
-			WHERE item_parent_cache.parent_id = item.id
-			  	AND item_parent_cache.item_id <> item_parent_cache.parent_id
-				AND product2.add_datetime > DATE_SUB(NOW(), INTERVAL ? DAY)
-		), (
-		    SELECT name
-            FROM item_language
-            WHERE item_id = item.id AND length(name) > 0
-            ORDER BY FIELD(language`+strings.Repeat(", ?", len(langPriority))+`)
-            LIMIT 1
-		)
-		FROM item
-		WHERE item_type_id = ?
-		GROUP BY item.id
-		ORDER BY cars_count DESC
-		LIMIT ?
-	`, queryArgs...)
-	if err != nil {
-		return nil, err
-	}
-	defer util.Close(rows)
-
-	var result []TopBrandsListItem
-	for rows.Next() {
-		var r TopBrandsListItem
-		var langName sql.NullString
-		var newCount sql.NullInt32
-		err = rows.Scan(&r.ID, &r.Catname, &r.Name, &r.ItemsCount, &newCount, &langName)
-		if err != nil {
-			return nil, err
-		}
-
-		if langName.Valid && len(langName.String) > 0 {
-			r.Name = langName.String
-		}
-
-		r.NewItemsCount = 0
-		if newCount.Valid {
-			r.NewItemsCount = newCount.Int32
-		}
-
-		result = append(result, r)
-	}
-
-	tag := language.English
-	switch lang {
-	case "ru":
-		tag = language.Russian
-	case "zh":
-		tag = language.SimplifiedChinese
-	case "fr":
-		tag = language.French
-	case "es":
-		tag = language.Spanish
-	case "uk":
-		tag = language.Ukrainian
-	case "be":
-		tag = language.Russian
-	case "pt-br":
-		tag = language.BrazilianPortuguese
-	}
-
-	cyrillic := regexp.MustCompile(`^\p{Cyrillic}`)
-	han := regexp.MustCompile(`^\p{Han}`)
-
-	cl := collate.New(tag, collate.IgnoreCase, collate.IgnoreDiacritics)
-	sort.SliceStable(result, func(i, j int) bool {
-		a := result[i].Name
-		b := result[j].Name
-
-		switch lang {
-		case "ru", "uk", "be":
-			aIsCyrillic := cyrillic.MatchString(a)
-			bIsCyrillic := cyrillic.MatchString(b)
-
-			if aIsCyrillic && !bIsCyrillic {
-				return true
-			}
-
-			if bIsCyrillic && !aIsCyrillic {
-				return false
-			}
-		case "zh":
-			aIsHan := han.MatchString(a)
-			bIsHan := han.MatchString(b)
-
-			if aIsHan && !bIsHan {
-				return true
-			}
-
-			if bIsHan && !aIsHan {
-				return false
-			}
-		}
-
-		return cl.CompareString(a, b) == -1
-	})
-
-	var total int
-	err = s.db.QueryRow("SELECT count(1) FROM item WHERE item_type_id = ?", BRAND).Scan(&total)
-	if err != nil {
-		return nil, err
-	}
-
-	return &TopBrandsListResult{
-		Brands: result,
-		Total:  total,
-	}, nil
 }
 
 type PicturesOptions struct {
@@ -238,13 +85,15 @@ type ListPreviewPicturesFields struct {
 }
 
 type ListFields struct {
-	Name            bool
-	NameHtml        bool
-	NameDefault     bool
-	Description     bool
-	HasText         bool
-	PreviewPictures ListPreviewPicturesFields
-	TotalPictures   bool
+	Name                bool
+	NameHtml            bool
+	NameDefault         bool
+	Description         bool
+	HasText             bool
+	PreviewPictures     ListPreviewPicturesFields
+	TotalPictures       bool
+	DescendantsCount    bool
+	NewDescendantsCount bool
 }
 
 type ListOptions struct {
@@ -255,6 +104,7 @@ type ListOptions struct {
 	PreviewPictures    *ItemPicturesOptions
 	Limit              uint64
 	OrderBy            string
+	SortByName         bool
 }
 
 func applyPicture(alias string, sqSelect sq.SelectBuilder, options *PicturesOptions) sq.SelectBuilder {
@@ -299,7 +149,7 @@ func applyItemPicture(alias string, sqSelect sq.SelectBuilder, options *ItemPict
 	return sqSelect
 }
 
-func applyItem(alias string, sqSelect sq.SelectBuilder, options *ListOptions) (sq.SelectBuilder, error) {
+func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *ListOptions) (sq.SelectBuilder, error) {
 	if options.TypeID != 0 {
 		sqSelect = sqSelect.Where(sq.Eq{alias + ".item_type_id": options.TypeID})
 	}
@@ -308,34 +158,80 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, options *ListOptions) (s
 		sqSelect = applyItemPicture(alias, sqSelect, options.DescendantPictures)
 	}
 
-	if options.Fields.Name {
+	if fields {
+		if options.Fields.Name {
 
-		langPriority, ok := languagePriority[options.Language]
-		if !ok {
-			return sqSelect, fmt.Errorf("language `%s` not found", options.Language)
+			langPriority, ok := languagePriority[options.Language]
+			if !ok {
+				return sqSelect, fmt.Errorf("language `%s` not found", options.Language)
+			}
+
+			s := make([]interface{}, len(langPriority))
+			for i, v := range langPriority {
+				s[i] = v
+			}
+
+			sqSelect = sqSelect.Column(`
+				IFNULL(
+					(SELECT name
+					FROM item_language
+					WHERE item_id = `+alias+`.id AND length(name) > 0
+					ORDER BY FIELD(language, `+sq.Placeholders(len(s))+`)
+					LIMIT 1),
+					`+alias+`.name
+				) AS name
+			`, s...)
 		}
 
-		s := make([]interface{}, len(langPriority))
-		for i, v := range langPriority {
-			s[i] = v
+		if options.Fields.DescendantsCount {
+			sqSelect = sqSelect.Column(`
+				(
+					SELECT count(distinct product1.id)
+					FROM item AS product1
+						JOIN item_parent_cache ON product1.id = item_parent_cache.item_id
+					WHERE item_parent_cache.parent_id = ` + alias + `.id
+						AND item_parent_cache.item_id <> item_parent_cache.parent_id
+					LIMIT 1
+				) AS descendants_count
+			`)
 		}
 
-		sqSelect = sqSelect.Column(`
-			IFNULL(
-				(SELECT name
-				FROM item_language
-				WHERE item_id = `+alias+`.id AND length(name) > 0
-				ORDER BY FIELD(language, `+sq.Placeholders(len(s))+`)
-				LIMIT 1),
-				`+alias+`.name
-			) AS name
-		`, s...)
+		if options.Fields.NewDescendantsCount {
+			sqSelect = sqSelect.Column(`
+				(
+					SELECT count(distinct product2.id)
+					FROM item AS product2
+						JOIN item_parent_cache ON product2.id = item_parent_cache.item_id
+					WHERE item_parent_cache.parent_id = `+alias+`.id
+						AND item_parent_cache.item_id <> item_parent_cache.parent_id
+						AND product2.add_datetime > DATE_SUB(NOW(), INTERVAL ? DAY)
+				) AS new_descendants_count
+			`, NewDays)
+		}
 	}
 
 	return sqSelect, nil
 }
 
-func (s *Repository) List(options ListOptions) (*ListResult, error) {
+func (s *Repository) Count(options ListOptions) (int, error) {
+	var err error
+	sqSelect := sq.Select("COUNT(1)").From("item AS i")
+
+	sqSelect, err = applyItem("i", sqSelect, false, &options)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int
+	err = sqSelect.RunWith(s.db).QueryRow().Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (s *Repository) List(options ListOptions) ([]Item, error) {
 	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
 		return nil, fmt.Errorf("language `%s` not found", options.Language)
@@ -343,7 +239,7 @@ func (s *Repository) List(options ListOptions) (*ListResult, error) {
 	var err error
 	sqSelect := sq.Select("i.id", "i.catname").From("item AS i").GroupBy("i.id")
 
-	sqSelect, err = applyItem("i", sqSelect, &options)
+	sqSelect, err = applyItem("i", sqSelect, true, &options)
 	if err != nil {
 		return nil, err
 	}
@@ -381,6 +277,10 @@ func (s *Repository) List(options ListOptions) (*ListResult, error) {
 				pointers[i] = &r.Name
 			case "catname":
 				pointers[i] = &catname
+			case "descendants_count":
+				pointers[i] = &r.DescendantsCount
+			case "new_descendants_count":
+				pointers[i] = &r.NewDescendantsCount
 			default:
 				pointers[i] = nil
 			}
@@ -398,7 +298,61 @@ func (s *Repository) List(options ListOptions) (*ListResult, error) {
 		result = append(result, r)
 	}
 
-	return &ListResult{
-		Items: result,
-	}, nil
+	if options.SortByName {
+		tag := language.English
+		switch options.Language {
+		case "ru":
+			tag = language.Russian
+		case "zh":
+			tag = language.SimplifiedChinese
+		case "fr":
+			tag = language.French
+		case "es":
+			tag = language.Spanish
+		case "uk":
+			tag = language.Ukrainian
+		case "be":
+			tag = language.Russian
+		case "pt-br":
+			tag = language.BrazilianPortuguese
+		}
+
+		cyrillic := regexp.MustCompile(`^\p{Cyrillic}`)
+		han := regexp.MustCompile(`^\p{Han}`)
+
+		cl := collate.New(tag, collate.IgnoreCase, collate.IgnoreDiacritics)
+		sort.SliceStable(result, func(i, j int) bool {
+			a := result[i].Name
+			b := result[j].Name
+
+			switch options.Language {
+			case "ru", "uk", "be":
+				aIsCyrillic := cyrillic.MatchString(a)
+				bIsCyrillic := cyrillic.MatchString(b)
+
+				if aIsCyrillic && !bIsCyrillic {
+					return true
+				}
+
+				if bIsCyrillic && !aIsCyrillic {
+					return false
+				}
+			case "zh":
+				aIsHan := han.MatchString(a)
+				bIsHan := han.MatchString(b)
+
+				if aIsHan && !bIsHan {
+					return true
+				}
+
+				if bIsHan && !aIsHan {
+					return false
+				}
+			}
+
+			return cl.CompareString(a, b) == -1
+		})
+	}
+
+	return result, nil
 }

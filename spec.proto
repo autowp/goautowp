@@ -365,7 +365,7 @@ message APITopBrandsList {
 }
 
 message APITopBrandsListItem {
-  int32 id = 1;
+  int64 id = 1;
   string catname = 2;
   string name = 3;
   int32 items_count = 4;
