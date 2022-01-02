@@ -113,6 +113,7 @@ type ItemsOptions struct {
 	SortByName         bool
 	ChildItems         *ItemsOptions
 	DescendantItems    *ItemsOptions
+	NoParents          bool
 }
 
 func applyPicture(alias string, sqSelect sq.SelectBuilder, options *PicturesOptions) sq.SelectBuilder {
@@ -190,6 +191,13 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 		if err != nil {
 			return sqSelect, err
 		}
+	}
+
+	if options.NoParents {
+		ippAlias := alias + "_ipp"
+		sqSelect = sqSelect.
+			LeftJoin("item_parent AS " + ippAlias + " ON " + alias + ".id = " + ippAlias + ".item_id").
+			Where(ippAlias + ".parent_id IS NULL")
 	}
 
 	if fields {
