@@ -16,6 +16,7 @@ const TopBrandsCount = 150
 const NewDays = 7
 const TopPersonsCount = 5
 const TopFactoriesCount = 8
+const TopCategoriesCount = 15
 
 var languagePriority = map[string][]string{
 	"xx":    {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
@@ -111,6 +112,7 @@ type ItemsOptions struct {
 	OrderBy            string
 	SortByName         bool
 	ChildItems         *ItemsOptions
+	DescendantItems    *ItemsOptions
 }
 
 func applyPicture(alias string, sqSelect sq.SelectBuilder, options *PicturesOptions) sq.SelectBuilder {
@@ -168,12 +170,23 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 
 	ipAlias := alias + "_ip"
 	iAlias := ipAlias + "_i"
+	ipcAlias := alias + "_ipc"
 
 	if options.ChildItems != nil {
 		sqSelect = sqSelect.
 			Join("item_parent AS " + ipAlias + " ON " + alias + ".id = " + ipAlias + ".parent_id").
 			Join("item AS " + iAlias + " ON " + ipAlias + ".item_id = " + iAlias + ".id")
 		sqSelect, err = applyItem(iAlias, sqSelect, false, options.ChildItems)
+		if err != nil {
+			return sqSelect, err
+		}
+	}
+
+	if options.DescendantItems != nil {
+		sqSelect = sqSelect.
+			Join("item_parent_cache AS " + ipcAlias + " ON " + alias + ".id = " + ipcAlias + ".parent_id").
+			Join("item AS " + iAlias + " ON " + ipAlias + ".item_id = " + iAlias + ".id")
+		sqSelect, err = applyItem(iAlias, sqSelect, false, options.DescendantItems)
 		if err != nil {
 			return sqSelect, err
 		}

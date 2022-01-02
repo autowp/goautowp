@@ -265,6 +265,72 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFacto
 	}, nil
 }
 
+func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCategoriesListRequest) (*APITopCategoriesList, error) {
+
+	key := fmt.Sprintf("GO_CATEGORIES_%s", in.Language)
+
+	item, err := s.memcached.Get(key)
+	if err != nil && err != memcache.ErrCacheMiss {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var res []items.Item
+
+	if err == memcache.ErrCacheMiss {
+
+		res, err = s.repository.List(items.ItemsOptions{
+			Language: in.Language,
+			Fields: items.ListFields{
+				Name:                true,
+				DescendantsCount:    true,
+				NewDescendantsCount: true,
+			},
+			TypeID:  []items.ItemType{items.CATEGORY},
+			Limit:   items.TopCategoriesCount,
+			OrderBy: "descendants_count DESC",
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		b := new(bytes.Buffer)
+		err = gob.NewEncoder(b).Encode(res)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.memcached.Set(&memcache.Item{
+			Key:        key,
+			Value:      b.Bytes(),
+			Expiration: 180,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+	} else {
+		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
+		err = decoder.Decode(&res)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	is := make([]*APITopCategoriesListItem, len(res))
+	for idx, b := range res {
+		is[idx] = &APITopCategoriesListItem{
+			Id:       b.ID,
+			Name:     b.Name,
+			Count:    b.ChildItemsCount,
+			NewCount: b.NewChildItemsCount,
+		}
+	}
+
+	return &APITopCategoriesList{
+		Items: is,
+	}, nil
+}
+
 func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
 	switch request.Status {
 	case PictureStatus_PICTURE_STATUS_UNKNOWN:
