@@ -267,7 +267,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFacto
 
 func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCategoriesListRequest) (*APITopCategoriesList, error) {
 
-	key := fmt.Sprintf("GO_CATEGORIES_2_%s", in.Language)
+	key := fmt.Sprintf("GO_CATEGORIES_3_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
 	if err != nil && err != memcache.ErrCacheMiss {
@@ -322,8 +322,8 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCate
 		is[idx] = &APITopCategoriesListItem{
 			Id:       b.ID,
 			Name:     b.Name,
-			Count:    b.ChildItemsCount,
-			NewCount: b.NewChildItemsCount,
+			Count:    b.DescendantsCount,
+			NewCount: b.NewDescendantsCount,
 		}
 	}
 
