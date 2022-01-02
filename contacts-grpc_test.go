@@ -6,6 +6,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"testing"
 )
@@ -13,7 +14,7 @@ import (
 func TestCreateDeleteContact(t *testing.T) {
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	defer util.Close(conn)
 	client := NewContactsClient(conn)
