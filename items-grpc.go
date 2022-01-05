@@ -380,6 +380,9 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwi
 			},
 			TypeID: []items.ItemType{items.BRAND},
 		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 
 		b := new(bytes.Buffer)
 		err = gob.NewEncoder(b).Encode(twinsData)
