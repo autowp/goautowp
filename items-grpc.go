@@ -43,7 +43,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 		return nil, status.Error(codes.Internal, "memcached not initialized")
 	}
 
-	key := "GO_TOPBRANDSLIST_2_" + in.Language
+	key := "GO_TOPBRANDSLIST_3_" + in.Language
 
 	item, err := s.memcached.Get(key)
 	if err != nil && err != memcache.ErrCacheMiss {
@@ -130,7 +130,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 		return nil, status.Error(codes.InvalidArgument, "Unexpected picture_item_type")
 	}
 
-	key := fmt.Sprintf("GO_PERSONS_%d_%s", pictureItemType, in.Language)
+	key := fmt.Sprintf("GO_PERSONS_2_%d_%s", pictureItemType, in.Language)
 
 	item, err := s.memcached.Get(key)
 	if err != nil && err != memcache.ErrCacheMiss {
@@ -198,7 +198,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 
 func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFactoriesListRequest) (*APITopFactoriesList, error) {
 
-	key := fmt.Sprintf("GO_FACTORIES_%s", in.Language)
+	key := fmt.Sprintf("GO_FACTORIES_2_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
 	if err != nil && err != memcache.ErrCacheMiss {
@@ -267,7 +267,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFacto
 
 func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCategoriesListRequest) (*APITopCategoriesList, error) {
 
-	key := fmt.Sprintf("GO_CATEGORIES_3_%s", in.Language)
+	key := fmt.Sprintf("GO_CATEGORIES_4_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
 	if err != nil && err != memcache.ErrCacheMiss {
@@ -329,6 +329,94 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCate
 
 	return &APITopCategoriesList{
 		Items: is,
+	}, nil
+}
+
+func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error) {
+	key := fmt.Sprintf("GO_TWINS_1_%s", in.Language)
+
+	item, err := s.memcached.Get(key)
+	if err != nil && err != memcache.ErrCacheMiss {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	twinsData := struct {
+		Count int
+		Res   []items.Item
+	}{
+		0,
+		nil,
+	}
+
+	if err == memcache.ErrCacheMiss {
+
+		twinsData.Res, err = s.repository.List(items.ItemsOptions{
+			Language: in.Language,
+			Fields: items.ListFields{
+				Name: true,
+			},
+			DescendantItems: &items.ItemsOptions{
+				ParentItems: &items.ItemsOptions{
+					TypeID: []items.ItemType{items.TWINS},
+					Fields: items.ListFields{
+						ItemsCount:    true,
+						NewItemsCount: true,
+					},
+				},
+			},
+			TypeID:  []items.ItemType{items.BRAND},
+			Limit:   items.TopTwinsBrandsCount,
+			OrderBy: "items_count DESC",
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		twinsData.Count, err = s.repository.CountDistinct(items.ItemsOptions{
+			DescendantItems: &items.ItemsOptions{
+				ParentItems: &items.ItemsOptions{
+					TypeID: []items.ItemType{items.TWINS},
+				},
+			},
+			TypeID: []items.ItemType{items.BRAND},
+		})
+
+		b := new(bytes.Buffer)
+		err = gob.NewEncoder(b).Encode(twinsData)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.memcached.Set(&memcache.Item{
+			Key:        key,
+			Value:      b.Bytes(),
+			Expiration: 180,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+	} else {
+		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
+		err = decoder.Decode(&twinsData)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	is := make([]*APITopTwinsBrandsListItem, len(twinsData.Res))
+	for idx, b := range twinsData.Res {
+		is[idx] = &APITopTwinsBrandsListItem{
+			Id:       b.ID,
+			Name:     b.Name,
+			Count:    b.ItemsCount,
+			NewCount: b.NewItemsCount,
+		}
+	}
+
+	return &APITopTwinsBrandsList{
+		Items: is,
+		Count: int32(twinsData.Count),
 	}, nil
 }
 

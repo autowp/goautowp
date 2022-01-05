@@ -17,6 +17,7 @@ const NewDays = 7
 const TopPersonsCount = 5
 const TopFactoriesCount = 8
 const TopCategoriesCount = 15
+const TopTwinsBrandsCount = 20
 
 var languagePriority = map[string][]string{
 	"xx":    {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
@@ -53,6 +54,8 @@ type Item struct {
 	ID                  int64
 	Catname             string
 	Name                string
+	ItemsCount          int32
+	NewItemsCount       int32
 	ChildItemsCount     int32
 	NewChildItemsCount  int32
 	DescendantsCount    int32
@@ -96,6 +99,8 @@ type ListFields struct {
 	HasText             bool
 	PreviewPictures     ListPreviewPicturesFields
 	TotalPictures       bool
+	ItemsCount          bool
+	NewItemsCount       bool
 	ChildItemsCount     bool
 	NewChildItemsCount  bool
 	DescendantsCount    bool
@@ -113,6 +118,8 @@ type ItemsOptions struct {
 	SortByName         bool
 	ChildItems         *ItemsOptions
 	DescendantItems    *ItemsOptions
+	ParentItems        *ItemsOptions
+	AncestorItems      *ItemsOptions
 	NoParents          bool
 }
 
@@ -169,45 +176,70 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 		sqSelect = applyItemPicture(alias, sqSelect, options.DescendantPictures)
 	}
 
-	ipAlias := alias + "_ip"
-	iAlias := ipAlias + "_i"
 	ipcAlias := alias + "_ipc"
 
 	if options.ChildItems != nil {
+		iAlias := alias + "_ic"
 		sqSelect = sqSelect.
-			Join("item_parent AS " + ipAlias + " ON " + alias + ".id = " + ipAlias + ".parent_id").
-			Join("item AS " + iAlias + " ON " + ipAlias + ".item_id = " + iAlias + ".id")
-		sqSelect, err = applyItem(iAlias, sqSelect, false, options.ChildItems)
+			Join("item_parent AS " + ipcAlias + " ON " + alias + ".id = " + ipcAlias + ".parent_id").
+			Join("item AS " + iAlias + " ON " + ipcAlias + ".item_id = " + iAlias + ".id")
+		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ChildItems)
+		if err != nil {
+			return sqSelect, err
+		}
+	}
+
+	if options.ParentItems != nil {
+		iAlias := alias + "_ip"
+		ippAlias := alias + "_ipc"
+		sqSelect = sqSelect.
+			Join("item_parent AS " + ippAlias + " ON " + alias + ".id = " + ippAlias + ".item_id").
+			Join("item AS " + iAlias + " ON " + ippAlias + ".parent_id = " + iAlias + ".id")
+		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ParentItems)
 		if err != nil {
 			return sqSelect, err
 		}
 	}
 
 	if options.DescendantItems != nil {
+		ipcdAlias := alias + "_ipcd"
+		iAlias := alias + "_id"
 		sqSelect = sqSelect.
-			Join("item_parent_cache AS " + ipcAlias + " ON " + alias + ".id = " + ipcAlias + ".parent_id").
-			Join("item AS " + iAlias + " ON " + ipAlias + ".item_id = " + iAlias + ".id")
-		sqSelect, err = applyItem(iAlias, sqSelect, false, options.DescendantItems)
+			Join("item_parent_cache AS " + ipcdAlias + " ON " + alias + ".id = " + ipcdAlias + ".parent_id").
+			Join("item AS " + iAlias + " ON " + ipcdAlias + ".item_id = " + iAlias + ".id")
+		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.DescendantItems)
+		if err != nil {
+			return sqSelect, err
+		}
+	}
+
+	if options.AncestorItems != nil {
+		ipcaAlias := alias + "_ipca"
+		iAlias := alias + "_ia"
+		sqSelect = sqSelect.
+			Join("item_parent_cache AS " + ipcaAlias + " ON " + alias + ".id = " + ipcaAlias + ".item_id").
+			Join("item AS " + iAlias + " ON " + ipcaAlias + ".parent_id = " + iAlias + ".id")
+		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.AncestorItems)
 		if err != nil {
 			return sqSelect, err
 		}
 	}
 
 	if options.NoParents {
-		ippAlias := alias + "_ipp"
+		ipnpAlias := alias + "_ipnp"
 		sqSelect = sqSelect.
-			LeftJoin("item_parent AS " + ippAlias + " ON " + alias + ".id = " + ippAlias + ".item_id").
-			Where(ippAlias + ".parent_id IS NULL")
+			LeftJoin("item_parent AS " + ipnpAlias + " ON " + alias + ".id = " + ipnpAlias + ".item_id").
+			Where(ipnpAlias + ".parent_id IS NULL")
 	}
 
 	if fields {
 		if options.Fields.ChildItemsCount {
-			sqSelect = sqSelect.Column("count(distinct " + ipAlias + ".item_id) AS child_items_count")
+			sqSelect = sqSelect.Column("count(distinct " + ipcAlias + ".item_id) AS child_items_count")
 		}
 
 		if options.Fields.NewChildItemsCount {
 			sqSelect = sqSelect.Column(
-				"count(distinct IF("+ipAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+ipAlias+".item_id, NULL)) AS new_child_items_count",
+				"count(distinct IF("+ipcAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+ipcAlias+".item_id, NULL)) AS new_child_items_count",
 				NewDays,
 			)
 		}
@@ -234,6 +266,16 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 					`+alias+`.name
 				) AS name
 			`, s...)
+		}
+
+		if options.Fields.ItemsCount {
+			sqSelect = sqSelect.Column("count(distinct " + alias + ".id) AS items_count")
+		}
+
+		if options.Fields.NewItemsCount {
+			sqSelect = sqSelect.Column(`
+				count(distinct if(`+alias+`.add_datetime > date_sub(NOW(), INTERVAL ? DAY), `+alias+`.id, null)) AS new_items_count
+			`, NewDays)
 		}
 
 		if options.Fields.DescendantsCount {
@@ -269,6 +311,24 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 func (s *Repository) Count(options ItemsOptions) (int, error) {
 	var err error
 	sqSelect := sq.Select("COUNT(1)").From("item AS i")
+
+	sqSelect, err = applyItem("i", sqSelect, false, &options)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int
+	err = sqSelect.RunWith(s.db).QueryRow().Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (s *Repository) CountDistinct(options ItemsOptions) (int, error) {
+	var err error
+	sqSelect := sq.Select("COUNT(distinct i.id)").From("item AS i")
 
 	sqSelect, err = applyItem("i", sqSelect, false, &options)
 	if err != nil {
@@ -330,6 +390,10 @@ func (s *Repository) List(options ItemsOptions) ([]Item, error) {
 				pointers[i] = &r.Name
 			case "catname":
 				pointers[i] = &catname
+			case "items_count":
+				pointers[i] = &r.ItemsCount
+			case "new_items_count":
+				pointers[i] = &r.NewItemsCount
 			case "descendants_count":
 				pointers[i] = &r.DescendantsCount
 			case "new_descendants_count":

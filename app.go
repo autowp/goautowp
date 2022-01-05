@@ -79,8 +79,7 @@ func (s *Application) ServePublic(quit chan bool) error {
 
 	go func() {
 		<-quit
-		err := httpServer.Shutdown(context.Background())
-		if err != nil {
+		if err := httpServer.Shutdown(context.Background()); err != nil {
 			logrus.Error(err.Error())
 		}
 	}()
@@ -288,15 +287,13 @@ func (s *Application) ServePrivate(quit chan bool) error {
 
 	go func() {
 		<-quit
-		err := httpServer.Shutdown(context.Background())
-		if err != nil {
+		if err := httpServer.Shutdown(context.Background()); err != nil {
 			logrus.Error(err.Error())
 		}
 	}()
 
 	logrus.Info("HTTP server started")
-	err = httpServer.ListenAndServe()
-	if err != nil {
+	if err = httpServer.ListenAndServe(); err != nil {
 		// cannot panic, because this probably is an intentional close
 		logrus.Infof("Httpserver: ListenAndServe() error: %s", err)
 	}

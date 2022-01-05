@@ -1397,6 +1397,7 @@ type ItemsClient interface {
 	GetTopPersonsList(ctx context.Context, in *GetTopPersonsListRequest, opts ...grpc.CallOption) (*APITopPersonsList, error)
 	GetTopFactoriesList(ctx context.Context, in *GetTopFactoriesListRequest, opts ...grpc.CallOption) (*APITopFactoriesList, error)
 	GetTopCategoriesList(ctx context.Context, in *GetTopCategoriesListRequest, opts ...grpc.CallOption) (*APITopCategoriesList, error)
+	GetTopTwinsBrandsList(ctx context.Context, in *GetTopTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITopTwinsBrandsList, error)
 	List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 }
 
@@ -1444,6 +1445,15 @@ func (c *itemsClient) GetTopCategoriesList(ctx context.Context, in *GetTopCatego
 	return out, nil
 }
 
+func (c *itemsClient) GetTopTwinsBrandsList(ctx context.Context, in *GetTopTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITopTwinsBrandsList, error) {
+	out := new(APITopTwinsBrandsList)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/GetTopTwinsBrandsList", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *itemsClient) List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error) {
 	out := new(APIItemList)
 	err := c.cc.Invoke(ctx, "/goautowp.Items/List", in, out, opts...)
@@ -1461,6 +1471,7 @@ type ItemsServer interface {
 	GetTopPersonsList(context.Context, *GetTopPersonsListRequest) (*APITopPersonsList, error)
 	GetTopFactoriesList(context.Context, *GetTopFactoriesListRequest) (*APITopFactoriesList, error)
 	GetTopCategoriesList(context.Context, *GetTopCategoriesListRequest) (*APITopCategoriesList, error)
+	GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error)
 	List(context.Context, *ListItemsRequest) (*APIItemList, error)
 	mustEmbedUnimplementedItemsServer()
 }
@@ -1480,6 +1491,9 @@ func (UnimplementedItemsServer) GetTopFactoriesList(context.Context, *GetTopFact
 }
 func (UnimplementedItemsServer) GetTopCategoriesList(context.Context, *GetTopCategoriesListRequest) (*APITopCategoriesList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopCategoriesList not implemented")
+}
+func (UnimplementedItemsServer) GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTopTwinsBrandsList not implemented")
 }
 func (UnimplementedItemsServer) List(context.Context, *ListItemsRequest) (*APIItemList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
@@ -1569,6 +1583,24 @@ func _Items_GetTopCategoriesList_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetTopTwinsBrandsList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTopTwinsBrandsListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetTopTwinsBrandsList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/GetTopTwinsBrandsList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetTopTwinsBrandsList(ctx, req.(*GetTopTwinsBrandsListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Items_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListItemsRequest)
 	if err := dec(in); err != nil {
@@ -1609,6 +1641,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTopCategoriesList",
 			Handler:    _Items_GetTopCategoriesList_Handler,
+		},
+		{
+			MethodName: "GetTopTwinsBrandsList",
+			Handler:    _Items_GetTopTwinsBrandsList_Handler,
 		},
 		{
 			MethodName: "List",
