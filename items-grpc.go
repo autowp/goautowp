@@ -411,6 +411,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwi
 	for idx, b := range twinsData.Res {
 		is[idx] = &APITopTwinsBrandsListItem{
 			Id:       b.ID,
+			Catname:  b.Catname,
 			Name:     b.Name,
 			Count:    b.ItemsCount,
 			NewCount: b.NewItemsCount,
