@@ -306,11 +306,87 @@ func (s *Container) PublicHttpServer() (*http.Server, error) {
 	return s.publicHttpServer, nil
 }
 
+type TokenForm struct {
+	GrantType    string `json:"grant_type"`
+	RefreshToken string `json:"refresh_token"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+}
+
 func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 
 	if s.publicRouter != nil {
 		return s.publicRouter, nil
 	}
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	r.POST("/api/oauth/token", func(c *gin.Context) {
+
+		form := TokenForm{}
+		err := c.BindJSON(&form)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		kcConfig := s.Config().Keycloak
+
+		switch form.GrantType {
+		case "refresh_token":
+			jwtToken, err := s.Keycloak().RefreshToken(c, form.RefreshToken, kcConfig.ClientID, kcConfig.ClientSecret, kcConfig.Realm)
+			if err != nil {
+				if apiErr, ok := err.(*gocloak.APIError); ok {
+					if apiErr.Code > 0 {
+						c.String(apiErr.Code, apiErr.Message)
+						return
+					}
+				}
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			c.JSON(http.StatusOK, jwtToken)
+		case "password":
+
+			ur, err := s.UsersRepository()
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			userId, err := ur.UserByCredentials(form.Username, form.Password)
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			if userId == 0 {
+				c.Status(http.StatusBadRequest)
+				return
+			}
+
+			logrus.Debugf("Login `%s` to Keycloak by credentials", form.Username)
+			jwtToken, err := s.Keycloak().Login(c, kcConfig.ClientID, kcConfig.ClientSecret, kcConfig.Realm, form.Username, form.Password)
+			if err != nil {
+				logrus.Debugf("Login `%s` to Keycloak by credentials failed: %s", form.Username, err.Error())
+				if apiErr, ok := err.(*gocloak.APIError); ok {
+					if apiErr.Code > 0 {
+						c.String(apiErr.Code, apiErr.Message)
+						return
+					}
+				}
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			c.JSON(http.StatusOK, jwtToken)
+
+		default:
+			c.String(http.StatusBadRequest, "Unexpected grant_type")
+		}
+	})
 
 	srv, err := s.GRPCServer()
 	if err != nil {
@@ -354,7 +430,14 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 
 	wrappedGrpc := grpcweb.WrapServer(grpcServer)
 
-	s.publicRouter = wrappedGrpc.ServeHTTP
+	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
+		if wrappedGrpc.IsGrpcWebRequest(req) {
+			wrappedGrpc.ServeHTTP(resp, req)
+			return
+		}
+		// Fall back to other servers.
+		r.ServeHTTP(resp, req)
+	}
 
 	return s.publicRouter, nil
 }
@@ -459,8 +542,8 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 			cfg.EmailSalt,
 			cfg.Languages,
 			s.EmailSender(),
-			s.KeyCloak(),
-			cfg.KeyCloak,
+			s.Keycloak(),
+			cfg.Keycloak,
 		)
 	}
 
@@ -537,7 +620,6 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			cfg.FileStorage,
 			db,
 			enforcer,
-			cfg.Auth.OAuth.Secret,
 			userRepository,
 			s.UserExtractor(),
 			comments,
@@ -546,6 +628,8 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			feedback,
 			forums,
 			messages,
+			s.Keycloak(),
+			cfg.Keycloak,
 		)
 	}
 
@@ -584,7 +668,6 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 		}
 
 		s.usersGrpcServer = NewUsersGRPCServer(
-			cfg.Auth.OAuth.Secret,
 			db,
 			enforcer,
 			contactsRepository,
@@ -594,6 +677,8 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			cfg.Captcha,
 			pr,
 			s.UserExtractor(),
+			s.Keycloak(),
+			cfg.Keycloak,
 		)
 	}
 
@@ -633,11 +718,12 @@ func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 		}
 
 		s.contactsGrpcServer = NewContactsGRPCServer(
-			cfg.Auth.OAuth.Secret,
 			db,
 			contactsRepository,
 			userRepository,
 			s.UserExtractor(),
+			s.Keycloak(),
+			cfg.Keycloak,
 		)
 	}
 
@@ -670,9 +756,9 @@ func (s *Container) Messages() (*Messages, error) {
 	return s.messages, nil
 }
 
-func (s *Container) KeyCloak() gocloak.GoCloak {
+func (s *Container) Keycloak() gocloak.GoCloak {
 	if s.keyCloak == nil {
-		client := gocloak.NewClient(s.Config().KeyCloak.URL)
+		client := gocloak.NewClient(s.Config().Keycloak.URL)
 
 		s.keyCloak = client
 	}

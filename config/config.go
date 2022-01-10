@@ -21,8 +21,8 @@ type LanguageConfig struct {
 	Aliases  []string `yaml:"aliases"  mapstructure:"aliases"`
 }
 
-// KeyCloakConfig KeyCloakConfig
-type KeyCloakConfig struct {
+// KeycloakConfig KeycloakConfig
+type KeycloakConfig struct {
 	URL          string `yaml:"url"           mapstructure:"url"`
 	ClientID     string `yaml:"client-id"     mapstructure:"client-id"`
 	ClientSecret string `yaml:"client-secret" mapstructure:"client-secret"`
@@ -105,12 +105,11 @@ type Config struct {
 	MockEmailSender   bool                      `yaml:"mock-email-sender"  mapstructure:"mock-email-sender"`
 	SMTP              SMTPConfig                `yaml:"smtp"               mapstructure:"smtp"`
 	Feedback          FeedbackConfig            `yaml:"feedback"           mapstructure:"feedback"`
-	KeyCloak          KeyCloakConfig            `yaml:"keycloak"           mapstructure:"keycloak"`
+	Keycloak          KeycloakConfig            `yaml:"keycloak"           mapstructure:"keycloak"`
 	UsersSalt         string                    `yaml:"users-salt"         mapstructure:"users-salt"`
 	EmailSalt         string                    `yaml:"email-salt"         mapstructure:"email-salt"`
 	Languages         map[string]LanguageConfig `yaml:"languages"          mapstructure:"languages"`
 	Captcha           bool                      `yaml:"captcha"            mapstructure:"captcha"`
-	Auth              AuthConfig                `yaml:"auth"               mapstructure:"auth"`
 	ImageStorage      ImageStorageConfig        `yaml:"image-storage"      mapstructure:"image-storage"`
 	Memcached         []string                  `yaml:"memcached"          mapstructure:"memcached"`
 }

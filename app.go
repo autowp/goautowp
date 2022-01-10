@@ -4,19 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/autowp/goautowp/auth"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/users"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
-
-	"github.com/golang-jwt/jwt"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
@@ -53,17 +51,6 @@ func (s *Application) MigrateAutowp() error {
 	cfg := s.container.Config()
 
 	err = applyMigrations(cfg.AutowpMigrations)
-	if err != nil && err != migrate.ErrNoChange {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Application) MigrateAuth() error {
-	cfg := s.container.Config()
-
-	err := applyMigrations(cfg.Auth.Migrations)
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
@@ -131,7 +118,7 @@ func (s *Application) Close() error {
 	return nil
 }
 
-func validateGRPCAuthorization(ctx context.Context, db *sql.DB, oauthSecret string) (int64, string, error) {
+func validateGRPCAuthorization(ctx context.Context, db *sql.DB, keycloak gocloak.GoCloak, keycloakCfg config.KeycloakConfig) (int64, string, error) {
 	const bearerSchema = "Bearer"
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -147,50 +134,31 @@ func validateGRPCAuthorization(ctx context.Context, db *sql.DB, oauthSecret stri
 
 	tokenString := strings.TrimPrefix(lines[0], bearerSchema+" ")
 
-	return validateTokenAuthorization(tokenString, db, oauthSecret)
+	return validateTokenAuthorization(ctx, tokenString, db, keycloak, keycloakCfg)
 }
 
-func validateTokenAuthorization(tokenString string, db *sql.DB, oauthSecret string) (int64, string, error) {
+func validateTokenAuthorization(ctx context.Context, tokenString string, db *sql.DB, keycloak gocloak.GoCloak, keycloakCfg config.KeycloakConfig) (int64, string, error) {
 	if len(tokenString) <= 0 {
 		return 0, "", fmt.Errorf("authorization token is invalid")
 	}
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, isValid := token.Method.(*jwt.SigningMethodHMAC); !isValid {
-			return nil, fmt.Errorf("invalid token alg %v", token.Header["alg"])
-
-		}
-		return []byte(oauthSecret), nil
-	})
-
+	_, claims, err := keycloak.DecodeAccessToken(ctx, tokenString, keycloakCfg.Realm, "")
 	if err != nil {
 		return 0, "", err
 	}
 
-	if !token.Valid {
-		if ve, ok := err.(*jwt.ValidationError); ok {
-			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
-				return 0, "", fmt.Errorf("that's not even a token")
-			}
-			if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-				return 0, "", fmt.Errorf("timing is everything")
-			}
-		}
-		return 0, "", err
-	}
+	guid := (*claims)["sub"].(string)
 
-	claims := token.Claims.(jwt.MapClaims)
-	idStr := claims["sub"].(string)
-
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		return 0, "", err
-	}
-
+	var id int64
 	role := ""
-	err = db.QueryRow("SELECT role FROM users WHERE id = ? AND not deleted", id).Scan(&role)
+	err = db.QueryRow(`
+		SELECT users.id, users.role
+		FROM users
+			JOIN user_account ON users.id = user_account.user_id
+		WHERE user_account.external_id = ? AND user_account.service_id = ? AND not users.deleted
+	`, guid, users.KeycloakExternalAccountID).Scan(&id, &role)
 	if err == sql.ErrNoRows {
-		return 0, "", fmt.Errorf("user `%v` not found", id)
+		return 0, "", fmt.Errorf("user `%v` not found", guid)
 	}
 
 	if err != nil {
@@ -198,7 +166,7 @@ func validateTokenAuthorization(tokenString string, db *sql.DB, oauthSecret stri
 	}
 
 	if role == "" {
-		return 0, "", fmt.Errorf("failed role detection for `%v`", id)
+		return 0, "", fmt.Errorf("failed role detection for `%v`", guid)
 	}
 
 	return id, role, nil
@@ -243,37 +211,6 @@ func (s *Application) MigrateTraffic() error {
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
-
-	return nil
-}
-
-func (s *Application) ServeAuth(quit chan bool) error {
-
-	appConfig := s.container.Config()
-
-	cfg := s.container.Config()
-
-	usersDB, err := s.container.AutowpDB()
-	if err != nil {
-		return err
-	}
-
-	users, err := s.container.UsersRepository()
-	if err != nil {
-		return err
-	}
-
-	service, err := auth.NewService(cfg.Auth, usersDB, appConfig.Languages, users)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		<-quit
-		service.Close()
-	}()
-
-	service.ListenHTTP()
 
 	return nil
 }
@@ -332,18 +269,18 @@ func (s *Application) SchedulerHourly() error {
 }
 
 func (s *Application) SchedulerDaily() error {
-	users, err := s.container.UsersRepository()
+	usersRep, err := s.container.UsersRepository()
 	if err != nil {
 		return err
 	}
 
-	err = users.UserRenamesGC()
+	err = usersRep.UserRenamesGC()
 	if err != nil {
 		logrus.Error(err.Error())
 		return err
 	}
 
-	err = users.UpdateSpecsVolumes()
+	err = usersRep.UpdateSpecsVolumes()
 	if err != nil {
 		logrus.Error(err.Error())
 		return err

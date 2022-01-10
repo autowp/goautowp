@@ -27,7 +27,7 @@ func TestRestorePassword(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	keycloak := gocloak.NewClient(cfg.KeyCloak.URL)
+	keycloak := gocloak.NewClient(cfg.Keycloak.URL)
 
 	emailSender := email.MockSender{}
 
@@ -38,7 +38,7 @@ func TestRestorePassword(t *testing.T) {
 		cfg.Languages,
 		&emailSender,
 		keycloak,
-		cfg.KeyCloak,
+		cfg.Keycloak,
 	)
 
 	userID, err := usersRep.CreateUser(users.CreateUserOptions{

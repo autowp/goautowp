@@ -92,17 +92,6 @@ func (r *ServePrivateCommand) Execute(_ []string) error {
 	return app.ServePrivate(quit)
 }
 
-type ServeAuthCommand struct{}
-
-func (r *ServeAuthCommand) Execute(_ []string) error {
-	err := app.MigrateAuth()
-	if err != nil {
-		return err
-	}
-	quit := captureOsInterrupt()
-	return app.ServeAuth(quit)
-}
-
 type MigrateAutowpCommand struct{}
 
 func (r *MigrateAutowpCommand) Execute(_ []string) error {
@@ -184,7 +173,6 @@ func mainReturnWithCode() int {
 		ListenMonitoringAmqp ListenMonitoringAmqpCommand `command:"listen-monitoring-amqp"`
 		ServePublic          ServePublicCommand          `command:"serve-public"`
 		ServePrivate         ServePrivateCommand         `command:"serve-private"`
-		ServeAuth            ServeAuthCommand            `command:"serve-auth"`
 		MigrateAutowp        MigrateAutowpCommand        `command:"migrate-autowp"`
 		MigrateTraffic       MigrateTrafficCommand       `command:"migrate-traffic"`
 		SchedulerHourly      SchedulerHourlyCommand      `command:"scheduler-hourly"`

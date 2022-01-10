@@ -75,7 +75,6 @@ RUN apt-get update -qqy && \
 USER appuser:appuser
 
 COPY --from=builder /app /app
-COPY auth/migrations /auth/migrations
 COPY migrations /migrations
 COPY traffic-migrations /traffic-migrations
 COPY defaults.yaml /defaults.yaml

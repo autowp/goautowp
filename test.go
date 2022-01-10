@@ -37,6 +37,8 @@ func init() {
 
 	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
 
+	keycloak := gocloak.NewClient(cfg.Keycloak.URL)
+
 	contactsRepository := NewContactsRepository(db)
 	userRepository := users.NewRepository(
 		db,
@@ -44,8 +46,8 @@ func init() {
 		cfg.EmailSalt,
 		cfg.Languages,
 		emailSender,
-		gocloak.NewClient(cfg.KeyCloak.URL),
-		cfg.KeyCloak,
+		keycloak,
+		cfg.Keycloak,
 	)
 
 	userExtractor := NewUserExtractor(NewContainer(cfg))
@@ -54,16 +56,16 @@ func init() {
 	grpcServer := grpc.NewServer()
 
 	contactsSrv := NewContactsGRPCServer(
-		cfg.Auth.OAuth.Secret,
 		db,
 		contactsRepository,
 		userRepository,
 		userExtractor,
+		keycloak,
+		cfg.Keycloak,
 	)
 	RegisterContactsServer(grpcServer, contactsSrv)
 
 	usersSrv := NewUsersGRPCServer(
-		cfg.Auth.OAuth.Secret,
 		db,
 		enforcer,
 		contactsRepository,
@@ -78,6 +80,8 @@ func init() {
 			emailSender,
 		),
 		userExtractor,
+		keycloak,
+		cfg.Keycloak,
 	)
 	RegisterUsersServer(grpcServer, usersSrv)
 

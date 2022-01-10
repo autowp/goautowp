@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
@@ -28,7 +29,6 @@ type GRPCServer struct {
 	fileStorageConfig config.FileStorageConfig
 	db                *sql.DB
 	enforcer          *casbin.Enforcer
-	oauthSecret       string
 	userRepository    *users.Repository
 	userExtractor     *UserExtractor
 	comments          *Comments
@@ -37,6 +37,8 @@ type GRPCServer struct {
 	feedback          *Feedback
 	forums            *Forums
 	messages          *Messages
+	keycloak          gocloak.GoCloak
+	keycloakCfg       config.KeycloakConfig
 }
 
 func NewGRPCServer(
@@ -45,7 +47,6 @@ func NewGRPCServer(
 	fileStorageConfig config.FileStorageConfig,
 	db *sql.DB,
 	enforcer *casbin.Enforcer,
-	oauthSecret string,
 	userRepository *users.Repository,
 	userExtractor *UserExtractor,
 	comments *Comments,
@@ -54,6 +55,8 @@ func NewGRPCServer(
 	feedback *Feedback,
 	forums *Forums,
 	messages *Messages,
+	keycloak gocloak.GoCloak,
+	keycloakCfg config.KeycloakConfig,
 ) *GRPCServer {
 	return &GRPCServer{
 		catalogue:         catalogue,
@@ -61,7 +64,6 @@ func NewGRPCServer(
 		fileStorageConfig: fileStorageConfig,
 		db:                db,
 		enforcer:          enforcer,
-		oauthSecret:       oauthSecret,
 		userRepository:    userRepository,
 		userExtractor:     userExtractor,
 		comments:          comments,
@@ -70,6 +72,8 @@ func NewGRPCServer(
 		feedback:          feedback,
 		forums:            forums,
 		messages:          messages,
+		keycloak:          keycloak,
+		keycloakCfg:       keycloakCfg,
 	}
 }
 
@@ -139,7 +143,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 
 func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*AclEnforceResult, error) {
 
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -150,7 +154,7 @@ func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*Ac
 }
 
 func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*VehicleTypeItems, error) {
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -309,7 +313,7 @@ func (s *GRPCServer) getUser(id int64) (*users.DBUser, error) {
 
 func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, error) {
 
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -360,7 +364,7 @@ func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRe
 
 func (s *GRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error) {
 
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -383,7 +387,7 @@ func (s *GRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteF
 }
 
 func (s *GRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error) {
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -406,7 +410,7 @@ func (s *GRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteF
 }
 
 func (s *GRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest) (*emptypb.Empty, error) {
-	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -431,7 +435,7 @@ func (s *GRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddToTraffic
 }
 
 func (s *GRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest) (*emptypb.Empty, error) {
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -459,7 +463,7 @@ func (s *GRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddToTraffic
 }
 
 func (s *GRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) (*APITrafficWhitelistItems, error) {
-	_, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	_, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -479,7 +483,7 @@ func (s *GRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) 
 }
 
 func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty) (*APIForumsUserSummary, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -499,7 +503,7 @@ func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty)
 }
 
 func (s *GRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) (*APIMessageNewCount, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -519,7 +523,7 @@ func (s *GRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) 
 }
 
 func (s *GRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (*APIMessageSummary, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

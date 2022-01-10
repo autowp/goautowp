@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
@@ -26,10 +27,11 @@ type UsersGRPCServer struct {
 	captcha            bool
 	passwordRecovery   *PasswordRecovery
 	userExtractor      *UserExtractor
+	keycloak           gocloak.GoCloak
+	keycloakCfg        config.KeycloakConfig
 }
 
 func NewUsersGRPCServer(
-	oauthSecret string,
 	db *sql.DB,
 	enforcer *casbin.Enforcer,
 	contactsRepository *ContactsRepository,
@@ -39,9 +41,10 @@ func NewUsersGRPCServer(
 	captcha bool,
 	passwordRecovery *PasswordRecovery,
 	userExtractor *UserExtractor,
+	keycloak gocloak.GoCloak,
+	keycloakCfg config.KeycloakConfig,
 ) *UsersGRPCServer {
 	return &UsersGRPCServer{
-		oauthSecret:        oauthSecret,
 		db:                 db,
 		enforcer:           enforcer,
 		contactsRepository: contactsRepository,
@@ -51,6 +54,8 @@ func NewUsersGRPCServer(
 		captcha:            captcha,
 		passwordRecovery:   passwordRecovery,
 		userExtractor:      userExtractor,
+		keycloak:           keycloak,
+		keycloakCfg:        keycloakCfg,
 	}
 }
 
@@ -116,7 +121,7 @@ func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*AP
 }
 
 func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -142,7 +147,7 @@ func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserReque
 }
 
 func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {
-	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -194,7 +199,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 }
 
 func (s *UsersGRPCServer) EmailChange(ctx context.Context, in *APIEmailChangeRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -225,7 +230,7 @@ func (s *UsersGRPCServer) EmailChangeConfirm(ctx context.Context, in *APIEmailCh
 }
 
 func (s *UsersGRPCServer) SetPassword(ctx context.Context, in *APISetPasswordRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.oauthSecret)
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

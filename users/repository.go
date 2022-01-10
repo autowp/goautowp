@@ -12,6 +12,7 @@ import (
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"math"
 	"math/rand"
@@ -20,7 +21,7 @@ import (
 	"time"
 )
 
-const KeyCloakExternalAccountID = "keycloak"
+const KeycloakExternalAccountID = "keycloak"
 
 type GetUsersOptions struct {
 	ID         int64
@@ -75,8 +76,8 @@ type Repository struct {
 	emailSalt      string
 	languages      map[string]config.LanguageConfig
 	emailSender    email.Sender
-	keyCloak       gocloak.GoCloak
-	keyCloakConfig config.KeyCloakConfig
+	keycloak       gocloak.GoCloak
+	keycloakConfig config.KeycloakConfig
 }
 
 // NewRepository constructor
@@ -87,7 +88,7 @@ func NewRepository(
 	languages map[string]config.LanguageConfig,
 	emailSender email.Sender,
 	keyCloak gocloak.GoCloak,
-	keyCloakConfig config.KeyCloakConfig,
+	keyCloakConfig config.KeycloakConfig,
 ) *Repository {
 
 	return &Repository{
@@ -96,8 +97,8 @@ func NewRepository(
 		emailSalt:      emailSalt,
 		languages:      languages,
 		emailSender:    emailSender,
-		keyCloak:       keyCloak,
-		keyCloakConfig: keyCloakConfig,
+		keycloak:       keyCloak,
+		keycloakConfig: keyCloakConfig,
 	}
 }
 
@@ -297,11 +298,11 @@ func (s *Repository) emailChangeCode(email string) string {
 func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
 
 	ctx := context.Background()
-	token, err := s.keyCloak.LoginClient(
+	token, err := s.keycloak.LoginClient(
 		ctx,
-		s.keyCloakConfig.ClientID,
-		s.keyCloakConfig.ClientSecret,
-		s.keyCloakConfig.Realm,
+		s.keycloakConfig.ClientID,
+		s.keycloakConfig.ClientSecret,
+		s.keycloakConfig.Realm,
 	)
 	if err != nil {
 		return 0, err
@@ -316,7 +317,7 @@ func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
 	}
 	f := false
 	t := true
-	userGuid, err := s.keyCloak.CreateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+	userGuid, err := s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		Enabled:       &t,
 		Totp:          &f,
 		EmailVerified: &f,
@@ -353,7 +354,7 @@ func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
 	_, err = s.autowpDB.Exec(`
 		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
 		VALUES (?, ?, ?, 0, ?, "")
-	`, KeyCloakExternalAccountID, userGuid, userID, options.Name)
+	`, KeycloakExternalAccountID, userGuid, userID, options.Name)
 	if err != nil {
 		return 0, err
 	}
@@ -463,11 +464,12 @@ func (s *Repository) RefreshUserConflicts(userId int64) error {
 	return err
 }
 
-func (s *Repository) ensureUserExportedToKeyCloak(userID int64) (string, error) {
+func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) {
+	logrus.Debugf("Ensure user `%d` exported to Keycloak", userID)
 	var userGuid string
-	err := s.autowpDB.QueryRow(`
-		SELECT external_id FROM user_account WHERE service_id = ? AND user_id = ?
-	`, KeyCloakExternalAccountID, userID).Scan(&userGuid)
+	err := s.autowpDB.
+		QueryRow("SELECT external_id FROM user_account WHERE service_id = ? AND user_id = ?", KeycloakExternalAccountID, userID).
+		Scan(&userGuid)
 	if err != nil && err != sql.ErrNoRows {
 		return "", err
 	}
@@ -481,18 +483,18 @@ func (s *Repository) ensureUserExportedToKeyCloak(userID int64) (string, error) 
 	var emailToCheck sql.NullString
 	var login sql.NullString
 	var name string
-	err = s.autowpDB.QueryRow(`
-			SELECT deleted, e_mail, email_to_check, login, name FROM users WHERE id = ?
-		`, userID).Scan(&deleted, &userEmail, &emailToCheck, &login, &name)
+	err = s.autowpDB.
+		QueryRow("SELECT deleted, e_mail, email_to_check, login, name FROM users WHERE id = ?", userID).
+		Scan(&deleted, &userEmail, &emailToCheck, &login, &name)
 	if err != nil {
 		return "", err
 	}
 	ctx := context.Background()
-	token, err := s.keyCloak.LoginClient(
+	token, err := s.keycloak.LoginClient(
 		ctx,
-		s.keyCloakConfig.ClientID,
-		s.keyCloakConfig.ClientSecret,
-		s.keyCloakConfig.Realm,
+		s.keycloakConfig.ClientID,
+		s.keycloakConfig.ClientSecret,
+		s.keycloakConfig.Realm,
 	)
 	if err != nil {
 		return "", err
@@ -510,7 +512,7 @@ func (s *Repository) ensureUserExportedToKeyCloak(userID int64) (string, error) 
 	}
 	f := false
 	enabled := !deleted
-	userGuid, err = s.keyCloak.CreateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+	userGuid, err = s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		Enabled:       &enabled,
 		Totp:          &f,
 		EmailVerified: &emailVerified,
@@ -526,7 +528,7 @@ func (s *Repository) ensureUserExportedToKeyCloak(userID int64) (string, error) 
 		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
 		VALUES (?, ?, ?, 0, ?, "")
 		ON DUPLICATE KEY UPDATE user_id=VALUES(user_id), name=VALUES(name);
-	`, KeyCloakExternalAccountID, userGuid, userID, name)
+	`, KeycloakExternalAccountID, userGuid, userID, name)
 	if err != nil {
 		return "", err
 	}
@@ -536,12 +538,12 @@ func (s *Repository) ensureUserExportedToKeyCloak(userID int64) (string, error) 
 
 func (s *Repository) SetPassword(ctx context.Context, userID int64, password string) error {
 
-	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+	userGuid, err := s.ensureUserExportedToKeycloak(userID)
 	if err != nil {
 		return err
 	}
 
-	err = s.setUserKeyCloakPassword(ctx, userGuid, password)
+	err = s.setUserKeycloakPassword(ctx, userGuid, password)
 	if err != nil {
 		return err
 	}
@@ -655,25 +657,28 @@ func (s *Repository) EmailChangeFinish(ctx context.Context, code string) error {
 		return err
 	}
 
-	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+	userGuid, err := s.ensureUserExportedToKeycloak(userID)
 	if err != nil {
 		return err
 	}
 
-	token, err := s.keyCloak.LoginClient(
+	token, err := s.keycloak.LoginClient(
 		ctx,
-		s.keyCloakConfig.ClientID,
-		s.keyCloakConfig.ClientSecret,
-		s.keyCloakConfig.Realm,
+		s.keycloakConfig.ClientID,
+		s.keycloakConfig.ClientSecret,
+		s.keycloakConfig.Realm,
 	)
 	if err != nil {
 		return err
 	}
 
-	return s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
-		ID:       &userGuid,
-		Email:    &userEmail,
-		Username: &userEmail,
+	emailVerified := true
+
+	return s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
+		ID:            &userGuid,
+		Email:         &userEmail,
+		Username:      &userEmail,
+		EmailVerified: &emailVerified,
 	})
 }
 
@@ -799,6 +804,7 @@ func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) 
 
 // UserByCredentials UserByCredentials
 func (s *Repository) UserByCredentials(username string, password string) (int64, error) {
+	logrus.Debugf("Get user %s by credentials", username)
 	if username == "" || password == "" {
 		return 0, nil
 	}
@@ -825,13 +831,12 @@ func (s *Repository) UserByCredentials(username string, password string) (int64,
 		return 0, nil
 	}
 
-	if err != nil && userID != 0 {
-		userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+	if err == nil && userID != 0 {
+		userGuid, err := s.ensureUserExportedToKeycloak(userID)
 		if err != nil {
 			return 0, err
 		}
-		err = s.setUserKeyCloakPassword(context.Background(), userGuid, password)
-		if err != nil {
+		if err = s.setUserKeycloakPassword(context.Background(), userGuid, password); err != nil {
 			return 0, err
 		}
 	}
@@ -839,51 +844,59 @@ func (s *Repository) UserByCredentials(username string, password string) (int64,
 	return userID, err
 }
 
-func (s *Repository) setUserKeyCloakPassword(ctx context.Context, userGuid string, password string) error {
-	token, err := s.keyCloak.LoginClient(
+func (s *Repository) setUserKeycloakPassword(ctx context.Context, userGuid string, password string) error {
+	logrus.Debugf("Set user `%s` Keycloak password", userGuid)
+	token, err := s.keycloak.LoginClient(
 		ctx,
-		s.keyCloakConfig.ClientID,
-		s.keyCloakConfig.ClientSecret,
-		s.keyCloakConfig.Realm,
+		s.keycloakConfig.ClientID,
+		s.keycloakConfig.ClientSecret,
+		s.keycloakConfig.Realm,
 	)
 	if err != nil {
 		return err
 	}
 
 	credentialsType := "PASSWORD"
+	temporary := false
 	credentials := []gocloak.CredentialRepresentation{
 		{
-			Type:  &credentialsType,
-			Value: &password,
+			Temporary: &temporary,
+			Type:      &credentialsType,
+			Value:     &password,
 		},
 	}
-	err = s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		ID:          &userGuid,
 		Credentials: &credentials,
 	})
+
+	if err != nil {
+		logrus.Debugf("Set user `%s` Keycloak password failed: %s", userGuid, err.Error())
+	}
+
 	return err
 }
 
 func (s *Repository) DeleteUser(userID int64) (bool, error) {
 
-	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+	userGuid, err := s.ensureUserExportedToKeycloak(userID)
 	if err != nil {
 		return false, err
 	}
 
 	ctx := context.Background()
-	token, err := s.keyCloak.LoginClient(
+	token, err := s.keycloak.LoginClient(
 		ctx,
-		s.keyCloakConfig.ClientID,
-		s.keyCloakConfig.ClientSecret,
-		s.keyCloakConfig.Realm,
+		s.keycloakConfig.ClientID,
+		s.keycloakConfig.ClientSecret,
+		s.keycloakConfig.Realm,
 	)
 	if err != nil {
 		return false, err
 	}
 
 	f := false
-	err = s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		ID:      &userGuid,
 		Enabled: &f,
 	})
@@ -922,7 +935,7 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 	// delete linked profiles
 	_, err = s.autowpDB.Exec(`
 		DELETE FROM user_account WHERE user_id = ? AND service_id != ?
-	`, userID, KeyCloakExternalAccountID)
+	`, userID, KeycloakExternalAccountID)
 	if err != nil {
 		return false, err
 	}
@@ -940,7 +953,7 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 
 func (s *Repository) UpdateUser(ctx context.Context, userID int64, name string) ([]*errdetails.BadRequest_FieldViolation, error) {
 
-	userGuid, err := s.ensureUserExportedToKeyCloak(userID)
+	userGuid, err := s.ensureUserExportedToKeycloak(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -989,17 +1002,17 @@ func (s *Repository) UpdateUser(ctx context.Context, userID int64, name string) 
 		return nil, err
 	}
 
-	token, err := s.keyCloak.LoginClient(
+	token, err := s.keycloak.LoginClient(
 		ctx,
-		s.keyCloakConfig.ClientID,
-		s.keyCloakConfig.ClientSecret,
-		s.keyCloakConfig.Realm,
+		s.keycloakConfig.ClientID,
+		s.keycloakConfig.ClientSecret,
+		s.keycloakConfig.Realm,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.keyCloak.UpdateUser(ctx, token.AccessToken, s.keyCloakConfig.Realm, gocloak.User{
+	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		ID:        &userGuid,
 		FirstName: &name,
 	})
