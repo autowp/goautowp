@@ -17,7 +17,6 @@ import (
 
 type UsersGRPCServer struct {
 	UnimplementedUsersServer
-	oauthSecret        string
 	db                 *sql.DB
 	enforcer           *casbin.Enforcer
 	contactsRepository *ContactsRepository
