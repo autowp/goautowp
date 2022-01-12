@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
@@ -21,25 +22,27 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
+	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+
 	var contactUserID int64 = 1
 
 	// create
 	_, err = client.CreateContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, cfg.Auth.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
 		&CreateContactRequest{UserId: contactUserID},
 	)
 	require.NoError(t, err)
 
 	// get contact
 	_, err = client.GetContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, cfg.Auth.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
 		&GetContactRequest{UserId: contactUserID},
 	)
 	require.NoError(t, err)
 
 	// get contacts
 	items, err := client.GetContacts(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, cfg.Auth.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
 		&GetContactsRequest{
 			Fields: []string{"avatar", "gravatar"},
 		},
@@ -58,7 +61,7 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	// delete
 	_, err = client.DeleteContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, cfg.Auth.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
 		&DeleteContactRequest{UserId: 1},
 	)
 	require.NoError(t, err)

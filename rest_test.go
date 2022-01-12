@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -51,10 +52,15 @@ func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
 func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
+	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+
 	srv, err := NewContainer(cfg).GRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, testUserID, cfg.Auth.OAuth.Secret)}))
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		metadata.New(map[string]string{"authorization": "Bearer " + getUserToken(t, testUsername, testPassword, keycloakClient, cfg.Keycloak)}),
+	)
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.Error(t, err)
@@ -66,7 +72,12 @@ func TestGetVehicleTypes(t *testing.T) {
 	srv, err := NewContainer(cfg).GRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, cfg.Auth.OAuth.Secret)}))
+	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		metadata.New(map[string]string{"authorization": "Bearer " + getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)}),
+	)
 
 	result, err := srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.NoError(t, err)

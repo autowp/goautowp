@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/util"
@@ -44,6 +45,8 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
+	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+
 	var userID int64
 
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -53,7 +56,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.UpdateUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, userID, cfg.Auth.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, userEmail, password, keycloakClient, cfg.Keycloak)),
 		&APIUpdateUserRequest{UserId: userID, Name: newName},
 	)
 	require.NoError(t, err)
@@ -75,7 +78,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.Equal(t, newName, user.Name)
 
 	_, err = client.DeleteUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+createToken(t, adminUserID, cfg.Auth.OAuth.Secret)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
 		&APIDeleteUserRequest{UserId: userID, Password: password},
 	)
 	require.NoError(t, err)

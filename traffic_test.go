@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -138,9 +139,11 @@ func TestHttpBanPost(t *testing.T) {
 	srv, err := NewContainer(cfg).GRPCServer()
 	require.NoError(t, err)
 
+	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, cfg.Auth.OAuth.Secret)}),
+		metadata.New(map[string]string{"authorization": "Bearer " + getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)}),
 	)
 
 	_, err = srv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
@@ -189,12 +192,14 @@ func TestTop(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
+	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+
 	srv, err := NewContainer(cfg).GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + createToken(t, adminUserID, cfg.Auth.OAuth.Secret)}),
+		metadata.New(map[string]string{"authorization": "Bearer " + getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)}),
 	)
 
 	top, err := srv.GetTrafficTop(ctx, &emptypb.Empty{})
