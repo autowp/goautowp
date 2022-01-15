@@ -122,6 +122,12 @@ func (r *SchedulerMidnightCommand) Execute(_ []string) error {
 	return app.SchedulerMidnight()
 }
 
+type ExportUsersToKeycloakCommand struct{}
+
+func (r *ExportUsersToKeycloakCommand) Execute(_ []string) error {
+	return app.ExportUsersToKeycloak()
+}
+
 func captureOsInterrupt() chan bool {
 	quit := make(chan bool)
 	go func() {
@@ -167,17 +173,18 @@ func mainReturnWithCode() int {
 	defer util.Close(app)
 
 	var opts struct {
-		ImageStorage         ImageStorageCommand         `command:"image-storage"`
-		Autoban              AutobanCommand              `command:"autoban"`
-		ListenDfAmqp         ListenDfAmqpCommand         `command:"listen-df-amqp"`
-		ListenMonitoringAmqp ListenMonitoringAmqpCommand `command:"listen-monitoring-amqp"`
-		ServePublic          ServePublicCommand          `command:"serve-public"`
-		ServePrivate         ServePrivateCommand         `command:"serve-private"`
-		MigrateAutowp        MigrateAutowpCommand        `command:"migrate-autowp"`
-		MigrateTraffic       MigrateTrafficCommand       `command:"migrate-traffic"`
-		SchedulerHourly      SchedulerHourlyCommand      `command:"scheduler-hourly"`
-		SchedulerDaily       SchedulerDailyCommand       `command:"scheduler-daily"`
-		SchedulerMidnight    SchedulerMidnightCommand    `command:"scheduler-midnight"`
+		ImageStorage          ImageStorageCommand          `command:"image-storage"`
+		Autoban               AutobanCommand               `command:"autoban"`
+		ListenDfAmqp          ListenDfAmqpCommand          `command:"listen-df-amqp"`
+		ListenMonitoringAmqp  ListenMonitoringAmqpCommand  `command:"listen-monitoring-amqp"`
+		ServePublic           ServePublicCommand           `command:"serve-public"`
+		ServePrivate          ServePrivateCommand          `command:"serve-private"`
+		MigrateAutowp         MigrateAutowpCommand         `command:"migrate-autowp"`
+		MigrateTraffic        MigrateTrafficCommand        `command:"migrate-traffic"`
+		SchedulerHourly       SchedulerHourlyCommand       `command:"scheduler-hourly"`
+		SchedulerDaily        SchedulerDailyCommand        `command:"scheduler-daily"`
+		SchedulerMidnight     SchedulerMidnightCommand     `command:"scheduler-midnight"`
+		ExportUsersToKeycloak ExportUsersToKeycloakCommand `command:"export-users-to-keycloak"`
 	}
 
 	parser := flags.NewParser(&opts, 0)

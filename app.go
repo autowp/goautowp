@@ -301,18 +301,18 @@ func (s *Application) SchedulerDaily() error {
 }
 
 func (s *Application) SchedulerMidnight() error {
-	users, err := s.container.UsersRepository()
+	ur, err := s.container.UsersRepository()
 	if err != nil {
 		return err
 	}
 
-	err = users.RestoreVotes()
+	err = ur.RestoreVotes()
 	if err != nil {
 		logrus.Error(err.Error())
 		return err
 	}
 
-	affected, err := users.UpdateVotesLimits()
+	affected, err := ur.UpdateVotesLimits()
 	if err != nil {
 		logrus.Error(err.Error())
 		return err
@@ -348,6 +348,14 @@ loop:
 	logrus.Info("AutoBan scheduler stopped")
 
 	return nil
+}
+
+func (s *Application) ExportUsersToKeycloak() error {
+	ur, err := s.container.UsersRepository()
+	if err != nil {
+		return err
+	}
+	return ur.ExportUsersToKeycloak()
 }
 
 func (s *Application) ListenMonitoringAMQP(quit chan bool) error {

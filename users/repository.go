@@ -1094,3 +1094,33 @@ func (s *Repository) UpdateSpecsVolumes() error {
 	}
 	return nil
 }
+
+func (s *Repository) ExportUsersToKeycloak() error {
+	rows, err := s.autowpDB.Query(`
+		SELECT id 
+		FROM users 
+		WHERE LENGTH(login) > 0 OR LENGTH(e_mail) > 0 OR LENGTH(email_to_check) > 0 
+		ORDER BY id
+	`)
+	if err != nil {
+		return err
+	}
+	defer util.Close(rows)
+
+	for rows.Next() {
+		var userID int64
+		err = rows.Scan(&userID)
+		if err != nil {
+			return err
+		}
+
+		guid, err := s.ensureUserExportedToKeycloak(userID)
+		if err != nil {
+			logrus.Debugf("Error exporting user %d", userID)
+			return err
+		}
+
+		logrus.Debugf("User %d exported to keycloak as %s", userID, guid)
+	}
+	return nil
+}
