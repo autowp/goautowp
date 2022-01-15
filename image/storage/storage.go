@@ -365,8 +365,6 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 		Height: iRow.CropHeight,
 	}
 
-	b := mw.GetImagesBlob()
-	fmt.Printf("BLOB IS %v\n", len(b))
 	mw, err = s.sampler.ConvertImage(mw, crop, *format)
 	if err != nil {
 		return 0, err
@@ -391,8 +389,6 @@ func (s *Storage) doFormatImage(imageId int, formatName string) (int, error) {
 	if formatExt == "" {
 		extension = strings.TrimLeft(filepath.Ext(newPath), ".")
 	}
-	b2 := mw.GetImagesBlob()
-	fmt.Printf("BLOB2 IS %v\n", len(b2))
 	formattedImageId, err = s.addImageFromImagick(
 		mw,
 		s.formattedImageDirName,
