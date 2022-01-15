@@ -57,6 +57,7 @@ type Container struct {
 	usersRepository    *users.Repository
 	usersGrpcServer    *UsersGRPCServer
 	memcached          *memcache.Client
+	oauth              *OAuth
 }
 
 // NewContainer constructor
@@ -91,6 +92,22 @@ func (s *Container) Close() error {
 	}
 
 	return nil
+}
+
+func (s *Container) OAuth() (*OAuth, error) {
+	if s.oauth == nil {
+
+		ur, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		kcConfig := s.Config().Keycloak
+
+		s.oauth = NewOAuth(kcConfig, s.Keycloak(), ur)
+	}
+
+	return s.oauth, nil
 }
 
 func (s *Container) AutowpDB() (*sql.DB, error) {
@@ -331,11 +348,14 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 			return
 		}
 
-		kcConfig := s.Config().Keycloak
+		oauth, err := s.OAuth()
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+		}
 
 		switch form.GrantType {
 		case "refresh_token":
-			jwtToken, err := s.Keycloak().RefreshToken(c, form.RefreshToken, kcConfig.ClientID, kcConfig.ClientSecret, kcConfig.Realm)
+			jwtToken, err := oauth.TokenByRefreshToken(c, form.RefreshToken)
 			if err != nil {
 				if apiErr, ok := err.(*gocloak.APIError); ok {
 					if apiErr.Code > 0 {
@@ -349,26 +369,15 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 
 			c.JSON(http.StatusOK, jwtToken)
 		case "password":
-
-			ur, err := s.UsersRepository()
+			jwtToken, userId, err := oauth.TokenByPassword(c, form.Username, form.Password)
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
 			}
-
-			userId, err := ur.UserByCredentials(form.Username, form.Password)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-
 			if userId == 0 {
 				c.Status(http.StatusBadRequest)
 				return
 			}
-
-			logrus.Debugf("Login `%s` to Keycloak by credentials", form.Username)
-			jwtToken, err := s.Keycloak().Login(c, kcConfig.ClientID, kcConfig.ClientSecret, kcConfig.Realm, form.Username, form.Password)
 			if err != nil {
 				logrus.Debugf("Login `%s` to Keycloak by credentials failed: %s", form.Username, err.Error())
 				if apiErr, ok := err.(*gocloak.APIError); ok {

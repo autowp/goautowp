@@ -2,8 +2,8 @@ package goautowp
 
 import (
 	"context"
-	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/util"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"net"
@@ -14,9 +14,7 @@ import (
 )
 
 func createTrafficService(t *testing.T) *Traffic {
-	container := NewContainer(config.LoadConfig("."))
-
-	s, err := container.Traffic()
+	s, err := getContainer().Traffic()
 	require.NoError(t, err)
 
 	return s
@@ -136,14 +134,21 @@ func TestWhitelistedNotBanned(t *testing.T) {
 func TestHttpBanPost(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
-	srv, err := NewContainer(cfg).GRPCServer()
+	cnt := NewContainer(cfg)
+	defer util.Close(cnt)
+	oauth, err := cnt.OAuth()
 	require.NoError(t, err)
 
-	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+	token, _, err := oauth.TokenByPassword(context.Background(), adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	srv, err := cnt.GRPCServer()
+	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)}),
+		metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
 	)
 
 	_, err = srv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
@@ -192,14 +197,21 @@ func TestTop(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+	cnt := NewContainer(cfg)
+	defer util.Close(cnt)
+	oauth, err := cnt.OAuth()
+	require.NoError(t, err)
 
-	srv, err := NewContainer(cfg).GRPCServer()
+	token, _, err := oauth.TokenByPassword(context.Background(), adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)}),
+		metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
 	)
 
 	top, err := srv.GetTrafficTop(ctx, &emptypb.Empty{})

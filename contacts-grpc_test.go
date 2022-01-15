@@ -2,7 +2,6 @@ package goautowp
 
 import (
 	"context"
-	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
@@ -22,27 +21,34 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+	cnt := NewContainer(cfg)
+	defer util.Close(cnt)
+	oauth, err := cnt.OAuth()
+	require.NoError(t, err)
+
+	token, _, err := oauth.TokenByPassword(ctx, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
 	var contactUserID int64 = 1
 
 	// create
 	_, err = client.CreateContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
 		&CreateContactRequest{UserId: contactUserID},
 	)
 	require.NoError(t, err)
 
 	// get contact
 	_, err = client.GetContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
 		&GetContactRequest{UserId: contactUserID},
 	)
 	require.NoError(t, err)
 
 	// get contacts
 	items, err := client.GetContacts(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
 		&GetContactsRequest{
 			Fields: []string{"avatar", "gravatar"},
 		},
@@ -61,7 +67,7 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	// delete
 	_, err = client.DeleteContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
 		&DeleteContactRequest{UserId: 1},
 	)
 	require.NoError(t, err)

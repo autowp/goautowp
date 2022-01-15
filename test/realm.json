@@ -29,7 +29,7 @@
     "enabled": true,
     "sslRequired": "external",
     "registrationAllowed": true,
-    "registrationEmailAsUsername": true,
+    "registrationEmailAsUsername": false,
     "rememberMe": true,
     "verifyEmail": false,
     "loginWithEmailAllowed": true,
@@ -107,42 +107,6 @@
                 ]
             },
             "notBefore": 0
-        },
-        {
-            "username": "admin",
-            "enabled": true,
-            "email": "admin@example.com",
-            "firstName": "Admin",
-            "credentials": [
-                {
-                    "type": "password",
-                    "value": "123123"
-                }
-            ]
-        },
-        {
-            "username": "tester",
-            "enabled": true,
-            "email": "tester@example.com",
-            "firstName": "Tester",
-            "credentials": [
-                {
-                    "type": "password",
-                    "value": "123123"
-                }
-            ]
-        },
-        {
-            "username": "tester2",
-            "enabled": true,
-            "email": "tester2@example.com",
-            "firstName": "Tester2",
-            "credentials": [
-                {
-                    "type": "password",
-                    "value": "123123"
-                }
-            ]
         }
     ],
     "scopeMappings": [

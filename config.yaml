@@ -41,3 +41,4 @@ image-storage:
 #      strip: true
 memcached:
   - "127.0.0.1:11211"
+captcha: false

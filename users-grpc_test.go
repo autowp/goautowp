@@ -2,9 +2,7 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
-	"github.com/Nerzal/gocloak/v9"
-	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
@@ -12,6 +10,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -43,26 +42,36 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	cfg := config.LoadConfig(".")
+	cnt := getContainer()
 
-	keycloakClient := gocloak.NewClient(cfg.Keycloak.URL)
+	emailSender := cnt.EmailSender().(*email.MockSender)
 
-	var userID int64
+	re := regexp.MustCompile("https://en.localhost/account/emailcheck/([0-9a-z]+)")
+	match := re.FindStringSubmatch(emailSender.Body)
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	_, err = client.EmailChangeConfirm(ctx, &APIEmailChangeConfirmRequest{
+		Code: match[1],
+	})
 	require.NoError(t, err)
-	defer util.Close(db)
-	err = db.QueryRow("SELECT id FROM users WHERE email_to_check = ?", userEmail).Scan(&userID)
+
+	oauth, err := cnt.OAuth()
+	require.NoError(t, err)
+
+	token, userID, err := oauth.TokenByPassword(context.Background(), userEmail, password)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	db, err := cnt.AutowpDB()
 	require.NoError(t, err)
 
 	_, err = client.UpdateUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, userEmail, password, keycloakClient, cfg.Keycloak)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
 		&APIUpdateUserRequest{UserId: userID, Name: newName},
 	)
 	require.NoError(t, err)
 
 	// set avatar
-	imageStorage, err := storage.NewStorage(db, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	imageID, err := imageStorage.AddImageFromFile(TestImageFile, "user", storage.GenerateOptions{})
@@ -77,8 +86,12 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NotEmpty(t, user.Avatar.Src)
 	require.Equal(t, newName, user.Name)
 
+	adminToken, _, err := oauth.TokenByPassword(context.Background(), adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
 	_, err = client.DeleteUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+getUserToken(t, adminUsername, adminPassword, keycloakClient, cfg.Keycloak)),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
 		&APIDeleteUserRequest{UserId: userID, Password: password},
 	)
 	require.NoError(t, err)

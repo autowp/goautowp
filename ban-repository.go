@@ -46,7 +46,7 @@ func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, r
 	ct, err := s.db.Exec(context.Background(), `
 		INSERT INTO ip_ban (ip, until, by_user_id, reason)
 		VALUES ($1, $2, $3, $4)
-		ON CONFLICT(ip) DO UPDATE SET until=EXCLUDED.until, by_user_id=EXCLUDED.by_user_id, reason=EXCLUDED.reason
+		ON CONFLICT(ip) DO UPDATE SET until = EXCLUDED.until, by_user_id = EXCLUDED.by_user_id, reason = EXCLUDED.reason
 	`, ip.String(), upTo, byUserID, reason)
 	if err != nil {
 		return err
