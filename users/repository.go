@@ -1100,7 +1100,7 @@ func (s *Repository) ExportUsersToKeycloak() error {
 		SELECT id 
 		FROM users 
 		WHERE LENGTH(login) > 0 OR LENGTH(e_mail) > 0 OR LENGTH(email_to_check) > 0 
-		ORDER BY id
+		ORDER BY id DESC
 	`)
 	if err != nil {
 		return err
