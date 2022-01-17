@@ -60,7 +60,8 @@ type DBUser struct {
 // CreateUserOptions CreateUserOptions
 type CreateUserOptions struct {
 	UserName        string `json:"user_name"`
-	Name            string `json:"name"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
 	Email           string `json:"email"`
 	Timezone        string `json:"timezone"`
 	Language        string `json:"language"`
@@ -184,20 +185,37 @@ func (s *Repository) ValidateCreateUser(options CreateUserOptions, captchaEnable
 	var problems []string
 	var err error
 
-	nameInputFilter := validation.InputFilter{
+	firstNameInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{
 			&validation.NotEmpty{},
 			&validation.StringLength{Min: 2, Max: 50},
 		},
 	}
-	options.Name, problems, err = nameInputFilter.IsValidString(options.Name)
+	options.FirstName, problems, err = firstNameInputFilter.IsValidString(options.FirstName)
 	if err != nil {
 		return nil, err
 	}
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "name",
+			Field:       "first_name",
+			Description: fv,
+		})
+	}
+
+	lastNameInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.StringLength{Min: 0, Max: 50},
+		},
+	}
+	options.LastName, problems, err = lastNameInputFilter.IsValidString(options.LastName)
+	if err != nil {
+		return nil, err
+	}
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "last_name",
 			Description: fv,
 		})
 	}
@@ -322,7 +340,8 @@ func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
 		Totp:          &f,
 		EmailVerified: &f,
 		Username:      &options.Email,
-		FirstName:     &options.Name,
+		FirstName:     &options.FirstName,
+		LastName:      &options.LastName,
 		Email:         &options.Email,
 		Credentials:   &credentials,
 	})
@@ -337,11 +356,13 @@ func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
 		username = nil
 	}
 
+	fName := fullName(options.FirstName, options.LastName, options.UserName)
+
 	r, err := s.autowpDB.Exec(`
 		INSERT INTO users (login, e_mail, password, email_to_check, hide_e_mail, email_check_code, name, reg_date, 
 		                   last_online, timezone, last_ip, language)
 		VALUES (?, NULL, MD5(CONCAT(?, ?)), ?, 1, ?, ?, NOW(), NOW(), ?, INET6_ATON(?), ?)
-	`, username, s.usersSalt, options.Password, options.Email, emailCheckCode, options.Name, options.Timezone, "127.0.0.1", options.Language)
+	`, username, s.usersSalt, options.Password, options.Email, emailCheckCode, fName, options.Timezone, "127.0.0.1", options.Language)
 	if err != nil {
 		return 0, err
 	}
@@ -354,7 +375,7 @@ func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
 	_, err = s.autowpDB.Exec(`
 		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
 		VALUES (?, ?, ?, 0, ?, "")
-	`, KeycloakExternalAccountID, userGuid, userID, options.Name)
+	`, KeycloakExternalAccountID, userGuid, userID, fName)
 	if err != nil {
 		return 0, err
 	}
@@ -364,7 +385,7 @@ func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
 		return 0, fmt.Errorf("language `%s` is not defined", options.Language)
 	}
 
-	err = s.sendRegistrationConfirmEmail(options.Email, emailCheckCode, options.Name, language.Hostname)
+	err = s.sendRegistrationConfirmEmail(options.Email, emailCheckCode, fName, language.Hostname)
 	if err != nil {
 		return 0, err
 	}
@@ -951,53 +972,8 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 	return true, nil
 }
 
-func (s *Repository) UpdateUser(ctx context.Context, userID int64, name string) ([]*errdetails.BadRequest_FieldViolation, error) {
-
+func (s *Repository) KeycloakUser(ctx context.Context, userID int64) (*gocloak.User, error) {
 	userGuid, err := s.ensureUserExportedToKeycloak(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*errdetails.BadRequest_FieldViolation, 0)
-	var problems []string
-
-	nameInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{
-			&validation.StringTrimFilter{},
-			&validation.StringSingleSpaces{},
-		},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.StringLength{Min: 2, Max: 50},
-		},
-	}
-	name, problems, err = nameInputFilter.IsValidString(name)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "name",
-			Description: fv,
-		})
-	}
-
-	if len(result) > 0 {
-		return result, nil
-	}
-
-	oldName := ""
-	err = s.autowpDB.QueryRow("SELECT name FROM users WHERE id = ?", userID).Scan(&oldName)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = s.autowpDB.Exec("UPDATE users SET name = ? WHERE id = ?", name, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = s.autowpDB.Exec("INSERT INTO user_renames (user_id, old_name, new_name, date) VALUES (?, ?, ?, NOW())", userID, oldName, name)
 	if err != nil {
 		return nil, err
 	}
@@ -1012,12 +988,106 @@ func (s *Repository) UpdateUser(ctx context.Context, userID int64, name string) 
 		return nil, err
 	}
 
+	return s.keycloak.GetUserByID(ctx, token.AccessToken, s.keycloakConfig.Realm, userGuid)
+}
+
+func (s *Repository) UpdateUser(ctx context.Context, userID int64, firstName, lastName string) ([]*errdetails.BadRequest_FieldViolation, error) {
+
+	userGuid, err := s.ensureUserExportedToKeycloak(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*errdetails.BadRequest_FieldViolation, 0)
+	var problems []string
+
+	firstNameInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{
+			&validation.StringTrimFilter{},
+			&validation.StringSingleSpaces{},
+		},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.StringLength{Min: 2, Max: 50},
+		},
+	}
+	firstName, problems, err = firstNameInputFilter.IsValidString(firstName)
+	if err != nil {
+		return nil, err
+	}
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "first_name",
+			Description: fv,
+		})
+	}
+
+	lastNameInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{
+			&validation.StringTrimFilter{},
+			&validation.StringSingleSpaces{},
+		},
+		Validators: []validation.ValidatorInterface{
+			&validation.StringLength{Min: 0, Max: 50},
+		},
+	}
+	lastName, problems, err = lastNameInputFilter.IsValidString(lastName)
+	if err != nil {
+		return nil, err
+	}
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "last_name",
+			Description: fv,
+		})
+	}
+
+	if len(result) > 0 {
+		return result, nil
+	}
+
+	token, err := s.keycloak.LoginClient(
+		ctx,
+		s.keycloakConfig.ClientID,
+		s.keycloakConfig.ClientSecret,
+		s.keycloakConfig.Realm,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		ID:        &userGuid,
-		FirstName: &name,
+		FirstName: &firstName,
+		LastName:  &lastName,
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	user, err := s.keycloak.GetUserByID(ctx, token.AccessToken, s.keycloakConfig.Realm, userGuid)
+	if err != nil {
+		return nil, err
+	}
+
+	name := fullName(util.StrPtrToStr(user.FirstName), util.StrPtrToStr(user.LastName), util.StrPtrToStr(user.Username))
+
+	oldName := ""
+	err = s.autowpDB.QueryRow("SELECT name FROM users WHERE id = ?", userID).Scan(&oldName)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = s.autowpDB.Exec("UPDATE users SET name = ? WHERE id = ?", name, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if oldName != name {
+		_, err = s.autowpDB.Exec("INSERT INTO user_renames (user_id, old_name, new_name, date) VALUES (?, ?, ?, NOW())", userID, oldName, name)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -1123,4 +1193,12 @@ func (s *Repository) ExportUsersToKeycloak() error {
 		logrus.Debugf("User %d exported to keycloak as %s", userID, guid)
 	}
 	return nil
+}
+
+func fullName(firstName, lastName, username string) string {
+	result := strings.TrimSpace(firstName + " " + lastName)
+	if len(result) <= 0 {
+		result = username
+	}
+	return result
 }

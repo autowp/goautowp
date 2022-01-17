@@ -131,6 +131,7 @@
         {
             "id": "6dd38c6a-6a3d-4ac9-9698-0a5f04bbb200",
             "clientId": "autowp",
+            "baseUrl": "http://localhost/",
             "surrogateAuthRequired": false,
             "enabled": true,
             "alwaysDisplayInConsole": false,

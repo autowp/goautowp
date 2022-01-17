@@ -45,7 +45,7 @@ func TestRestorePassword(t *testing.T) {
 		Email:           userEmail,
 		Password:        password,
 		PasswordConfirm: password,
-		Name:            name,
+		FirstName:       name,
 		Timezone:        "UTC",
 		Language:        "en",
 	})

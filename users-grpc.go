@@ -7,6 +7,7 @@ import (
 	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -72,7 +73,8 @@ func (s *UsersGRPCServer) CreateUser(ctx context.Context, in *APICreateUserReque
 	}
 
 	user := users.CreateUserOptions{
-		Name:            in.Name,
+		FirstName:       in.FirstName,
+		LastName:        in.LastName,
 		Email:           in.Email,
 		Timezone:        language.Timezone,
 		Language:        in.Language,
@@ -119,6 +121,31 @@ func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*AP
 	return s.userExtractor.Extract(dbUser, m)
 }
 
+func (s *UsersGRPCServer) GetKeycloakUser(ctx context.Context, in *APIGetKeycloakUserRequest) (*APIGetKeycloakUserResponse, error) {
+	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Error(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if userID != in.UserId {
+		return nil, status.Error(codes.Internal, "Forbidden")
+	}
+
+	user, err := s.userRepository.KeycloakUser(ctx, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &APIGetKeycloakUserResponse{
+		FirstName: util.StrPtrToStr(user.FirstName),
+		LastName:  util.StrPtrToStr(user.LastName),
+	}, nil
+}
+
 func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserRequest) (*emptypb.Empty, error) {
 	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
 	if err != nil {
@@ -133,7 +160,7 @@ func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserReque
 		return nil, status.Error(codes.Internal, "Forbidden")
 	}
 
-	fv, err := s.userRepository.UpdateUser(ctx, userID, in.Name)
+	fv, err := s.userRepository.UpdateUser(ctx, userID, in.FirstName, in.LastName)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

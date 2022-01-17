@@ -12,3 +12,11 @@ func Close(c io.Closer) {
 		logrus.Error(err)
 	}
 }
+
+func StrPtrToStr(ptr *string) string {
+	if ptr == nil {
+		return ""
+	}
+
+	return *ptr
+}
