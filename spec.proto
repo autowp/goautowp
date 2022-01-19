@@ -11,11 +11,7 @@ option go_package = "github.com/autowp/goautowp";
 
 service Autowp {
   rpc AclEnforce(AclEnforceRequest) returns (AclEnforceResult) {}
-  rpc AddToTrafficBlacklist(AddToTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
-  rpc AddToTrafficWhitelist(AddToTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
   rpc CreateFeedback(APICreateFeedbackRequest) returns (google.protobuf.Empty) {}
-  rpc DeleteFromTrafficBlacklist(DeleteFromTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
-  rpc DeleteFromTrafficWhitelist(DeleteFromTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
   rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
   rpc GetBrandVehicleTypes(GetBrandVehicleTypesRequest) returns (BrandVehicleTypeItems) {}
   rpc GetCommentVotes(GetCommentVotesRequest) returns (CommentVoteItems) {}
@@ -27,9 +23,16 @@ service Autowp {
   rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
   rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
   rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
-  rpc GetTrafficTop(google.protobuf.Empty) returns (APITrafficTopResponse) {}
-  rpc GetTrafficWhitelist(google.protobuf.Empty) returns (APITrafficWhitelistItems) {}
   rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
+}
+
+service Traffic {
+  rpc AddToBlacklist(AddToTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
+  rpc AddToWhitelist(AddToTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteFromBlacklist(DeleteFromTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteFromWhitelist(DeleteFromTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
+  rpc GetTop(google.protobuf.Empty) returns (APITrafficTopResponse) {}
+  rpc GetWhitelist(google.protobuf.Empty) returns (APITrafficWhitelistItems) {}
 }
 
 service Contacts {

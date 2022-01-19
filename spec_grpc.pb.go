@@ -20,11 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AutowpClient interface {
 	AclEnforce(ctx context.Context, in *AclEnforceRequest, opts ...grpc.CallOption) (*AclEnforceResult, error)
-	AddToTrafficBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	AddToTrafficWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteFromTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error)
 	GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error)
 	GetCommentVotes(ctx context.Context, in *GetCommentVotesRequest, opts ...grpc.CallOption) (*CommentVoteItems, error)
@@ -36,8 +32,6 @@ type AutowpClient interface {
 	GetPerspectivePages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ReCaptchaConfig, error)
 	GetSpecs(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SpecsItems, error)
-	GetTrafficTop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficTopResponse, error)
-	GetTrafficWhitelist(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficWhitelistItems, error)
 	GetVehicleTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VehicleTypeItems, error)
 }
 
@@ -58,45 +52,9 @@ func (c *autowpClient) AclEnforce(ctx context.Context, in *AclEnforceRequest, op
 	return out, nil
 }
 
-func (c *autowpClient) AddToTrafficBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/AddToTrafficBlacklist", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) AddToTrafficWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/AddToTrafficWhitelist", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *autowpClient) CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/CreateFeedback", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteFromTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/DeleteFromTrafficBlacklist", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/DeleteFromTrafficWhitelist", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -202,24 +160,6 @@ func (c *autowpClient) GetSpecs(ctx context.Context, in *emptypb.Empty, opts ...
 	return out, nil
 }
 
-func (c *autowpClient) GetTrafficTop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficTopResponse, error) {
-	out := new(APITrafficTopResponse)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetTrafficTop", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) GetTrafficWhitelist(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficWhitelistItems, error) {
-	out := new(APITrafficWhitelistItems)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetTrafficWhitelist", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *autowpClient) GetVehicleTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VehicleTypeItems, error) {
 	out := new(VehicleTypeItems)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetVehicleTypes", in, out, opts...)
@@ -234,11 +174,7 @@ func (c *autowpClient) GetVehicleTypes(ctx context.Context, in *emptypb.Empty, o
 // for forward compatibility
 type AutowpServer interface {
 	AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error)
-	AddToTrafficBlacklist(context.Context, *AddToTrafficBlacklistRequest) (*emptypb.Empty, error)
-	AddToTrafficWhitelist(context.Context, *AddToTrafficWhitelistRequest) (*emptypb.Empty, error)
 	CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error)
-	DeleteFromTrafficBlacklist(context.Context, *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error)
-	DeleteFromTrafficWhitelist(context.Context, *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error)
 	GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error)
 	GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error)
 	GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error)
@@ -250,8 +186,6 @@ type AutowpServer interface {
 	GetPerspectivePages(context.Context, *emptypb.Empty) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error)
 	GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error)
-	GetTrafficTop(context.Context, *emptypb.Empty) (*APITrafficTopResponse, error)
-	GetTrafficWhitelist(context.Context, *emptypb.Empty) (*APITrafficWhitelistItems, error)
 	GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error)
 	mustEmbedUnimplementedAutowpServer()
 }
@@ -263,20 +197,8 @@ type UnimplementedAutowpServer struct {
 func (UnimplementedAutowpServer) AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AclEnforce not implemented")
 }
-func (UnimplementedAutowpServer) AddToTrafficBlacklist(context.Context, *AddToTrafficBlacklistRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddToTrafficBlacklist not implemented")
-}
-func (UnimplementedAutowpServer) AddToTrafficWhitelist(context.Context, *AddToTrafficWhitelistRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddToTrafficWhitelist not implemented")
-}
 func (UnimplementedAutowpServer) CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFeedback not implemented")
-}
-func (UnimplementedAutowpServer) DeleteFromTrafficBlacklist(context.Context, *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteFromTrafficBlacklist not implemented")
-}
-func (UnimplementedAutowpServer) DeleteFromTrafficWhitelist(context.Context, *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteFromTrafficWhitelist not implemented")
 }
 func (UnimplementedAutowpServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrandIcons not implemented")
@@ -310,12 +232,6 @@ func (UnimplementedAutowpServer) GetReCaptchaConfig(context.Context, *emptypb.Em
 }
 func (UnimplementedAutowpServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSpecs not implemented")
-}
-func (UnimplementedAutowpServer) GetTrafficTop(context.Context, *emptypb.Empty) (*APITrafficTopResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTrafficTop not implemented")
-}
-func (UnimplementedAutowpServer) GetTrafficWhitelist(context.Context, *emptypb.Empty) (*APITrafficWhitelistItems, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTrafficWhitelist not implemented")
 }
 func (UnimplementedAutowpServer) GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVehicleTypes not implemented")
@@ -351,42 +267,6 @@ func _Autowp_AclEnforce_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autowp_AddToTrafficBlacklist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddToTrafficBlacklistRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).AddToTrafficBlacklist(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/AddToTrafficBlacklist",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).AddToTrafficBlacklist(ctx, req.(*AddToTrafficBlacklistRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_AddToTrafficWhitelist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddToTrafficWhitelistRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).AddToTrafficWhitelist(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/AddToTrafficWhitelist",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).AddToTrafficWhitelist(ctx, req.(*AddToTrafficWhitelistRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Autowp_CreateFeedback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(APICreateFeedbackRequest)
 	if err := dec(in); err != nil {
@@ -401,42 +281,6 @@ func _Autowp_CreateFeedback_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutowpServer).CreateFeedback(ctx, req.(*APICreateFeedbackRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_DeleteFromTrafficBlacklist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteFromTrafficBlacklistRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).DeleteFromTrafficBlacklist(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/DeleteFromTrafficBlacklist",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).DeleteFromTrafficBlacklist(ctx, req.(*DeleteFromTrafficBlacklistRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_DeleteFromTrafficWhitelist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteFromTrafficWhitelistRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).DeleteFromTrafficWhitelist(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/DeleteFromTrafficWhitelist",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).DeleteFromTrafficWhitelist(ctx, req.(*DeleteFromTrafficWhitelistRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -639,42 +483,6 @@ func _Autowp_GetSpecs_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autowp_GetTrafficTop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).GetTrafficTop(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetTrafficTop",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetTrafficTop(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_GetTrafficWhitelist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).GetTrafficWhitelist(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetTrafficWhitelist",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetTrafficWhitelist(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Autowp_GetVehicleTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -705,24 +513,8 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Autowp_AclEnforce_Handler,
 		},
 		{
-			MethodName: "AddToTrafficBlacklist",
-			Handler:    _Autowp_AddToTrafficBlacklist_Handler,
-		},
-		{
-			MethodName: "AddToTrafficWhitelist",
-			Handler:    _Autowp_AddToTrafficWhitelist_Handler,
-		},
-		{
 			MethodName: "CreateFeedback",
 			Handler:    _Autowp_CreateFeedback_Handler,
-		},
-		{
-			MethodName: "DeleteFromTrafficBlacklist",
-			Handler:    _Autowp_DeleteFromTrafficBlacklist_Handler,
-		},
-		{
-			MethodName: "DeleteFromTrafficWhitelist",
-			Handler:    _Autowp_DeleteFromTrafficWhitelist_Handler,
 		},
 		{
 			MethodName: "GetBrandIcons",
@@ -769,16 +561,274 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Autowp_GetSpecs_Handler,
 		},
 		{
-			MethodName: "GetTrafficTop",
-			Handler:    _Autowp_GetTrafficTop_Handler,
-		},
-		{
-			MethodName: "GetTrafficWhitelist",
-			Handler:    _Autowp_GetTrafficWhitelist_Handler,
-		},
-		{
 			MethodName: "GetVehicleTypes",
 			Handler:    _Autowp_GetVehicleTypes_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+// TrafficClient is the client API for Traffic service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type TrafficClient interface {
+	AddToBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	AddToWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteFromBlacklist(ctx context.Context, in *DeleteFromTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteFromWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetTop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficTopResponse, error)
+	GetWhitelist(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficWhitelistItems, error)
+}
+
+type trafficClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewTrafficClient(cc grpc.ClientConnInterface) TrafficClient {
+	return &trafficClient{cc}
+}
+
+func (c *trafficClient) AddToBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Traffic/AddToBlacklist", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *trafficClient) AddToWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Traffic/AddToWhitelist", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *trafficClient) DeleteFromBlacklist(ctx context.Context, in *DeleteFromTrafficBlacklistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Traffic/DeleteFromBlacklist", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *trafficClient) DeleteFromWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Traffic/DeleteFromWhitelist", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *trafficClient) GetTop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficTopResponse, error) {
+	out := new(APITrafficTopResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Traffic/GetTop", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *trafficClient) GetWhitelist(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APITrafficWhitelistItems, error) {
+	out := new(APITrafficWhitelistItems)
+	err := c.cc.Invoke(ctx, "/goautowp.Traffic/GetWhitelist", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TrafficServer is the server API for Traffic service.
+// All implementations must embed UnimplementedTrafficServer
+// for forward compatibility
+type TrafficServer interface {
+	AddToBlacklist(context.Context, *AddToTrafficBlacklistRequest) (*emptypb.Empty, error)
+	AddToWhitelist(context.Context, *AddToTrafficWhitelistRequest) (*emptypb.Empty, error)
+	DeleteFromBlacklist(context.Context, *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error)
+	DeleteFromWhitelist(context.Context, *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error)
+	GetTop(context.Context, *emptypb.Empty) (*APITrafficTopResponse, error)
+	GetWhitelist(context.Context, *emptypb.Empty) (*APITrafficWhitelistItems, error)
+	mustEmbedUnimplementedTrafficServer()
+}
+
+// UnimplementedTrafficServer must be embedded to have forward compatible implementations.
+type UnimplementedTrafficServer struct {
+}
+
+func (UnimplementedTrafficServer) AddToBlacklist(context.Context, *AddToTrafficBlacklistRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddToBlacklist not implemented")
+}
+func (UnimplementedTrafficServer) AddToWhitelist(context.Context, *AddToTrafficWhitelistRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddToWhitelist not implemented")
+}
+func (UnimplementedTrafficServer) DeleteFromBlacklist(context.Context, *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteFromBlacklist not implemented")
+}
+func (UnimplementedTrafficServer) DeleteFromWhitelist(context.Context, *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteFromWhitelist not implemented")
+}
+func (UnimplementedTrafficServer) GetTop(context.Context, *emptypb.Empty) (*APITrafficTopResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTop not implemented")
+}
+func (UnimplementedTrafficServer) GetWhitelist(context.Context, *emptypb.Empty) (*APITrafficWhitelistItems, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWhitelist not implemented")
+}
+func (UnimplementedTrafficServer) mustEmbedUnimplementedTrafficServer() {}
+
+// UnsafeTrafficServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to TrafficServer will
+// result in compilation errors.
+type UnsafeTrafficServer interface {
+	mustEmbedUnimplementedTrafficServer()
+}
+
+func RegisterTrafficServer(s grpc.ServiceRegistrar, srv TrafficServer) {
+	s.RegisterService(&Traffic_ServiceDesc, srv)
+}
+
+func _Traffic_AddToBlacklist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddToTrafficBlacklistRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TrafficServer).AddToBlacklist(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Traffic/AddToBlacklist",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TrafficServer).AddToBlacklist(ctx, req.(*AddToTrafficBlacklistRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Traffic_AddToWhitelist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddToTrafficWhitelistRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TrafficServer).AddToWhitelist(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Traffic/AddToWhitelist",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TrafficServer).AddToWhitelist(ctx, req.(*AddToTrafficWhitelistRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Traffic_DeleteFromBlacklist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteFromTrafficBlacklistRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TrafficServer).DeleteFromBlacklist(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Traffic/DeleteFromBlacklist",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TrafficServer).DeleteFromBlacklist(ctx, req.(*DeleteFromTrafficBlacklistRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Traffic_DeleteFromWhitelist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteFromTrafficWhitelistRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TrafficServer).DeleteFromWhitelist(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Traffic/DeleteFromWhitelist",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TrafficServer).DeleteFromWhitelist(ctx, req.(*DeleteFromTrafficWhitelistRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Traffic_GetTop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TrafficServer).GetTop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Traffic/GetTop",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TrafficServer).GetTop(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Traffic_GetWhitelist_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TrafficServer).GetWhitelist(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Traffic/GetWhitelist",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TrafficServer).GetWhitelist(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Traffic_ServiceDesc is the grpc.ServiceDesc for Traffic service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Traffic_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Traffic",
+	HandlerType: (*TrafficServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AddToBlacklist",
+			Handler:    _Traffic_AddToBlacklist_Handler,
+		},
+		{
+			MethodName: "AddToWhitelist",
+			Handler:    _Traffic_AddToWhitelist_Handler,
+		},
+		{
+			MethodName: "DeleteFromBlacklist",
+			Handler:    _Traffic_DeleteFromBlacklist_Handler,
+		},
+		{
+			MethodName: "DeleteFromWhitelist",
+			Handler:    _Traffic_DeleteFromWhitelist_Handler,
+		},
+		{
+			MethodName: "GetTop",
+			Handler:    _Traffic_GetTop_Handler,
+		},
+		{
+			MethodName: "GetWhitelist",
+			Handler:    _Traffic_GetWhitelist_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

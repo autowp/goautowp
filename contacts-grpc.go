@@ -2,9 +2,6 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
-	"github.com/Nerzal/gocloak/v9"
-	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,34 +10,28 @@ import (
 
 type ContactsGRPCServer struct {
 	UnimplementedContactsServer
-	db                 *sql.DB
+	auth               *Auth
 	contactsRepository *ContactsRepository
 	userRepository     *users.Repository
 	userExtractor      *UserExtractor
-	keycloak           gocloak.GoCloak
-	keycloakCfg        config.KeycloakConfig
 }
 
 func NewContactsGRPCServer(
-	db *sql.DB,
+	auth *Auth,
 	contactsRepository *ContactsRepository,
 	userRepository *users.Repository,
 	userExtractor *UserExtractor,
-	keycloak gocloak.GoCloak,
-	keycloakCfg config.KeycloakConfig,
 ) *ContactsGRPCServer {
 	return &ContactsGRPCServer{
-		db:                 db,
+		auth:               auth,
 		contactsRepository: contactsRepository,
 		userRepository:     userRepository,
 		userExtractor:      userExtractor,
-		keycloak:           keycloak,
-		keycloakCfg:        keycloakCfg,
 	}
 }
 
 func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -72,7 +63,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 }
 
 func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContactRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -90,7 +81,7 @@ func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContac
 }
 
 func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactRequest) (*Contact, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -118,7 +109,7 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 }
 
 func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsRequest) (*ContactItems, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

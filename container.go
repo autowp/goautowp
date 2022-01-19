@@ -54,10 +54,12 @@ type Container struct {
 	publicRouter       http.HandlerFunc
 	traffic            *Traffic
 	trafficDB          *pgxpool.Pool
+	trafficGrpcServer  *TrafficGRPCServer
 	usersRepository    *users.Repository
 	usersGrpcServer    *UsersGRPCServer
 	memcached          *memcache.Client
 	oauth              *OAuth
+	auth               *Auth
 }
 
 // NewContainer constructor
@@ -402,6 +404,11 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return nil, err
 	}
 
+	trafficSrv, err := s.TrafficGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	usersSrv, err := s.UsersGRPCServer()
 	if err != nil {
 		return nil, err
@@ -433,6 +440,7 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		),
 	)
 	RegisterAutowpServer(grpcServer, srv)
+	RegisterTrafficServer(grpcServer, trafficSrv)
 	RegisterUsersServer(grpcServer, usersSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
 	RegisterItemsServer(grpcServer, itemsSrv)
@@ -575,6 +583,22 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 	return s.itemsRepository, nil
 }
 
+func (s *Container) Auth() (*Auth, error) {
+	if s.auth == nil {
+
+		cfg := s.Config()
+
+		db, err := s.AutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.auth = NewAuth(db, s.Keycloak(), cfg.Keycloak)
+	}
+
+	return s.auth, nil
+}
+
 func (s *Container) GRPCServer() (*GRPCServer, error) {
 	if s.grpcServer == nil {
 		catalogue, err := s.Catalogue()
@@ -584,29 +608,10 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 
 		cfg := s.Config()
 
-		db, err := s.AutowpDB()
-		if err != nil {
-			return nil, err
-		}
-
-		enforcer := s.Enforcer()
-
-		userRepository, err := s.UsersRepository()
-		if err != nil {
-			return nil, err
-		}
-
 		comments, err := s.Comments()
 		if err != nil {
 			return nil, err
 		}
-
-		traffic, err := s.Traffic()
-		if err != nil {
-			return nil, err
-		}
-
-		ipExtractor := s.IPExtractor()
 
 		feedback, err := s.Feedback()
 		if err != nil {
@@ -623,36 +628,61 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
 		s.grpcServer = NewGRPCServer(
+			auth,
 			catalogue,
 			cfg.Recaptcha,
 			cfg.FileStorage,
-			db,
-			enforcer,
-			userRepository,
+			s.Enforcer(),
 			s.UserExtractor(),
 			comments,
-			traffic,
-			ipExtractor,
+			s.IPExtractor(),
 			feedback,
 			forums,
 			messages,
-			s.Keycloak(),
-			cfg.Keycloak,
 		)
 	}
 
 	return s.grpcServer, nil
 }
 
-func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
-	if s.usersGrpcServer == nil {
-		cfg := s.Config()
-
+func (s *Container) TrafficGRPCServer() (*TrafficGRPCServer, error) {
+	if s.trafficGrpcServer == nil {
 		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
+
+		traffic, err := s.Traffic()
+		if err != nil {
+			return nil, err
+		}
+
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		s.trafficGrpcServer = NewTrafficGRPCServer(
+			auth,
+			db,
+			s.Enforcer(),
+			s.UserExtractor(),
+			traffic,
+		)
+	}
+
+	return s.trafficGrpcServer, nil
+}
+
+func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
+	if s.usersGrpcServer == nil {
+		cfg := s.Config()
 
 		enforcer := s.Enforcer()
 
@@ -676,8 +706,13 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			return nil, err
 		}
 
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
 		s.usersGrpcServer = NewUsersGRPCServer(
-			db,
+			auth,
 			enforcer,
 			contactsRepository,
 			userRepository,
@@ -686,8 +721,6 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			cfg.Captcha,
 			pr,
 			s.UserExtractor(),
-			s.Keycloak(),
-			cfg.Keycloak,
 		)
 	}
 
@@ -709,13 +742,6 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 
 func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 	if s.contactsGrpcServer == nil {
-		cfg := s.Config()
-
-		db, err := s.AutowpDB()
-		if err != nil {
-			return nil, err
-		}
-
 		contactsRepository, err := s.ContactsRepository()
 		if err != nil {
 			return nil, err
@@ -726,13 +752,16 @@ func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 			return nil, err
 		}
 
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
 		s.contactsGrpcServer = NewContactsGRPCServer(
-			db,
+			auth,
 			contactsRepository,
 			userRepository,
 			s.UserExtractor(),
-			s.Keycloak(),
-			cfg.Keycloak,
 		)
 	}
 

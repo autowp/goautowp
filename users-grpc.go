@@ -2,9 +2,7 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
@@ -18,7 +16,7 @@ import (
 
 type UsersGRPCServer struct {
 	UnimplementedUsersServer
-	db                 *sql.DB
+	auth               *Auth
 	enforcer           *casbin.Enforcer
 	contactsRepository *ContactsRepository
 	userRepository     *users.Repository
@@ -27,12 +25,10 @@ type UsersGRPCServer struct {
 	captcha            bool
 	passwordRecovery   *PasswordRecovery
 	userExtractor      *UserExtractor
-	keycloak           gocloak.GoCloak
-	keycloakCfg        config.KeycloakConfig
 }
 
 func NewUsersGRPCServer(
-	db *sql.DB,
+	auth *Auth,
 	enforcer *casbin.Enforcer,
 	contactsRepository *ContactsRepository,
 	userRepository *users.Repository,
@@ -41,11 +37,9 @@ func NewUsersGRPCServer(
 	captcha bool,
 	passwordRecovery *PasswordRecovery,
 	userExtractor *UserExtractor,
-	keycloak gocloak.GoCloak,
-	keycloakCfg config.KeycloakConfig,
 ) *UsersGRPCServer {
 	return &UsersGRPCServer{
-		db:                 db,
+		auth:               auth,
 		enforcer:           enforcer,
 		contactsRepository: contactsRepository,
 		userRepository:     userRepository,
@@ -54,8 +48,6 @@ func NewUsersGRPCServer(
 		captcha:            captcha,
 		passwordRecovery:   passwordRecovery,
 		userExtractor:      userExtractor,
-		keycloak:           keycloak,
-		keycloakCfg:        keycloakCfg,
 	}
 }
 
@@ -122,7 +114,7 @@ func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*AP
 }
 
 func (s *UsersGRPCServer) GetKeycloakUser(ctx context.Context, in *APIGetKeycloakUserRequest) (*APIGetKeycloakUserResponse, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -147,7 +139,7 @@ func (s *UsersGRPCServer) GetKeycloakUser(ctx context.Context, in *APIGetKeycloa
 }
 
 func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -173,7 +165,7 @@ func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *APIUpdateUserReque
 }
 
 func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {
-	userID, role, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -225,7 +217,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 }
 
 func (s *UsersGRPCServer) EmailChange(ctx context.Context, in *APIEmailChangeRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -256,7 +248,7 @@ func (s *UsersGRPCServer) EmailChangeConfirm(ctx context.Context, in *APIEmailCh
 }
 
 func (s *UsersGRPCServer) SetPassword(ctx context.Context, in *APISetPasswordRequest) (*emptypb.Empty, error) {
-	userID, _, err := validateGRPCAuthorization(ctx, s.db, s.keycloak, s.keycloakCfg)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

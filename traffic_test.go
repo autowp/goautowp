@@ -146,15 +146,18 @@ func TestHttpBanPost(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
+	trafficSrv, err := cnt.TrafficGRPCServer()
+	require.NoError(t, err)
+
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
 		metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
 	)
 
-	_, err = srv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
+	_, err = trafficSrv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
 	require.NoError(t, err)
 
-	_, err = srv.AddToTrafficBlacklist(ctx, &AddToTrafficBlacklistRequest{
+	_, err = trafficSrv.AddToTrafficBlacklist(ctx, &AddToTrafficBlacklistRequest{
 		Ip:     "127.0.0.1",
 		Period: 3,
 		Reason: "Test",
@@ -168,7 +171,7 @@ func TestHttpBanPost(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ip.Blacklist)
 
-	_, err = srv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
+	_, err = trafficSrv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
 	require.NoError(t, err)
 
 	ip, err = srv.GetIP(ctx, &APIGetIPRequest{Ip: "127.0.0.1"})
@@ -206,7 +209,7 @@ func TestTop(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	srv, err := cnt.GRPCServer()
+	srv, err := cnt.TrafficGRPCServer()
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
