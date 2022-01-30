@@ -1,9 +1,3 @@
-INSERT INTO `users` (`id`, `login`, `password`, `e_mail`, `name`, `reg_date`, `last_online`, `icq`, `url`, `own_car`, `dream_car`, `forums_topics`, `forums_messages`, `pictures_added`, `e_mail_checked`, `hide_e_mail`, `authority`, `pictures_ratio`, `email_to_check`, `email_check_code`, `role`, `messaging_interval`, `last_message_time`, `deleted`, `identity`, `img`, `votes_per_day`, `votes_left`, `timezone`, `specs_volume`, `specs_volume_valid`, `specs_positives`, `specs_negatives`, `specs_weight`, `last_ip`, `language`)
-VALUES
-(1, 'tester',MD5(CONCAT('users-salt', '123123')),'test@example.com', 'tester',                 NULL,NOW(),0,'','','',0,0,0,0,NULL,0,NULL,NULL,NULL,'user', 10,NULL,0,NULL,NULL,1,1000000,'Europe/Moscow',0,0,NULL,NULL,0,0x7F000001,'ru'),
-(2,   NULL,                                '',              NULL,'tester2',                 NULL,NOW(),0,'','','',0,0,0,0,NULL,0,NULL,NULL,NULL,'user', 10,NULL,0,'identity',NULL,1,1000000,'UTC',0,0,NULL,NULL,0,0x7F000001,'ru'),
-(3,'admin',MD5(CONCAT('users-salt', '123123')),              NULL,  'admin','2004-11-25 18:31:52',NOW(),0,'','','',0,0,0,0,NULL,0,NULL,NULL,NULL,'admin',0,NULL,0,'admin',NULL,1,1000000,'UTC',0,0,NULL,NULL,0,0x7F000001,'ru');
-
 /*!40000 ALTER TABLE `item` DISABLE KEYS */;
 INSERT INTO `item` (`id`, `name`, `begin_year`, `end_year`, `body`, `spec_id`, `spec_inherit`, `produced`, `produced_exactly`, `is_concept`, `today`, `add_datetime`, `begin_month`, `end_month`, `begin_order_cache`, `end_order_cache`, `begin_model_year`, `end_model_year`, `is_group`, `car_type_inherit`, `is_concept_inherit`, `engine_item_id`, `engine_inherit`, `item_type_id`, `catname`, `full_name`, `position`, `logo_id`)
 VALUES
@@ -470,18 +464,3 @@ insert into voting_variant(id, voting_id, name, votes, position, text)
 values (1, 1, "First variant", 0, 1, "First variant text"),
 (2, 1, "Second variant", 0, 2, "Second variant text");
 /*!40000 ALTER TABLE `voting_variant` ENABLE KEYS */;
-
-INSERT INTO `attrs_user_values` (`attribute_id`, `item_id`, `user_id`, `add_date`, `update_date`, `conflict`, `weight`)
-VALUES (20,1,1,'2016-11-25 18:31:46','2016-11-25 18:31:46',0,1);
-
-INSERT INTO `attrs_user_values_list` (`attribute_id`, `item_id`, `user_id`, `value`, `ordering`)
-VALUES (20,1,1,1,1);
-
-INSERT INTO `attrs_values` (`attribute_id`, `item_id`, `conflict`, `update_date`)
-VALUES (20,1,0,'2016-11-25 18:31:46');
-
-INSERT INTO `attrs_values_list` (`attribute_id`, `item_id`, `value`, `ordering`)
-VALUES (20,1,1,1);
-
-INSERT INTO `forums_topics` (`id`, `theme_id`, `name`, `author_id`, `add_datetime`, `_messages`, `views`, `status`, `author_ip`)
-VALUES (1,2,'Test topic',1,'2016-11-25 18:31:48',0,0,'normal',0x30);

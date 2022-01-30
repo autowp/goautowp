@@ -42,7 +42,7 @@ services:
       - "5432:5432"
 
   keycloak:
-    image: jboss/keycloak
+    image: jboss/keycloak:16.1.1
     container_name: goautowp_keycloak_test
     restart: always
     environment:

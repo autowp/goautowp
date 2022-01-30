@@ -212,28 +212,11 @@ func (s *Application) SchedulerDaily() error {
 		return err
 	}
 
-	err = usersRep.UserRenamesGC()
-	if err != nil {
-		logrus.Error(err.Error())
-		return err
-	}
-
 	err = usersRep.UpdateSpecsVolumes()
 	if err != nil {
 		logrus.Error(err.Error())
 		return err
 	}
-
-	pr, err := s.container.PasswordRecovery()
-	if err != nil {
-		return err
-	}
-	count, err := pr.GC()
-	if err != nil {
-		logrus.Error(err.Error())
-		return err
-	}
-	logrus.Infof("`%d` password remind rows was deleted", count)
 
 	return nil
 }

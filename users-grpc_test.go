@@ -2,7 +2,8 @@ package goautowp
 
 import (
 	"context"
-	"github.com/autowp/goautowp/email"
+	"github.com/Nerzal/gocloak/v9"
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
@@ -10,7 +11,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"math/rand"
-	"regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -30,47 +30,46 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	name := "ivan"
 	lastName := "ivanov"
-	newName := "petr"
-	newLastName := "petrov"
 	password := "password"
 
-	_, err = client.CreateUser(ctx, &APICreateUserRequest{
-		Email:           userEmail,
-		FirstName:       name,
-		LastName:        lastName,
-		Password:        password,
-		PasswordConfirm: password,
-		Language:        "en",
-		Captcha:         "",
+	cfg := config.LoadConfig(".")
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+
+	clientToken, err := kc.LoginClient(
+		ctx,
+		cfg.Keycloak.ClientID,
+		cfg.Keycloak.ClientSecret,
+		cfg.Keycloak.Realm,
+	)
+	require.NoError(t, err)
+
+	_, err = kc.CreateUser(ctx, clientToken.AccessToken, cfg.Keycloak.Realm, gocloak.User{
+		Enabled:       gocloak.BoolP(true),
+		EmailVerified: gocloak.BoolP(true),
+		Username:      &userEmail,
+		FirstName:     &name,
+		LastName:      &lastName,
+		Email:         &userEmail,
+		Credentials: &[]gocloak.CredentialRepresentation{{
+			Type:  gocloak.StringP("password"),
+			Value: &password,
+		}},
 	})
 	require.NoError(t, err)
 
-	cnt := getContainer()
-
-	emailSender := cnt.EmailSender().(*email.MockSender)
-
-	re := regexp.MustCompile("https://en.localhost/account/emailcheck/([0-9a-z]+)")
-	match := re.FindStringSubmatch(emailSender.Body)
-
-	_, err = client.EmailChangeConfirm(ctx, &APIEmailChangeConfirmRequest{
-		Code: match[1],
-	})
-	require.NoError(t, err)
-
-	oauth, err := cnt.OAuth()
-	require.NoError(t, err)
-
-	token, userID, err := oauth.TokenByPassword(context.Background(), userEmail, password)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, userEmail, password)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	db, err := cnt.AutowpDB()
-	require.NoError(t, err)
-
-	_, err = client.UpdateUser(
+	me, err := client.Me(
 		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
-		&APIUpdateUserRequest{UserId: userID, FirstName: newName, LastName: newLastName},
+		&APIMeRequest{},
 	)
+	require.NoError(t, err)
+	require.NotNil(t, me)
+
+	cnt := getContainer()
+	db, err := cnt.AutowpDB()
 	require.NoError(t, err)
 
 	// set avatar
@@ -79,23 +78,23 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	imageID, err := imageStorage.AddImageFromFile(TestImageFile, "user", storage.GenerateOptions{})
 	require.NoError(t, err)
-	_, err = db.Exec("UPDATE users SET img = ? WHERE id = ?", imageID, userID)
+	_, err = db.Exec("UPDATE users SET img = ? WHERE id = ?", imageID, me.Id)
 	require.NoError(t, err)
 
-	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: userID, Fields: []string{"avatar", "gravatar"}})
+	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id, Fields: []string{"avatar", "gravatar"}})
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
 	// require.NotEmpty(t, user.Gravatar)
 	require.NotEmpty(t, user.Avatar.Src)
-	require.Equal(t, newName+" "+newLastName, user.Name)
+	require.Equal(t, name+" "+lastName, user.Name)
 
-	adminToken, _, err := oauth.TokenByPassword(context.Background(), adminUsername, adminPassword)
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	_, err = client.DeleteUser(
 		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
-		&APIDeleteUserRequest{UserId: userID, Password: password},
+		&APIDeleteUserRequest{UserId: me.Id, Password: password},
 	)
 	require.NoError(t, err)
 }
@@ -113,36 +112,42 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	name := "ivan"
 	password := "password"
 
-	_, err = client.CreateUser(ctx, &APICreateUserRequest{
-		Email:           userEmail,
-		FirstName:       name,
-		Password:        password,
-		PasswordConfirm: password,
-		Language:        "en",
-		Captcha:         "",
+	cfg := config.LoadConfig(".")
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+
+	clientToken, err := kc.LoginClient(
+		ctx,
+		cfg.Keycloak.ClientID,
+		cfg.Keycloak.ClientSecret,
+		cfg.Keycloak.Realm,
+	)
+	require.NoError(t, err)
+
+	_, err = kc.CreateUser(ctx, clientToken.AccessToken, cfg.Keycloak.Realm, gocloak.User{
+		Enabled:       gocloak.BoolP(true),
+		EmailVerified: gocloak.BoolP(true),
+		Username:      &userEmail,
+		FirstName:     &name,
+		Email:         &userEmail,
+		Credentials: &[]gocloak.CredentialRepresentation{{
+			Type:  gocloak.StringP("password"),
+			Value: &password,
+		}},
 	})
 	require.NoError(t, err)
 
-	cnt := getContainer()
-
-	emailSender := cnt.EmailSender().(*email.MockSender)
-
-	re := regexp.MustCompile("https://en.localhost/account/emailcheck/([0-9a-z]+)")
-	match := re.FindStringSubmatch(emailSender.Body)
-
-	_, err = client.EmailChangeConfirm(ctx, &APIEmailChangeConfirmRequest{
-		Code: match[1],
-	})
-	require.NoError(t, err)
-
-	oauth, err := cnt.OAuth()
-	require.NoError(t, err)
-
-	token, userID, err := oauth.TokenByPassword(context.Background(), userEmail, password)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, userEmail, password)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: userID, Fields: []string{}})
+	me, err := client.Me(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
+		&APIMeRequest{},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, me)
+
+	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id, Fields: []string{}})
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
 	require.Equal(t, name, user.Name)

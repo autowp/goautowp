@@ -17,13 +17,15 @@ type Auth struct {
 	db          *sql.DB
 	keycloak    gocloak.GoCloak
 	keycloakCfg config.KeycloakConfig
+	repository  *users.Repository
 }
 
-func NewAuth(db *sql.DB, keycloak gocloak.GoCloak, keycloakCfg config.KeycloakConfig) *Auth {
+func NewAuth(db *sql.DB, keycloak gocloak.GoCloak, keycloakCfg config.KeycloakConfig, repository *users.Repository) *Auth {
 	return &Auth{
 		db:          db,
 		keycloak:    keycloak,
 		keycloakCfg: keycloakCfg,
+		repository:  repository,
 	}
 }
 
@@ -51,31 +53,20 @@ func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, st
 		return 0, "", fmt.Errorf("authorization token is invalid")
 	}
 
-	_, claims, err := s.keycloak.DecodeAccessToken(ctx, tokenString, s.keycloakCfg.Realm, "")
+	var claims users.Claims
+
+	_, err := s.keycloak.DecodeAccessTokenCustomClaims(ctx, tokenString, s.keycloakCfg.Realm, "", &claims)
 	if err != nil {
 		return 0, "", err
 	}
 
-	guid := (*claims)["sub"].(string)
-
-	var id int64
-	role := ""
-	err = s.db.QueryRow(`
-		SELECT users.id, users.role
-		FROM users
-			JOIN user_account ON users.id = user_account.user_id
-		WHERE user_account.external_id = ? AND user_account.service_id = ? AND not users.deleted
-	`, guid, users.KeycloakExternalAccountID).Scan(&id, &role)
-	if err == sql.ErrNoRows {
-		return 0, "", fmt.Errorf("user `%v` not found", guid)
-	}
-
+	id, role, err := s.repository.EnsureUserImported(ctx, claims)
 	if err != nil {
 		return 0, "", err
 	}
 
 	if role == "" {
-		return 0, "", fmt.Errorf("failed role detection for `%v`", guid)
+		return 0, "", fmt.Errorf("failed role detection for `%v`", claims.Subject)
 	}
 
 	return id, role, nil

@@ -23,7 +23,7 @@ services:
     - "./test:/usr/share/nginx/html:ro"
 
   keycloak:
-    image: jboss/keycloak
+    image: jboss/keycloak:16.1.1
     container_name: goautowp_keycloak_test
     restart: always
     environment:

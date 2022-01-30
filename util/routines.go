@@ -13,10 +13,11 @@ func Close(c io.Closer) {
 	}
 }
 
-func StrPtrToStr(ptr *string) string {
-	if ptr == nil {
-		return ""
+func Contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
 	}
-
-	return *ptr
+	return false
 }

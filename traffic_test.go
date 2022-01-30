@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"google.golang.org/grpc/metadata"
@@ -136,10 +137,9 @@ func TestHttpBanPost(t *testing.T) {
 
 	cnt := NewContainer(cfg)
 	defer util.Close(cnt)
-	oauth, err := cnt.OAuth()
-	require.NoError(t, err)
 
-	token, _, err := oauth.TokenByPassword(context.Background(), adminUsername, adminPassword)
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
@@ -202,10 +202,9 @@ func TestTop(t *testing.T) {
 
 	cnt := NewContainer(cfg)
 	defer util.Close(cnt)
-	oauth, err := cnt.OAuth()
-	require.NoError(t, err)
 
-	token, _, err := oauth.TokenByPassword(context.Background(), adminUsername, adminPassword)
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 

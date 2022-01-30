@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"google.golang.org/grpc/metadata"
@@ -64,10 +65,9 @@ func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 
 	cnt := NewContainer(cfg)
 	defer util.Close(cnt)
-	oauth, err := cnt.OAuth()
-	require.NoError(t, err)
 
-	token, _, err := oauth.TokenByPassword(ctx, testUsername, testPassword)
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
@@ -91,10 +91,9 @@ func TestGetVehicleTypes(t *testing.T) {
 
 	cnt := NewContainer(cfg)
 	defer util.Close(cnt)
-	oauth, err := cnt.OAuth()
-	require.NoError(t, err)
 
-	token, _, err := oauth.TokenByPassword(ctx, adminUsername, adminPassword)
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 

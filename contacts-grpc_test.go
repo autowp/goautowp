@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"github.com/Nerzal/gocloak/v9"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
@@ -23,32 +24,44 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	cnt := NewContainer(cfg)
 	defer util.Close(cnt)
-	oauth, err := cnt.OAuth()
-	require.NoError(t, err)
 
-	token, _, err := oauth.TokenByPassword(ctx, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, token)
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	usersClient := NewUsersClient(conn)
 
-	var contactUserID int64 = 1
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	// tester
+	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	require.NoError(t, err)
+	require.NotNil(t, testerToken)
+
+	// tester (me)
+	tester, err := usersClient.Me(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+testerToken.AccessToken),
+		&APIMeRequest{},
+	)
+	require.NoError(t, err)
 
 	// create
 	_, err = client.CreateContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
-		&CreateContactRequest{UserId: contactUserID},
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&CreateContactRequest{UserId: tester.Id},
 	)
 	require.NoError(t, err)
 
 	// get contact
 	_, err = client.GetContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
-		&GetContactRequest{UserId: contactUserID},
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&GetContactRequest{UserId: tester.Id},
 	)
 	require.NoError(t, err)
 
 	// get contacts
 	items, err := client.GetContacts(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
 		&GetContactsRequest{
 			Fields: []string{"avatar", "gravatar"},
 		},
@@ -57,7 +70,7 @@ func TestCreateDeleteContact(t *testing.T) {
 	require.NotEmpty(t, items)
 	var contactUser *Contact
 	for _, i := range items.Items {
-		if i.ContactUserId == contactUserID {
+		if i.ContactUserId == tester.Id {
 			contactUser = i
 			break
 		}
@@ -67,8 +80,8 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	// delete
 	_, err = client.DeleteContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
-		&DeleteContactRequest{UserId: 1},
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&DeleteContactRequest{UserId: tester.Id},
 	)
 	require.NoError(t, err)
 }

@@ -2,24 +2,34 @@ package users
 
 import (
 	"context"
-	"crypto/md5"
 	"database/sql"
-	"encoding/hex"
-	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/Nerzal/gocloak/v9"
+	"github.com/Nerzal/gocloak/v9/pkg/jwx"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/util"
-	"github.com/autowp/goautowp/validation"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 	"math"
-	"math/rand"
-	"net/url"
 	"strings"
 	"time"
 )
+
+type Claims struct {
+	jwx.Claims
+	Locale         string         `json:"locale,omitempty"`
+	ResourceAccess ResourceAccess `json:"resource_access,omitempty"`
+}
+
+type ResourceAccess struct {
+	Autowp AutowpResourceAccess `json:"autowp,omitempty"`
+}
+
+type AutowpResourceAccess struct {
+	Roles []string `json:"roles,omitempty"`
+}
 
 const KeycloakExternalAccountID = "keycloak"
 
@@ -74,9 +84,7 @@ type CreateUserOptions struct {
 type Repository struct {
 	autowpDB       *sql.DB
 	usersSalt      string
-	emailSalt      string
 	languages      map[string]config.LanguageConfig
-	emailSender    email.Sender
 	keycloak       gocloak.GoCloak
 	keycloakConfig config.KeycloakConfig
 }
@@ -85,9 +93,7 @@ type Repository struct {
 func NewRepository(
 	autowpDB *sql.DB,
 	usersSalt string,
-	emailSalt string,
 	languages map[string]config.LanguageConfig,
-	emailSender email.Sender,
 	keyCloak gocloak.GoCloak,
 	keyCloakConfig config.KeycloakConfig,
 ) *Repository {
@@ -95,9 +101,7 @@ func NewRepository(
 	return &Repository{
 		autowpDB:       autowpDB,
 		usersSalt:      usersSalt,
-		emailSalt:      emailSalt,
 		languages:      languages,
-		emailSender:    emailSender,
 		keycloak:       keyCloak,
 		keycloakConfig: keyCloakConfig,
 	}
@@ -180,256 +184,20 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 	return result, nil
 }
 
-func (s *Repository) ValidateCreateUser(options CreateUserOptions, captchaEnabled bool, ip string) ([]*errdetails.BadRequest_FieldViolation, error) {
-	result := make([]*errdetails.BadRequest_FieldViolation, 0)
-	var problems []string
-	var err error
-
-	firstNameInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.StringLength{Min: 2, Max: 50},
-		},
-	}
-	options.FirstName, problems, err = firstNameInputFilter.IsValidString(options.FirstName)
+func (s *Repository) AfterUserCreated(userID int64) error {
+	err := s.RefreshUserConflicts(userID)
 	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "first_name",
-			Description: fv,
-		})
-	}
-
-	lastNameInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{
-			&validation.StringLength{Min: 0, Max: 50},
-		},
-	}
-	options.LastName, problems, err = lastNameInputFilter.IsValidString(options.LastName)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "last_name",
-			Description: fv,
-		})
-	}
-
-	emailInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.EmailAddress{},
-			&validation.StringLength{Max: 50},
-			&validation.EmailNotExists{DB: s.autowpDB},
-		},
-	}
-	options.Email, problems, err = emailInputFilter.IsValidString(options.Email)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "email",
-			Description: fv,
-		})
-	}
-
-	passwordInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.StringLength{
-				Min: 6,
-				Max: 50,
-			},
-		},
-	}
-	options.Password, problems, err = passwordInputFilter.IsValidString(options.Password)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "password",
-			Description: fv,
-		})
-	}
-
-	passwordConfirmInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.StringLength{
-				Min: 6,
-				Max: 50,
-			},
-			&validation.IdenticalStrings{Pattern: options.Password},
-		},
-	}
-	options.PasswordConfirm, problems, err = passwordConfirmInputFilter.IsValidString(options.PasswordConfirm)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "password_confirm",
-			Description: fv,
-		})
-	}
-
-	if captchaEnabled {
-		captchaInputFilter := validation.InputFilter{
-			Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
-			Validators: []validation.ValidatorInterface{
-				&validation.NotEmpty{},
-				&validation.Recaptcha{
-					ClientIP: ip,
-				},
-			},
-		}
-		options.Captcha, problems, err = captchaInputFilter.IsValidString(options.Captcha)
-		if err != nil {
-			return nil, err
-		}
-		for _, fv := range problems {
-			result = append(result, &errdetails.BadRequest_FieldViolation{
-				Field:       "captcha",
-				Description: fv,
-			})
-		}
-	}
-
-	return result, nil
-}
-
-func (s *Repository) emailChangeCode(email string) string {
-	md5Bytes := md5.Sum([]byte(fmt.Sprintf("%s%s%d", s.emailSalt, email, rand.Int())))
-	return hex.EncodeToString(md5Bytes[:])
-}
-
-func (s *Repository) CreateUser(options CreateUserOptions) (int64, error) {
-
-	ctx := context.Background()
-	token, err := s.keycloak.LoginClient(
-		ctx,
-		s.keycloakConfig.ClientID,
-		s.keycloakConfig.ClientSecret,
-		s.keycloakConfig.Realm,
-	)
-	if err != nil {
-		return 0, err
-	}
-
-	credentialsType := "PASSWORD"
-	credentials := []gocloak.CredentialRepresentation{
-		{
-			Type:  &credentialsType,
-			Value: &options.Password,
-		},
-	}
-	f := false
-	t := true
-	userGuid, err := s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
-		Enabled:       &t,
-		Totp:          &f,
-		EmailVerified: &f,
-		Username:      &options.Email,
-		FirstName:     &options.FirstName,
-		LastName:      &options.LastName,
-		Email:         &options.Email,
-		Credentials:   &credentials,
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	emailCheckCode := s.emailChangeCode(options.Email)
-
-	username := &options.UserName
-	if len(options.UserName) <= 0 {
-		username = nil
-	}
-
-	fName := fullName(options.FirstName, options.LastName, options.UserName)
-
-	r, err := s.autowpDB.Exec(`
-		INSERT INTO users (login, e_mail, password, email_to_check, hide_e_mail, email_check_code, name, reg_date, 
-		                   last_online, timezone, last_ip, language)
-		VALUES (?, NULL, MD5(CONCAT(?, ?)), ?, 1, ?, ?, NOW(), NOW(), ?, INET6_ATON(?), ?)
-	`, username, s.usersSalt, options.Password, options.Email, emailCheckCode, fName, options.Timezone, "127.0.0.1", options.Language)
-	if err != nil {
-		return 0, err
-	}
-
-	userID, err := r.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-
-	_, err = s.autowpDB.Exec(`
-		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
-		VALUES (?, ?, ?, 0, ?, "")
-	`, KeycloakExternalAccountID, userGuid, userID, fName)
-	if err != nil {
-		return 0, err
-	}
-
-	language, ok := s.languages[options.Language]
-	if !ok {
-		return 0, fmt.Errorf("language `%s` is not defined", options.Language)
-	}
-
-	err = s.sendRegistrationConfirmEmail(options.Email, emailCheckCode, fName, language.Hostname)
-	if err != nil {
-		return 0, err
-	}
-
-	err = s.RefreshUserConflicts(userID)
-	if err != nil {
-		return 0, err
+		return err
 	}
 
 	err = s.UpdateUserVoteLimit(userID)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	_, err = s.autowpDB.Exec("UPDATE users SET votes_left = votes_per_day WHERE id = ?", userID)
-	if err != nil {
-		return 0, err
-	}
 
-	return userID, nil
-}
-
-func (s *Repository) sendRegistrationConfirmEmail(email string, code string, name string, hostname string) error {
-	if len(email) <= 0 || len(code) <= 0 {
-		return nil
-	}
-
-	fromStr := "Robot " + hostname
-	subject := fmt.Sprintf("Registration on %s", hostname)
-	message := fmt.Sprintf(
-		"Hello.\n"+
-			"You are registered on website %s\n"+
-			"Your registration details:\n"+
-			"E-mail: %s\n"+
-			"To confirm registration, and your e-mail address, you will need to click on the link %s\n\n"+
-			"If you are not registered on the site, simply remove this message\n\n"+
-			"Sincerely, %s",
-		"https://"+hostname+"/",
-		email,
-		"https://"+hostname+"/account/emailcheck/"+url.QueryEscape(code),
-		fromStr,
-	)
-
-	return s.emailSender.Send(fromStr+" <no-reply@autowp.ru>", []string{name + " <" + email + ">"}, subject, message, "")
+	return err
 }
 
 func (s *Repository) UpdateUserVoteLimit(userId int64) error {
@@ -483,6 +251,101 @@ func (s *Repository) RefreshUserConflicts(userId int64) error {
 		WHERE users.id = ?
 	`, userId)
 	return err
+}
+
+func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int64, string, error) {
+
+	remoteAddr := "127.0.0.1"
+	p, ok := peer.FromContext(ctx)
+	if ok {
+		ip := p.Addr.String()
+		if ip != "bufconn" {
+			remoteAddr = ip
+		}
+	}
+
+	locale := strings.ToLower(claims.Locale)
+
+	language, ok := s.languages[locale]
+	if !ok {
+		locale = "en"
+		language, ok = s.languages["en"]
+	}
+	if !ok {
+		return 0, "", status.Errorf(codes.InvalidArgument, "language `%s` is not defined", locale)
+	}
+
+	guid := claims.Subject
+	emailAddr := claims.Email
+	name := fullName(claims.GivenName, claims.FamilyName, claims.PreferredUsername)
+	role := "user"
+
+	if util.Contains(claims.ResourceAccess.Autowp.Roles, "admin") {
+		role = "admin"
+	}
+
+	logrus.Debugf("Ensure user `%s` imported", guid)
+
+	var userID int64
+	err := s.autowpDB.
+		QueryRow("SELECT user_id FROM user_account WHERE service_id = ? AND external_id = ?", KeycloakExternalAccountID, guid).
+		Scan(&userID)
+	if err != nil && err != sql.ErrNoRows {
+		return 0, "", err
+	}
+
+	if err == sql.ErrNoRows {
+		var r sql.Result
+		r, err = s.autowpDB.Exec(`
+			INSERT INTO users (login, e_mail, password, email_to_check, hide_e_mail, email_check_code, name, reg_date, 
+							   last_online, timezone, last_ip, language, role)
+			VALUES (NULL, ?, NULL, NULL, 1, NULL, ?, NOW(), NOW(), ?, INET6_ATON(?), ?, ?)
+		`, emailAddr, name, language.Timezone, remoteAddr, locale, role)
+		if err != nil {
+			return 0, "", err
+		}
+
+		userID, err = r.LastInsertId()
+		if err != nil {
+			return 0, "", err
+		}
+
+		err = s.AfterUserCreated(userID)
+		if err != nil {
+			return 0, "", err
+		}
+
+	} else {
+		_, err = s.autowpDB.Exec(`
+			UPDATE users SET e_mail = ?, name = ?, last_ip = ?
+			WHERE id = ?
+		`, emailAddr, name, remoteAddr, userID)
+		if err != nil {
+			return 0, "", err
+		}
+
+		err = s.autowpDB.
+			QueryRow("SELECT role FROM users WHERE id = ?", userID).
+			Scan(&role)
+		if err != nil {
+			return 0, "", err
+		}
+	}
+
+	_, err = s.autowpDB.Exec(`
+		INSERT INTO user_account (user_id, service_id, external_id, used_for_reg, name, link)
+		VALUES (?, ?, ?, 0, ?, "")
+		ON DUPLICATE KEY UPDATE user_id=VALUES(user_id), name=VALUES(name)`,
+		userID,
+		KeycloakExternalAccountID,
+		guid,
+		name,
+	)
+	if err != nil {
+		return 0, "", err
+	}
+
+	return userID, role, nil
 }
 
 func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) {
@@ -557,255 +420,6 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 	return userGuid, err
 }
 
-func (s *Repository) SetPassword(ctx context.Context, userID int64, password string) error {
-
-	userGuid, err := s.ensureUserExportedToKeycloak(userID)
-	if err != nil {
-		return err
-	}
-
-	err = s.setUserKeycloakPassword(ctx, userGuid, password)
-	if err != nil {
-		return err
-	}
-
-	_, err = s.autowpDB.Exec(`
-		UPDATE users SET password = MD5(CONCAT(?, ?)) WHERE id = ?
-	`, s.usersSalt, password, userID)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
-func (s *Repository) GetLogin(userID int64) (string, error) {
-	var login string
-	var userEmail string
-	err := s.autowpDB.QueryRow("SELECT login, e_mail FROM users WHERE id = ?", userID).Scan(&login, &userEmail)
-	if err != nil {
-		return "", err
-	}
-
-	if len(userEmail) > 0 {
-		return userEmail, nil
-	}
-
-	return login, nil
-}
-
-func (s *Repository) EmailChangeStart(userID int64, email string) ([]*errdetails.BadRequest_FieldViolation, error) {
-
-	result := make([]*errdetails.BadRequest_FieldViolation, 0)
-	var problems []string
-	var err error
-
-	emailInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.EmailAddress{},
-			&validation.StringLength{Max: 50},
-			&validation.EmailNotExists{DB: s.autowpDB},
-		},
-	}
-	email, problems, err = emailInputFilter.IsValidString(email)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "email",
-			Description: fv,
-		})
-	}
-
-	if len(result) > 0 {
-		return result, nil
-	}
-
-	var name string
-	var languageCode string
-	err = s.autowpDB.QueryRow(`
-		SELECT name, language FROM users
-		WHERE id = ?
-	`, userID).Scan(&name, &languageCode)
-	if err != nil {
-		return nil, err
-	}
-
-	language, ok := s.languages[languageCode]
-	if !ok {
-		return nil, fmt.Errorf("language `%s` is not defined", languageCode)
-	}
-
-	emailCheckCode := s.emailChangeCode(email)
-
-	_, err = s.autowpDB.Exec(`
-		UPDATE users SET email_to_check = ?, email_check_code = ?
-		WHERE id = ?
-	`, email, emailCheckCode, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, s.sendChangeConfirmEmail(email, emailCheckCode, name, language.Hostname)
-}
-
-func (s *Repository) EmailChangeFinish(ctx context.Context, code string) error {
-	if len(code) <= 0 {
-		return fmt.Errorf("token is invalid")
-	}
-
-	var userID int64
-	var userEmail string
-	err := s.autowpDB.QueryRow(`
-		SELECT id, email_to_check FROM users
-		WHERE not deleted AND
-		      email_check_code = ? AND
-		      LENGTH(email_check_code) > 0 AND
-		      LENGTH(email_to_check) > 0
-	`, code).Scan(&userID, &userEmail)
-	if err != nil {
-		return err
-	}
-
-	_, err = s.autowpDB.Exec(`
-		UPDATE users SET e_mail = email_to_check, email_check_code = NULL, email_to_check = NULL
-		WHERE id = ?
-	`, userID)
-	if err != nil {
-		return err
-	}
-
-	userGuid, err := s.ensureUserExportedToKeycloak(userID)
-	if err != nil {
-		return err
-	}
-
-	token, err := s.keycloak.LoginClient(
-		ctx,
-		s.keycloakConfig.ClientID,
-		s.keycloakConfig.ClientSecret,
-		s.keycloakConfig.Realm,
-	)
-	if err != nil {
-		return err
-	}
-
-	emailVerified := true
-
-	return s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
-		ID:            &userGuid,
-		Email:         &userEmail,
-		Username:      &userEmail,
-		EmailVerified: &emailVerified,
-	})
-}
-
-func (s *Repository) sendChangeConfirmEmail(email string, code string, name string, hostname string) error {
-	if len(email) <= 0 || len(code) <= 0 {
-		return nil
-	}
-
-	fromStr := "Robot " + hostname
-	subject := fmt.Sprintf("E-mail confirm on %s", hostname)
-	message := fmt.Sprintf(
-		"Hello.\n\n"+
-			"On the %s you or someone else asked to change contact address of account to %s\n"+
-			"For confirmation of this action, you must click on the link %s\n\n"+
-			"If the message has got to you by mistake - just delete it\n\n"+
-			"Sincerely, %s",
-		"https://"+hostname+"/",
-		email,
-		"https://"+hostname+"/account/emailcheck/"+url.QueryEscape(code),
-		fromStr,
-	)
-
-	return s.emailSender.Send(fromStr+" <no-reply@autowp.ru>", []string{name + " <" + email + ">"}, subject, message, "")
-}
-
-func (s *Repository) ValidateChangePassword(userID int64, oldPassword, newPassword, newPasswordConfirm string) ([]*errdetails.BadRequest_FieldViolation, error) {
-
-	result := make([]*errdetails.BadRequest_FieldViolation, 0)
-	var problems []string
-	var err error
-
-	oldPasswordInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.Callback{
-				Callback: func(value string) ([]string, error) {
-					match, err := s.PasswordMatch(userID, oldPassword)
-					if err != nil {
-						return nil, err
-					}
-					if !match {
-						return []string{"Current password is incorrect"}, nil
-					}
-					return []string{}, nil
-				},
-			},
-		},
-	}
-	oldPassword, problems, err = oldPasswordInputFilter.IsValidString(oldPassword)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "oldPassword",
-			Description: fv,
-		})
-	}
-
-	newPasswordInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.StringLength{
-				Min: 6,
-				Max: 50,
-			},
-		},
-	}
-	newPassword, problems, err = newPasswordInputFilter.IsValidString(newPassword)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "newPassword",
-			Description: fv,
-		})
-	}
-
-	newPasswordConfirmInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.StringLength{
-				Min: 6,
-				Max: 50,
-			},
-			&validation.IdenticalStrings{Pattern: newPassword},
-		},
-	}
-	_, problems, err = newPasswordConfirmInputFilter.IsValidString(newPasswordConfirm)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "newPasswordConfirm",
-			Description: fv,
-		})
-	}
-
-	return result, nil
-}
-
 func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) {
 	var exists bool
 	err := s.autowpDB.QueryRow(`
@@ -821,81 +435,6 @@ func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) 
 	}
 
 	return true, nil
-}
-
-// UserByCredentials UserByCredentials
-func (s *Repository) UserByCredentials(username string, password string) (int64, error) {
-	logrus.Debugf("Get user %s by credentials", username)
-	if username == "" || password == "" {
-		return 0, nil
-	}
-
-	column := "login"
-	if strings.Contains(username, "@") {
-		column = "e_mail"
-	}
-
-	var userID int64
-
-	err := s.autowpDB.QueryRow(
-		fmt.Sprintf(
-			`
-				SELECT id FROM users
-				WHERE NOT deleted AND %s = ? AND password = MD5(CONCAT(?, ?))
-			`,
-			column,
-		),
-		username, s.usersSalt, password,
-	).Scan(&userID)
-
-	if err == sql.ErrNoRows {
-		return 0, nil
-	}
-
-	if err == nil && userID != 0 {
-		userGuid, err := s.ensureUserExportedToKeycloak(userID)
-		if err != nil {
-			return 0, err
-		}
-		if err = s.setUserKeycloakPassword(context.Background(), userGuid, password); err != nil {
-			return 0, err
-		}
-	}
-
-	return userID, err
-}
-
-func (s *Repository) setUserKeycloakPassword(ctx context.Context, userGuid string, password string) error {
-	logrus.Debugf("Set user `%s` Keycloak password", userGuid)
-	token, err := s.keycloak.LoginClient(
-		ctx,
-		s.keycloakConfig.ClientID,
-		s.keycloakConfig.ClientSecret,
-		s.keycloakConfig.Realm,
-	)
-	if err != nil {
-		return err
-	}
-
-	credentialsType := "PASSWORD"
-	temporary := false
-	credentials := []gocloak.CredentialRepresentation{
-		{
-			Temporary: &temporary,
-			Type:      &credentialsType,
-			Value:     &password,
-		},
-	}
-	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
-		ID:          &userGuid,
-		Credentials: &credentials,
-	})
-
-	if err != nil {
-		logrus.Debugf("Set user `%s` Keycloak password failed: %s", userGuid, err.Error())
-	}
-
-	return err
 }
 
 func (s *Repository) DeleteUser(userID int64) (bool, error) {
@@ -970,132 +509,6 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func (s *Repository) KeycloakUser(ctx context.Context, userID int64) (*gocloak.User, error) {
-	userGuid, err := s.ensureUserExportedToKeycloak(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := s.keycloak.LoginClient(
-		ctx,
-		s.keycloakConfig.ClientID,
-		s.keycloakConfig.ClientSecret,
-		s.keycloakConfig.Realm,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.keycloak.GetUserByID(ctx, token.AccessToken, s.keycloakConfig.Realm, userGuid)
-}
-
-func (s *Repository) UpdateUser(ctx context.Context, userID int64, firstName, lastName string) ([]*errdetails.BadRequest_FieldViolation, error) {
-
-	userGuid, err := s.ensureUserExportedToKeycloak(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*errdetails.BadRequest_FieldViolation, 0)
-	var problems []string
-
-	firstNameInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{
-			&validation.StringTrimFilter{},
-			&validation.StringSingleSpaces{},
-		},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.StringLength{Min: 2, Max: 50},
-		},
-	}
-	firstName, problems, err = firstNameInputFilter.IsValidString(firstName)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "first_name",
-			Description: fv,
-		})
-	}
-
-	lastNameInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{
-			&validation.StringTrimFilter{},
-			&validation.StringSingleSpaces{},
-		},
-		Validators: []validation.ValidatorInterface{
-			&validation.StringLength{Min: 0, Max: 50},
-		},
-	}
-	lastName, problems, err = lastNameInputFilter.IsValidString(lastName)
-	if err != nil {
-		return nil, err
-	}
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "last_name",
-			Description: fv,
-		})
-	}
-
-	if len(result) > 0 {
-		return result, nil
-	}
-
-	token, err := s.keycloak.LoginClient(
-		ctx,
-		s.keycloakConfig.ClientID,
-		s.keycloakConfig.ClientSecret,
-		s.keycloakConfig.Realm,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
-		ID:        &userGuid,
-		FirstName: &firstName,
-		LastName:  &lastName,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	user, err := s.keycloak.GetUserByID(ctx, token.AccessToken, s.keycloakConfig.Realm, userGuid)
-	if err != nil {
-		return nil, err
-	}
-
-	name := fullName(util.StrPtrToStr(user.FirstName), util.StrPtrToStr(user.LastName), util.StrPtrToStr(user.Username))
-
-	oldName := ""
-	err = s.autowpDB.QueryRow("SELECT name FROM users WHERE id = ?", userID).Scan(&oldName)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = s.autowpDB.Exec("UPDATE users SET name = ? WHERE id = ?", name, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	if oldName != name {
-		_, err = s.autowpDB.Exec("INSERT INTO user_renames (user_id, old_name, new_name, date) VALUES (?, ?, ?, NOW())", userID, oldName, name)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return nil, nil
-}
-
-func (s *Repository) UserRenamesGC() error {
-	_, err := s.autowpDB.Exec("DELETE FROM user_renames WHERE date < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
-	return err
 }
 
 func (s *Repository) RestoreVotes() error {

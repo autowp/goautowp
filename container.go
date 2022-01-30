@@ -47,7 +47,6 @@ type Container struct {
 	keyCloak           gocloak.GoCloak
 	location           *time.Location
 	messages           *Messages
-	passwordRecovery   *PasswordRecovery
 	privateHttpServer  *http.Server
 	privateRouter      *gin.Engine
 	publicHttpServer   *http.Server
@@ -58,7 +57,6 @@ type Container struct {
 	usersRepository    *users.Repository
 	usersGrpcServer    *UsersGRPCServer
 	memcached          *memcache.Client
-	oauth              *OAuth
 	auth               *Auth
 }
 
@@ -94,22 +92,6 @@ func (s *Container) Close() error {
 	}
 
 	return nil
-}
-
-func (s *Container) OAuth() (*OAuth, error) {
-	if s.oauth == nil {
-
-		ur, err := s.UsersRepository()
-		if err != nil {
-			return nil, err
-		}
-
-		kcConfig := s.Config().Keycloak
-
-		s.oauth = NewOAuth(kcConfig, s.Keycloak(), ur)
-	}
-
-	return s.oauth, nil
 }
 
 func (s *Container) AutowpDB() (*sql.DB, error) {
@@ -338,67 +320,6 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return s.publicRouter, nil
 	}
 
-	r := gin.New()
-	r.Use(gin.Recovery())
-
-	r.POST("/api/oauth/token", func(c *gin.Context) {
-
-		form := TokenForm{}
-		err := c.BindJSON(&form)
-		if err != nil {
-			c.String(http.StatusBadRequest, err.Error())
-			return
-		}
-
-		oauth, err := s.OAuth()
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-		}
-
-		switch form.GrantType {
-		case "refresh_token":
-			jwtToken, err := oauth.TokenByRefreshToken(c, form.RefreshToken)
-			if err != nil {
-				if apiErr, ok := err.(*gocloak.APIError); ok {
-					if apiErr.Code > 0 {
-						c.String(apiErr.Code, apiErr.Message)
-						return
-					}
-				}
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-
-			c.JSON(http.StatusOK, jwtToken)
-		case "password":
-			jwtToken, userId, err := oauth.TokenByPassword(c, form.Username, form.Password)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			if userId == 0 {
-				c.Status(http.StatusBadRequest)
-				return
-			}
-			if err != nil {
-				logrus.Debugf("Login `%s` to Keycloak by credentials failed: %s", form.Username, err.Error())
-				if apiErr, ok := err.(*gocloak.APIError); ok {
-					if apiErr.Code > 0 {
-						c.String(apiErr.Code, apiErr.Message)
-						return
-					}
-				}
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-
-			c.JSON(http.StatusOK, jwtToken)
-
-		default:
-			c.String(http.StatusBadRequest, "Unexpected grant_type")
-		}
-	})
-
 	srv, err := s.GRPCServer()
 	if err != nil {
 		return nil, err
@@ -446,15 +367,7 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterItemsServer(grpcServer, itemsSrv)
 
 	wrappedGrpc := grpcweb.WrapServer(grpcServer)
-
-	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
-		if wrappedGrpc.IsGrpcWebRequest(req) {
-			wrappedGrpc.ServeHTTP(resp, req)
-			return
-		}
-		// Fall back to other servers.
-		r.ServeHTTP(resp, req)
-	}
+	s.publicRouter = wrappedGrpc.ServeHTTP
 
 	return s.publicRouter, nil
 }
@@ -556,9 +469,7 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 		s.usersRepository = users.NewRepository(
 			autowpDB,
 			cfg.UsersSalt,
-			cfg.EmailSalt,
 			cfg.Languages,
-			s.EmailSender(),
 			s.Keycloak(),
 			cfg.Keycloak,
 		)
@@ -593,7 +504,12 @@ func (s *Container) Auth() (*Auth, error) {
 			return nil, err
 		}
 
-		s.auth = NewAuth(db, s.Keycloak(), cfg.Keycloak)
+		rep, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.auth = NewAuth(db, s.Keycloak(), cfg.Keycloak, rep)
 	}
 
 	return s.auth, nil
@@ -701,11 +617,6 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			return nil, err
 		}
 
-		pr, err := s.PasswordRecovery()
-		if err != nil {
-			return nil, err
-		}
-
 		auth, err := s.Auth()
 		if err != nil {
 			return nil, err
@@ -719,7 +630,6 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			events,
 			cfg.Languages,
 			cfg.Captcha,
-			pr,
 			s.UserExtractor(),
 		)
 	}
@@ -802,23 +712,6 @@ func (s *Container) Keycloak() gocloak.GoCloak {
 	}
 
 	return s.keyCloak
-}
-
-func (s *Container) PasswordRecovery() (*PasswordRecovery, error) {
-	if s.passwordRecovery == nil {
-		cfg := s.Config()
-
-		autowpDB, err := s.AutowpDB()
-		if err != nil {
-			return nil, err
-		}
-
-		emailSender := s.EmailSender()
-
-		s.passwordRecovery = NewPasswordRecovery(autowpDB, cfg.Captcha, cfg.Languages, emailSender)
-	}
-
-	return s.passwordRecovery, nil
 }
 
 func (s *Container) EmailSender() email.Sender {

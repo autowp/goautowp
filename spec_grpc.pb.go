@@ -1033,17 +1033,9 @@ var Contacts_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersClient interface {
-	CreateUser(ctx context.Context, in *APICreateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetKeycloakUser(ctx context.Context, in *APIGetKeycloakUserRequest, opts ...grpc.CallOption) (*APIGetKeycloakUserResponse, error)
-	UpdateUser(ctx context.Context, in *APIUpdateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUser(ctx context.Context, in *APIGetUserRequest, opts ...grpc.CallOption) (*APIUser, error)
-	EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	PasswordRecoveryCheckCode(ctx context.Context, in *APIPasswordRecoveryCheckCodeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error)
-	SetPassword(ctx context.Context, in *APISetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Me(ctx context.Context, in *APIMeRequest, opts ...grpc.CallOption) (*APIUser, error)
 }
 
 type usersClient struct {
@@ -1052,33 +1044,6 @@ type usersClient struct {
 
 func NewUsersClient(cc grpc.ClientConnInterface) UsersClient {
 	return &usersClient{cc}
-}
-
-func (c *usersClient) CreateUser(ctx context.Context, in *APICreateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/CreateUser", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersClient) GetKeycloakUser(ctx context.Context, in *APIGetKeycloakUserRequest, opts ...grpc.CallOption) (*APIGetKeycloakUserResponse, error) {
-	out := new(APIGetKeycloakUserResponse)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/GetKeycloakUser", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersClient) UpdateUser(ctx context.Context, in *APIUpdateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/UpdateUser", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *usersClient) DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
@@ -1099,54 +1064,9 @@ func (c *usersClient) GetUser(ctx context.Context, in *APIGetUserRequest, opts .
 	return out, nil
 }
 
-func (c *usersClient) EmailChange(ctx context.Context, in *APIEmailChangeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/EmailChange", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersClient) EmailChangeConfirm(ctx context.Context, in *APIEmailChangeConfirmRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/EmailChangeConfirm", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersClient) PasswordRecovery(ctx context.Context, in *APIPasswordRecoveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/PasswordRecovery", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersClient) PasswordRecoveryCheckCode(ctx context.Context, in *APIPasswordRecoveryCheckCodeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/PasswordRecoveryCheckCode", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersClient) PasswordRecoveryConfirm(ctx context.Context, in *APIPasswordRecoveryConfirmRequest, opts ...grpc.CallOption) (*APIPasswordRecoveryConfirmResponse, error) {
-	out := new(APIPasswordRecoveryConfirmResponse)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/PasswordRecoveryConfirm", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *usersClient) SetPassword(ctx context.Context, in *APISetPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/SetPassword", in, out, opts...)
+func (c *usersClient) Me(ctx context.Context, in *APIMeRequest, opts ...grpc.CallOption) (*APIUser, error) {
+	out := new(APIUser)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/Me", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1157,17 +1077,9 @@ func (c *usersClient) SetPassword(ctx context.Context, in *APISetPasswordRequest
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
 type UsersServer interface {
-	CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error)
-	GetKeycloakUser(context.Context, *APIGetKeycloakUserRequest) (*APIGetKeycloakUserResponse, error)
-	UpdateUser(context.Context, *APIUpdateUserRequest) (*emptypb.Empty, error)
 	DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error)
 	GetUser(context.Context, *APIGetUserRequest) (*APIUser, error)
-	EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error)
-	EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error)
-	PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error)
-	PasswordRecoveryCheckCode(context.Context, *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error)
-	PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error)
-	SetPassword(context.Context, *APISetPasswordRequest) (*emptypb.Empty, error)
+	Me(context.Context, *APIMeRequest) (*APIUser, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -1175,38 +1087,14 @@ type UsersServer interface {
 type UnimplementedUsersServer struct {
 }
 
-func (UnimplementedUsersServer) CreateUser(context.Context, *APICreateUserRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
-}
-func (UnimplementedUsersServer) GetKeycloakUser(context.Context, *APIGetKeycloakUserRequest) (*APIGetKeycloakUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetKeycloakUser not implemented")
-}
-func (UnimplementedUsersServer) UpdateUser(context.Context, *APIUpdateUserRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
-}
 func (UnimplementedUsersServer) DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
 }
 func (UnimplementedUsersServer) GetUser(context.Context, *APIGetUserRequest) (*APIUser, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
 }
-func (UnimplementedUsersServer) EmailChange(context.Context, *APIEmailChangeRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EmailChange not implemented")
-}
-func (UnimplementedUsersServer) EmailChangeConfirm(context.Context, *APIEmailChangeConfirmRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EmailChangeConfirm not implemented")
-}
-func (UnimplementedUsersServer) PasswordRecovery(context.Context, *APIPasswordRecoveryRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecovery not implemented")
-}
-func (UnimplementedUsersServer) PasswordRecoveryCheckCode(context.Context, *APIPasswordRecoveryCheckCodeRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecoveryCheckCode not implemented")
-}
-func (UnimplementedUsersServer) PasswordRecoveryConfirm(context.Context, *APIPasswordRecoveryConfirmRequest) (*APIPasswordRecoveryConfirmResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PasswordRecoveryConfirm not implemented")
-}
-func (UnimplementedUsersServer) SetPassword(context.Context, *APISetPasswordRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetPassword not implemented")
+func (UnimplementedUsersServer) Me(context.Context, *APIMeRequest) (*APIUser, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Me not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -1219,60 +1107,6 @@ type UnsafeUsersServer interface {
 
 func RegisterUsersServer(s grpc.ServiceRegistrar, srv UsersServer) {
 	s.RegisterService(&Users_ServiceDesc, srv)
-}
-
-func _Users_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APICreateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).CreateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/CreateUser",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).CreateUser(ctx, req.(*APICreateUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Users_GetKeycloakUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIGetKeycloakUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).GetKeycloakUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/GetKeycloakUser",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).GetKeycloakUser(ctx, req.(*APIGetKeycloakUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Users_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIUpdateUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).UpdateUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/UpdateUser",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).UpdateUser(ctx, req.(*APIUpdateUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _Users_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1311,110 +1145,20 @@ func _Users_GetUser_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Users_EmailChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIEmailChangeRequest)
+func _Users_Me_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIMeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UsersServer).EmailChange(ctx, in)
+		return srv.(UsersServer).Me(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/goautowp.Users/EmailChange",
+		FullMethod: "/goautowp.Users/Me",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).EmailChange(ctx, req.(*APIEmailChangeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Users_EmailChangeConfirm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIEmailChangeConfirmRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).EmailChangeConfirm(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/EmailChangeConfirm",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).EmailChangeConfirm(ctx, req.(*APIEmailChangeConfirmRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Users_PasswordRecovery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIPasswordRecoveryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).PasswordRecovery(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/PasswordRecovery",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).PasswordRecovery(ctx, req.(*APIPasswordRecoveryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Users_PasswordRecoveryCheckCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIPasswordRecoveryCheckCodeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).PasswordRecoveryCheckCode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/PasswordRecoveryCheckCode",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).PasswordRecoveryCheckCode(ctx, req.(*APIPasswordRecoveryCheckCodeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Users_PasswordRecoveryConfirm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIPasswordRecoveryConfirmRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).PasswordRecoveryConfirm(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/PasswordRecoveryConfirm",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).PasswordRecoveryConfirm(ctx, req.(*APIPasswordRecoveryConfirmRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Users_SetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APISetPasswordRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).SetPassword(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/SetPassword",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).SetPassword(ctx, req.(*APISetPasswordRequest))
+		return srv.(UsersServer).Me(ctx, req.(*APIMeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1427,18 +1171,6 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UsersServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateUser",
-			Handler:    _Users_CreateUser_Handler,
-		},
-		{
-			MethodName: "GetKeycloakUser",
-			Handler:    _Users_GetKeycloakUser_Handler,
-		},
-		{
-			MethodName: "UpdateUser",
-			Handler:    _Users_UpdateUser_Handler,
-		},
-		{
 			MethodName: "DeleteUser",
 			Handler:    _Users_DeleteUser_Handler,
 		},
@@ -1447,28 +1179,8 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Users_GetUser_Handler,
 		},
 		{
-			MethodName: "EmailChange",
-			Handler:    _Users_EmailChange_Handler,
-		},
-		{
-			MethodName: "EmailChangeConfirm",
-			Handler:    _Users_EmailChangeConfirm_Handler,
-		},
-		{
-			MethodName: "PasswordRecovery",
-			Handler:    _Users_PasswordRecovery_Handler,
-		},
-		{
-			MethodName: "PasswordRecoveryCheckCode",
-			Handler:    _Users_PasswordRecoveryCheckCode_Handler,
-		},
-		{
-			MethodName: "PasswordRecoveryConfirm",
-			Handler:    _Users_PasswordRecoveryConfirm_Handler,
-		},
-		{
-			MethodName: "SetPassword",
-			Handler:    _Users_SetPassword_Handler,
+			MethodName: "Me",
+			Handler:    _Users_Me_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

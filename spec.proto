@@ -43,17 +43,9 @@ service Contacts {
 }
 
 service Users {
-  rpc CreateUser(APICreateUserRequest) returns (google.protobuf.Empty) {}
-  rpc GetKeycloakUser(APIGetKeycloakUserRequest) returns (APIGetKeycloakUserResponse) {}
-  rpc UpdateUser(APIUpdateUserRequest) returns (google.protobuf.Empty) {}
   rpc DeleteUser(APIDeleteUserRequest) returns (google.protobuf.Empty) {}
   rpc GetUser(APIGetUserRequest) returns (APIUser) {}
-  rpc EmailChange(APIEmailChangeRequest) returns (google.protobuf.Empty) {}
-  rpc EmailChangeConfirm(APIEmailChangeConfirmRequest) returns (google.protobuf.Empty) {}
-  rpc PasswordRecovery(APIPasswordRecoveryRequest) returns (google.protobuf.Empty) {}
-  rpc PasswordRecoveryCheckCode(APIPasswordRecoveryCheckCodeRequest) returns (google.protobuf.Empty) {}
-  rpc PasswordRecoveryConfirm(APIPasswordRecoveryConfirmRequest) returns (APIPasswordRecoveryConfirmResponse) {}
-  rpc SetPassword(APISetPasswordRequest) returns (google.protobuf.Empty) {}
+  rpc Me(APIMeRequest) returns (APIUser) {}
 }
 
 service Items {
@@ -305,67 +297,13 @@ message APIMessageSummary {
   int32 system_new_count = 5;
 }
 
-message APICreateUserRequest {
-  string email = 1;
-  string first_name = 2;
-  string last_name = 3;
-  string password = 4;
-  string password_confirm = 5;
-  string language = 6;
-  string captcha = 7;
-}
-
-message APIPasswordRecoveryRequest {
-  string email = 1;
-  string captcha = 2;
-}
-
-message APIPasswordRecoveryCheckCodeRequest {
-  string code = 1;
-}
-
-message APIPasswordRecoveryConfirmRequest {
-  string code = 1;
-  string password = 2;
-  string password_confirm = 3;
-}
-
-message APIPasswordRecoveryConfirmResponse {
-  string login = 1;
-}
-
-message APIEmailChangeRequest {
-  string email = 1;
-}
-
-message APIEmailChangeConfirmRequest {
-  string code = 1;
-}
-
-message APISetPasswordRequest {
-  string old_password = 1;
-  string new_password = 2;
-  string new_password_confirm = 3;
-}
-
 message APIDeleteUserRequest {
   int64 user_id = 1;
   string password = 2;
 }
 
-message APIUpdateUserRequest {
-  int64 user_id = 1;
-  string first_name = 2;
-  string last_name = 3;
-}
-
-message APIGetKeycloakUserRequest {
-  int64 user_id = 1;
-}
-
-message APIGetKeycloakUserResponse {
-  string first_name = 1;
-  string last_name = 2;
+message APIMeRequest {
+  repeated string fields = 1;
 }
 
 message APIGetUserRequest {
