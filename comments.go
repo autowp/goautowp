@@ -39,7 +39,7 @@ func NewComments(db *sql.DB, userExtractor *UserExtractor) *Comments {
 func (s *Comments) getVotes(id int) (*getVotesResult, error) {
 
 	rows, err := s.db.Query(`
-		SELECT users.id, users.name, users.deleted, users.identity, users.last_online, users.role, comment_vote.vote
+		SELECT users.id, users.name, users.deleted, users.identity, users.last_online, users.role, users.specs_weight, comment_vote.vote
 		FROM comment_vote
 			INNER JOIN users ON comment_vote.user_id = users.id
 		WHERE comment_vote.comment_id = ?
@@ -54,7 +54,7 @@ func (s *Comments) getVotes(id int) (*getVotesResult, error) {
 	for rows.Next() {
 		var r users.DBUser
 		var vote int
-		err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &vote)
+		err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight, &vote)
 		if err != nil {
 			return nil, err
 		}

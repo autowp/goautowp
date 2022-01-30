@@ -57,14 +57,15 @@ type APIUser struct {
 
 // DBUser DBUser
 type DBUser struct {
-	ID         int64
-	Name       string
-	Deleted    bool
-	Identity   *string
-	LastOnline *time.Time
-	Role       string
-	EMail      *string
-	Img        *int
+	ID          int64
+	Name        string
+	Deleted     bool
+	Identity    *string
+	LastOnline  *time.Time
+	Role        string
+	EMail       *string
+	Img         *int
+	SpecsWeight float64
 }
 
 // CreateUserOptions CreateUserOptions
@@ -126,9 +127,9 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 	result := make([]DBUser, 0)
 
 	var r DBUser
-	valuePtrs := []interface{}{&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role}
+	valuePtrs := []interface{}{&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight}
 
-	sqSelect := sq.Select("users.id, users.name, users.deleted, users.identity, users.last_online, users.role").From("users")
+	sqSelect := sq.Select("users.id, users.name, users.deleted, users.identity, users.last_online, users.role, users.specs_weight").From("users")
 
 	if options.ID != 0 {
 		sqSelect = sqSelect.Where(sq.Eq{"users.id": options.ID})

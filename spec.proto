@@ -178,6 +178,7 @@ message APIUser {
   APIImage avatar = 8;
   string gravatar = 9;
   google.protobuf.Timestamp last_online = 10;
+  double specs_weight = 11;
 }
 
 message Contact {

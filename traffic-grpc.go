@@ -220,7 +220,7 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.
 
 func (s *TrafficGRPCServer) getUser(id int64) (*users.DBUser, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, deleted, identity, last_online, role
+		SELECT id, name, deleted, identity, last_online, role, specs_weight
 		FROM users
 		WHERE id = ?
 	`, id)
@@ -238,7 +238,7 @@ func (s *TrafficGRPCServer) getUser(id int64) (*users.DBUser, error) {
 	}
 
 	var r users.DBUser
-	err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role)
+	err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight)
 	if err != nil {
 		return nil, err
 	}

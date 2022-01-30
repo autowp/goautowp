@@ -56,13 +56,14 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*API
 	}
 
 	user := APIUser{
-		Id:       row.ID,
-		Name:     row.Name,
-		Deleted:  row.Deleted,
-		LongAway: longAway,
-		Green:    isGreen,
-		Route:    route,
-		Identity: identity,
+		Id:          row.ID,
+		Name:        row.Name,
+		Deleted:     row.Deleted,
+		LongAway:    longAway,
+		Green:       isGreen,
+		Route:       route,
+		Identity:    identity,
+		SpecsWeight: row.SpecsWeight,
 	}
 
 	for field := range fields {
