@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"math"
+	"net"
 	"strings"
 	"time"
 )
@@ -259,11 +260,18 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 	remoteAddr := "127.0.0.1"
 	p, ok := peer.FromContext(ctx)
 	if ok {
-		ip := p.Addr.String()
-		if ip != "bufconn" {
-			remoteAddr = ip
+		nw := p.Addr.String()
+		if nw != "bufconn" {
+			ip, _, err := net.SplitHostPort(nw)
+			if err != nil {
+				logrus.Errorf("userip: %q is not IP:port", nw)
+			} else {
+				remoteAddr = ip
+			}
 		}
 	}
+
+	logrus.Infof("IP=%s", remoteAddr)
 
 	locale := strings.ToLower(claims.Locale)
 

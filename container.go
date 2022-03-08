@@ -9,6 +9,7 @@ import (
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
 	"github.com/getsentry/sentry-go"
@@ -366,7 +367,10 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterContactsServer(grpcServer, contactsSrv)
 	RegisterItemsServer(grpcServer, itemsSrv)
 
-	wrappedGrpc := grpcweb.WrapServer(grpcServer)
+	originFunc := func(origin string) bool {
+		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
+	}
+	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
 	s.publicRouter = wrappedGrpc.ServeHTTP
 
 	return s.publicRouter, nil

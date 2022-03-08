@@ -69,9 +69,15 @@ type DuplicateFinderConfig struct {
 	Queue    string `yaml:"queue"    mapstructure:"queue"`
 }
 
+// RestCorsConfig RestCorsConfig
+type RestCorsConfig struct {
+	Origin []string `mapstructure:"origin"`
+}
+
 // RestConfig RestConfig
 type RestConfig struct {
-	Listen string `mapstructure:"listen"`
+	Listen string         `mapstructure:"listen"`
+	Cors   RestCorsConfig `mapstructure:"cors"`
 }
 
 // RecaptchaConfig RecaptchaConfig

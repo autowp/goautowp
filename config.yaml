@@ -1,3 +1,7 @@
+public-rest:
+  cors:
+    origin:
+      - http://localhost
 image-storage:
   src-override:
     host: 127.0.0.1:9000
