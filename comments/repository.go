@@ -274,6 +274,9 @@ func (s *Repository) VoteComment(ctx context.Context, userId int64, commentId in
         `,
 		commentId, userId, vote,
 	)
+	if err != nil {
+		return 0, err
+	}
 
 	affected, err := res.RowsAffected()
 	if err != nil {

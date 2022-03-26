@@ -186,6 +186,9 @@ func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCo
 	}
 
 	commentType, err := s.repository.GetCommentType(ctx, in.GetCommentId())
+	if err != nil {
+		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
+	}
 	if commentType != comments.TypeIDForums {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
