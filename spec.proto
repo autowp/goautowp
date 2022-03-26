@@ -66,6 +66,10 @@ service Comments {
   rpc VoteComment(CommentsVoteCommentRequest) returns (CommentsVoteCommentResponse) {}
 }
 
+service Map {
+  rpc GetPoints(MapGetPointsRequest) returns (MapPoints) {}
+}
+
 message ErrorDetails {
   google.rpc.RetryInfo retryInfo = 1;
   google.rpc.DebugInfo debugInfo = 2;
@@ -525,4 +529,27 @@ message CommentsVoteCommentRequest {
 
 message CommentsVoteCommentResponse {
   int32 votes = 1;
+}
+
+message MapGetPointsRequest {
+  bool PointsOnly = 1;
+  string bounds = 2;
+  string language = 3;
+}
+
+message Point {
+  double lat = 1;
+  double lng = 2;
+}
+
+message MapPoints {
+  repeated MapPoint points = 1;
+}
+
+message MapPoint {
+  Point location = 1;
+  string id = 2;
+  string name = 3;
+  repeated string url = 4;
+  APIImage image = 5;
 }

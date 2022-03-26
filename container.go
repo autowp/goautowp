@@ -61,6 +61,7 @@ type Container struct {
 	usersGrpcServer    *UsersGRPCServer
 	memcached          *memcache.Client
 	auth               *Auth
+	mapGrpcServer      *MapGRPCServer
 }
 
 // NewContainer constructor
@@ -349,6 +350,11 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return nil, err
 	}
 
+	mapSrv, err := s.MapGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	logrusLogger := logrus.New()
 	logrusEntry := logrus.NewEntry(logrusLogger)
 
@@ -370,6 +376,7 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterCommentsServer(grpcServer, commentsSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
 	RegisterItemsServer(grpcServer, itemsSrv)
+	RegisterMapServer(grpcServer, mapSrv)
 
 	originFunc := func(origin string) bool {
 		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
@@ -711,6 +718,25 @@ func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 	}
 
 	return s.contactsGrpcServer, nil
+}
+
+func (s *Container) MapGRPCServer() (*MapGRPCServer, error) {
+	if s.mapGrpcServer == nil {
+
+		db, err := s.AutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		imageStorage, err := s.ImageStorage()
+		if err != nil {
+			return nil, err
+		}
+
+		s.mapGrpcServer = NewMapGRPCServer(db, imageStorage)
+	}
+
+	return s.mapGrpcServer, nil
 }
 
 func (s *Container) Forums() (*Forums, error) {
