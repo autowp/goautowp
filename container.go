@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/Nerzal/gocloak/v9"
+	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/image/storage"
@@ -31,8 +32,9 @@ type Container struct {
 	autowpDB           *sql.DB
 	banRepository      *BanRepository
 	catalogue          *Catalogue
-	comments           *Comments
+	commentsRepository *comments.Repository
 	config             config.Config
+	commentsGrpcServer *CommentsGRPCServer
 	contactsGrpcServer *ContactsGRPCServer
 	contactsRepository *ContactsRepository
 	duplicateFinder    *DuplicateFinder
@@ -71,7 +73,7 @@ func NewContainer(cfg config.Config) *Container {
 func (s *Container) Close() error {
 	s.banRepository = nil
 	s.catalogue = nil
-	s.comments = nil
+	s.commentsRepository = nil
 	s.contactsRepository = nil
 	s.duplicateFinder = nil
 	s.traffic = nil
@@ -155,9 +157,7 @@ func (s *Container) Catalogue() (*Catalogue, error) {
 			return nil, err
 		}
 
-		enforcer := s.Enforcer()
-
-		s.catalogue, err = NewCatalogue(db, enforcer)
+		s.catalogue, err = NewCatalogue(db)
 		if err != nil {
 			return nil, err
 		}
@@ -166,19 +166,17 @@ func (s *Container) Catalogue() (*Catalogue, error) {
 	return s.catalogue, nil
 }
 
-func (s *Container) Comments() (*Comments, error) {
-	if s.comments == nil {
+func (s *Container) CommentsRepository() (*comments.Repository, error) {
+	if s.commentsRepository == nil {
 		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		extractor := s.UserExtractor()
-
-		s.comments = NewComments(db, extractor)
+		s.commentsRepository = comments.NewRepository(db)
 	}
 
-	return s.comments, nil
+	return s.commentsRepository, nil
 }
 
 func (s *Container) Config() config.Config {
@@ -336,6 +334,11 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return nil, err
 	}
 
+	commentsSrv, err := s.CommentsGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	contactsSrv, err := s.ContactsGRPCServer()
 	if err != nil {
 		return nil, err
@@ -364,6 +367,7 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterAutowpServer(grpcServer, srv)
 	RegisterTrafficServer(grpcServer, trafficSrv)
 	RegisterUsersServer(grpcServer, usersSrv)
+	RegisterCommentsServer(grpcServer, commentsSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
 	RegisterItemsServer(grpcServer, itemsSrv)
 
@@ -528,7 +532,7 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 
 		cfg := s.Config()
 
-		comments, err := s.Comments()
+		commentsRepository, err := s.CommentsRepository()
 		if err != nil {
 			return nil, err
 		}
@@ -560,7 +564,7 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			cfg.FileStorage,
 			s.Enforcer(),
 			s.UserExtractor(),
-			comments,
+			commentsRepository,
 			s.IPExtractor(),
 			feedback,
 			forums,
@@ -604,8 +608,6 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 	if s.usersGrpcServer == nil {
 		cfg := s.Config()
 
-		enforcer := s.Enforcer()
-
 		contactsRepository, err := s.ContactsRepository()
 		if err != nil {
 			return nil, err
@@ -628,7 +630,7 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 
 		s.usersGrpcServer = NewUsersGRPCServer(
 			auth,
-			enforcer,
+			s.Enforcer(),
 			contactsRepository,
 			userRepository,
 			events,
@@ -652,6 +654,35 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 	}
 
 	return s.itemsGrpcServer, nil
+}
+
+func (s *Container) CommentsGRPCServer() (*CommentsGRPCServer, error) {
+	if s.commentsGrpcServer == nil {
+		commentsRepository, err := s.CommentsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		usersRepository, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		s.commentsGrpcServer = NewCommentsGRPCServer(
+			auth,
+			commentsRepository,
+			usersRepository,
+			s.UserExtractor(),
+			s.Enforcer(),
+		)
+	}
+
+	return s.commentsGrpcServer, nil
 }
 
 func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {

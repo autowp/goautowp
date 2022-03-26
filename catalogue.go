@@ -9,17 +9,15 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/util"
-	"github.com/casbin/casbin"
 )
 
 // Catalogue service
 type Catalogue struct {
-	db       *sql.DB
-	enforcer *casbin.Enforcer
+	db *sql.DB
 }
 
 // NewCatalogue constructor
-func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer) (*Catalogue, error) {
+func NewCatalogue(db *sql.DB) (*Catalogue, error) {
 
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
@@ -28,8 +26,7 @@ func NewCatalogue(db *sql.DB, enforcer *casbin.Enforcer) (*Catalogue, error) {
 	rand.Seed(time.Now().Unix())
 
 	return &Catalogue{
-		db:       db,
-		enforcer: enforcer,
+		db: db,
 	}, nil
 }
 

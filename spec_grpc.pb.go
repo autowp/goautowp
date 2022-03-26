@@ -23,7 +23,6 @@ type AutowpClient interface {
 	CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error)
 	GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error)
-	GetCommentVotes(ctx context.Context, in *GetCommentVotesRequest, opts ...grpc.CallOption) (*CommentVoteItems, error)
 	GetForumsUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error)
 	GetIP(ctx context.Context, in *APIGetIPRequest, opts ...grpc.CallOption) (*APIIP, error)
 	GetMessagesNewCount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageNewCount, error)
@@ -73,15 +72,6 @@ func (c *autowpClient) GetBrandIcons(ctx context.Context, in *emptypb.Empty, opt
 func (c *autowpClient) GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error) {
 	out := new(BrandVehicleTypeItems)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetBrandVehicleTypes", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) GetCommentVotes(ctx context.Context, in *GetCommentVotesRequest, opts ...grpc.CallOption) (*CommentVoteItems, error) {
-	out := new(CommentVoteItems)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetCommentVotes", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +167,6 @@ type AutowpServer interface {
 	CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error)
 	GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error)
 	GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error)
-	GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error)
 	GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error)
 	GetIP(context.Context, *APIGetIPRequest) (*APIIP, error)
 	GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error)
@@ -205,9 +194,6 @@ func (UnimplementedAutowpServer) GetBrandIcons(context.Context, *emptypb.Empty) 
 }
 func (UnimplementedAutowpServer) GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrandVehicleTypes not implemented")
-}
-func (UnimplementedAutowpServer) GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCommentVotes not implemented")
 }
 func (UnimplementedAutowpServer) GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetForumsUserSummary not implemented")
@@ -317,24 +303,6 @@ func _Autowp_GetBrandVehicleTypes_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutowpServer).GetBrandVehicleTypes(ctx, req.(*GetBrandVehicleTypesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_GetCommentVotes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCommentVotesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).GetCommentVotes(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetCommentVotes",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetCommentVotes(ctx, req.(*GetCommentVotesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -523,10 +491,6 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBrandVehicleTypes",
 			Handler:    _Autowp_GetBrandVehicleTypes_Handler,
-		},
-		{
-			MethodName: "GetCommentVotes",
-			Handler:    _Autowp_GetCommentVotes_Handler,
 		},
 		{
 			MethodName: "GetForumsUserSummary",
@@ -1447,6 +1411,308 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "List",
 			Handler:    _Items_List_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+// CommentsClient is the client API for Comments service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type CommentsClient interface {
+	GetCommentVotes(ctx context.Context, in *GetCommentVotesRequest, opts ...grpc.CallOption) (*CommentVoteItems, error)
+	Subscribe(ctx context.Context, in *CommentsSubscribeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnSubscribe(ctx context.Context, in *CommentsUnSubscribeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	View(ctx context.Context, in *CommentsViewRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SetDeleted(ctx context.Context, in *CommentsSetDeletedRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	MoveComment(ctx context.Context, in *CommentsMoveCommentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	VoteComment(ctx context.Context, in *CommentsVoteCommentRequest, opts ...grpc.CallOption) (*CommentsVoteCommentResponse, error)
+}
+
+type commentsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCommentsClient(cc grpc.ClientConnInterface) CommentsClient {
+	return &commentsClient{cc}
+}
+
+func (c *commentsClient) GetCommentVotes(ctx context.Context, in *GetCommentVotesRequest, opts ...grpc.CallOption) (*CommentVoteItems, error) {
+	out := new(CommentVoteItems)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/GetCommentVotes", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentsClient) Subscribe(ctx context.Context, in *CommentsSubscribeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/Subscribe", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentsClient) UnSubscribe(ctx context.Context, in *CommentsUnSubscribeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/UnSubscribe", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentsClient) View(ctx context.Context, in *CommentsViewRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/View", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentsClient) SetDeleted(ctx context.Context, in *CommentsSetDeletedRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/SetDeleted", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentsClient) MoveComment(ctx context.Context, in *CommentsMoveCommentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/MoveComment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentsClient) VoteComment(ctx context.Context, in *CommentsVoteCommentRequest, opts ...grpc.CallOption) (*CommentsVoteCommentResponse, error) {
+	out := new(CommentsVoteCommentResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/VoteComment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CommentsServer is the server API for Comments service.
+// All implementations must embed UnimplementedCommentsServer
+// for forward compatibility
+type CommentsServer interface {
+	GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error)
+	Subscribe(context.Context, *CommentsSubscribeRequest) (*emptypb.Empty, error)
+	UnSubscribe(context.Context, *CommentsUnSubscribeRequest) (*emptypb.Empty, error)
+	View(context.Context, *CommentsViewRequest) (*emptypb.Empty, error)
+	SetDeleted(context.Context, *CommentsSetDeletedRequest) (*emptypb.Empty, error)
+	MoveComment(context.Context, *CommentsMoveCommentRequest) (*emptypb.Empty, error)
+	VoteComment(context.Context, *CommentsVoteCommentRequest) (*CommentsVoteCommentResponse, error)
+	mustEmbedUnimplementedCommentsServer()
+}
+
+// UnimplementedCommentsServer must be embedded to have forward compatible implementations.
+type UnimplementedCommentsServer struct {
+}
+
+func (UnimplementedCommentsServer) GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCommentVotes not implemented")
+}
+func (UnimplementedCommentsServer) Subscribe(context.Context, *CommentsSubscribeRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
+}
+func (UnimplementedCommentsServer) UnSubscribe(context.Context, *CommentsUnSubscribeRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnSubscribe not implemented")
+}
+func (UnimplementedCommentsServer) View(context.Context, *CommentsViewRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method View not implemented")
+}
+func (UnimplementedCommentsServer) SetDeleted(context.Context, *CommentsSetDeletedRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetDeleted not implemented")
+}
+func (UnimplementedCommentsServer) MoveComment(context.Context, *CommentsMoveCommentRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MoveComment not implemented")
+}
+func (UnimplementedCommentsServer) VoteComment(context.Context, *CommentsVoteCommentRequest) (*CommentsVoteCommentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VoteComment not implemented")
+}
+func (UnimplementedCommentsServer) mustEmbedUnimplementedCommentsServer() {}
+
+// UnsafeCommentsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CommentsServer will
+// result in compilation errors.
+type UnsafeCommentsServer interface {
+	mustEmbedUnimplementedCommentsServer()
+}
+
+func RegisterCommentsServer(s grpc.ServiceRegistrar, srv CommentsServer) {
+	s.RegisterService(&Comments_ServiceDesc, srv)
+}
+
+func _Comments_GetCommentVotes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCommentVotesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).GetCommentVotes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/GetCommentVotes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).GetCommentVotes(ctx, req.(*GetCommentVotesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Comments_Subscribe_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommentsSubscribeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).Subscribe(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/Subscribe",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).Subscribe(ctx, req.(*CommentsSubscribeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Comments_UnSubscribe_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommentsUnSubscribeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).UnSubscribe(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/UnSubscribe",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).UnSubscribe(ctx, req.(*CommentsUnSubscribeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Comments_View_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommentsViewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).View(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/View",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).View(ctx, req.(*CommentsViewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Comments_SetDeleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommentsSetDeletedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).SetDeleted(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/SetDeleted",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).SetDeleted(ctx, req.(*CommentsSetDeletedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Comments_MoveComment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommentsMoveCommentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).MoveComment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/MoveComment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).MoveComment(ctx, req.(*CommentsMoveCommentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Comments_VoteComment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommentsVoteCommentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).VoteComment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/VoteComment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).VoteComment(ctx, req.(*CommentsVoteCommentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Comments_ServiceDesc is the grpc.ServiceDesc for Comments service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Comments_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Comments",
+	HandlerType: (*CommentsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetCommentVotes",
+			Handler:    _Comments_GetCommentVotes_Handler,
+		},
+		{
+			MethodName: "Subscribe",
+			Handler:    _Comments_Subscribe_Handler,
+		},
+		{
+			MethodName: "UnSubscribe",
+			Handler:    _Comments_UnSubscribe_Handler,
+		},
+		{
+			MethodName: "View",
+			Handler:    _Comments_View_Handler,
+		},
+		{
+			MethodName: "SetDeleted",
+			Handler:    _Comments_SetDeleted_Handler,
+		},
+		{
+			MethodName: "MoveComment",
+			Handler:    _Comments_MoveComment_Handler,
+		},
+		{
+			MethodName: "VoteComment",
+			Handler:    _Comments_VoteComment_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"errors"
+	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -23,7 +24,7 @@ type GRPCServer struct {
 	fileStorageConfig config.FileStorageConfig
 	enforcer          *casbin.Enforcer
 	userExtractor     *UserExtractor
-	comments          *Comments
+	comments          *comments.Repository
 	ipExtractor       *IPExtractor
 	feedback          *Feedback
 	forums            *Forums
@@ -37,7 +38,7 @@ func NewGRPCServer(
 	fileStorageConfig config.FileStorageConfig,
 	enforcer *casbin.Enforcer,
 	userExtractor *UserExtractor,
-	comments *Comments,
+	comments *comments.Repository,
 	ipExtractor *IPExtractor,
 	feedback *Feedback,
 	forums *Forums,
@@ -164,46 +165,6 @@ func (s *GRPCServer) GetBrandVehicleTypes(_ context.Context, in *GetBrandVehicle
 
 	return &BrandVehicleTypeItems{
 		Items: items,
-	}, nil
-}
-
-func (s *GRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVotesRequest) (*CommentVoteItems, error) {
-	votes, err := s.comments.getVotes(int(in.CommentId))
-
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if votes == nil {
-		return nil, status.Errorf(codes.NotFound, "NotFound")
-	}
-
-	result := make([]*CommentVote, 0)
-
-	for _, user := range votes.PositiveVotes {
-		extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		result = append(result, &CommentVote{
-			Value: CommentVote_POSITIVE,
-			User:  extracted,
-		})
-	}
-
-	for _, user := range votes.NegativeVotes {
-		extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		result = append(result, &CommentVote{
-			Value: CommentVote_NEGATIVE,
-			User:  extracted,
-		})
-	}
-
-	return &CommentVoteItems{
-		Items: result,
 	}, nil
 }
 

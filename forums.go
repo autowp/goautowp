@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"database/sql"
+	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/util"
 )
 
@@ -25,7 +26,7 @@ func (s *Forums) GetUserSummary(userID int64) (int, error) {
 		WHERE comment_topic_subscribe.user_id = ?
 		  	AND comment_topic.type_id = ?
 			AND comment_topic_subscribe.type_id = ?
-	`, userID, CommentsTypeForumTopicID, CommentsTypeForumTopicID)
+	`, userID, comments.TypeIDForums, comments.TypeIDForums)
 	if err != nil {
 		return 0, err
 	}

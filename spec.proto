@@ -14,7 +14,6 @@ service Autowp {
   rpc CreateFeedback(APICreateFeedbackRequest) returns (google.protobuf.Empty) {}
   rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
   rpc GetBrandVehicleTypes(GetBrandVehicleTypesRequest) returns (BrandVehicleTypeItems) {}
-  rpc GetCommentVotes(GetCommentVotesRequest) returns (CommentVoteItems) {}
   rpc GetForumsUserSummary(google.protobuf.Empty) returns (APIForumsUserSummary) {}
   rpc GetIP(APIGetIPRequest) returns (APIIP) {}
   rpc GetMessagesNewCount(google.protobuf.Empty) returns (APIMessageNewCount) {}
@@ -55,6 +54,16 @@ service Items {
   rpc GetTopCategoriesList(GetTopCategoriesListRequest) returns (APITopCategoriesList) {}
   rpc GetTopTwinsBrandsList(GetTopTwinsBrandsListRequest) returns (APITopTwinsBrandsList) {}
   rpc List(ListItemsRequest) returns (APIItemList) {}
+}
+
+service Comments {
+  rpc GetCommentVotes(GetCommentVotesRequest) returns (CommentVoteItems) {}
+  rpc Subscribe(CommentsSubscribeRequest) returns (google.protobuf.Empty) {}
+  rpc UnSubscribe(CommentsUnSubscribeRequest) returns (google.protobuf.Empty) {}
+  rpc View(CommentsViewRequest) returns (google.protobuf.Empty) {}
+  rpc SetDeleted(CommentsSetDeletedRequest) returns (google.protobuf.Empty) {}
+  rpc MoveComment(CommentsMoveCommentRequest) returns (google.protobuf.Empty) {}
+  rpc VoteComment(CommentsVoteCommentRequest) returns (CommentsVoteCommentResponse) {}
 }
 
 message ErrorDetails {
@@ -192,10 +201,6 @@ message ContactItems {
 
 message GetContactsRequest {
   repeated string fields = 1;
-}
-
-message GetCommentVotesRequest {
-  int32 comment_id = 1;
 }
 
 message CommentVoteItems {
@@ -472,4 +477,52 @@ message APIItem {
 
 message APIItemList {
   repeated APIItem items = 1;
+}
+
+enum CommentsType {
+  UNKNOWN = 0;
+  PICTURES_TYPE_ID = 1;
+  ITEM_TYPE_ID = 2;
+  VOTINGS_TYPE_ID = 3;
+  ARTICLES_TYPE_ID = 4;
+  FORUMS_TYPE_ID = 5;
+}
+
+message CommentsSubscribeRequest {
+  int64 item_id = 1;
+  CommentsType type_id = 2;
+}
+
+message CommentsUnSubscribeRequest {
+  int64 item_id = 1;
+  CommentsType type_id = 2;
+}
+
+message GetCommentVotesRequest {
+  int64 comment_id = 1;
+}
+
+message CommentsViewRequest {
+  int64 item_id = 1;
+  CommentsType type_id = 2;
+}
+
+message CommentsSetDeletedRequest {
+  int64 comment_id = 1;
+  bool deleted = 2;
+}
+
+message CommentsMoveCommentRequest {
+  int64 comment_id = 1;
+  int64 item_id = 2;
+  CommentsType type_id = 3;
+}
+
+message CommentsVoteCommentRequest {
+  int64 comment_id = 1;
+  int32 vote = 2;
+}
+
+message CommentsVoteCommentResponse {
+  int32 votes = 1;
 }

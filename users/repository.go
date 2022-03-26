@@ -186,6 +186,17 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 	return result, nil
 }
 
+func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error) {
+	var votesLeft int
+	err := s.autowpDB.QueryRowContext(ctx, "SELECT votes_left FROM users WHERE id = ?", userID).Scan(&votesLeft)
+	return votesLeft, err
+}
+
+func (s *Repository) DecVotes(ctx context.Context, userId int64) error {
+	_, err := s.autowpDB.ExecContext(ctx, "UPDATE users SET votes_left = votes_left - 1 WHERE id = ?", userId)
+	return err
+}
+
 func (s *Repository) AfterUserCreated(userID int64) error {
 	err := s.RefreshUserConflicts(userID)
 	if err != nil {
@@ -270,8 +281,6 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 			}
 		}
 	}
-
-	logrus.Infof("IP=%s", remoteAddr)
 
 	locale := strings.ToLower(claims.Locale)
 
