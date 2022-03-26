@@ -193,7 +193,7 @@ func (s *Repository) moveMessageRecursive(ctx context.Context, parentId int64, d
 		return err
 	}
 
-	rows, err := s.db.QueryContext(ctx, "SELECT id FROM comment_message WHERE parent_id = ?")
+	rows, err := s.db.QueryContext(ctx, "SELECT id FROM comment_message WHERE parent_id = ?", parentId)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
