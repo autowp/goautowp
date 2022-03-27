@@ -93,6 +93,10 @@ type FeedbackConfig struct {
 	Subject string   `yaml:"subject" mapstructure:"subject"`
 }
 
+type TelegramConfig struct {
+	AccessToken string `yaml:"access-token" mapstructure:"access-token"`
+}
+
 // Config Application config definition
 type Config struct {
 	GinMode           string                    `yaml:"gin-mode"           mapstructure:"gin-mode"`
@@ -105,6 +109,7 @@ type Config struct {
 	RabbitMQ          string                    `yaml:"rabbitmq"           mapstructure:"rabbitmq"`
 	MonitoringQueue   string                    `yaml:"monitoring_queue"   mapstructure:"monitoring_queue"`
 	PrivateRest       RestConfig                `yaml:"private-rest"       mapstructure:"private-rest"`
+	Telegram          TelegramConfig            `yaml:"telegram"           mapstructure:"telegram"`
 	TrafficDSN        string                    `yaml:"traffic-dsn"        mapstructure:"traffic-dsn"`
 	TrafficMigrations MigrationsConfig          `yaml:"traffic-migrations" mapstructure:"traffic-migrations"`
 	Recaptcha         RecaptchaConfig           `yaml:"recaptcha"          mapstructure:"recaptcha"`

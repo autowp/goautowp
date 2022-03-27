@@ -25,8 +25,6 @@ type AutowpClient interface {
 	GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error)
 	GetForumsUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error)
 	GetIP(ctx context.Context, in *APIGetIPRequest, opts ...grpc.CallOption) (*APIIP, error)
-	GetMessagesNewCount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageNewCount, error)
-	GetMessagesSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageSummary, error)
 	GetPerspectives(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivesItems, error)
 	GetPerspectivePages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ReCaptchaConfig, error)
@@ -96,24 +94,6 @@ func (c *autowpClient) GetIP(ctx context.Context, in *APIGetIPRequest, opts ...g
 	return out, nil
 }
 
-func (c *autowpClient) GetMessagesNewCount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageNewCount, error) {
-	out := new(APIMessageNewCount)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetMessagesNewCount", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) GetMessagesSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageSummary, error) {
-	out := new(APIMessageSummary)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetMessagesSummary", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *autowpClient) GetPerspectives(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivesItems, error) {
 	out := new(PerspectivesItems)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetPerspectives", in, out, opts...)
@@ -169,8 +149,6 @@ type AutowpServer interface {
 	GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error)
 	GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error)
 	GetIP(context.Context, *APIGetIPRequest) (*APIIP, error)
-	GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error)
-	GetMessagesSummary(context.Context, *emptypb.Empty) (*APIMessageSummary, error)
 	GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error)
 	GetPerspectivePages(context.Context, *emptypb.Empty) (*PerspectivePagesItems, error)
 	GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error)
@@ -200,12 +178,6 @@ func (UnimplementedAutowpServer) GetForumsUserSummary(context.Context, *emptypb.
 }
 func (UnimplementedAutowpServer) GetIP(context.Context, *APIGetIPRequest) (*APIIP, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetIP not implemented")
-}
-func (UnimplementedAutowpServer) GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMessagesNewCount not implemented")
-}
-func (UnimplementedAutowpServer) GetMessagesSummary(context.Context, *emptypb.Empty) (*APIMessageSummary, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMessagesSummary not implemented")
 }
 func (UnimplementedAutowpServer) GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPerspectives not implemented")
@@ -343,42 +315,6 @@ func _Autowp_GetIP_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Autowp_GetMessagesNewCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).GetMessagesNewCount(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetMessagesNewCount",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetMessagesNewCount(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_GetMessagesSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).GetMessagesSummary(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetMessagesSummary",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetMessagesSummary(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Autowp_GetPerspectives_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -499,14 +435,6 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetIP",
 			Handler:    _Autowp_GetIP_Handler,
-		},
-		{
-			MethodName: "GetMessagesNewCount",
-			Handler:    _Autowp_GetMessagesNewCount_Handler,
-		},
-		{
-			MethodName: "GetMessagesSummary",
-			Handler:    _Autowp_GetMessagesSummary_Handler,
 		},
 		{
 			MethodName: "GetPerspectives",
@@ -1799,6 +1727,322 @@ var Map_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPoints",
 			Handler:    _Map_GetPoints_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+// PicturesClient is the client API for Pictures service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type PicturesClient interface {
+	View(ctx context.Context, in *PicturesViewRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type picturesClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewPicturesClient(cc grpc.ClientConnInterface) PicturesClient {
+	return &picturesClient{cc}
+}
+
+func (c *picturesClient) View(ctx context.Context, in *PicturesViewRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Pictures/View", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// PicturesServer is the server API for Pictures service.
+// All implementations must embed UnimplementedPicturesServer
+// for forward compatibility
+type PicturesServer interface {
+	View(context.Context, *PicturesViewRequest) (*emptypb.Empty, error)
+	mustEmbedUnimplementedPicturesServer()
+}
+
+// UnimplementedPicturesServer must be embedded to have forward compatible implementations.
+type UnimplementedPicturesServer struct {
+}
+
+func (UnimplementedPicturesServer) View(context.Context, *PicturesViewRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method View not implemented")
+}
+func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
+
+// UnsafePicturesServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PicturesServer will
+// result in compilation errors.
+type UnsafePicturesServer interface {
+	mustEmbedUnimplementedPicturesServer()
+}
+
+func RegisterPicturesServer(s grpc.ServiceRegistrar, srv PicturesServer) {
+	s.RegisterService(&Pictures_ServiceDesc, srv)
+}
+
+func _Pictures_View_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PicturesViewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).View(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Pictures/View",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).View(ctx, req.(*PicturesViewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Pictures_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Pictures",
+	HandlerType: (*PicturesServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "View",
+			Handler:    _Pictures_View_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+// MessagingClient is the client API for Messaging service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type MessagingClient interface {
+	GetMessagesNewCount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageNewCount, error)
+	GetMessagesSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageSummary, error)
+	DeleteMessage(ctx context.Context, in *MessagingDeleteMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ClearFolder(ctx context.Context, in *MessagingClearFolder, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CreateMessage(ctx context.Context, in *MessagingCreateMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type messagingClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMessagingClient(cc grpc.ClientConnInterface) MessagingClient {
+	return &messagingClient{cc}
+}
+
+func (c *messagingClient) GetMessagesNewCount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageNewCount, error) {
+	out := new(APIMessageNewCount)
+	err := c.cc.Invoke(ctx, "/goautowp.Messaging/GetMessagesNewCount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingClient) GetMessagesSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIMessageSummary, error) {
+	out := new(APIMessageSummary)
+	err := c.cc.Invoke(ctx, "/goautowp.Messaging/GetMessagesSummary", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingClient) DeleteMessage(ctx context.Context, in *MessagingDeleteMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Messaging/DeleteMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingClient) ClearFolder(ctx context.Context, in *MessagingClearFolder, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Messaging/ClearFolder", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingClient) CreateMessage(ctx context.Context, in *MessagingCreateMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Messaging/CreateMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MessagingServer is the server API for Messaging service.
+// All implementations must embed UnimplementedMessagingServer
+// for forward compatibility
+type MessagingServer interface {
+	GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error)
+	GetMessagesSummary(context.Context, *emptypb.Empty) (*APIMessageSummary, error)
+	DeleteMessage(context.Context, *MessagingDeleteMessage) (*emptypb.Empty, error)
+	ClearFolder(context.Context, *MessagingClearFolder) (*emptypb.Empty, error)
+	CreateMessage(context.Context, *MessagingCreateMessage) (*emptypb.Empty, error)
+	mustEmbedUnimplementedMessagingServer()
+}
+
+// UnimplementedMessagingServer must be embedded to have forward compatible implementations.
+type UnimplementedMessagingServer struct {
+}
+
+func (UnimplementedMessagingServer) GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessagesNewCount not implemented")
+}
+func (UnimplementedMessagingServer) GetMessagesSummary(context.Context, *emptypb.Empty) (*APIMessageSummary, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessagesSummary not implemented")
+}
+func (UnimplementedMessagingServer) DeleteMessage(context.Context, *MessagingDeleteMessage) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteMessage not implemented")
+}
+func (UnimplementedMessagingServer) ClearFolder(context.Context, *MessagingClearFolder) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClearFolder not implemented")
+}
+func (UnimplementedMessagingServer) CreateMessage(context.Context, *MessagingCreateMessage) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateMessage not implemented")
+}
+func (UnimplementedMessagingServer) mustEmbedUnimplementedMessagingServer() {}
+
+// UnsafeMessagingServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MessagingServer will
+// result in compilation errors.
+type UnsafeMessagingServer interface {
+	mustEmbedUnimplementedMessagingServer()
+}
+
+func RegisterMessagingServer(s grpc.ServiceRegistrar, srv MessagingServer) {
+	s.RegisterService(&Messaging_ServiceDesc, srv)
+}
+
+func _Messaging_GetMessagesNewCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServer).GetMessagesNewCount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Messaging/GetMessagesNewCount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServer).GetMessagesNewCount(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Messaging_GetMessagesSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServer).GetMessagesSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Messaging/GetMessagesSummary",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServer).GetMessagesSummary(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Messaging_DeleteMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MessagingDeleteMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServer).DeleteMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Messaging/DeleteMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServer).DeleteMessage(ctx, req.(*MessagingDeleteMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Messaging_ClearFolder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MessagingClearFolder)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServer).ClearFolder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Messaging/ClearFolder",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServer).ClearFolder(ctx, req.(*MessagingClearFolder))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Messaging_CreateMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MessagingCreateMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServer).CreateMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Messaging/CreateMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServer).CreateMessage(ctx, req.(*MessagingCreateMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Messaging_ServiceDesc is the grpc.ServiceDesc for Messaging service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Messaging_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Messaging",
+	HandlerType: (*MessagingServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetMessagesNewCount",
+			Handler:    _Messaging_GetMessagesNewCount_Handler,
+		},
+		{
+			MethodName: "GetMessagesSummary",
+			Handler:    _Messaging_GetMessagesSummary_Handler,
+		},
+		{
+			MethodName: "DeleteMessage",
+			Handler:    _Messaging_DeleteMessage_Handler,
+		},
+		{
+			MethodName: "ClearFolder",
+			Handler:    _Messaging_ClearFolder_Handler,
+		},
+		{
+			MethodName: "CreateMessage",
+			Handler:    _Messaging_CreateMessage_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

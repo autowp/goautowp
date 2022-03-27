@@ -16,8 +16,6 @@ service Autowp {
   rpc GetBrandVehicleTypes(GetBrandVehicleTypesRequest) returns (BrandVehicleTypeItems) {}
   rpc GetForumsUserSummary(google.protobuf.Empty) returns (APIForumsUserSummary) {}
   rpc GetIP(APIGetIPRequest) returns (APIIP) {}
-  rpc GetMessagesNewCount(google.protobuf.Empty) returns (APIMessageNewCount) {}
-  rpc GetMessagesSummary(google.protobuf.Empty) returns (APIMessageSummary) {}
   rpc GetPerspectives(google.protobuf.Empty) returns (PerspectivesItems) {}
   rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
   rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
@@ -68,6 +66,18 @@ service Comments {
 
 service Map {
   rpc GetPoints(MapGetPointsRequest) returns (MapPoints) {}
+}
+
+service Pictures {
+  rpc View(PicturesViewRequest) returns (google.protobuf.Empty) {}
+}
+
+service Messaging {
+  rpc GetMessagesNewCount(google.protobuf.Empty) returns (APIMessageNewCount) {}
+  rpc GetMessagesSummary(google.protobuf.Empty) returns (APIMessageSummary) {}
+  rpc DeleteMessage(MessagingDeleteMessage) returns (google.protobuf.Empty) {}
+  rpc ClearFolder(MessagingClearFolder) returns (google.protobuf.Empty) {}
+  rpc CreateMessage(MessagingCreateMessage) returns (google.protobuf.Empty) {}
 }
 
 message ErrorDetails {
@@ -552,4 +562,21 @@ message MapPoint {
   string name = 3;
   repeated string url = 4;
   APIImage image = 5;
+}
+
+message PicturesViewRequest {
+  int64 picture_id = 1;
+}
+
+message MessagingDeleteMessage {
+  int64 message_id = 1;
+}
+
+message MessagingClearFolder {
+  string folder = 1;
+}
+
+message MessagingCreateMessage {
+  int64 user_id = 1;
+  string message = 2;
 }

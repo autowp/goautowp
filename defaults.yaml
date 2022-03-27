@@ -225,3 +225,5 @@ image-storage:
       secret: secret
     use_path_style_endpoint: true
   srcOverride: []
+telegram:
+  access-token: "example"

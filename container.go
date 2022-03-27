@@ -7,8 +7,12 @@ import (
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
+	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/messaging"
+	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -29,39 +33,44 @@ import (
 
 // Container Container
 type Container struct {
-	autowpDB           *sql.DB
-	banRepository      *BanRepository
-	catalogue          *Catalogue
-	commentsRepository *comments.Repository
-	config             config.Config
-	commentsGrpcServer *CommentsGRPCServer
-	contactsGrpcServer *ContactsGRPCServer
-	contactsRepository *ContactsRepository
-	duplicateFinder    *DuplicateFinder
-	emailSender        email.Sender
-	enforcer           *casbin.Enforcer
-	events             *Events
-	feedback           *Feedback
-	forums             *Forums
-	grpcServer         *GRPCServer
-	imageStorage       *storage.Storage
-	itemsGrpcServer    *ItemsGRPCServer
-	itemsRepository    *items.Repository
-	keyCloak           gocloak.GoCloak
-	location           *time.Location
-	messages           *Messages
-	privateHttpServer  *http.Server
-	privateRouter      *gin.Engine
-	publicHttpServer   *http.Server
-	publicRouter       http.HandlerFunc
-	traffic            *Traffic
-	trafficDB          *pgxpool.Pool
-	trafficGrpcServer  *TrafficGRPCServer
-	usersRepository    *users.Repository
-	usersGrpcServer    *UsersGRPCServer
-	memcached          *memcache.Client
-	auth               *Auth
-	mapGrpcServer      *MapGRPCServer
+	autowpDB            *sql.DB
+	banRepository       *BanRepository
+	catalogue           *Catalogue
+	commentsRepository  *comments.Repository
+	config              config.Config
+	commentsGrpcServer  *CommentsGRPCServer
+	contactsGrpcServer  *ContactsGRPCServer
+	contactsRepository  *ContactsRepository
+	duplicateFinder     *DuplicateFinder
+	emailSender         email.Sender
+	enforcer            *casbin.Enforcer
+	events              *Events
+	feedback            *Feedback
+	forums              *Forums
+	grpcServer          *GRPCServer
+	hostsManager        *hosts.Manager
+	imageStorage        *storage.Storage
+	itemsGrpcServer     *ItemsGRPCServer
+	itemsRepository     *items.Repository
+	keyCloak            gocloak.GoCloak
+	location            *time.Location
+	messagingRepository *messaging.Repository
+	privateHttpServer   *http.Server
+	privateRouter       *gin.Engine
+	publicHttpServer    *http.Server
+	publicRouter        http.HandlerFunc
+	telegramService     *telegram.Service
+	traffic             *Traffic
+	trafficDB           *pgxpool.Pool
+	trafficGrpcServer   *TrafficGRPCServer
+	usersRepository     *users.Repository
+	usersGrpcServer     *UsersGRPCServer
+	memcached           *memcache.Client
+	auth                *Auth
+	mapGrpcServer       *MapGRPCServer
+	picturesRepository  *pictures.Repository
+	picturesGrpcServer  *PicturesGRPCServer
+	messagingGrpcServer *MessagingGRPCServer
 }
 
 // NewContainer constructor
@@ -242,6 +251,13 @@ func (s *Container) IPExtractor() *IPExtractor {
 	return NewIPExtractor(s)
 }
 
+func (s *Container) HostsManager() *hosts.Manager {
+	if s.hostsManager == nil {
+		s.hostsManager = hosts.NewManager(s.Config().Languages)
+	}
+	return s.hostsManager
+}
+
 // Location Location
 func (s *Container) Location() (*time.Location, error) {
 	if s.location == nil {
@@ -254,6 +270,19 @@ func (s *Container) Location() (*time.Location, error) {
 	}
 
 	return s.location, nil
+}
+
+func (s *Container) PicturesRepository() (*pictures.Repository, error) {
+	if s.picturesRepository == nil {
+		db, err := s.AutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.picturesRepository = pictures.NewRepository(db)
+	}
+
+	return s.picturesRepository, nil
 }
 
 func (s *Container) PrivateHttpServer() (*http.Server, error) {
@@ -325,16 +354,6 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return nil, err
 	}
 
-	trafficSrv, err := s.TrafficGRPCServer()
-	if err != nil {
-		return nil, err
-	}
-
-	usersSrv, err := s.UsersGRPCServer()
-	if err != nil {
-		return nil, err
-	}
-
 	commentsSrv, err := s.CommentsGRPCServer()
 	if err != nil {
 		return nil, err
@@ -355,6 +374,26 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return nil, err
 	}
 
+	trafficSrv, err := s.TrafficGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
+	picturesSrv, err := s.PicturesGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
+	messagingSrv, err := s.MessagingGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
+	usersSrv, err := s.UsersGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	logrusLogger := logrus.New()
 	logrusEntry := logrus.NewEntry(logrusLogger)
 
@@ -371,12 +410,14 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		),
 	)
 	RegisterAutowpServer(grpcServer, srv)
-	RegisterTrafficServer(grpcServer, trafficSrv)
-	RegisterUsersServer(grpcServer, usersSrv)
 	RegisterCommentsServer(grpcServer, commentsSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
 	RegisterItemsServer(grpcServer, itemsSrv)
 	RegisterMapServer(grpcServer, mapSrv)
+	RegisterMessagingServer(grpcServer, messagingSrv)
+	RegisterPicturesServer(grpcServer, picturesSrv)
+	RegisterTrafficServer(grpcServer, trafficSrv)
+	RegisterUsersServer(grpcServer, usersSrv)
 
 	originFunc := func(origin string) bool {
 		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
@@ -385,6 +426,20 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	s.publicRouter = wrappedGrpc.ServeHTTP
 
 	return s.publicRouter, nil
+}
+
+func (s *Container) TelegramService() (*telegram.Service, error) {
+	if s.telegramService == nil {
+
+		db, err := s.AutowpDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.telegramService = telegram.NewService(s.Config().Telegram, db, s.HostsManager())
+	}
+
+	return s.telegramService, nil
 }
 
 func (s *Container) Traffic() (*Traffic, error) {
@@ -554,11 +609,6 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
-		messages, err := s.Messages()
-		if err != nil {
-			return nil, err
-		}
-
 		auth, err := s.Auth()
 		if err != nil {
 			return nil, err
@@ -575,7 +625,6 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			s.IPExtractor(),
 			feedback,
 			forums,
-			messages,
 		)
 	}
 
@@ -720,6 +769,20 @@ func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 	return s.contactsGrpcServer, nil
 }
 
+func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
+	if s.picturesGrpcServer == nil {
+
+		repository, err := s.PicturesRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.picturesGrpcServer = NewPicturesGRPCServer(repository)
+	}
+
+	return s.picturesGrpcServer, nil
+}
+
 func (s *Container) MapGRPCServer() (*MapGRPCServer, error) {
 	if s.mapGrpcServer == nil {
 
@@ -739,6 +802,25 @@ func (s *Container) MapGRPCServer() (*MapGRPCServer, error) {
 	return s.mapGrpcServer, nil
 }
 
+func (s *Container) MessagingGRPCServer() (*MessagingGRPCServer, error) {
+	if s.messagingGrpcServer == nil {
+
+		repository, err := s.MessagingRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		s.messagingGrpcServer = NewMessagingGRPCServer(repository, auth)
+	}
+
+	return s.messagingGrpcServer, nil
+}
+
 func (s *Container) Forums() (*Forums, error) {
 	if s.forums == nil {
 		db, err := s.AutowpDB()
@@ -752,17 +834,22 @@ func (s *Container) Forums() (*Forums, error) {
 	return s.forums, nil
 }
 
-func (s *Container) Messages() (*Messages, error) {
-	if s.messages == nil {
+func (s *Container) MessagingRepository() (*messaging.Repository, error) {
+	if s.messagingRepository == nil {
 		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
 		}
 
-		s.messages = NewMessages(db)
+		tg, err := s.TelegramService()
+		if err != nil {
+			return nil, err
+		}
+
+		s.messagingRepository = messaging.NewRepository(db, tg)
 	}
 
-	return s.messages, nil
+	return s.messagingRepository, nil
 }
 
 func (s *Container) Keycloak() gocloak.GoCloak {
