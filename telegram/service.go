@@ -78,7 +78,10 @@ func (s *Service) NotifyMessage(ctx context.Context, fromId int64, userId int64,
 			uri.String(),
 		)
 
-		return s.sendMessage(ctx, telegramMessage, chatID)
+		err = s.sendMessage(ctx, telegramMessage, chatID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

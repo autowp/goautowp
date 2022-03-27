@@ -169,7 +169,7 @@ func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCr
 		return nil, wrapFieldViolations(fvs)
 	}
 
-	err = s.repository.CreateMessage(ctx, userID, in.GetUserId(), in.GetMessage())
+	err = s.repository.CreateMessage(ctx, userID, in.GetUserId(), message)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
