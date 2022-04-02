@@ -3,11 +3,13 @@ package goautowp
 import (
 	"context"
 	"github.com/autowp/goautowp/messaging"
+	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type MessagingGRPCServer struct {
@@ -148,7 +150,7 @@ func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCr
 	fvs := make([]*errdetails.BadRequest_FieldViolation, 0)
 	var problems []string
 
-	message := in.GetMessage()
+	message := in.GetText()
 
 	messageInputFilter := validation.InputFilter{
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
@@ -175,4 +177,81 @@ func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCr
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *MessagingGRPCServer) GetMessages(ctx context.Context, in *MessagingGetMessagesRequest) (*MessagingGetMessagesResponse, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	var messages []messaging.Message
+	var pages *util.Pages
+	switch in.GetFolder() {
+	case "inbox":
+		messages, pages, err = s.repository.GetInbox(userID, in.GetPage())
+	case "sent":
+		messages, pages, err = s.repository.GetSentbox(userID, in.GetPage())
+	case "system":
+		messages, pages, err = s.repository.GetSystembox(userID, in.GetPage())
+	case "dialog":
+		messages, pages, err = s.repository.GetDialogbox(
+			userID,
+			in.GetUserId(),
+			in.GetPage(),
+		)
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unexpected folder value")
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	items := make([]*APIMessage, len(messages))
+	for idx, msg := range messages {
+		item := APIMessage{
+			Id:              msg.ID,
+			Text:            msg.Text,
+			IsNew:           msg.IsNew,
+			CanDelete:       msg.CanDelete,
+			CanReply:        msg.CanReply,
+			Date:            timestamppb.New(msg.Date),
+			AllMessagesLink: msg.AllMessagesLink,
+			DialogCount:     msg.DialogCount,
+			ToUserId:        msg.ToUserID,
+		}
+		if msg.AuthorID != nil {
+			item.AuthorId = *msg.AuthorID
+		}
+		if msg.DialogWithUserID != nil {
+			item.DialogWithUserId = *msg.DialogWithUserID
+		}
+		items[idx] = &item
+	}
+
+	paginator := Pages{
+		PageCount:        pages.PageCount,
+		First:            pages.First,
+		Current:          pages.Current,
+		FirstPageInRange: pages.FirstPageInRange,
+		LastPageInRange:  pages.LastPageInRange,
+		PagesInRange:     pages.PagesInRange,
+		TotalItemCount:   pages.TotalItemCount,
+	}
+
+	if pages.Next != nil {
+		paginator.Next = *pages.Next
+	}
+	if pages.Previous != nil {
+		paginator.Previous = *pages.Previous
+	}
+
+	return &MessagingGetMessagesResponse{
+		Items:     items,
+		Paginator: &paginator,
+	}, nil
 }

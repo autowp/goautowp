@@ -12,13 +12,13 @@ import (
 	"testing"
 )
 
-func TestCreateDeleteContact(t *testing.T) {
+func TestMessaging(t *testing.T) {
 
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	defer util.Close(conn)
-	client := NewContactsClient(conn)
+	messagingClient := NewMessagingClient(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -46,42 +46,24 @@ func TestCreateDeleteContact(t *testing.T) {
 	require.NoError(t, err)
 
 	// create
-	_, err = client.CreateContact(
+	_, err = messagingClient.CreateMessage(
 		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
-		&CreateContactRequest{UserId: tester.Id},
-	)
-	require.NoError(t, err)
-
-	// get contact
-	_, err = client.GetContact(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
-		&GetContactRequest{UserId: tester.Id},
-	)
-	require.NoError(t, err)
-
-	// get contacts
-	items, err := client.GetContacts(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
-		&GetContactsRequest{
-			Fields: []string{"avatar", "gravatar"},
+		&MessagingCreateMessage{
+			UserId: tester.Id,
+			Text:   "Test message",
 		},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, items)
-	var contactUser *Contact
-	for _, i := range items.Items {
-		if i.ContactUserId == tester.Id {
-			contactUser = i
-			break
-		}
-	}
-	require.NotNil(t, contactUser)
-	require.NotEmpty(t, contactUser.GetUser().GetGravatar())
 
-	// delete
-	_, err = client.DeleteContact(
+	// get message
+	r, err := messagingClient.GetMessages(
 		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
-		&DeleteContactRequest{UserId: tester.Id},
+		&MessagingGetMessagesRequest{
+			UserId: tester.Id,
+			Folder: "sent",
+			Page:   1,
+		},
 	)
 	require.NoError(t, err)
+	require.Equal(t, "Test message", r.Items[0].Text)
 }

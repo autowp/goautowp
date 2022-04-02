@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver

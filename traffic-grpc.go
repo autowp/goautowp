@@ -42,6 +42,7 @@ func NewTrafficGRPCServer(
 }
 
 func (s *TrafficGRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
+	var err error
 
 	items, err := s.traffic.Monitoring.ListOfTop(50)
 

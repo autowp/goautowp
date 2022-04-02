@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/Nerzal/gocloak/v9"
+	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
@@ -17,6 +18,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
@@ -34,7 +36,7 @@ import (
 // Container Container
 type Container struct {
 	autowpDB            *sql.DB
-	banRepository       *BanRepository
+	banRepository       *ban.Repository
 	catalogue           *Catalogue
 	commentsRepository  *comments.Repository
 	config              config.Config
@@ -71,6 +73,7 @@ type Container struct {
 	picturesRepository  *pictures.Repository
 	picturesGrpcServer  *PicturesGRPCServer
 	messagingGrpcServer *MessagingGRPCServer
+	goquDB              *goqu.Database
 }
 
 // NewContainer constructor
@@ -144,14 +147,26 @@ func (s *Container) AutowpDB() (*sql.DB, error) {
 	return s.autowpDB, nil
 }
 
-func (s *Container) BanRepository() (*BanRepository, error) {
+func (s *Container) GoquDB() (*goqu.Database, error) {
+	if s.goquDB == nil {
+		db, err := s.AutowpDB()
+		if err != nil {
+			return nil, err
+		}
+		s.goquDB = goqu.New("mysql", db)
+	}
+
+	return s.goquDB, nil
+}
+
+func (s *Container) BanRepository() (*ban.Repository, error) {
 	if s.banRepository == nil {
 		db, err := s.TrafficDB()
 		if err != nil {
 			return nil, err
 		}
 
-		s.banRepository, err = NewBanRepository(db)
+		s.banRepository, err = ban.NewRepository(db)
 		if err != nil {
 			return nil, err
 		}
@@ -454,7 +469,7 @@ func (s *Container) Traffic() (*Traffic, error) {
 			return nil, err
 		}
 
-		ban, err := s.BanRepository()
+		banRepository, err := s.BanRepository()
 		if err != nil {
 			return nil, err
 		}
@@ -463,7 +478,7 @@ func (s *Container) Traffic() (*Traffic, error) {
 
 		userExtractor := s.UserExtractor()
 
-		traffic, err := NewTraffic(db, autowpDB, enforcer, ban, userExtractor)
+		traffic, err := NewTraffic(db, autowpDB, enforcer, banRepository, userExtractor)
 		if err != nil {
 			logrus.Error(err.Error())
 			return nil, err
@@ -836,7 +851,7 @@ func (s *Container) Forums() (*Forums, error) {
 
 func (s *Container) MessagingRepository() (*messaging.Repository, error) {
 	if s.messagingRepository == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}

@@ -1828,6 +1828,7 @@ type MessagingClient interface {
 	DeleteMessage(ctx context.Context, in *MessagingDeleteMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ClearFolder(ctx context.Context, in *MessagingClearFolder, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateMessage(ctx context.Context, in *MessagingCreateMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetMessages(ctx context.Context, in *MessagingGetMessagesRequest, opts ...grpc.CallOption) (*MessagingGetMessagesResponse, error)
 }
 
 type messagingClient struct {
@@ -1883,6 +1884,15 @@ func (c *messagingClient) CreateMessage(ctx context.Context, in *MessagingCreate
 	return out, nil
 }
 
+func (c *messagingClient) GetMessages(ctx context.Context, in *MessagingGetMessagesRequest, opts ...grpc.CallOption) (*MessagingGetMessagesResponse, error) {
+	out := new(MessagingGetMessagesResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Messaging/GetMessages", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MessagingServer is the server API for Messaging service.
 // All implementations must embed UnimplementedMessagingServer
 // for forward compatibility
@@ -1892,6 +1902,7 @@ type MessagingServer interface {
 	DeleteMessage(context.Context, *MessagingDeleteMessage) (*emptypb.Empty, error)
 	ClearFolder(context.Context, *MessagingClearFolder) (*emptypb.Empty, error)
 	CreateMessage(context.Context, *MessagingCreateMessage) (*emptypb.Empty, error)
+	GetMessages(context.Context, *MessagingGetMessagesRequest) (*MessagingGetMessagesResponse, error)
 	mustEmbedUnimplementedMessagingServer()
 }
 
@@ -1913,6 +1924,9 @@ func (UnimplementedMessagingServer) ClearFolder(context.Context, *MessagingClear
 }
 func (UnimplementedMessagingServer) CreateMessage(context.Context, *MessagingCreateMessage) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMessage not implemented")
+}
+func (UnimplementedMessagingServer) GetMessages(context.Context, *MessagingGetMessagesRequest) (*MessagingGetMessagesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessages not implemented")
 }
 func (UnimplementedMessagingServer) mustEmbedUnimplementedMessagingServer() {}
 
@@ -2017,6 +2031,24 @@ func _Messaging_CreateMessage_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Messaging_GetMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MessagingGetMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServer).GetMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Messaging/GetMessages",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServer).GetMessages(ctx, req.(*MessagingGetMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Messaging_ServiceDesc is the grpc.ServiceDesc for Messaging service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2043,6 +2075,10 @@ var Messaging_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateMessage",
 			Handler:    _Messaging_CreateMessage_Handler,
+		},
+		{
+			MethodName: "GetMessages",
+			Handler:    _Messaging_GetMessages_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -5,79 +5,101 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/autowp/goautowp/telegram"
+	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"strings"
+	"time"
 )
 
+type Options struct {
+	AllMessagesLink bool
+}
+
 const MaxText = 2000
+const MessagesPerPage = 20
 
 type Repository struct {
-	db              *sql.DB
+	db              *goqu.Database
 	telegramService *telegram.Service
 }
 
-func NewRepository(db *sql.DB, telegramService *telegram.Service) *Repository {
+type messageRow struct {
+	ID          int64         `db:"id"`
+	FromUserID  sql.NullInt64 `db:"from_user_id"`
+	ToUserID    int64         `db:"to_user_id"`
+	Readen      bool          `db:"readen"`
+	Contents    string        `db:"contents"`
+	AddDatetime time.Time     `db:"add_datetime"`
+}
+
+type Message struct {
+	ID               int64
+	AuthorID         *int64
+	Text             string
+	IsNew            bool
+	CanDelete        bool
+	Date             time.Time
+	CanReply         bool
+	DialogCount      int32
+	AllMessagesLink  bool
+	ToUserID         int64
+	DialogWithUserID *int64
+}
+
+func NewRepository(db *goqu.Database, telegramService *telegram.Service) *Repository {
 	return &Repository{
 		db:              db,
 		telegramService: telegramService,
 	}
 }
 
-func (s *Repository) fetchCount(query string, args ...interface{}) (int, error) {
-	result := 0
-	err := s.db.QueryRow(query, args...).Scan(&result)
-	if err != nil {
-		return 0, err
+func (s *Repository) GetUserNewMessagesCount(userID int64) (int32, error) {
+	paginator := util.Paginator{
+		SqlSelect: s.getReceivedSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
-
-	return result, nil
+	return paginator.GetTotalItemCount()
 }
 
-func (s *Repository) GetUserNewMessagesCount(userID int64) (int, error) {
-	return s.fetchCount(`
-		SELECT count(1)
-		FROM personal_messages
-		WHERE to_user_id = ? AND NOT readen
-	`, userID)
+func (s *Repository) GetInboxCount(userID int64) (int32, error) {
+	paginator := util.Paginator{
+		SqlSelect: s.getInboxSelect(userID),
+	}
+	return paginator.GetTotalItemCount()
 }
 
-func (s *Repository) GetInboxCount(userID int64) (int, error) {
-	return s.fetchCount(`
-		SELECT count(1)
-		FROM personal_messages
-		WHERE to_user_id = ? AND from_user_id AND NOT deleted_by_to
-	`, userID)
+func (s *Repository) GetInboxNewCount(userID int64) (int32, error) {
+	paginator := util.Paginator{
+		SqlSelect: s.getInboxSelect(userID).Where(goqu.I("readen").IsNotTrue()),
+	}
+	return paginator.GetTotalItemCount()
 }
 
-func (s *Repository) GetInboxNewCount(userID int64) (int, error) {
-	return s.fetchCount(`
-		SELECT count(1)
-		FROM personal_messages
-		WHERE to_user_id = ? AND from_user_id AND NOT deleted_by_to AND NOT readen
-	`, userID)
+func (s *Repository) GetSentCount(userID int64) (int32, error) {
+	paginator := util.Paginator{
+		SqlSelect: s.getSentSelect(userID),
+	}
+	return paginator.GetTotalItemCount()
 }
 
-func (s *Repository) GetSentCount(userID int64) (int, error) {
-	return s.fetchCount(`
-		SELECT count(1)
-		FROM personal_messages
-		WHERE from_user_id = ? AND NOT deleted_by_from
-	`, userID)
+func (s *Repository) GetSystemCount(userID int64) (int32, error) {
+	paginator := util.Paginator{
+		SqlSelect: s.getSystemSelect(userID),
+	}
+	return paginator.GetTotalItemCount()
 }
 
-func (s *Repository) GetSystemCount(userID int64) (int, error) {
-	return s.fetchCount(`
-		SELECT count(1)
-		FROM personal_messages
-		WHERE to_user_id = ? AND from_user_id IS NULL AND NOT deleted_by_to
-	`, userID)
+func (s *Repository) GetSystemNewCount(userID int64) (int32, error) {
+	paginator := util.Paginator{
+		SqlSelect: s.getSystemSelect(userID).Where(goqu.I("readen").IsNotTrue()),
+	}
+	return paginator.GetTotalItemCount()
 }
 
-func (s *Repository) GetSystemNewCount(userID int64) (int, error) {
-	return s.fetchCount(`
-		SELECT count(1)
-		FROM personal_messages
-		WHERE to_user_id = ? AND from_user_id IS NULL AND NOT deleted_by_to AND NOT readen
-	`, userID)
+func (s *Repository) GetDialogCount(userID int64, withUserID int64) (int32, error) {
+	paginator := util.Paginator{
+		SqlSelect: s.getDialogSelect(userID, withUserID),
+	}
+	return paginator.GetTotalItemCount()
 }
 
 func (s *Repository) DeleteMessage(ctx context.Context, userID int64, messageID int64) error {
@@ -112,9 +134,9 @@ func (s *Repository) ClearSystem(ctx context.Context, userID int64) error {
 	return err
 }
 
-func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUserID int64, message string) error {
-	message = strings.TrimSpace(message)
-	msgLength := len(message)
+func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUserID int64, text string) error {
+	text = strings.TrimSpace(text)
+	msgLength := len(text)
 
 	if msgLength <= 0 {
 		return errors.New("message is empty")
@@ -124,17 +146,289 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 		return errors.New("too long message")
 	}
 
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO personal_messages (from_user_id, to_user_id, contents, add_datetime, readen) VALUES (?, ?, ?, NOW(), 0)
-    `, fromUserID, toUserID, message)
+	_, err := s.db.Insert("personal_messages").Rows(
+		goqu.Record{
+			"from_user_id": fromUserID,
+			"to_user_id":   toUserID,
+			"contents":     text,
+			"add_datetime": goqu.L("NOW()"),
+			"readen":       false,
+		},
+	).Executor().ExecContext(ctx)
+
 	if err != nil {
 		return err
 	}
 
-	err = s.telegramService.NotifyMessage(ctx, fromUserID, toUserID, message)
+	err = s.telegramService.NotifyMessage(ctx, fromUserID, toUserID, text)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *Repository) markReaden(ids []int64) error {
+	var err error
+	if len(ids) > 0 {
+		_, err = s.db.Update("personal_messages").
+			Set(goqu.Record{"readen": true}).
+			Where(
+				goqu.I("id").In(ids),
+			).
+			Executor().Exec()
+	}
+	return err
+}
+
+func (s *Repository) markReadenRows(rows []messageRow, userId int64) error {
+	ids := make([]int64, 0)
+	for _, msg := range rows {
+		if (!msg.Readen) && (msg.ToUserID == userId) {
+			ids = append(ids, msg.ID)
+		}
+	}
+
+	return s.markReaden(ids)
+}
+
+func (s *Repository) GetInbox(userId int64, page int32) ([]Message, *util.Pages, error) {
+	paginator := util.Paginator{
+		SqlSelect:         s.getInboxSelect(userId),
+		ItemCountPerPage:  MessagesPerPage,
+		CurrentPageNumber: page,
+	}
+
+	ds, err := paginator.GetCurrentItems()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var msgs []messageRow
+	err = ds.ScanStructs(&msgs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = s.markReadenRows(msgs, userId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pages, err := paginator.GetPages()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	list, err := s.prepareList(userId, msgs, Options{AllMessagesLink: true})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return list, pages, nil
+}
+
+func (s *Repository) GetSentbox(userId int64, page int32) ([]Message, *util.Pages, error) {
+	paginator := util.Paginator{
+		SqlSelect:         s.getSentSelect(userId),
+		ItemCountPerPage:  MessagesPerPage,
+		CurrentPageNumber: page,
+	}
+
+	ds, err := paginator.GetCurrentItems()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var msgs []messageRow
+	err = ds.ScanStructs(&msgs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pages, err := paginator.GetPages()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	list, err := s.prepareList(userId, msgs, Options{AllMessagesLink: true})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return list, pages, nil
+}
+
+func (s *Repository) GetSystembox(userId int64, page int32) ([]Message, *util.Pages, error) {
+	paginator := util.Paginator{
+		SqlSelect:         s.getSystemSelect(userId),
+		ItemCountPerPage:  MessagesPerPage,
+		CurrentPageNumber: page,
+	}
+
+	ds, err := paginator.GetCurrentItems()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var msgs []messageRow
+	err = ds.ScanStructs(&msgs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = s.markReadenRows(msgs, userId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pages, err := paginator.GetPages()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	list, err := s.prepareList(userId, msgs, Options{AllMessagesLink: true})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return list, pages, nil
+}
+
+func (s *Repository) GetDialogbox(userId int64, withUserId int64, page int32) ([]Message, *util.Pages, error) {
+	paginator := util.Paginator{
+		SqlSelect:         s.getDialogSelect(userId, withUserId),
+		ItemCountPerPage:  MessagesPerPage,
+		CurrentPageNumber: page,
+	}
+
+	ds, err := paginator.GetCurrentItems()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var msgs []messageRow
+	err = ds.ScanStructs(&msgs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = s.markReadenRows(msgs, userId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pages, err := paginator.GetPages()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	list, err := s.prepareList(userId, msgs, Options{AllMessagesLink: false})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return list, pages, nil
+}
+
+func (s *Repository) getReceivedSelect(userId int64) *goqu.SelectDataset {
+	return s.db.From("personal_messages").
+		Where(
+			goqu.I("to_user_id").Eq(userId),
+			goqu.I("deleted_by_to").IsFalse(),
+		).
+		Order(goqu.I("add_datetime").Desc())
+}
+
+func (s *Repository) getSystemSelect(userId int64) *goqu.SelectDataset {
+	return s.getReceivedSelect(userId).Where(goqu.I("from_user_id").IsNull())
+}
+
+func (s *Repository) getInboxSelect(userId int64) *goqu.SelectDataset {
+	return s.getReceivedSelect(userId).Where(goqu.I("from_user_id").IsNotNull())
+}
+
+func (s *Repository) getSentSelect(userId int64) *goqu.SelectDataset {
+	return s.db.From("personal_messages").
+		Where(
+			goqu.I("from_user_id").Eq(userId),
+			goqu.I("deleted_by_from").IsNotTrue(),
+		).
+		Order(goqu.I("add_datetime").Desc())
+}
+
+func (s *Repository) getDialogSelect(userId int64, withUserId int64) *goqu.SelectDataset {
+
+	return s.db.From("personal_messages").
+		Where(
+			goqu.Or(
+				goqu.And(
+					goqu.I("from_user_id").Eq(userId),
+					goqu.I("to_user_id").Eq(withUserId),
+					goqu.I("deleted_by_from").IsNotTrue(),
+				),
+				goqu.And(
+					goqu.I("from_user_id").Eq(withUserId),
+					goqu.I("to_user_id").Eq(userId),
+					goqu.I("deleted_by_to").IsNotTrue(),
+				),
+			),
+		).
+		Order(goqu.I("add_datetime").Desc())
+}
+
+func (s *Repository) prepareList(userId int64, rows []messageRow, options Options) ([]Message, error) {
+	var err error
+	cache := make(map[int64]int32)
+
+	messages := make([]Message, len(rows))
+	for idx, msg := range rows {
+		isNew := msg.ToUserID == userId && !msg.Readen
+		canDelete := msg.FromUserID.Valid && msg.FromUserID.Int64 == userId || msg.ToUserID == userId
+		authorIsMe := msg.FromUserID.Valid && msg.FromUserID.Int64 == userId
+		canReply := msg.FromUserID.Valid && !authorIsMe //  && ! $author['deleted']
+
+		var dialogCount int32
+		var ok bool
+
+		if options.AllMessagesLink && msg.FromUserID.Valid {
+			dialogWith := msg.FromUserID.Int64
+			if msg.FromUserID.Valid && msg.FromUserID.Int64 == userId {
+				dialogWith = msg.ToUserID
+			}
+
+			if dialogCount, ok = cache[dialogWith]; !ok {
+				dialogCount, err = s.GetDialogCount(userId, dialogWith)
+				if err != nil {
+					return messages, err
+				}
+				cache[dialogWith] = dialogCount
+			}
+		}
+
+		var dialogWithUserID *int64
+		if msg.ToUserID == userId {
+			if msg.FromUserID.Valid {
+				dialogWithUserID = &msg.FromUserID.Int64
+			}
+		} else {
+			dialogWithUserID = &userId
+		}
+
+		messages[idx] = Message{
+			ID:               msg.ID,
+			AuthorID:         util.SqlNullInt64ToPtr(msg.FromUserID),
+			Text:             msg.Contents,
+			IsNew:            isNew,
+			CanDelete:        canDelete,
+			Date:             msg.AddDatetime,
+			CanReply:         canReply,
+			DialogCount:      dialogCount,
+			AllMessagesLink:  options.AllMessagesLink,
+			ToUserID:         msg.ToUserID,
+			DialogWithUserID: dialogWithUserID,
+		}
+	}
+
+	return messages, nil
 }

@@ -1,4 +1,4 @@
-package goautowp
+package ban
 
 import (
 	"context"
@@ -10,13 +10,13 @@ import (
 	"time"
 )
 
-func createBanService(t *testing.T) *BanRepository {
-	cfg := config.LoadConfig(".")
+func createBanService(t *testing.T) *Repository {
+	cfg := config.LoadConfig("..")
 
 	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
 	require.NoError(t, err)
 
-	s, err := NewBanRepository(pool)
+	s, err := NewRepository(pool)
 	require.NoError(t, err)
 
 	return s

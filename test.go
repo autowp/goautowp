@@ -52,6 +52,12 @@ func init() {
 	}
 	RegisterItemsServer(grpcServer, itemsSrv)
 
+	messagingSrv, err := cnt.MessagingGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+	RegisterMessagingServer(grpcServer, messagingSrv)
+
 	lis = bufconn.Listen(bufSize)
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {

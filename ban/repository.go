@@ -1,4 +1,4 @@
-package goautowp
+package ban
 
 import (
 	"context"
@@ -11,27 +11,27 @@ import (
 	"time"
 )
 
-// BanItem BanItem
-type BanItem struct {
+// Item Item
+type Item struct {
 	IP       net.IP    `json:"ip"`
 	Until    time.Time `json:"up_to"`
 	ByUserID int64     `json:"by_user_id"`
 	Reason   string    `json:"reason"`
 }
 
-// BanRepository Main Object
-type BanRepository struct {
+// Repository Main Object
+type Repository struct {
 	db *pgxpool.Pool
 }
 
-// NewBanRepository constructor
-func NewBanRepository(db *pgxpool.Pool) (*BanRepository, error) {
+// NewRepository constructor
+func NewRepository(db *pgxpool.Pool) (*Repository, error) {
 
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
 	}
 
-	s := &BanRepository{
+	s := &Repository{
 		db: db,
 	}
 
@@ -39,7 +39,7 @@ func NewBanRepository(db *pgxpool.Pool) (*BanRepository, error) {
 }
 
 // Add IP to list of banned
-func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, reason string) error {
+func (s *Repository) Add(ip net.IP, duration time.Duration, byUserID int64, reason string) error {
 	reason = strings.TrimSpace(reason)
 	upTo := time.Now().Add(duration)
 
@@ -62,7 +62,7 @@ func (s *BanRepository) Add(ip net.IP, duration time.Duration, byUserID int64, r
 }
 
 // Remove IP from list of banned
-func (s *BanRepository) Remove(ip net.IP) error {
+func (s *Repository) Remove(ip net.IP) error {
 	logrus.Info(ip.String() + ": unban")
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE ip = $1", ip.String())
 
@@ -70,7 +70,7 @@ func (s *BanRepository) Remove(ip net.IP) error {
 }
 
 // Exists ban list already contains IP
-func (s *BanRepository) Exists(ip net.IP) (bool, error) {
+func (s *Repository) Exists(ip net.IP) (bool, error) {
 
 	var exists bool
 	err := s.db.QueryRow(context.Background(), `
@@ -86,9 +86,9 @@ func (s *BanRepository) Exists(ip net.IP) (bool, error) {
 }
 
 // Get ban info
-func (s *BanRepository) Get(ip net.IP) (*BanItem, error) {
+func (s *Repository) Get(ip net.IP) (*Item, error) {
 
-	item := BanItem{}
+	item := Item{}
 	err := s.db.QueryRow(context.Background(), `
 		SELECT ip, until, reason, by_user_id
 		FROM ip_ban
@@ -106,7 +106,7 @@ func (s *BanRepository) Get(ip net.IP) (*BanItem, error) {
 }
 
 // GC Garbage Collect
-func (s *BanRepository) GC() (int64, error) {
+func (s *Repository) GC() (int64, error) {
 	ct, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE until < NOW()")
 	if err != nil {
 		return 0, err
@@ -118,7 +118,7 @@ func (s *BanRepository) GC() (int64, error) {
 }
 
 // Clear removes all collected data
-func (s *BanRepository) Clear() error {
+func (s *Repository) Clear() error {
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban")
 
 	return err

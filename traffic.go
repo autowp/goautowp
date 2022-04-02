@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"database/sql"
+	"github.com/autowp/goautowp/ban"
 	"github.com/casbin/casbin"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -17,7 +18,7 @@ const banByUserID = 9
 type Traffic struct {
 	Monitoring    *Monitoring
 	Whitelist     *Whitelist
-	Ban           *BanRepository
+	Ban           *ban.Repository
 	autowpDB      *sql.DB
 	enforcer      *casbin.Enforcer
 	userExtractor *UserExtractor
@@ -71,7 +72,7 @@ type APITrafficWhitelistPostRequestBody struct {
 }
 
 // NewTraffic constructor
-func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer, ban *BanRepository, userExtractor *UserExtractor) (*Traffic, error) {
+func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer, ban *ban.Repository, userExtractor *UserExtractor) (*Traffic, error) {
 
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
@@ -193,18 +194,18 @@ func (s *Traffic) SetupPrivateRouter(r *gin.Engine) {
 			return
 		}
 
-		ban, err := s.Ban.Get(ip)
+		b, err := s.Ban.Get(ip)
 		if err != nil {
 			logrus.Error(err.Error())
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		if ban == nil {
+		if b == nil {
 			c.Status(http.StatusNotFound)
 			return
 		}
 
-		c.JSON(http.StatusOK, ban)
+		c.JSON(http.StatusOK, b)
 	})
 }

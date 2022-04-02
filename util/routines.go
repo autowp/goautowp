@@ -1,6 +1,7 @@
 package util
 
 import (
+	"database/sql"
 	"github.com/sirupsen/logrus"
 	"io"
 )
@@ -20,4 +21,13 @@ func Contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+func SqlNullInt64ToPtr(v sql.NullInt64) *int64 {
+	var r *int64
+	if v.Valid {
+		return &v.Int64
+	}
+
+	return r
 }
