@@ -1738,6 +1738,7 @@ var Map_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PicturesClient interface {
 	View(ctx context.Context, in *PicturesViewRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Vote(ctx context.Context, in *PicturesVoteRequest, opts ...grpc.CallOption) (*PicturesVoteSummary, error)
 }
 
 type picturesClient struct {
@@ -1757,11 +1758,21 @@ func (c *picturesClient) View(ctx context.Context, in *PicturesViewRequest, opts
 	return out, nil
 }
 
+func (c *picturesClient) Vote(ctx context.Context, in *PicturesVoteRequest, opts ...grpc.CallOption) (*PicturesVoteSummary, error) {
+	out := new(PicturesVoteSummary)
+	err := c.cc.Invoke(ctx, "/goautowp.Pictures/Vote", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility
 type PicturesServer interface {
 	View(context.Context, *PicturesViewRequest) (*emptypb.Empty, error)
+	Vote(context.Context, *PicturesVoteRequest) (*PicturesVoteSummary, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -1771,6 +1782,9 @@ type UnimplementedPicturesServer struct {
 
 func (UnimplementedPicturesServer) View(context.Context, *PicturesViewRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method View not implemented")
+}
+func (UnimplementedPicturesServer) Vote(context.Context, *PicturesVoteRequest) (*PicturesVoteSummary, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Vote not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 
@@ -1803,6 +1817,24 @@ func _Pictures_View_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_Vote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PicturesVoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).Vote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Pictures/Vote",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).Vote(ctx, req.(*PicturesVoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1813,6 +1845,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "View",
 			Handler:    _Pictures_View_Handler,
+		},
+		{
+			MethodName: "Vote",
+			Handler:    _Pictures_Vote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
