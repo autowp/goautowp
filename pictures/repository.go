@@ -146,6 +146,9 @@ func (s Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mode
 		"SELECT id, reason, vote FROM picture_moder_vote_template WHERE user_id = ? ORDER BY reason",
 		id,
 	)
+	if err != nil {
+		return nil, err
+	}
 	var items []ModerVoteTemplate
 	for rows.Next() {
 		var r ModerVoteTemplate
