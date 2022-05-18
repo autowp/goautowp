@@ -3,6 +3,8 @@ package pictures
 import (
 	"context"
 	"database/sql"
+	"github.com/autowp/goautowp/validation"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
 type Status string
@@ -21,6 +23,15 @@ const (
 	ItemPictureAuthor     ItemPictureType = 2
 	ItemPictureCopyrights ItemPictureType = 3
 )
+
+const ModerVoteTemplateMessageMaxLength = 80
+
+type ModerVoteTemplate struct {
+	ID      int64
+	UserID  int64
+	Message string
+	Vote    int32
+}
 
 type VoteSummary struct {
 	Value    int32
@@ -96,6 +107,57 @@ func (s Repository) Vote(ctx context.Context, id int64, value int32, userID int6
 	return s.updatePictureSummary(ctx, id)
 }
 
+func (s Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteTemplate) (ModerVoteTemplate, error) {
+
+	if tpl.Vote < 0 {
+		tpl.Vote = -1
+	}
+	if tpl.Vote > 0 {
+		tpl.Vote = 1
+	}
+
+	r, err := s.db.ExecContext(ctx, `
+        INSERT INTO picture_moder_vote_template (user_id, reason, vote)
+		VALUES (?, ?, ?)
+    `, tpl.UserID, tpl.Message, tpl.Vote)
+
+	if err != nil {
+		return tpl, err
+	}
+
+	tpl.ID, err = r.LastInsertId()
+
+	if err != nil {
+		return tpl, err
+	}
+
+	return tpl, err
+}
+
+func (s Repository) DeleteModerVoteTemplate(ctx context.Context, id int64, userID int64) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM picture_moder_vote_template WHERE user_id = ? AND id = ?", userID, id)
+
+	return err
+}
+
+func (s Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]ModerVoteTemplate, error) {
+	rows, err := s.db.QueryContext(
+		ctx,
+		"SELECT id, reason, vote FROM picture_moder_vote_template WHERE user_id = ? ORDER BY reason",
+		id,
+	)
+	var items []ModerVoteTemplate
+	for rows.Next() {
+		var r ModerVoteTemplate
+		err = rows.Scan(&r.ID, &r.Message, &r.Vote)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, r)
+	}
+	return items, nil
+}
+
 func (s Repository) updatePictureSummary(ctx context.Context, id int64) error {
 	_, err := s.db.ExecContext(ctx, `
         insert into picture_vote_summary (picture_id, positive, negative)
@@ -110,4 +172,31 @@ func (s Repository) updatePictureSummary(ctx context.Context, id int64) error {
     `, id, id, id)
 
 	return err
+}
+
+func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
+
+	result := make([]*errdetails.BadRequest_FieldViolation, 0)
+	var problems []string
+	var err error
+
+	messageInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.StringLength{Max: ModerVoteTemplateMessageMaxLength},
+		},
+	}
+	s.Message, problems, err = messageInputFilter.IsValidString(s.Message)
+	if err != nil {
+		return nil, err
+	}
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "message",
+			Description: fv,
+		})
+	}
+
+	return result, nil
 }

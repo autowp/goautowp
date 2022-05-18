@@ -1739,6 +1739,9 @@ var Map_ServiceDesc = grpc.ServiceDesc{
 type PicturesClient interface {
 	View(ctx context.Context, in *PicturesViewRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Vote(ctx context.Context, in *PicturesVoteRequest, opts ...grpc.CallOption) (*PicturesVoteSummary, error)
+	CreateModerVoteTemplate(ctx context.Context, in *ModerVoteTemplate, opts ...grpc.CallOption) (*ModerVoteTemplate, error)
+	DeleteModerVoteTemplate(ctx context.Context, in *DeleteModerVoteTemplateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetModerVoteTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ModerVoteTemplates, error)
 }
 
 type picturesClient struct {
@@ -1767,12 +1770,42 @@ func (c *picturesClient) Vote(ctx context.Context, in *PicturesVoteRequest, opts
 	return out, nil
 }
 
+func (c *picturesClient) CreateModerVoteTemplate(ctx context.Context, in *ModerVoteTemplate, opts ...grpc.CallOption) (*ModerVoteTemplate, error) {
+	out := new(ModerVoteTemplate)
+	err := c.cc.Invoke(ctx, "/goautowp.Pictures/CreateModerVoteTemplate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *picturesClient) DeleteModerVoteTemplate(ctx context.Context, in *DeleteModerVoteTemplateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Pictures/DeleteModerVoteTemplate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *picturesClient) GetModerVoteTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ModerVoteTemplates, error) {
+	out := new(ModerVoteTemplates)
+	err := c.cc.Invoke(ctx, "/goautowp.Pictures/GetModerVoteTemplates", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility
 type PicturesServer interface {
 	View(context.Context, *PicturesViewRequest) (*emptypb.Empty, error)
 	Vote(context.Context, *PicturesVoteRequest) (*PicturesVoteSummary, error)
+	CreateModerVoteTemplate(context.Context, *ModerVoteTemplate) (*ModerVoteTemplate, error)
+	DeleteModerVoteTemplate(context.Context, *DeleteModerVoteTemplateRequest) (*emptypb.Empty, error)
+	GetModerVoteTemplates(context.Context, *emptypb.Empty) (*ModerVoteTemplates, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -1785,6 +1818,15 @@ func (UnimplementedPicturesServer) View(context.Context, *PicturesViewRequest) (
 }
 func (UnimplementedPicturesServer) Vote(context.Context, *PicturesVoteRequest) (*PicturesVoteSummary, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Vote not implemented")
+}
+func (UnimplementedPicturesServer) CreateModerVoteTemplate(context.Context, *ModerVoteTemplate) (*ModerVoteTemplate, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateModerVoteTemplate not implemented")
+}
+func (UnimplementedPicturesServer) DeleteModerVoteTemplate(context.Context, *DeleteModerVoteTemplateRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteModerVoteTemplate not implemented")
+}
+func (UnimplementedPicturesServer) GetModerVoteTemplates(context.Context, *emptypb.Empty) (*ModerVoteTemplates, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetModerVoteTemplates not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 
@@ -1835,6 +1877,60 @@ func _Pictures_Vote_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_CreateModerVoteTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModerVoteTemplate)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).CreateModerVoteTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Pictures/CreateModerVoteTemplate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).CreateModerVoteTemplate(ctx, req.(*ModerVoteTemplate))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Pictures_DeleteModerVoteTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteModerVoteTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).DeleteModerVoteTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Pictures/DeleteModerVoteTemplate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).DeleteModerVoteTemplate(ctx, req.(*DeleteModerVoteTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Pictures_GetModerVoteTemplates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).GetModerVoteTemplates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Pictures/GetModerVoteTemplates",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).GetModerVoteTemplates(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1849,6 +1945,18 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Vote",
 			Handler:    _Pictures_Vote_Handler,
+		},
+		{
+			MethodName: "CreateModerVoteTemplate",
+			Handler:    _Pictures_CreateModerVoteTemplate_Handler,
+		},
+		{
+			MethodName: "DeleteModerVoteTemplate",
+			Handler:    _Pictures_DeleteModerVoteTemplate_Handler,
+		},
+		{
+			MethodName: "GetModerVoteTemplates",
+			Handler:    _Pictures_GetModerVoteTemplates_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

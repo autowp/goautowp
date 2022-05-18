@@ -797,7 +797,7 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
-		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth)
+		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer())
 	}
 
 	return s.picturesGrpcServer, nil

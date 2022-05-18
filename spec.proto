@@ -71,6 +71,9 @@ service Map {
 service Pictures {
   rpc View(PicturesViewRequest) returns (google.protobuf.Empty) {}
   rpc Vote(PicturesVoteRequest) returns (PicturesVoteSummary) {}
+  rpc CreateModerVoteTemplate(ModerVoteTemplate) returns (ModerVoteTemplate) {}
+  rpc DeleteModerVoteTemplate(DeleteModerVoteTemplateRequest) returns (google.protobuf.Empty) {}
+  rpc GetModerVoteTemplates(google.protobuf.Empty) returns (ModerVoteTemplates) {}
 }
 
 service Messaging {
@@ -579,6 +582,21 @@ message PicturesVoteSummary {
   int32 value = 1;
   int32 positive = 2;
   int32 negative = 3;
+}
+
+message ModerVoteTemplate {
+  int64 id = 1;
+  int64 userID = 2;
+  string message = 3;
+  int32 vote = 4;
+}
+
+message ModerVoteTemplates {
+  repeated ModerVoteTemplate items = 1;
+}
+
+message DeleteModerVoteTemplateRequest {
+  int64 id = 1;
 }
 
 message MessagingDeleteMessage {
