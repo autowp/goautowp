@@ -2228,3 +2228,89 @@ var Messaging_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "spec.proto",
 }
+
+// StatisticsClient is the client API for Statistics service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type StatisticsClient interface {
+	GetPulse(ctx context.Context, in *PulseRequest, opts ...grpc.CallOption) (*PulseResponse, error)
+}
+
+type statisticsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewStatisticsClient(cc grpc.ClientConnInterface) StatisticsClient {
+	return &statisticsClient{cc}
+}
+
+func (c *statisticsClient) GetPulse(ctx context.Context, in *PulseRequest, opts ...grpc.CallOption) (*PulseResponse, error) {
+	out := new(PulseResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Statistics/GetPulse", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// StatisticsServer is the server API for Statistics service.
+// All implementations must embed UnimplementedStatisticsServer
+// for forward compatibility
+type StatisticsServer interface {
+	GetPulse(context.Context, *PulseRequest) (*PulseResponse, error)
+	mustEmbedUnimplementedStatisticsServer()
+}
+
+// UnimplementedStatisticsServer must be embedded to have forward compatible implementations.
+type UnimplementedStatisticsServer struct {
+}
+
+func (UnimplementedStatisticsServer) GetPulse(context.Context, *PulseRequest) (*PulseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPulse not implemented")
+}
+func (UnimplementedStatisticsServer) mustEmbedUnimplementedStatisticsServer() {}
+
+// UnsafeStatisticsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to StatisticsServer will
+// result in compilation errors.
+type UnsafeStatisticsServer interface {
+	mustEmbedUnimplementedStatisticsServer()
+}
+
+func RegisterStatisticsServer(s grpc.ServiceRegistrar, srv StatisticsServer) {
+	s.RegisterService(&Statistics_ServiceDesc, srv)
+}
+
+func _Statistics_GetPulse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PulseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StatisticsServer).GetPulse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Statistics/GetPulse",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StatisticsServer).GetPulse(ctx, req.(*PulseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Statistics_ServiceDesc is the grpc.ServiceDesc for Statistics service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Statistics_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Statistics",
+	HandlerType: (*StatisticsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetPulse",
+			Handler:    _Statistics_GetPulse_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}

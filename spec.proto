@@ -85,6 +85,10 @@ service Messaging {
   rpc GetMessages(MessagingGetMessagesRequest) returns (MessagingGetMessagesResponse) {}
 }
 
+service Statistics {
+  rpc GetPulse(PulseRequest) returns (PulseResponse) {}
+}
+
 message ErrorDetails {
   google.rpc.RetryInfo retryInfo = 1;
   google.rpc.DebugInfo debugInfo = 2;
@@ -94,6 +98,32 @@ message ErrorDetails {
   google.rpc.RequestInfo requestInfo = 6;
   google.rpc.Help help = 7;
   google.rpc.LocalizedMessage localizedMessage = 8;
+}
+
+message PulseRequest {
+  enum Period {
+    DEFAULT = 0;
+    YEAR = 1;
+    MONTH = 2;
+  }
+  Period period = 1;
+}
+
+message PulseGrid {
+  repeated float line = 1;
+  string color = 2;
+  int64 user_id = 3;
+}
+
+message PulseLegend {
+  int64 user_id = 1;
+  string color = 2;
+}
+
+message PulseResponse {
+  repeated PulseGrid grid = 1;
+  repeated PulseLegend legend = 2;
+  repeated string labels = 3;
 }
 
 message Spec {

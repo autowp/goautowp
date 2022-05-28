@@ -35,45 +35,46 @@ import (
 
 // Container Container
 type Container struct {
-	autowpDB            *sql.DB
-	banRepository       *ban.Repository
-	catalogue           *Catalogue
-	commentsRepository  *comments.Repository
-	config              config.Config
-	commentsGrpcServer  *CommentsGRPCServer
-	contactsGrpcServer  *ContactsGRPCServer
-	contactsRepository  *ContactsRepository
-	duplicateFinder     *DuplicateFinder
-	emailSender         email.Sender
-	enforcer            *casbin.Enforcer
-	events              *Events
-	feedback            *Feedback
-	forums              *Forums
-	grpcServer          *GRPCServer
-	hostsManager        *hosts.Manager
-	imageStorage        *storage.Storage
-	itemsGrpcServer     *ItemsGRPCServer
-	itemsRepository     *items.Repository
-	keyCloak            gocloak.GoCloak
-	location            *time.Location
-	messagingRepository *messaging.Repository
-	privateHttpServer   *http.Server
-	privateRouter       *gin.Engine
-	publicHttpServer    *http.Server
-	publicRouter        http.HandlerFunc
-	telegramService     *telegram.Service
-	traffic             *Traffic
-	trafficDB           *pgxpool.Pool
-	trafficGrpcServer   *TrafficGRPCServer
-	usersRepository     *users.Repository
-	usersGrpcServer     *UsersGRPCServer
-	memcached           *memcache.Client
-	auth                *Auth
-	mapGrpcServer       *MapGRPCServer
-	picturesRepository  *pictures.Repository
-	picturesGrpcServer  *PicturesGRPCServer
-	messagingGrpcServer *MessagingGRPCServer
-	goquDB              *goqu.Database
+	autowpDB             *sql.DB
+	banRepository        *ban.Repository
+	catalogue            *Catalogue
+	commentsRepository   *comments.Repository
+	config               config.Config
+	commentsGrpcServer   *CommentsGRPCServer
+	contactsGrpcServer   *ContactsGRPCServer
+	contactsRepository   *ContactsRepository
+	duplicateFinder      *DuplicateFinder
+	emailSender          email.Sender
+	enforcer             *casbin.Enforcer
+	events               *Events
+	feedback             *Feedback
+	forums               *Forums
+	goquDB               *goqu.Database
+	grpcServer           *GRPCServer
+	hostsManager         *hosts.Manager
+	imageStorage         *storage.Storage
+	itemsGrpcServer      *ItemsGRPCServer
+	itemsRepository      *items.Repository
+	keyCloak             gocloak.GoCloak
+	location             *time.Location
+	messagingGrpcServer  *MessagingGRPCServer
+	messagingRepository  *messaging.Repository
+	privateHttpServer    *http.Server
+	privateRouter        *gin.Engine
+	publicHttpServer     *http.Server
+	publicRouter         http.HandlerFunc
+	telegramService      *telegram.Service
+	traffic              *Traffic
+	trafficDB            *pgxpool.Pool
+	trafficGrpcServer    *TrafficGRPCServer
+	usersRepository      *users.Repository
+	usersGrpcServer      *UsersGRPCServer
+	memcached            *memcache.Client
+	auth                 *Auth
+	mapGrpcServer        *MapGRPCServer
+	picturesRepository   *pictures.Repository
+	picturesGrpcServer   *PicturesGRPCServer
+	statisticsGrpcServer *StatisticsGRPCServer
 }
 
 // NewContainer constructor
@@ -409,6 +410,11 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return nil, err
 	}
 
+	statSrv, err := s.StatisticsGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	logrusLogger := logrus.New()
 	logrusEntry := logrus.NewEntry(logrusLogger)
 
@@ -431,6 +437,7 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterMapServer(grpcServer, mapSrv)
 	RegisterMessagingServer(grpcServer, messagingSrv)
 	RegisterPicturesServer(grpcServer, picturesSrv)
+	RegisterStatisticsServer(grpcServer, statSrv)
 	RegisterTrafficServer(grpcServer, trafficSrv)
 	RegisterUsersServer(grpcServer, usersSrv)
 
@@ -644,6 +651,21 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 	}
 
 	return s.grpcServer, nil
+}
+
+func (s *Container) StatisticsGRPCServer() (*StatisticsGRPCServer, error) {
+	if s.statisticsGrpcServer == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.statisticsGrpcServer = NewStatisticsGRPCServer(
+			db,
+		)
+	}
+
+	return s.statisticsGrpcServer, nil
 }
 
 func (s *Container) TrafficGRPCServer() (*TrafficGRPCServer, error) {
