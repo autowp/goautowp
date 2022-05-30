@@ -3,7 +3,7 @@ package goautowp
 import (
 	"context"
 	"errors"
-	"github.com/Nerzal/gocloak/v9"
+	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func assertGridNotEmpty(t *testing.T, grid []*PulseGrid) error {
+func assertGridNotEmpty(grid []*PulseGrid) error {
 	for _, x := range grid {
 		for _, y := range x.Line {
 			if y > 0 {
@@ -75,19 +75,19 @@ func TestStatisticsPulse(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, assertGridNotEmpty(t, r1.Grid))
+	require.NoError(t, assertGridNotEmpty(r1.Grid))
 
 	r1, err = statisticsClient.GetPulse(ctxTimeout, &PulseRequest{
 		Period: PulseRequest_MONTH,
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, assertGridNotEmpty(t, r1.Grid))
+	require.NoError(t, assertGridNotEmpty(r1.Grid))
 
 	r1, err = statisticsClient.GetPulse(ctxTimeout, &PulseRequest{
 		Period: PulseRequest_YEAR,
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, assertGridNotEmpty(t, r1.Grid))
+	require.NoError(t, assertGridNotEmpty(r1.Grid))
 }

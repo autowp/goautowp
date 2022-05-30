@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/Nerzal/gocloak/v9"
+	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"google.golang.org/grpc/codes"
@@ -55,7 +55,7 @@ func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, st
 
 	var claims users.Claims
 
-	_, err := s.keycloak.DecodeAccessTokenCustomClaims(ctx, tokenString, s.keycloakCfg.Realm, "", &claims)
+	_, err := s.keycloak.DecodeAccessTokenCustomClaims(ctx, tokenString, s.keycloakCfg.Realm, &claims)
 	if err != nil {
 		return 0, "", err
 	}

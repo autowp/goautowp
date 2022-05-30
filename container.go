@@ -3,7 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
-	"github.com/Nerzal/gocloak/v9"
+	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"

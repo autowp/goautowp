@@ -2,7 +2,7 @@ package goautowp
 
 import (
 	"context"
-	"github.com/Nerzal/gocloak/v9"
+	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/util"
