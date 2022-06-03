@@ -52,7 +52,7 @@ func (s *Application) MigrateAutowp() error {
 }
 
 func (s *Application) ServePublic(quit chan bool) error {
-	httpServer, err := s.container.PublicHttpServer()
+	httpServer, err := s.container.PublicHTTPServer()
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (s *Application) MigrateTraffic() error {
 
 func (s *Application) ServePrivate(quit chan bool) error {
 
-	httpServer, err := s.container.PrivateHttpServer()
+	httpServer, err := s.container.PrivateHTTPServer()
 	if err != nil {
 		return err
 	}

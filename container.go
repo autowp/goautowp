@@ -10,6 +10,7 @@ import (
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
@@ -44,6 +45,7 @@ type Container struct {
 	contactsGrpcServer   *ContactsGRPCServer
 	contactsRepository   *ContactsRepository
 	duplicateFinder      *DuplicateFinder
+	donationsGrpcServer  *DonationsGRPCServer
 	emailSender          email.Sender
 	enforcer             *casbin.Enforcer
 	events               *Events
@@ -53,15 +55,16 @@ type Container struct {
 	grpcServer           *GRPCServer
 	hostsManager         *hosts.Manager
 	imageStorage         *storage.Storage
+	itemOfDayRepository  *itemofday.Repository
 	itemsGrpcServer      *ItemsGRPCServer
 	itemsRepository      *items.Repository
 	keyCloak             gocloak.GoCloak
 	location             *time.Location
 	messagingGrpcServer  *MessagingGRPCServer
 	messagingRepository  *messaging.Repository
-	privateHttpServer    *http.Server
+	privateHTTPServer    *http.Server
 	privateRouter        *gin.Engine
-	publicHttpServer     *http.Server
+	publicHTTPServer     *http.Server
 	publicRouter         http.HandlerFunc
 	telegramService      *telegram.Service
 	traffic              *Traffic
@@ -100,6 +103,7 @@ func (s *Container) Close() error {
 			logrus.Error(err.Error())
 			sentry.CaptureException(err)
 		}
+
 		s.autowpDB = nil
 	}
 
@@ -123,6 +127,7 @@ func (s *Container) AutowpDB() (*sql.DB, error) {
 
 	var db *sql.DB
 	var err error
+
 	for {
 		db, err = sql.Open("mysql", s.config.AutowpDSN)
 		if err != nil {
@@ -248,7 +253,6 @@ func (s *Container) Enforcer() *casbin.Enforcer {
 
 func (s *Container) Feedback() (*Feedback, error) {
 	if s.feedback == nil {
-
 		cfg := s.Config()
 
 		emailSender := s.EmailSender()
@@ -271,6 +275,7 @@ func (s *Container) HostsManager() *hosts.Manager {
 	if s.hostsManager == nil {
 		s.hostsManager = hosts.NewManager(s.Config().Languages)
 	}
+
 	return s.hostsManager
 }
 
@@ -301,8 +306,8 @@ func (s *Container) PicturesRepository() (*pictures.Repository, error) {
 	return s.picturesRepository, nil
 }
 
-func (s *Container) PrivateHttpServer() (*http.Server, error) {
-	if s.privateHttpServer == nil {
+func (s *Container) PrivateHTTPServer() (*http.Server, error) {
+	if s.privateHTTPServer == nil {
 		cfg := s.Config()
 
 		router, err := s.PrivateRouter()
@@ -310,10 +315,10 @@ func (s *Container) PrivateHttpServer() (*http.Server, error) {
 			return nil, err
 		}
 
-		s.privateHttpServer = &http.Server{Addr: cfg.PrivateRest.Listen, Handler: router}
+		s.privateHTTPServer = &http.Server{Addr: cfg.PrivateRest.Listen, Handler: router}
 	}
 
-	return s.privateHttpServer, nil
+	return s.privateHTTPServer, nil
 }
 
 func (s *Container) PrivateRouter() (*gin.Engine, error) {
@@ -337,8 +342,8 @@ func (s *Container) PrivateRouter() (*gin.Engine, error) {
 	return s.privateRouter, nil
 }
 
-func (s *Container) PublicHttpServer() (*http.Server, error) {
-	if s.publicHttpServer == nil {
+func (s *Container) PublicHTTPServer() (*http.Server, error) {
+	if s.publicHTTPServer == nil {
 		cfg := s.Config()
 
 		r, err := s.PublicRouter()
@@ -346,10 +351,10 @@ func (s *Container) PublicHttpServer() (*http.Server, error) {
 			return nil, err
 		}
 
-		s.publicHttpServer = &http.Server{Addr: cfg.PublicRest.Listen, Handler: r}
+		s.publicHTTPServer = &http.Server{Addr: cfg.PublicRest.Listen, Handler: r}
 	}
 
-	return s.publicHttpServer, nil
+	return s.publicHTTPServer, nil
 }
 
 type TokenForm struct {
@@ -360,7 +365,6 @@ type TokenForm struct {
 }
 
 func (s *Container) PublicRouter() (http.HandlerFunc, error) {
-
 	if s.publicRouter != nil {
 		return s.publicRouter, nil
 	}
@@ -376,6 +380,11 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	}
 
 	contactsSrv, err := s.ContactsGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
+	donationsSrv, err := s.DonationsGRPCServer()
 	if err != nil {
 		return nil, err
 	}
@@ -433,6 +442,7 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterAutowpServer(grpcServer, srv)
 	RegisterCommentsServer(grpcServer, commentsSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
+	RegisterDonationsServer(grpcServer, donationsSrv)
 	RegisterItemsServer(grpcServer, itemsSrv)
 	RegisterMapServer(grpcServer, mapSrv)
 	RegisterMessagingServer(grpcServer, messagingSrv)
@@ -452,7 +462,6 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 
 func (s *Container) TelegramService() (*telegram.Service, error) {
 	if s.telegramService == nil {
-
 		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
@@ -498,7 +507,6 @@ func (s *Container) Traffic() (*Traffic, error) {
 }
 
 func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
-
 	if s.trafficDB != nil {
 		return s.trafficDB, nil
 	}
@@ -525,6 +533,7 @@ func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
 
 		err = db.Conn().Ping(context.Background())
 		db.Release()
+
 		if err == nil {
 			logrus.Info("Started.")
 			break
@@ -549,7 +558,6 @@ func (s *Container) UserExtractor() *UserExtractor {
 }
 
 func (s *Container) UsersRepository() (*users.Repository, error) {
-
 	if s.usersRepository == nil {
 		autowpDB, err := s.AutowpDB()
 		if err != nil {
@@ -571,7 +579,6 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 }
 
 func (s *Container) ItemsRepository() (*items.Repository, error) {
-
 	if s.itemsRepository == nil {
 		autowpDB, err := s.AutowpDB()
 		if err != nil {
@@ -588,7 +595,6 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 
 func (s *Container) Auth() (*Auth, error) {
 	if s.auth == nil {
-
 		cfg := s.Config()
 
 		db, err := s.AutowpDB()
@@ -808,7 +814,6 @@ func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 
 func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 	if s.picturesGrpcServer == nil {
-
 		repository, err := s.PicturesRepository()
 		if err != nil {
 			return nil, err
@@ -827,7 +832,6 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 
 func (s *Container) MapGRPCServer() (*MapGRPCServer, error) {
 	if s.mapGrpcServer == nil {
-
 		db, err := s.AutowpDB()
 		if err != nil {
 			return nil, err
@@ -844,9 +848,21 @@ func (s *Container) MapGRPCServer() (*MapGRPCServer, error) {
 	return s.mapGrpcServer, nil
 }
 
+func (s *Container) DonationsGRPCServer() (*DonationsGRPCServer, error) {
+	if s.donationsGrpcServer == nil {
+		repository, err := s.ItemOfDayRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.donationsGrpcServer = NewDonationsGRPCServer(repository, s.Config().DonationsVodPrice)
+	}
+
+	return s.donationsGrpcServer, nil
+}
+
 func (s *Container) MessagingGRPCServer() (*MessagingGRPCServer, error) {
 	if s.messagingGrpcServer == nil {
-
 		repository, err := s.MessagingRepository()
 		if err != nil {
 			return nil, err
@@ -874,6 +890,19 @@ func (s *Container) Forums() (*Forums, error) {
 	}
 
 	return s.forums, nil
+}
+
+func (s *Container) ItemOfDayRepository() (*itemofday.Repository, error) {
+	if s.itemOfDayRepository == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.itemOfDayRepository = itemofday.NewRepository(db)
+	}
+
+	return s.itemOfDayRepository, nil
 }
 
 func (s *Container) MessagingRepository() (*messaging.Repository, error) {

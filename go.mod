@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/Masterminds/squirrel v1.5.3
 	github.com/Nerzal/gocloak/v11 v11.2.0
-	github.com/aws/aws-sdk-go v1.44.24
+	github.com/aws/aws-sdk-go v1.44.27
 	github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.1.0
@@ -27,7 +27,7 @@ require (
 	github.com/jackc/pgproto3/v2 v2.3.0 // indirect
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/klauspost/compress v1.15.5 // indirect
+	github.com/klauspost/compress v1.15.6 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lib/pq v1.10.6 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
@@ -46,13 +46,13 @@ require (
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/text v0.3.7
-	google.golang.org/genproto v0.0.0-20220527130721-00d5c0f3be58
-	google.golang.org/grpc v1.46.2
+	google.golang.org/genproto v0.0.0-20220602131408-e326c6e8e9c8
+	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gographics/imagick.v2 v2.6.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-	gopkg.in/ini.v1 v1.66.5 // indirect
+	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )

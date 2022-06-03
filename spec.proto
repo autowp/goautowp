@@ -100,6 +100,10 @@ message ErrorDetails {
   google.rpc.LocalizedMessage localizedMessage = 8;
 }
 
+service Donations {
+  rpc GetVODData(google.protobuf.Empty) returns (VODDataResponse) {}
+}
+
 message PulseRequest {
   enum Period {
     DEFAULT = 0;
@@ -677,4 +681,14 @@ message Pages {
   int32 lastPageInRange = 8;
   repeated int32 pagesInRange = 9;
   int32 totalItemCount = 10;
+}
+
+message VODDataResponse {
+  repeated VODDataDate dates = 1;
+  int32 sum = 2;
+}
+
+message VODDataDate {
+  google.protobuf.Timestamp date = 1;
+  bool free = 2;
 }

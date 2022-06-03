@@ -96,7 +96,7 @@ func (s *GRPCServer) GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCap
 }
 
 func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error) {
-	if len(s.fileStorageConfig.S3.Endpoints) <= 0 {
+	if len(s.fileStorageConfig.S3.Endpoints) == 0 {
 		return nil, errors.New("no endpoints provided")
 	}
 
@@ -120,7 +120,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 	}, nil
 }
 
-func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*AclEnforceResult, error) {
+func (s *GRPCServer) ACLEnforce(ctx context.Context, in *AclEnforceRequest) (*AclEnforceResult, error) {
 
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
@@ -153,7 +153,10 @@ func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*Ve
 	}, nil
 }
 
-func (s *GRPCServer) GetBrandVehicleTypes(_ context.Context, in *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error) {
+func (s *GRPCServer) GetBrandVehicleTypes(
+	_ context.Context,
+	in *GetBrandVehicleTypesRequest,
+) (*BrandVehicleTypeItems, error) {
 	items, err := s.catalogue.getBrandVehicleTypes(in.BrandId)
 
 	if err != nil {
@@ -166,7 +169,6 @@ func (s *GRPCServer) GetBrandVehicleTypes(_ context.Context, in *GetBrandVehicle
 }
 
 func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, error) {
-
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -191,11 +193,11 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 }
 
 func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest) (*emptypb.Empty, error) {
-
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "Failed extract peer from context")
 	}
+
 	remoteAddr := p.Addr.String()
 
 	fv, err := s.feedback.Create(CreateFeedbackRequest{

@@ -227,3 +227,4 @@ image-storage:
   srcOverride: []
 telegram:
   access-token: "example"
+donations-vod-price: 100

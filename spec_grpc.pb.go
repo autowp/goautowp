@@ -2314,3 +2314,89 @@ var Statistics_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "spec.proto",
 }
+
+// DonationsClient is the client API for Donations service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type DonationsClient interface {
+	GetVODData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VODDataResponse, error)
+}
+
+type donationsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDonationsClient(cc grpc.ClientConnInterface) DonationsClient {
+	return &donationsClient{cc}
+}
+
+func (c *donationsClient) GetVODData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VODDataResponse, error) {
+	out := new(VODDataResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Donations/GetVODData", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DonationsServer is the server API for Donations service.
+// All implementations must embed UnimplementedDonationsServer
+// for forward compatibility
+type DonationsServer interface {
+	GetVODData(context.Context, *emptypb.Empty) (*VODDataResponse, error)
+	mustEmbedUnimplementedDonationsServer()
+}
+
+// UnimplementedDonationsServer must be embedded to have forward compatible implementations.
+type UnimplementedDonationsServer struct {
+}
+
+func (UnimplementedDonationsServer) GetVODData(context.Context, *emptypb.Empty) (*VODDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVODData not implemented")
+}
+func (UnimplementedDonationsServer) mustEmbedUnimplementedDonationsServer() {}
+
+// UnsafeDonationsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DonationsServer will
+// result in compilation errors.
+type UnsafeDonationsServer interface {
+	mustEmbedUnimplementedDonationsServer()
+}
+
+func RegisterDonationsServer(s grpc.ServiceRegistrar, srv DonationsServer) {
+	s.RegisterService(&Donations_ServiceDesc, srv)
+}
+
+func _Donations_GetVODData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DonationsServer).GetVODData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Donations/GetVODData",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DonationsServer).GetVODData(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Donations_ServiceDesc is the grpc.ServiceDesc for Donations service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Donations_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Donations",
+	HandlerType: (*DonationsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetVODData",
+			Handler:    _Donations_GetVODData_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
