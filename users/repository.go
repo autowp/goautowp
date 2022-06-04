@@ -20,7 +20,7 @@ import (
 
 type Claims struct {
 	jwx.Claims
-	Audience       []string       `json:"aud,omitempty"`
+	Audience       interface{}    `json:"aud,omitempty"`
 	Locale         string         `json:"locale,omitempty"`
 	ResourceAccess ResourceAccess `json:"resource_access,omitempty"`
 }
