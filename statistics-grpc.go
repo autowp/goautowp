@@ -95,17 +95,22 @@ func (s *StatisticsGRPCServer) randomColor() string {
 
 func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empty) (*AboutDataResponse, error) {
 
-	var wg sync.WaitGroup
-	var totalItems, totalComments, totalUsers int32
+	response := AboutDataResponse{
+		Developer:      s.aboutConfig.Developer,
+		FrTranslator:   s.aboutConfig.FrTranslator,
+		ZhTranslator:   s.aboutConfig.ZhTranslator,
+		BeTranslator:   s.aboutConfig.BeTranslator,
+		PtBrTranslator: s.aboutConfig.PtBrTranslator,
+	}
 
-	contributors := make([]string, 0)
+	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		_, err := s.db.Select(goqu.COUNT(goqu.L("1"))).
 			From("users").
 			Where(goqu.L("NOT deleted")).
-			Executor().ScanValContext(ctx, &totalUsers)
+			Executor().ScanValContext(ctx, &response.TotalUsers)
 
 		if err != nil {
 			logrus.Error(err.Error())
@@ -113,7 +118,7 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 			return
 		}
 
-		totalUsers = roundTo(totalUsers, 1000)
+		response.TotalUsers = roundTo(response.TotalUsers, 1000)
 
 		wg.Done()
 	}()
@@ -142,6 +147,8 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 
 		greenUserRoles = unique(greenUserRoles)
 
+		contributors := make([]string, 0)
+
 		if len(greenUserRoles) > 0 {
 			err := s.db.Select("id").From("users").Where(
 				goqu.I("deleted").IsFalse(),
@@ -169,15 +176,15 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 			return
 		}
 
-		contributors = unique(append(contributors, picturesUsers...))
+		response.Contributors = unique(append(contributors, picturesUsers...))
 
 		wg.Done()
 	}()
 
-	var picsStat picturesStat
-
 	wg.Add(1)
 	go func() {
+		var picsStat picturesStat
+
 		success, err := s.db.Select(
 			goqu.COUNT(goqu.Star()).As("count"),
 			goqu.SUM(goqu.I("filesize")).As("size"),
@@ -197,57 +204,46 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 			return
 		}
 
-		picsStat.Count = roundTo(picsStat.Count, 10000)
+		response.TotalPictures = roundTo(picsStat.Count, 10000)
+		response.PicturesSize = picsStat.Size.Int32
 
 		wg.Done()
 	}()
 
 	wg.Add(1)
 	go func() {
-		_, err := s.db.Select(goqu.COUNT(goqu.L("1"))).
+		_, err := s.db.Select(goqu.COUNT(goqu.Star())).
 			From("item").
-			Executor().ScanValContext(ctx, &totalItems)
+			Executor().ScanValContext(ctx, &response.TotalItems)
 		if err != nil {
 			logrus.Error(err.Error())
 			wg.Done()
 		}
 
-		totalItems = roundTo(totalItems, 1000)
+		response.TotalItems = roundTo(response.TotalItems, 1000)
 
 		wg.Done()
 	}()
 
 	wg.Add(1)
 	go func() {
-		_, err := s.db.Select(goqu.COUNT(goqu.L("1"))).
+		_, err := s.db.Select(goqu.COUNT(goqu.Star())).
 			From("comment_message").
 			Where(goqu.I("deleted").IsFalse()).
-			Executor().ScanValContext(ctx, &totalUsers)
+			Executor().ScanValContext(ctx, &response.TotalComments)
 
 		if err != nil {
 			logrus.Error(err.Error())
 			wg.Done()
 		}
 
-		totalComments = roundTo(totalComments, 1000)
+		response.TotalComments = roundTo(response.TotalComments, 1000)
 		wg.Done()
 	}()
 
 	wg.Wait()
 
-	return &AboutDataResponse{
-		Developer:      s.aboutConfig.Developer,
-		FrTranslator:   s.aboutConfig.FrTranslator,
-		ZhTranslator:   s.aboutConfig.ZhTranslator,
-		BeTranslator:   s.aboutConfig.BeTranslator,
-		PtBrTranslator: s.aboutConfig.PtBrTranslator,
-		Contributors:   contributors,
-		TotalPictures:  picsStat.Count,
-		PicturesSize:   picsStat.Size.Int32,
-		TotalUsers:     totalUsers,
-		TotalItems:     totalItems,
-		TotalComments:  totalComments,
-	}, nil
+	return &response, nil
 }
 
 func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (*PulseResponse, error) {
