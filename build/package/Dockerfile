@@ -1,4 +1,4 @@
-FROM ubuntu:focal as builder
+FROM ubuntu:jammy as builder
 
 ENV DEBIAN_FRONTEND=non-interactive \
     PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
@@ -19,9 +19,9 @@ RUN apt-get update -qqy && \
         wget \
     && \
     update-ca-certificates && \
-    wget -q https://golang.org/dl/go1.17.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-amd64.tar.gz && \
-    rm go1.17.linux-amd64.tar.gz
+    wget -q https://go.dev/dl/go1.18.3.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.18.3.linux-amd64.tar.gz && \
+    rm go1.18.3.linux-amd64.tar.gz
 
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
 
@@ -35,7 +35,7 @@ COPY . $GOPATH/src/github.com/autowp/goautowp/
 RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
 
 ############################
-FROM ubuntu:focal
+FROM ubuntu:jammy
 
 LABEL app_name="autowp.goautowp" \
       maintainer="dmitry@pereslegin.ru"

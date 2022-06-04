@@ -49,22 +49,9 @@ publish:
   script:
     - waitforit -address=tcp://docker:2375 -timeout=30
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u="$CI_REGISTRY_USER" --password-stdin
-    - docker pull $CI_REGISTRY_IMAGE || true
-    - docker build -f build/package/Dockerfile . -t $CI_REGISTRY_IMAGE
-    - docker push $CI_REGISTRY_IMAGE
-  only:
-    - master
-
-publish-docker-hub:
-  stage: publish
-  services:
-    - name: docker:dind
-      alias: docker
-  script:
-    - waitforit -address=tcp://docker:2375 -timeout=30
-    - echo "$DOCKER_PASSWORD" | docker login -u="$DOCKER_USERNAME" --password-stdin
-    - docker pull autowp/goautowp || true
-    - docker build -f build/package/Dockerfile . -t autowp/goautowp
+    - docker pull "$CI_REGISTRY_IMAGE" || true
+    - docker build -f build/package/Dockerfile . -t "$CI_REGISTRY_IMAGE" -t autowp/goautowp
+    - docker push "$CI_REGISTRY_IMAGE"
     - docker push autowp/goautowp
   only:
     - master
