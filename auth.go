@@ -49,7 +49,7 @@ func (s *Auth) ValidateGRPC(ctx context.Context) (int64, string, error) {
 }
 
 func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, string, error) {
-	if len(tokenString) <= 0 {
+	if len(tokenString) == 0 {
 		return 0, "", fmt.Errorf("authorization token is invalid")
 	}
 
