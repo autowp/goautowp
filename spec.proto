@@ -87,6 +87,7 @@ service Messaging {
 
 service Statistics {
   rpc GetPulse(PulseRequest) returns (PulseResponse) {}
+  rpc GetAboutData(google.protobuf.Empty) returns (AboutDataResponse) {}
 }
 
 message ErrorDetails {
@@ -691,4 +692,18 @@ message VODDataResponse {
 message VODDataDate {
   google.protobuf.Timestamp date = 1;
   bool free = 2;
+}
+
+message AboutDataResponse {
+  string developer = 1;
+  string fr_translator = 2;
+  string zh_translator = 3;
+  string be_translator = 4;
+  string pt_br_translator = 5;
+  repeated string contributors = 6;
+  int32 total_pictures = 7;
+  int32 pictures_size = 8;
+  int32 total_users = 9;
+  int32 total_items = 10;
+  int32 total_comments = 11;
 }

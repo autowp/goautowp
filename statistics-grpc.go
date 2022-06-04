@@ -2,9 +2,15 @@ package goautowp
 
 import (
 	"context"
+	"database/sql"
+	"github.com/autowp/goautowp/config"
+	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"sync"
 	"time"
 )
 
@@ -23,40 +29,227 @@ var colors = []string{
 	"#008888",
 }
 
+func roundTo(value int32, to int32) int32 {
+	var rest = value % to
+	if rest > to/2 {
+		value = value - rest + to
+	} else {
+		value -= rest
+	}
+
+	return value
+}
+
+func unique(intSlice []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+
+	for _, entry := range intSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+
+			list = append(list, entry)
+		}
+	}
+
+	return list
+}
+
 type StatisticsGRPCServer struct {
 	UnimplementedStatisticsServer
-	db        *goqu.Database
-	lastColor int
+	db          *goqu.Database
+	lastColor   int
+	enforcer    *casbin.Enforcer
+	aboutConfig config.AboutConfig
 }
 
 type scanRow struct {
-	UserId int64   `db:"user_id"`
+	UserID int64   `db:"user_id"`
 	Date   string  `db:"date"`
 	Value  float32 `db:"value"`
 }
 
+type picturesStat struct {
+	Count int32         `db:"count"`
+	Size  sql.NullInt32 `db:"size"`
+}
+
 func NewStatisticsGRPCServer(
 	db *goqu.Database,
+	enforcer *casbin.Enforcer,
+	aboutConfig config.AboutConfig,
 ) *StatisticsGRPCServer {
 	return &StatisticsGRPCServer{
-		db: db,
+		db:          db,
+		enforcer:    enforcer,
+		aboutConfig: aboutConfig,
 	}
 }
 
 func (s *StatisticsGRPCServer) randomColor() string {
 	idx := s.lastColor % len(colors)
 	s.lastColor++
+
 	return colors[idx]
+}
+
+func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empty) (*AboutDataResponse, error) {
+
+	var wg sync.WaitGroup
+	var totalItems, totalComments, totalUsers int32
+
+	contributors := make([]string, 0)
+
+	wg.Add(1)
+	go func() {
+		_, err := s.db.Select(goqu.COUNT(goqu.L("1"))).
+			From("users").
+			Where(goqu.L("NOT deleted")).
+			Executor().ScanValContext(ctx, &totalUsers)
+
+		if err != nil {
+			logrus.Error(err.Error())
+			wg.Done()
+			return
+		}
+
+		totalUsers = roundTo(totalUsers, 1000)
+
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		greenUserRoles := make([]string, 0)
+
+		toFetch := []string{"green-user"}
+		for len(toFetch) > 0 {
+			ep := len(toFetch) - 1
+			role := toFetch[ep]
+			toFetch = toFetch[:ep]
+
+			roles, err := s.enforcer.GetUsersForRole(role)
+			if err != nil {
+				logrus.Error(err.Error())
+				wg.Done()
+				return
+			}
+
+			toFetch = append(toFetch, roles...)
+
+			greenUserRoles = append(greenUserRoles, roles...)
+		}
+
+		greenUserRoles = unique(greenUserRoles)
+
+		if len(greenUserRoles) > 0 {
+			err := s.db.Select("id").From("users").Where(
+				goqu.I("deleted").IsFalse(),
+				goqu.I("role").In(greenUserRoles),
+				goqu.L("(identity is null or identity <> ?)", "autowp"),
+				goqu.L("last_online > DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"),
+			).Executor().ScanValsContext(ctx, &contributors)
+
+			if err != nil {
+				logrus.Error(err.Error())
+				wg.Done()
+				return
+			}
+		}
+
+		picturesUsers := make([]string, 0)
+		err := s.db.Select("id").From("users").
+			Where(goqu.I("deleted").IsFalse()).
+			Order(goqu.I("pictures_total").Desc()).
+			Limit(20).Executor().ScanValsContext(ctx, &picturesUsers)
+
+		if err != nil {
+			logrus.Error(err.Error())
+			wg.Done()
+			return
+		}
+
+		contributors = unique(append(contributors, picturesUsers...))
+
+		wg.Done()
+	}()
+
+	var picsStat picturesStat
+
+	wg.Add(1)
+	go func() {
+		_, err := s.db.Select(
+			goqu.COUNT(goqu.L("1")).As("count"),
+			goqu.SUM(goqu.I("filesize")).As("size"),
+		).
+			From("pictures").
+			Where(goqu.I("filesize").IsNotNull()).
+			Executor().ScanStructContext(ctx, &picsStat)
+		if err != nil {
+			logrus.Error(err.Error())
+			wg.Done()
+			return
+		}
+
+		picsStat.Count = roundTo(picsStat.Count, 10000)
+
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		_, err := s.db.Select(goqu.COUNT(goqu.L("1"))).
+			From("item").
+			Executor().ScanValContext(ctx, &totalItems)
+		if err != nil {
+			logrus.Error(err.Error())
+			wg.Done()
+		}
+
+		totalItems = roundTo(totalItems, 1000)
+
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		_, err := s.db.Select(goqu.COUNT(goqu.L("1"))).
+			From("comment_message").
+			Where(goqu.I("deleted").IsFalse()).
+			Executor().ScanValContext(ctx, &totalUsers)
+
+		if err != nil {
+			logrus.Error(err.Error())
+			wg.Done()
+		}
+
+		totalComments = roundTo(totalComments, 1000)
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	return &AboutDataResponse{
+		Developer:      s.aboutConfig.Developer,
+		FrTranslator:   s.aboutConfig.FrTranslator,
+		ZhTranslator:   s.aboutConfig.ZhTranslator,
+		BeTranslator:   s.aboutConfig.BeTranslator,
+		PtBrTranslator: s.aboutConfig.PtBrTranslator,
+		Contributors:   contributors,
+		TotalPictures:  picsStat.Count,
+		PicturesSize:   picsStat.Size.Int32,
+		TotalUsers:     totalUsers,
+		TotalItems:     totalItems,
+		TotalComments:  totalComments,
+	}, nil
 }
 
 func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (*PulseResponse, error) {
 	now := time.Now()
 	var from, to time.Time
-	subPeriodMonth := 0
-	subPeriodDay := 0
-	var subPeriodHour time.Duration = 0
-	var format string
-	var dateExpr string
+	var subPeriodMonth, subPeriodDay int
+	var subPeriodHour time.Duration
+	var format, dateExpr string
 
 	switch in.GetPeriod() {
 	case PulseRequest_YEAR:
@@ -102,11 +295,12 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 
 	data := make(map[int64]map[string]float32)
 	for _, row := range rows {
-		_, ok := data[row.UserId]
+		_, ok := data[row.UserID]
 		if !ok {
-			data[row.UserId] = make(map[string]float32)
+			data[row.UserID] = make(map[string]float32)
 		}
-		data[row.UserId][row.Date] = row.Value
+
+		data[row.UserID][row.Date] = row.Value
 	}
 
 	grid := make([]*PulseGrid, 0)
@@ -140,6 +334,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 
 	labels := make([]string, 0)
 	cDate := from
+
 	for to.After(cDate) {
 		labels = append(labels, cDate.Format(format))
 

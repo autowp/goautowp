@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"testing"
 	"time"
 )
@@ -29,7 +30,7 @@ func assertGridNotEmpty(grid []*PulseGrid) error {
 func TestStatisticsPulse(t *testing.T) {
 	ctx := context.Background()
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, 50000*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
 	defer cancel()
 
 	conn, err := grpc.DialContext(
@@ -90,4 +91,48 @@ func TestStatisticsPulse(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, assertGridNotEmpty(r1.Grid))
+}
+
+func TestAboutData(t *testing.T) {
+	ctx := context.Background()
+
+	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(
+		ctxTimeout,
+		"bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	statisticsClient := NewStatisticsClient(conn)
+
+	_, err = statisticsClient.GetAboutData(ctx, &emptypb.Empty{})
+	require.NoError(t, err)
+}
+
+func BenchmarkAboutData(b *testing.B) {
+	ctx := context.Background()
+
+	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(
+		ctxTimeout,
+		"bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(b, err)
+
+	defer util.Close(conn)
+	statisticsClient := NewStatisticsClient(conn)
+
+	for n := 0; n < b.N; n++ {
+		_, err = statisticsClient.GetAboutData(ctx, &emptypb.Empty{})
+		require.NoError(b, err)
+	}
 }

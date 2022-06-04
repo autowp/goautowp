@@ -97,6 +97,14 @@ type TelegramConfig struct {
 	AccessToken string `yaml:"access-token" mapstructure:"access-token"`
 }
 
+type AboutConfig struct {
+	Developer      string `yaml:"developer"        mapstructure:"developer"`
+	FrTranslator   string `yaml:"fr-translator"    mapstructure:"fr-translator"`
+	ZhTranslator   string `yaml:"zh-translator"    mapstructure:"zh-translator"`
+	BeTranslator   string `yaml:"be-translator"    mapstructure:"be-translator"`
+	PtBrTranslator string `yaml:"pt-br-translator" mapstructure:"pt-br-translator"`
+}
+
 // Config Application config definition
 type Config struct {
 	GinMode           string                    `yaml:"gin-mode"            mapstructure:"gin-mode"`
@@ -124,6 +132,7 @@ type Config struct {
 	ImageStorage      ImageStorageConfig        `yaml:"image-storage"       mapstructure:"image-storage"`
 	Memcached         []string                  `yaml:"memcached"           mapstructure:"memcached"`
 	DonationsVodPrice int32                     `yaml:"donations-vod-price" mapstructure:"donations-vod-price"`
+	About             AboutConfig               `yaml:"about"               mapstructure:"about"`
 }
 
 // LoadConfig LoadConfig.

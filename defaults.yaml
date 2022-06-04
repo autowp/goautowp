@@ -228,3 +228,9 @@ image-storage:
 telegram:
   access-token: "example"
 donations-vod-price: 100
+about:
+  developer: "1"
+  fr-translator: "1"
+  zh-translator: "1"
+  be-translator: "1"
+  pt-br-translator: "1"

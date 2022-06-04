@@ -668,6 +668,8 @@ func (s *Container) StatisticsGRPCServer() (*StatisticsGRPCServer, error) {
 
 		s.statisticsGrpcServer = NewStatisticsGRPCServer(
 			db,
+			s.Enforcer(),
+			s.Config().About,
 		)
 	}
 
