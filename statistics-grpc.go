@@ -178,13 +178,19 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 
 	wg.Add(1)
 	go func() {
-		_, err := s.db.Select(
-			goqu.COUNT(goqu.L("1")).As("count"),
+		success, err := s.db.Select(
+			goqu.COUNT(goqu.Star()).As("count"),
 			goqu.SUM(goqu.I("filesize")).As("size"),
 		).
 			From("pictures").
-			Where(goqu.I("filesize").IsNotNull()).
 			Executor().ScanStructContext(ctx, &picsStat)
+
+		if !success {
+			logrus.Error("failed to fetch stat row")
+			wg.Done()
+			return
+		}
+
 		if err != nil {
 			logrus.Error(err.Error())
 			wg.Done()
