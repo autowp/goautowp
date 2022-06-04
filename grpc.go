@@ -120,7 +120,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 	}, nil
 }
 
-func (s *GRPCServer) ACLEnforce(ctx context.Context, in *AclEnforceRequest) (*AclEnforceResult, error) {
+func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*AclEnforceResult, error) {
 
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
