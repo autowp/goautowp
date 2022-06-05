@@ -110,7 +110,7 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 		_, err := s.db.Select(goqu.COUNT(goqu.L("1"))).
 			From("users").
 			Where(goqu.L("NOT deleted")).
-			Executor().ScanValContext(ctx, &response.TotalUsers)
+			ScanValContext(ctx, &response.TotalUsers)
 
 		if err != nil {
 			logrus.Error(err.Error())
@@ -155,7 +155,7 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 				goqu.I("role").In(greenUserRoles),
 				goqu.L("(identity is null or identity <> ?)", "autowp"),
 				goqu.L("last_online > DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"),
-			).Executor().ScanValsContext(ctx, &contributors)
+			).ScanValsContext(ctx, &contributors)
 
 			if err != nil {
 				logrus.Error(err.Error())
@@ -168,7 +168,7 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 		err := s.db.Select("id").From("users").
 			Where(goqu.I("deleted").IsFalse()).
 			Order(goqu.I("pictures_total").Desc()).
-			Limit(20).Executor().ScanValsContext(ctx, &picturesUsers)
+			Limit(20).ScanValsContext(ctx, &picturesUsers)
 
 		if err != nil {
 			logrus.Error(err.Error())
@@ -190,16 +190,16 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 			goqu.SUM(goqu.I("filesize")).As("size"),
 		).
 			From("pictures").
-			Executor().ScanStructContext(ctx, &picsStat)
+			ScanStructContext(ctx, &picsStat)
 
-		if !success {
-			logrus.Error("failed to fetch stat row")
+		if err != nil {
+			logrus.Error(err.Error())
 			wg.Done()
 			return
 		}
 
-		if err != nil {
-			logrus.Error(err.Error())
+		if !success {
+			logrus.Error("failed to fetch stat row")
 			wg.Done()
 			return
 		}
@@ -214,7 +214,7 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 	go func() {
 		_, err := s.db.Select(goqu.COUNT(goqu.Star())).
 			From("item").
-			Executor().ScanValContext(ctx, &response.TotalItems)
+			ScanValContext(ctx, &response.TotalItems)
 		if err != nil {
 			logrus.Error(err.Error())
 			wg.Done()
@@ -230,7 +230,7 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 		_, err := s.db.Select(goqu.COUNT(goqu.Star())).
 			From("comment_message").
 			Where(goqu.I("deleted").IsFalse()).
-			Executor().ScanValContext(ctx, &response.TotalComments)
+			ScanValContext(ctx, &response.TotalComments)
 
 		if err != nil {
 			logrus.Error(err.Error())
@@ -290,7 +290,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 			goqu.I("add_datetime").Gte(from),
 			goqu.I("add_datetime").Lt(to),
 		).
-		GroupBy(goqu.I("user_id"), goqu.I("date")).Executor().ScanStructsContext(ctx, &rows)
+		GroupBy(goqu.I("user_id"), goqu.I("date")).ScanStructsContext(ctx, &rows)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
