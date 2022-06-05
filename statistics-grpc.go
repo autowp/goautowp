@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/autowp/goautowp/config"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
@@ -28,6 +29,12 @@ var colors = []string{
 	"#880088",
 	"#008888",
 }
+
+const thousands = 1000
+const tensOfThousands = 10 * thousands
+const numberOfTopUploadersToShowInAboutUs = 20
+
+var failedToFetchRow = errors.New("failed to fetch row")
 
 func roundTo(value int32, to int32) int32 {
 	var rest = value % to
@@ -93,8 +100,131 @@ func (s *StatisticsGRPCServer) randomColor() string {
 	return colors[idx]
 }
 
-func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empty) (*AboutDataResponse, error) {
+func (s *StatisticsGRPCServer) totalUsers(ctx context.Context) (int32, error) {
+	var result int32
 
+	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
+		From("users").
+		Where(goqu.L("NOT deleted")).
+		ScanValContext(ctx, &result)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, failedToFetchRow
+	}
+
+	return roundTo(result, thousands), nil
+}
+
+func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, error) {
+	greenUserRoles := make([]string, 0)
+
+	toFetch := []string{"green-user"}
+	for len(toFetch) > 0 {
+		ep := len(toFetch) - 1
+		role := toFetch[ep]
+		toFetch = toFetch[:ep]
+
+		roles, err := s.enforcer.GetUsersForRole(role)
+		if err != nil {
+			return nil, err
+		}
+
+		toFetch = append(toFetch, roles...)
+
+		greenUserRoles = append(greenUserRoles, roles...)
+	}
+
+	greenUserRoles = unique(greenUserRoles)
+
+	contributors := make([]string, 0)
+
+	if len(greenUserRoles) > 0 {
+		err := s.db.Select("id").From("users").Where(
+			goqu.I("deleted").IsFalse(),
+			goqu.I("role").In(greenUserRoles),
+			goqu.L("(identity is null or identity <> ?)", "autowp"),
+			goqu.L("last_online > DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"),
+		).ScanValsContext(ctx, &contributors)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	picturesUsers := make([]string, 0)
+	err := s.db.Select("id").From("users").
+		Where(goqu.I("deleted").IsFalse()).
+		Order(goqu.I("pictures_total").Desc()).
+		Limit(numberOfTopUploadersToShowInAboutUs).ScanValsContext(ctx, &picturesUsers)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return unique(append(contributors, picturesUsers...)), nil
+}
+
+func (s *StatisticsGRPCServer) picturesStat(ctx context.Context) (int32, int32, error) {
+	var picsStat picturesStat
+
+	success, err := s.db.Select(
+		goqu.COUNT(goqu.Star()).As("count"),
+		goqu.SUM(goqu.I("filesize")).As("size"),
+	).
+		From("pictures").
+		ScanStructContext(ctx, &picsStat)
+
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if !success {
+		return 0, 0, failedToFetchRow
+	}
+
+	return roundTo(picsStat.Count, tensOfThousands), picsStat.Size.Int32, nil
+}
+
+func (s *StatisticsGRPCServer) totalItems(ctx context.Context) (int32, error) {
+	var result int32
+
+	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
+		From("item").
+		ScanValContext(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+	if !success {
+		return 0, failedToFetchRow
+	}
+
+	return roundTo(result, thousands), nil
+}
+
+func (s *StatisticsGRPCServer) totalComments(ctx context.Context) (int32, error) {
+	var result int32
+
+	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
+		From("comment_message").
+		Where(goqu.I("deleted").IsFalse()).
+		ScanValContext(ctx, &result)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, failedToFetchRow
+	}
+
+	return roundTo(result, thousands), nil
+}
+
+func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empty) (*AboutDataResponse, error) {
 	response := AboutDataResponse{
 		Developer:      s.aboutConfig.Developer,
 		FrTranslator:   s.aboutConfig.FrTranslator,
@@ -106,138 +236,67 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 	var wg sync.WaitGroup
 
 	wg.Add(1)
+
 	go func() {
-		_, err := s.db.Select(goqu.COUNT(goqu.L("1"))).
-			From("users").
-			Where(goqu.L("NOT deleted")).
-			ScanValContext(ctx, &response.TotalUsers)
+		var err error
+		response.TotalUsers, err = s.totalUsers(ctx)
 
 		if err != nil {
 			logrus.Error(err.Error())
-			wg.Done()
-			return
 		}
-
-		response.TotalUsers = roundTo(response.TotalUsers, 1000)
 
 		wg.Done()
 	}()
 
 	wg.Add(1)
+
 	go func() {
-		greenUserRoles := make([]string, 0)
-
-		toFetch := []string{"green-user"}
-		for len(toFetch) > 0 {
-			ep := len(toFetch) - 1
-			role := toFetch[ep]
-			toFetch = toFetch[:ep]
-
-			roles, err := s.enforcer.GetUsersForRole(role)
-			if err != nil {
-				logrus.Error(err.Error())
-				wg.Done()
-				return
-			}
-
-			toFetch = append(toFetch, roles...)
-
-			greenUserRoles = append(greenUserRoles, roles...)
-		}
-
-		greenUserRoles = unique(greenUserRoles)
-
-		contributors := make([]string, 0)
-
-		if len(greenUserRoles) > 0 {
-			err := s.db.Select("id").From("users").Where(
-				goqu.I("deleted").IsFalse(),
-				goqu.I("role").In(greenUserRoles),
-				goqu.L("(identity is null or identity <> ?)", "autowp"),
-				goqu.L("last_online > DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"),
-			).ScanValsContext(ctx, &contributors)
-
-			if err != nil {
-				logrus.Error(err.Error())
-				wg.Done()
-				return
-			}
-		}
-
-		picturesUsers := make([]string, 0)
-		err := s.db.Select("id").From("users").
-			Where(goqu.I("deleted").IsFalse()).
-			Order(goqu.I("pictures_total").Desc()).
-			Limit(20).ScanValsContext(ctx, &picturesUsers)
+		var err error
+		response.Contributors, err = s.contributors(ctx)
 
 		if err != nil {
 			logrus.Error(err.Error())
-			wg.Done()
-			return
 		}
-
-		response.Contributors = unique(append(contributors, picturesUsers...))
 
 		wg.Done()
 	}()
 
 	wg.Add(1)
-	go func() {
-		var picsStat picturesStat
 
-		success, err := s.db.Select(
-			goqu.COUNT(goqu.Star()).As("count"),
-			goqu.SUM(goqu.I("filesize")).As("size"),
-		).
-			From("pictures").
-			ScanStructContext(ctx, &picsStat)
+	go func() {
+		var err error
+		response.TotalPictures, response.PicturesSize, err = s.picturesStat(ctx)
 
 		if err != nil {
 			logrus.Error(err.Error())
-			wg.Done()
-			return
 		}
-
-		if !success {
-			logrus.Error("failed to fetch stat row")
-			wg.Done()
-			return
-		}
-
-		response.TotalPictures = roundTo(picsStat.Count, 10000)
-		response.PicturesSize = picsStat.Size.Int32
 
 		wg.Done()
 	}()
 
 	wg.Add(1)
+
 	go func() {
-		_, err := s.db.Select(goqu.COUNT(goqu.Star())).
-			From("item").
-			ScanValContext(ctx, &response.TotalItems)
+		var err error
+		response.TotalItems, err = s.totalItems(ctx)
+
 		if err != nil {
 			logrus.Error(err.Error())
-			wg.Done()
 		}
-
-		response.TotalItems = roundTo(response.TotalItems, 1000)
 
 		wg.Done()
 	}()
 
 	wg.Add(1)
+
 	go func() {
-		_, err := s.db.Select(goqu.COUNT(goqu.Star())).
-			From("comment_message").
-			Where(goqu.I("deleted").IsFalse()).
-			ScanValContext(ctx, &response.TotalComments)
+		var err error
+		response.TotalComments, err = s.totalComments(ctx)
 
 		if err != nil {
 			logrus.Error(err.Error())
-			wg.Done()
 		}
 
-		response.TotalComments = roundTo(response.TotalComments, 1000)
 		wg.Done()
 	}()
 
@@ -248,6 +307,7 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 
 func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (*PulseResponse, error) {
 	now := time.Now()
+
 	var from, to time.Time
 	var subPeriodMonth, subPeriodDay int
 	var subPeriodHour time.Duration
