@@ -49,6 +49,7 @@ publish:
   script:
     - waitforit -address=tcp://docker:2375 -timeout=30
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u="$CI_REGISTRY_USER" --password-stdin
+    - echo "$DOCKER_PASSWORD" | docker login -u="$DOCKER_USERNAME" --password-stdin
     - docker pull "$CI_REGISTRY_IMAGE" || true
     - docker build -f build/package/Dockerfile . -t "$CI_REGISTRY_IMAGE" -t autowp/goautowp
     - docker push "$CI_REGISTRY_IMAGE"
