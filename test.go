@@ -29,7 +29,6 @@ func getContainer() *Container {
 }
 
 func init() {
-
 	cnt := getContainer()
 
 	grpcServer := grpc.NewServer()
@@ -39,6 +38,12 @@ func init() {
 		panic(err)
 	}
 	RegisterContactsServer(grpcServer, contactsSrv)
+
+	donationsSrv, err := cnt.DonationsGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+	RegisterDonationsServer(grpcServer, donationsSrv)
 
 	usersSrv, err := cnt.UsersGRPCServer()
 	if err != nil {
@@ -65,6 +70,7 @@ func init() {
 	RegisterStatisticsServer(grpcServer, statsSrv)
 
 	lis = bufconn.Listen(bufSize)
+
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
 			logrus.Errorf("Server exited with error: %v", err)

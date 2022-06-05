@@ -34,7 +34,7 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 	for i := 0; i < 10; i++ {
 		found := false
 		_, err := s.db.Select(goqu.L("1")).From("of_day").Where(
-			goqu.I("day_date").Eq(now.Format("2006-02-01")),
+			goqu.I("day_date").Eq(now.Format("2006-01-02")),
 			goqu.I("item_id").IsNotNull(),
 		).Executor().ScanValContext(ctx, &found)
 
