@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Masterminds/squirrel v1.5.3
 	github.com/Nerzal/gocloak/v11 v11.2.0
-	github.com/aws/aws-sdk-go v1.44.27
+	github.com/aws/aws-sdk-go v1.44.32
 	github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.1.0
@@ -15,7 +15,7 @@ require (
 	github.com/fiam/gounidecode v0.0.0-20150629112515-8deddbd03fec
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/getsentry/sentry-go v0.13.0
-	github.com/gin-gonic/gin v1.8.0
+	github.com/gin-gonic/gin v1.8.1
 	github.com/go-playground/validator/v10 v10.11.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
@@ -41,16 +41,16 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.12.0
 	github.com/streadway/amqp v1.0.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.7.2
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
-	golang.org/x/net v0.0.0-20220531201128-c960675eff93 // indirect
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
+	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d // indirect
 	golang.org/x/text v0.3.7
-	google.golang.org/genproto v0.0.0-20220602131408-e326c6e8e9c8
+	google.golang.org/genproto v0.0.0-20220608133413-ed9918b62aac
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
-	gopkg.in/gographics/imagick.v2 v2.6.0
+	gopkg.in/gographics/imagick.v2 v2.6.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -86,7 +86,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
