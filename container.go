@@ -159,6 +159,7 @@ func (s *Container) GoquDB() (*goqu.Database, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		s.goquDB = goqu.New("mysql", db)
 	}
 
@@ -945,7 +946,7 @@ func (s *Container) EmailSender() email.Sender {
 		if s.config.MockEmailSender {
 			s.emailSender = &email.MockSender{}
 		} else {
-			s.emailSender = &email.SmtpSender{Config: cfg.SMTP}
+			s.emailSender = &email.SMTPSender{Config: cfg.SMTP}
 		}
 	}
 

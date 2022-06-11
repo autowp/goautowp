@@ -36,6 +36,7 @@ var specialCharacters = map[rune]string{
 
 func replaceSpecialCharacters(s string) string {
 	str := ""
+
 	for _, c := range s {
 		d, ok := specialCharacters[c]
 		if ok {
@@ -44,6 +45,7 @@ func replaceSpecialCharacters(s string) string {
 			str += string(c)
 		}
 	}
+
 	return str
 }
 

@@ -27,7 +27,6 @@ type Repository struct {
 
 // NewRepository constructor
 func NewRepository(db *pgxpool.Pool) (*Repository, error) {
-
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
 	}
@@ -53,9 +52,7 @@ func (s *Repository) Add(ip net.IP, duration time.Duration, byUserID int64, reas
 		return err
 	}
 
-	affected := ct.RowsAffected()
-
-	if affected == 1 {
+	if affected := ct.RowsAffected(); affected == 1 {
 		logrus.Infof("%v was banned. Reason: %s", ip.String(), reason)
 	}
 
@@ -72,18 +69,18 @@ func (s *Repository) Remove(ip net.IP) error {
 
 // Exists ban list already contains IP
 func (s *Repository) Exists(ip net.IP) (bool, error) {
-
 	var exists bool
 	err := s.db.QueryRow(context.Background(), `
 		SELECT true
 		FROM ip_ban
 		WHERE ip = $1 AND until >= NOW()
 	`, ip.String()).Scan(&exists)
-	if err != nil && err != pgx.ErrNoRows {
+
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return false, err
 	}
 
-	return err != pgx.ErrNoRows, nil
+	return !errors.Is(err, pgx.ErrNoRows), nil
 }
 
 // Get ban info
@@ -95,6 +92,7 @@ func (s *Repository) Get(ip net.IP) (*Item, error) {
 		FROM ip_ban
 		WHERE ip = $1 AND until >= NOW()
 	`, ip.String()).Scan(&item.IP, &item.Until, &item.Reason, &item.ByUserID)
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

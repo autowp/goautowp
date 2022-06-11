@@ -8,6 +8,8 @@ import (
 
 const textMonthFormat = "%02d."
 
+const hundred = 100
+
 type ItemNameFormatter struct{}
 
 type ItemNameFormatterOptions struct {
@@ -48,8 +50,8 @@ func (s *ItemNameFormatter) Format(item ItemNameFormatterOptions, language strin
 	bmyf := item.BeginModelYearFraction
 	emyf := item.EndModelYearFraction
 
-	bs := by / 100
-	es := ey / 100
+	bs := by / hundred
+	es := ey / hundred
 
 	useModelYear := bmy > 0 || emy > 0
 
@@ -90,8 +92,8 @@ func (s *ItemNameFormatter) getModelYearsPrefix(
 		return fmt.Sprintf("%d%s", begin, endFraction)
 	}
 
-	bms := begin / 100
-	ems := end / 100
+	bms := begin / hundred
+	ems := end / hundred
 
 	if bms == ems {
 		return fmt.Sprintf("%d%s–%02d%s", begin, beginFraction, end%100, endFraction)
@@ -115,8 +117,8 @@ func (s *ItemNameFormatter) getModelYearsPrefix(
 		return fmt.Sprintf("%d%s", begin, beginFraction)
 	}
 
-	return fmt.Sprintf("%d%s–%s", begin, beginFraction, "pr.")
 	// $this->translate('present-time-abbr', $language);
+	return fmt.Sprintf("%d%s–%s", begin, beginFraction, "pr.")
 }
 
 func (s *ItemNameFormatter) renderYears(
@@ -147,6 +149,7 @@ func (s *ItemNameFormatter) renderYears(
 		if bm > 0 {
 			result1 = fmt.Sprintf(textMonthFormat, bm)
 		}
+
 		result1 += strconv.Itoa(by) + "–"
 
 		result2 := ""
@@ -158,7 +161,7 @@ func (s *ItemNameFormatter) renderYears(
 		if em > 0 {
 			result3 = strconv.Itoa(ey)
 		} else {
-			result3 = fmt.Sprintf("%02d", ey%100)
+			result3 = fmt.Sprintf("%02d", ey%hundred)
 		}
 
 		return result1 + result2 + result3
@@ -168,16 +171,20 @@ func (s *ItemNameFormatter) renderYears(
 	if bm > 0 {
 		result1 = fmt.Sprintf(textMonthFormat, bm)
 	}
+
 	result2 := "????"
+
 	if by > 0 {
 		result2 = strconv.Itoa(by)
 	}
 
 	result3 := ""
+
 	if ey > 0 {
 		if em > 0 {
 			result3 = fmt.Sprintf(textMonthFormat, em)
 		}
+
 		result3 = "–" + result3 + strconv.Itoa(ey)
 	} else {
 		result3 = s.missedEndYearYearsSuffix(today, by, language)
@@ -199,7 +206,6 @@ func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int, langua
 	}
 
 	return "–????"
-
 }
 
 func (s *ItemNameFormatter) monthsRange(from int, to int) string {

@@ -38,6 +38,7 @@ func (s *Paginator) Count() (int32, error) {
 		if err != nil {
 			return 0, err
 		}
+
 		s.pageCountCalculated = true
 	}
 
@@ -49,6 +50,7 @@ func (s *Paginator) calculatePageCount() (int32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return int32(math.Ceil(float64(count) / float64(s.getItemCountPerPage()))), nil
 }
 
@@ -76,25 +78,30 @@ func (s *Paginator) getItemCountPerPage() int32 {
 }
 
 func MinMax(array []int32) (int32, int32) {
-	var max = array[0]
-	var min = array[0]
+	var max, min = array[0], array[0]
+
 	for _, value := range array {
 		if max < value {
 			max = value
 		}
+
 		if min > value {
 			min = value
 		}
 	}
+
 	return min, max
 }
 
 func (s *Paginator) GetPages() (*Pages, error) {
 	pageCount, err := s.Count()
+
 	if err != nil {
 		return nil, err
 	}
+
 	currentPageNumber, err := s.getCurrentPageNumber()
+
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +146,7 @@ func (s *Paginator) GetPages() (*Pages, error) {
 
 	lowerBound := pageCount - pageRange + 1
 	upperBound := pageCount
+
 	if pageNumber-delta <= pageCount-pageRange {
 		if pageNumber-delta < 0 {
 			delta = pageNumber
@@ -167,10 +175,13 @@ func (s *Paginator) getCurrentPageNumber() (int32, error) {
 func (s *Paginator) getPagesInRange(lowerBound int32, upperBound int32) ([]int32, error) {
 	var err error
 	lowerBound, err = s.normalizePageNumber(lowerBound)
+
 	if err != nil {
 		return nil, err
 	}
+
 	upperBound, err = s.normalizePageNumber(upperBound)
+
 	if err != nil {
 		return nil, err
 	}
@@ -204,12 +215,14 @@ func (s *Paginator) normalizePageNumber(pageNumber int32) (int32, error) {
 func (s *Paginator) GetItemsByPage(pageNumber int32) (*goqu.SelectDataset, error) {
 	var err error
 	pageNumber, err = s.normalizePageNumber(pageNumber)
+
 	if err != nil {
 		return nil, err
 	}
 
 	offset := (pageNumber - 1) * s.getItemCountPerPage()
 	ds := *s.SqlSelect
+
 	return ds.Offset(uint(offset)).Limit(uint(s.getItemCountPerPage())), nil
 }
 
@@ -218,6 +231,7 @@ func (s *Paginator) GetCurrentItems() (*goqu.SelectDataset, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return s.GetItemsByPage(pageNumber)
 }
 
@@ -228,6 +242,7 @@ func (s *Paginator) GetTotalItemCount() (int32, error) {
 		if err != nil {
 			return 0, err
 		}
+
 		s.itemCountCalculated = true
 	}
 

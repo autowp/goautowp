@@ -38,6 +38,7 @@ var failedToFetchRow = errors.New("failed to fetch row")
 
 func roundTo(value int32, to int32) int32 {
 	var rest = value % to
+
 	if rest > to/2 {
 		value = value - rest + to
 	} else {
@@ -198,6 +199,7 @@ func (s *StatisticsGRPCServer) totalItems(ctx context.Context) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	if !success {
 		return 0, failedToFetchRow
 	}

@@ -61,6 +61,7 @@ func (s *UsersGRPCServer) Me(ctx context.Context, in *APIMeRequest) (*APIUser, e
 func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*APIUser, error) {
 	fields := in.Fields
 	m := make(map[string]bool)
+
 	for _, e := range fields {
 		m[e] = true
 	}
@@ -72,6 +73,7 @@ func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*AP
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	if dbUser == nil {
 		return nil, status.Error(codes.NotFound, "User not found")
 	}

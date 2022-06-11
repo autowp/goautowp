@@ -55,6 +55,7 @@ func (s Repository) IncView(ctx context.Context, id int64) error {
 		VALUES (?, 1)
 		ON DUPLICATE KEY UPDATE views=views+1
     `, id)
+
 	return err
 }
 
@@ -93,6 +94,7 @@ func (s Repository) Vote(ctx context.Context, id int64, value int32, userID int6
 	if value < 0 {
 		normalizedValue = -1
 	}
+
 	_, err := s.db.ExecContext(ctx, `
         INSERT INTO picture_vote (picture_id, user_id, value, timestamp)
 		VALUES (?, ?, ?, now())
@@ -108,10 +110,10 @@ func (s Repository) Vote(ctx context.Context, id int64, value int32, userID int6
 }
 
 func (s Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteTemplate) (ModerVoteTemplate, error) {
-
 	if tpl.Vote < 0 {
 		tpl.Vote = -1
 	}
+
 	if tpl.Vote > 0 {
 		tpl.Vote = 1
 	}
@@ -149,15 +151,20 @@ func (s Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mode
 	if err != nil {
 		return nil, err
 	}
+
 	var items []ModerVoteTemplate
+
 	for rows.Next() {
 		var r ModerVoteTemplate
 		err = rows.Scan(&r.ID, &r.Message, &r.Vote)
+
 		if err != nil {
 			return nil, err
 		}
+
 		items = append(items, r)
 	}
+
 	return items, nil
 }
 
@@ -178,8 +185,8 @@ func (s Repository) updatePictureSummary(ctx context.Context, id int64) error {
 }
 
 func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
-
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
+
 	var problems []string
 	var err error
 
@@ -191,9 +198,11 @@ func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation,
 		},
 	}
 	s.Message, problems, err = messageInputFilter.IsValidString(s.Message)
+
 	if err != nil {
 		return nil, err
 	}
+
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "message",

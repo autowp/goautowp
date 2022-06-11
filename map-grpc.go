@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
@@ -83,13 +84,14 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			`,
 			polygon,
 		)
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		for rows.Next() {
 			var p orb.Point
 			err = rows.Scan(wkb.Scanner(&p))
+
 			if err != nil {
 				return nil, status.Error(codes.InvalidArgument, err.Error())
 			}
@@ -112,7 +114,8 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			`,
 			polygon,
 		)
-		if err != nil && err != sql.ErrNoRows {
+
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
@@ -174,11 +177,11 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				    INNER JOIN picture_item ON pictures.id = picture_item.picture_id
 				WHERE pictures.status = ? AND picture_item.item_id = ?
 			`, pictures.StatusAccepted, id).Scan(&imageId)
-			if err != nil && err != sql.ErrNoRows {
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			if err != sql.ErrNoRows && imageId.Valid {
+			if !errors.Is(err, sql.ErrNoRows) && imageId.Valid {
 				image, err := s.imageStorage.FormattedImage(int(imageId.Int64), "format9")
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())

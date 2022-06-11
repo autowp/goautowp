@@ -11,6 +11,8 @@ import (
 )
 
 func createMonitoringService(t *testing.T) *Monitoring {
+	t.Helper()
+
 	cfg := config.LoadConfig(".")
 
 	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
@@ -23,6 +25,7 @@ func createMonitoringService(t *testing.T) *Monitoring {
 }
 
 func TestMonitoringAdd(t *testing.T) {
+	t.Parallel()
 
 	s := createMonitoringService(t)
 
@@ -34,6 +37,7 @@ func TestMonitoringAdd(t *testing.T) {
 }
 
 func TestMonitoringGC(t *testing.T) {
+	t.Parallel()
 
 	s := createMonitoringService(t)
 

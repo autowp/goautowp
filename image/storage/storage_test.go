@@ -5,6 +5,7 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
@@ -16,26 +17,31 @@ const TestImageFile = "./_files/Towers_Schiphol_small.jpg"
 const TestImageFile2 = "./_files/mazda3_sedan_us-spec_11.jpg"
 
 func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
+	t.Parallel()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
-	mw, err := NewStorage(db, cfg.ImageStorage)
+
+	goquDB := goqu.New("mysql", db)
+
+	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageId, err := mw.AddImageFromFile(TestImageFile, "brand", GenerateOptions{
+	imageID, err := mw.AddImageFromFile(TestImageFile, "brand", GenerateOptions{
 		Pattern: "folder/file",
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, imageId)
+	require.NotEmpty(t, imageID)
 
-	imageInfo, err := mw.Image(imageId)
+	imageInfo, err := mw.Image(imageID)
 	require.NoError(t, err)
 
 	require.Contains(t, imageInfo.Src(), "folder/file")
 
 	resp, err := http.Get(imageInfo.Src())
 	require.NoError(t, err)
+
 	defer util.Close(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -44,35 +50,40 @@ func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, filesize.Size(), len(body))
 
-	err = mw.ChangeImageName(imageId, GenerateOptions{
+	err = mw.ChangeImageName(imageID, GenerateOptions{
 		Pattern: "new-name/by-pattern",
 	})
 	require.NoError(t, err)
 
-	err = mw.RemoveImage(imageId)
+	err = mw.RemoveImage(imageID)
 	require.NoError(t, err)
 
-	result, err := mw.Image(imageId)
+	result, err := mw.Image(imageID)
 	require.NoError(t, err)
 	require.Nil(t, result)
 }
 
 func TestAddImageFromBlobAndFormat(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
-	mw, err := NewStorage(db, cfg.ImageStorage)
+
+	goquDB := goqu.New("mysql", db)
+
+	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
 	blob, err := ioutil.ReadFile(TestImageFile)
 	require.NoError(t, err)
 
-	imageId, err := mw.AddImageFromBlob(blob, "test", GenerateOptions{})
+	imageID, err := mw.AddImageFromBlob(blob, "test", GenerateOptions{})
 	require.NoError(t, err)
 
-	require.NotEmpty(t, imageId)
+	require.NotEmpty(t, imageID)
 
-	formattedImage, err := mw.FormattedImage(imageId, "test")
+	formattedImage, err := mw.FormattedImage(imageID, "test")
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())
@@ -82,20 +93,25 @@ func TestAddImageFromBlobAndFormat(t *testing.T) {
 }
 
 func TestS3AddImageWithPreferredName(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
-	mw, err := NewStorage(db, cfg.ImageStorage)
+
+	goquDB := goqu.New("mysql", db)
+
+	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageId, err := mw.AddImageFromFile(TestImageFile, "test", GenerateOptions{
+	imageID, err := mw.AddImageFromFile(TestImageFile, "test", GenerateOptions{
 		PreferredName: "zeliboba",
 	})
 	require.NoError(t, err)
 
-	require.NotEmpty(t, imageId)
+	require.NotEmpty(t, imageID)
 
-	image, err := mw.Image(imageId)
+	image, err := mw.Image(imageID)
 	require.NoError(t, err)
 	require.NotEmpty(t, image.src)
 	require.NotEmpty(t, image.height)
@@ -105,31 +121,37 @@ func TestS3AddImageWithPreferredName(t *testing.T) {
 }
 
 func TestAddImageAndCrop(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
-	mw, err := NewStorage(db, cfg.ImageStorage)
+
+	goquDB := goqu.New("mysql", db)
+
+	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageId, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
+	imageID, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
-	require.NotEmpty(t, imageId)
+	require.NotEmpty(t, imageID)
 
 	crop := sampler.Crop{Left: 1024, Top: 768, Width: 1020, Height: 500}
 
-	err = mw.SetImageCrop(imageId, crop)
+	err = mw.SetImageCrop(imageID, crop)
 	require.NoError(t, err)
 
-	c, err := mw.imageCrop(imageId)
+	c, err := mw.imageCrop(imageID)
 	require.NoError(t, err)
 
 	require.EqualValues(t, crop, *c)
 
-	imageInfo, err := mw.Image(imageId)
+	imageInfo, err := mw.Image(imageID)
 	require.NoError(t, err)
 
 	resp, err := http.Get(imageInfo.Src())
 	require.NoError(t, err)
+
 	defer util.Close(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -139,7 +161,7 @@ func TestAddImageAndCrop(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, filesize.Size(), len(body))
 
-	formattedImage, err := mw.FormattedImage(imageId, "picture-gallery")
+	formattedImage, err := mw.FormattedImage(imageID, "picture-gallery")
 	require.NoError(t, err)
 
 	require.EqualValues(t, 1020, formattedImage.Width())
@@ -151,55 +173,65 @@ func TestAddImageAndCrop(t *testing.T) {
 }
 
 func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
-	mw, err := NewStorage(db, cfg.ImageStorage)
+
+	goquDB := goqu.New("mysql", db)
+
+	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageId1, err := mw.AddImageFromFile(TestImageFile, "brand", GenerateOptions{})
+	imageID1, err := mw.AddImageFromFile(TestImageFile, "brand", GenerateOptions{})
 	require.NoError(t, err)
-	require.NotEmpty(t, imageId1)
+	require.NotEmpty(t, imageID1)
 
-	err = mw.Flop(imageId1)
-	require.NoError(t, err)
-
-	imageId2, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
-	require.NoError(t, err)
-	require.NotEmpty(t, imageId2)
-
-	err = mw.Normalize(imageId2)
+	err = mw.Flop(imageID1)
 	require.NoError(t, err)
 
-	images, err := mw.images([]int{imageId1, imageId2})
+	imageID2, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
+	require.NoError(t, err)
+	require.NotEmpty(t, imageID2)
+
+	err = mw.Normalize(imageID2)
+	require.NoError(t, err)
+
+	images, err := mw.images([]int{imageID1, imageID2})
 	require.NoError(t, err)
 
 	require.EqualValues(t, 2, len(images))
 
-	formattedImages, err := mw.FormattedImages([]int{imageId1, imageId2}, "test")
+	formattedImages, err := mw.FormattedImages([]int{imageID1, imageID2}, "test")
 	require.NoError(t, err)
 	require.EqualValues(t, 2, len(formattedImages))
 
 	// re-request
-	formattedImages, err = mw.FormattedImages([]int{imageId1, imageId2}, "test")
+	formattedImages, err = mw.FormattedImages([]int{imageID1, imageID2}, "test")
 	require.NoError(t, err)
 	require.EqualValues(t, 2, len(formattedImages))
 }
 
 func TestRequestFormattedImageAgain(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
-	mw, err := NewStorage(db, cfg.ImageStorage)
+
+	goquDB := goqu.New("mysql", db)
+
+	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageId, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
+	imageID, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
-	require.NotEmpty(t, imageId)
+	require.NotEmpty(t, imageID)
 
 	formatName := "test"
 
-	formattedImage, err := mw.FormattedImage(imageId, formatName)
+	formattedImage, err := mw.FormattedImage(imageID, formatName)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())
@@ -207,7 +239,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 	require.True(t, formattedImage.FileSize() > 0)
 	require.NotEmpty(t, formattedImage.Src())
 
-	formattedImage, err = mw.FormattedImage(imageId, formatName)
+	formattedImage, err = mw.FormattedImage(imageID, formatName)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())

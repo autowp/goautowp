@@ -10,6 +10,8 @@ import (
 )
 
 func TestTopBrandsListRu(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig("../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
@@ -40,6 +42,8 @@ func TestTopBrandsListRu(t *testing.T) {
 }
 
 func TestTopBrandsListZh(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig("../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)

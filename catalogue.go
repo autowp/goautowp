@@ -40,21 +40,26 @@ func (s *Catalogue) getVehicleTypesTree(parentID int32) ([]*VehicleType, error) 
 
 	rows, err := sqSelect.RunWith(s.db).Query()
 	defer util.Close(rows)
+
 	if err != nil {
 		return nil, err
 	}
 
 	result := []*VehicleType{}
+
 	for rows.Next() {
 		var r VehicleType
 		err = rows.Scan(&r.Id, &r.Name)
+
 		if err != nil {
 			return nil, err
 		}
+
 		r.Childs, err = s.getVehicleTypesTree(r.Id)
 		if err != nil {
 			return nil, err
 		}
+
 		result = append(result, &r)
 	}
 
@@ -77,16 +82,20 @@ func (s *Catalogue) getSpecs(parentID int32) ([]*Spec, error) {
 	defer util.Close(rows)
 
 	var specs []*Spec
+
 	for rows.Next() {
 		var r Spec
 		err = rows.Scan(&r.Id, &r.Name, &r.ShortName)
 		if err != nil {
 			return nil, err
 		}
+
 		childs, err := s.getSpecs(r.Id)
+
 		if err != nil {
 			return nil, err
 		}
+
 		r.Childs = childs
 		specs = append(specs, &r)
 	}
@@ -106,9 +115,11 @@ func (s *Catalogue) getPerspectiveGroups(pageID int32) ([]*PerspectiveGroup, err
 	var wg sync.WaitGroup
 
 	var perspectiveGroups []*PerspectiveGroup
+
 	for rows.Next() {
 		var r PerspectiveGroup
 		err = rows.Scan(&r.Id, &r.Name)
+
 		if err != nil {
 			return nil, err
 		}

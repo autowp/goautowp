@@ -29,8 +29,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 	}
 
 	// fit by widest
-	widest := format.Widest()
-	if widest > 0 {
+	if widest := format.Widest(); widest > 0 {
 		err := s.cropToWidest(decomposited, widest)
 		if err != nil {
 			return nil, err
@@ -38,8 +37,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 	}
 
 	// fit by highest
-	highest := format.Highest()
-	if highest > 0 {
+	if highest := format.Highest(); highest > 0 {
 		err := s.cropToHighest(decomposited, highest)
 		if err != nil {
 			return nil, err
@@ -49,6 +47,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 	// check for monotone background extend possibility
 	fWidth := format.Width()
 	fHeight := format.Height()
+
 	if format.IsProportionalCrop() && fWidth > 0 && fHeight > 0 {
 		fRatio := float64(fWidth) / float64(fHeight)
 		cRatio := float64(decomposited.GetImageWidth()) / float64(decomposited.GetImageHeight())
@@ -76,10 +75,13 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 		defer pw.Destroy()
 		pw.SetColor(background)
 		err := decomposited.SetBackgroundColor(pw)
+
 		if err != nil {
 			return nil, err
 		}
+
 		err = decomposited.SetImageBackgroundColor(pw)
+
 		if err != nil {
 			return nil, err
 		}
@@ -120,6 +122,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 	}
 
 	mw = decomposited
+
 	if decomposited.GetImageFormat() == "GIF" {
 		decomposited.OptimizeImageLayers()
 		mw = decomposited.DeconstructImages()
@@ -134,6 +137,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 	}
 
 	imageFormat := format.Format()
+
 	if imageFormat != "" {
 		err := mw.SetImageFormat(imageFormat)
 		if err != nil {
@@ -179,6 +183,7 @@ func (s Sampler) cropImage(mw *imagick.MagickWand, crop Crop, format Format) err
 	// try to fix height overflow
 	bottom := cropTop + cropHeight
 	overflow := bottom - height
+
 	if overflow > 0 && overflow <= 1 {
 		cropHeight -= overflow
 	}
@@ -208,11 +213,14 @@ func (s Sampler) cropImage(mw *imagick.MagickWand, crop Crop, format Format) err
 			if targetHeight > height {
 				targetHeight = height
 			}
+
 			addedHeight := targetHeight - cropHeight
 			cropTop -= addedHeight / 2
+
 			if cropTop < 0 {
 				cropTop = 0
 			}
+
 			cropHeight = targetHeight
 		} else {
 			// crop higher than format, need more width
@@ -237,6 +245,7 @@ func (s Sampler) crop(mw *imagick.MagickWand, width int, height int, left int, t
 	if err != nil {
 		return err
 	}
+
 	return mw.CropImage(uint(width), uint(height), left, top)
 }
 
@@ -282,7 +291,9 @@ func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 	if topColor != nil {
 		defer topColor.Destroy()
 	}
+
 	bottomColor := s.extendBottomColor(mw)
+
 	if bottomColor != nil {
 		defer bottomColor.Destroy()
 	}
@@ -324,6 +335,7 @@ func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 				float64(mw.GetImageWidth()),
 				float64(topHeight),
 			)
+
 			return mw.DrawImage(draw)
 		}
 
@@ -338,6 +350,7 @@ func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 				float64(mw.GetImageWidth()),
 				float64(mw.GetImageHeight()),
 			)
+
 			return mw.DrawImage(draw)
 		}
 	}
@@ -355,6 +368,7 @@ func (s Sampler) extendHorizontal(mw *imagick.MagickWand, format Format) error {
 	if leftColor != nil {
 		defer leftColor.Destroy()
 	}
+
 	rightColor := s.extendRightColor(mw)
 	if rightColor != nil {
 		defer rightColor.Destroy()
@@ -397,6 +411,7 @@ func (s Sampler) extendHorizontal(mw *imagick.MagickWand, format Format) error {
 				float64(leftWidth),
 				float64(mw.GetImageHeight()),
 			)
+
 			return mw.DrawImage(draw)
 		}
 
@@ -411,6 +426,7 @@ func (s Sampler) extendHorizontal(mw *imagick.MagickWand, format Format) error {
 				float64(mw.GetImageWidth()),
 				float64(mw.GetImageHeight()),
 			)
+
 			return mw.DrawImage(draw)
 		}
 	}
@@ -447,15 +463,14 @@ func (s Sampler) extendRightColor(mw *imagick.MagickWand) *imagick.PixelWand {
 }
 
 func (s Sampler) extendEdgeColor(iterator *imagick.PixelIterator) *imagick.PixelWand {
-
 	r := make([]float64, 0)
 	g := make([]float64, 0)
 	b := make([]float64, 0)
 
 	for _, pixel := range iterator.GetNextIteratorRow() {
 		r = append(r, pixel.GetRed())
-		g = append(r, pixel.GetGreen())
-		b = append(r, pixel.GetBlue())
+		g = append(g, pixel.GetGreen())
+		b = append(b, pixel.GetBlue())
 	}
 
 	red := s.standardDeviation(r)
@@ -483,6 +498,7 @@ func (s Sampler) standardDeviation(values []float64) float64 {
 
 	mean := arraySum(values) / float64(count)
 	carry := 0.0
+
 	for _, val := range values {
 		diff := val - mean
 		carry += diff * diff
@@ -496,11 +512,11 @@ func arraySum(values []float64) float64 {
 	for _, v := range values {
 		sum += v
 	}
+
 	return sum
 }
 
 func (s Sampler) convertByInnerFit(mw *imagick.MagickWand, format Format) error {
-
 	srcWidth := int(mw.GetImageWidth())
 	srcHeight := int(mw.GetImageHeight())
 	srcRatio := float64(srcWidth) / float64(srcHeight)
@@ -521,6 +537,7 @@ func (s Sampler) convertByInnerFit(mw *imagick.MagickWand, format Format) error 
 			scaleHeight := formatHeight
 			scaleWidth := int(math.Round(float64(scaleHeight) * srcRatio))
 			err := s.scaleImage(mw, scaleWidth, scaleHeight)
+
 			if err != nil {
 				return err
 			}
@@ -557,6 +574,7 @@ func (s Sampler) convertByInnerFit(mw *imagick.MagickWand, format Format) error 
 		if err != nil {
 			return err
 		}
+
 		return s.scaleImage(mw, formatWidth, formatHeight)
 	}
 
@@ -584,6 +602,7 @@ func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error 
 			scaleHeight := formatHeight
 			scaleWidth := int(math.Round(float64(scaleHeight) * srcRatio))
 			err := s.scaleImage(mw, scaleWidth, scaleHeight)
+
 			if err != nil {
 				return err
 			}
@@ -592,11 +611,11 @@ func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error 
 			scaleWidth := formatWidth
 			scaleHeight := int(math.Round(float64(scaleWidth) / srcRatio))
 			err := s.scaleImage(mw, scaleWidth, scaleHeight)
+
 			if err != nil {
 				return err
 			}
 		}
-
 	} else {
 		var scaleWidth int
 		var scaleHeight int
@@ -647,18 +666,22 @@ func (s Sampler) convertByMaximumFit(mw *imagick.MagickWand, format Format) erro
 			// resize by height
 			scaleHeight := formatHeight
 			scaleWidth := int(math.Round(float64(scaleHeight) * srcRatio))
+
 			return s.scaleImage(mw, scaleWidth, scaleHeight)
 		} else if !widthLess {
 			// resize by width
 			scaleWidth := formatWidth
 			scaleHeight := int(math.Round(float64(scaleWidth) / srcRatio))
+
 			return s.scaleImage(mw, scaleWidth, scaleHeight)
 		}
+
 		return nil
 	}
 
 	var scaleWidth int
 	var scaleHeight int
+
 	// высчитываем размеры обрезания
 	if ratio < srcRatio {
 		scaleWidth = formatWidth

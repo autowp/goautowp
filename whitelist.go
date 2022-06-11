@@ -31,7 +31,6 @@ func NewWhitelist(db *pgxpool.Pool) (*Whitelist, error) {
 
 // MatchAuto MatchAuto
 func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
-
 	ipText := ip.String()
 	ipWithDashes := strings.Replace(ipText, ".", "-", -1)
 
@@ -50,18 +49,20 @@ func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
 	}
 
 	for _, host := range hosts {
-
 		logrus.Info(host + " ")
 
 		if host == msnHost {
 			return true, "msnbot autodetect"
 		}
+
 		if host == yandexComHost {
 			return true, "yandex.com autodetect"
 		}
+
 		if host == googlebotHost {
 			return true, "googlebot autodetect"
 		}
+
 		if isIPv6 && host == yandexComIPv6Host {
 			return true, "yandex.com ipv6 autodetect"
 		}
@@ -89,6 +90,7 @@ func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 		FROM ip_whitelist
 		WHERE ip = $1
 	`, ip.String()).Scan(&item.IP, item.Description)
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -107,6 +109,7 @@ func (s *Whitelist) List() ([]*APITrafficWhitelistItem, error) {
 		SELECT ip, description
 		FROM ip_whitelist
 	`)
+
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +135,7 @@ func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 		FROM ip_whitelist
 		WHERE ip = $1
 	`, ip.String()).Scan(&exists)
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
@@ -146,5 +150,6 @@ func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 // Remove IP from whitelist
 func (s *Whitelist) Remove(ip net.IP) error {
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_whitelist WHERE ip = $1", ip.String())
+
 	return err
 }

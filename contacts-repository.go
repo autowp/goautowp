@@ -21,9 +21,11 @@ func NewContactsRepository(db *goqu.Database) *ContactsRepository {
 func (s *ContactsRepository) isExists(id int64, contactID int64) (bool, error) {
 	v := 0
 	err := s.autowpDB.QueryRow("SELECT 1 FROM contact WHERE user_id = ? and contact_user_id = ?", id, contactID).Scan(&v)
+
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
+
 	if err != nil {
 		return false, err
 	}

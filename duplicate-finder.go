@@ -36,7 +36,6 @@ type DuplicateFinderInputMessage struct {
 
 // NewDuplicateFinder constructor
 func NewDuplicateFinder(db *goqu.Database) (*DuplicateFinder, error) {
-
 	s := &DuplicateFinder{
 		db: db,
 	}
@@ -52,6 +51,7 @@ func connectRabbitMQ(config string) (*amqp.Connection, error) {
 
 	var rabbitMQ *amqp.Connection
 	var err error
+
 	for {
 		rabbitMQ, err = amqp.Dial(config)
 		if err == nil {
@@ -72,10 +72,10 @@ func connectRabbitMQ(config string) (*amqp.Connection, error) {
 
 // Listen for incoming messages
 func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan bool) error {
-
 	rabbitMQ, err := connectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)
+
 		return err
 	}
 
@@ -116,10 +116,12 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 		case <-quitChan:
 			logrus.Info("DuplicateFinder got quit signal")
 			done = true
+
 			break
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
 				sentry.CaptureException(fmt.Errorf("unexpected mime `%v`", d.ContentType))
+
 				continue
 			}
 
@@ -127,6 +129,7 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 			err := json.Unmarshal(d.Body, &message)
 			if err != nil {
 				sentry.CaptureException(fmt.Errorf("failed to parse json `%v`: %s", err, d.Body))
+
 				continue
 			}
 
@@ -138,6 +141,7 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 	}
 
 	logrus.Info("Disconnecting RabbitMQ")
+
 	return rabbitMQ.Close()
 }
 
@@ -181,7 +185,9 @@ func getFileHash(reader io.Reader) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	hash, err := goimagehash.PerceptionHash(img)
+
 	if err != nil {
 		return 0, err
 	}
@@ -231,7 +237,9 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	for rows.Next() {
 		var pictureID int
 		var distance int
+
 		serr := rows.Scan(&pictureID, &distance)
+
 		if serr != nil {
 			return serr
 		}

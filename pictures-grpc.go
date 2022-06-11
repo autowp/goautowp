@@ -60,7 +60,10 @@ func (s *PicturesGRPCServer) Vote(ctx context.Context, in *PicturesVoteRequest) 
 	}, nil
 }
 
-func (s *PicturesGRPCServer) CreateModerVoteTemplate(ctx context.Context, in *ModerVoteTemplate) (*ModerVoteTemplate, error) {
+func (s *PicturesGRPCServer) CreateModerVoteTemplate(
+	ctx context.Context,
+	in *ModerVoteTemplate,
+) (*ModerVoteTemplate, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -102,7 +105,10 @@ func (s *PicturesGRPCServer) CreateModerVoteTemplate(ctx context.Context, in *Mo
 	}, nil
 }
 
-func (s *PicturesGRPCServer) DeleteModerVoteTemplate(ctx context.Context, in *DeleteModerVoteTemplateRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) DeleteModerVoteTemplate(
+	ctx context.Context,
+	in *DeleteModerVoteTemplateRequest,
+) (*emptypb.Empty, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

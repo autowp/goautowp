@@ -19,9 +19,13 @@ import (
 const TestImageFile = "./image/storage/_files/Towers_Schiphol_small.jpg"
 
 func TestCreateUpdateDeleteUser(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+
 	require.NoError(t, err)
+
 	defer util.Close(conn)
 	client := NewUsersClient(conn)
 
@@ -100,9 +104,13 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 }
 
 func TestCreateUserWithEmptyLastName(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+
 	require.NoError(t, err)
+
 	defer util.Close(conn)
 	client := NewUsersClient(conn)
 

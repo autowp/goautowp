@@ -13,17 +13,18 @@ import (
 )
 
 func TestCreateDeleteContact(t *testing.T) {
-
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
+
 	defer util.Close(conn)
+
 	client := NewContactsClient(conn)
 
 	cfg := config.LoadConfig(".")
 
-	//cnt := NewContainer(cfg)
-	//defer util.Close(cnt)
+	// cnt := NewContainer(cfg)
+	// defer util.Close(cnt)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	usersClient := NewUsersClient(conn)
@@ -68,13 +69,16 @@ func TestCreateDeleteContact(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, items)
+
 	var contactUser *Contact
+
 	for _, i := range items.Items {
 		if i.ContactUserId == tester.Id {
 			contactUser = i
 			break
 		}
 	}
+
 	require.NotNil(t, contactUser)
 	require.NotEmpty(t, contactUser.GetUser().GetGravatar())
 

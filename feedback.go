@@ -26,8 +26,12 @@ type CreateFeedbackRequest struct {
 }
 
 // NewFeedback constructor
-func NewFeedback(config config.FeedbackConfig, recaptchaConfig config.RecaptchaConfig, captchaEnabled bool, emailSender email.Sender) (*Feedback, error) {
-
+func NewFeedback(
+	config config.FeedbackConfig,
+	recaptchaConfig config.RecaptchaConfig,
+	captchaEnabled bool,
+	emailSender email.Sender,
+) (*Feedback, error) {
 	s := &Feedback{
 		config:          config,
 		recaptchaConfig: recaptchaConfig,
@@ -39,7 +43,6 @@ func NewFeedback(config config.FeedbackConfig, recaptchaConfig config.RecaptchaC
 }
 
 func (s *Feedback) Create(request CreateFeedbackRequest) ([]*errdetails.BadRequest_FieldViolation, error) {
-
 	InvalidParams, err := request.Validate(s.captchaEnabled, request.IP)
 	if err != nil {
 		return nil, err
@@ -56,9 +59,12 @@ func (s *Feedback) Create(request CreateFeedbackRequest) ([]*errdetails.BadReque
 	return nil, err
 }
 
-func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*errdetails.BadRequest_FieldViolation, error) {
-
+func (s *CreateFeedbackRequest) Validate(
+	captchaEnabled bool,
+	ip string,
+) ([]*errdetails.BadRequest_FieldViolation, error) {
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
+
 	var problems []string
 	var err error
 
@@ -67,9 +73,11 @@ func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*err
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}},
 	}
 	s.Name, problems, err = nameInputFilter.IsValidString(s.Name)
+
 	if err != nil {
 		return nil, err
 	}
+
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "name",
@@ -81,10 +89,12 @@ func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*err
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}, &validation.EmailAddress{}},
 	}
+
 	s.Email, problems, err = emailInputFilter.IsValidString(s.Email)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "email",
@@ -96,10 +106,12 @@ func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*err
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}},
 	}
+
 	s.Message, problems, err = messageInputFilter.IsValidString(s.Message)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, fv := range problems {
 		result = append(result, &errdetails.BadRequest_FieldViolation{
 			Field:       "message",
@@ -117,10 +129,12 @@ func (s *CreateFeedbackRequest) Validate(captchaEnabled bool, ip string) ([]*err
 				},
 			},
 		}
+
 		s.Captcha, problems, err = captchaInputFilter.IsValidString(s.Captcha)
 		if err != nil {
 			return nil, err
 		}
+
 		for _, fv := range problems {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "captcha",

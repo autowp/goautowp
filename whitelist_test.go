@@ -10,6 +10,8 @@ import (
 )
 
 func createWhitelistService(t *testing.T) *Whitelist {
+	t.Helper()
+
 	cfg := config.LoadConfig(".")
 
 	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
@@ -22,6 +24,7 @@ func createWhitelistService(t *testing.T) *Whitelist {
 }
 
 func TestMatchAuto(t *testing.T) {
+	t.Parallel()
 
 	s := createWhitelistService(t)
 
@@ -44,6 +47,7 @@ func TestMatchAuto(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
+	t.Parallel()
 
 	s := createWhitelistService(t)
 

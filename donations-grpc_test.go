@@ -11,6 +11,8 @@ import (
 )
 
 func TestGetVODData(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	conn, err := grpc.DialContext(
 		ctx,
@@ -19,7 +21,9 @@ func TestGetVODData(t *testing.T) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	require.NoError(t, err)
+
 	defer util.Close(conn)
+
 	client := NewDonationsClient(conn)
 
 	r, err := client.GetVODData(ctx, &emptypb.Empty{})

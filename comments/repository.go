@@ -58,19 +58,21 @@ func (s *Repository) GetVotes(id int64) (*GetVotesResult, error) {
 
 	positiveVotes := make([]users.DBUser, 0)
 	negativeVotes := make([]users.DBUser, 0)
+
 	for rows.Next() {
 		var r users.DBUser
 		var vote int
+
 		err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight, &vote)
 		if err != nil {
 			return nil, err
 		}
+
 		if vote > 0 {
 			positiveVotes = append(positiveVotes, r)
 		} else {
 			negativeVotes = append(negativeVotes, r)
 		}
-
 	}
 
 	return &GetVotesResult{
@@ -79,24 +81,26 @@ func (s *Repository) GetVotes(id int64) (*GetVotesResult, error) {
 	}, nil
 }
 
-func (s *Repository) Subscribe(ctx context.Context, userId int64, commentsType CommentType, itemId int64) error {
+func (s *Repository) Subscribe(ctx context.Context, userID int64, commentsType CommentType, itemId int64) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT IGNORE INTO comment_topic_subscribe (type_id, item_id, user_id, sent)
 		VALUES (?, ?, ?, 0)
-    `, commentsType, itemId, userId)
+    `, commentsType, itemId, userID)
+
 	return err
 }
 
-func (s *Repository) UnSubscribe(ctx context.Context, userId int64, commentsType CommentType, itemId int64) error {
+func (s *Repository) UnSubscribe(ctx context.Context, userID int64, commentsType CommentType, itemId int64) error {
 	_, err := s.db.ExecContext(
 		ctx,
 		"DELETE FROM comment_topic_subscribe WHERE type_id = ? AND item_id = ? AND user_id = ?",
-		commentsType, itemId, userId,
+		commentsType, itemId, userID,
 	)
+
 	return err
 }
 
-func (s *Repository) View(ctx context.Context, userId int64, commentsType CommentType, itemId int64) error {
+func (s *Repository) View(ctx context.Context, userID int64, commentsType CommentType, itemId int64) error {
 	_, err := s.db.ExecContext(
 		ctx,
 		`
@@ -104,14 +108,17 @@ func (s *Repository) View(ctx context.Context, userId int64, commentsType Commen
             VALUES (?, ?, ?, NOW())
             ON DUPLICATE KEY UPDATE timestamp = values(timestamp)
         `,
-		userId, commentsType, itemId,
+		userID, commentsType, itemId,
 	)
+
 	return err
 }
 
-func (s *Repository) QueueDeleteMessage(ctx context.Context, commentId int64, byUserId int64) error {
+func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, byUserId int64) error {
 	var moderatorAttention ModeratorAttention
-	err := s.db.QueryRowContext(ctx, "SELECT moderator_attention FROM comment_message WHERE id = ?", commentId).Scan(&moderatorAttention)
+
+	err := s.db.QueryRowContext(ctx, "SELECT moderator_attention FROM comment_message WHERE id = ?", commentID).Scan(&moderatorAttention)
+
 	if err != nil {
 		return err
 	}
@@ -126,77 +133,84 @@ func (s *Repository) QueueDeleteMessage(ctx context.Context, commentId int64, by
 			UPDATE comment_message SET deleted = 1, deleted_by = ?, delete_date = NOW()
             WHERE id = ?
         `,
-		byUserId, commentId,
+		byUserId, commentID,
 	)
 
 	return err
 }
 
-func (s *Repository) RestoreMessage(ctx context.Context, commentId int64) error {
+func (s *Repository) RestoreMessage(ctx context.Context, commentID int64) error {
 	_, err := s.db.ExecContext(
 		ctx,
 		"UPDATE comment_message SET deleted = 0, delete_date = null WHERE id = ?",
-		commentId,
+		commentID,
 	)
+
 	return err
 }
 
-func (s *Repository) GetCommentType(ctx context.Context, commentId int64) (CommentType, error) {
+func (s *Repository) GetCommentType(ctx context.Context, commentID int64) (CommentType, error) {
 	var commentType CommentType
-	err := s.db.QueryRowContext(ctx, "SELECT type_id FROM comment_message WHERE id = ?", commentId).Scan(&commentType)
+	err := s.db.QueryRowContext(ctx, "SELECT type_id FROM comment_message WHERE id = ?", commentID).Scan(&commentType)
+
 	return commentType, err
 }
 
-func (s *Repository) MoveMessage(ctx context.Context, commentId int64, dstType CommentType, dstItemId int64) error {
+func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType CommentType, dstItemID int64) error {
 	var srcType CommentType
-	var srcItemId int64
-	err := s.db.QueryRowContext(ctx, "SELECT type_id, item_id FROM comment_message WHERE id = ?", commentId).Scan(&srcType, &srcItemId)
+	var srcItemID int64
+
+	err := s.db.QueryRowContext(ctx, "SELECT type_id, item_id FROM comment_message WHERE id = ?", commentID).Scan(&srcType, &srcItemID)
+
 	if err != nil {
 		return err
 	}
 
-	if srcItemId == dstItemId && srcType == dstType {
+	if srcItemID == dstItemID && srcType == dstType {
 		return nil
 	}
 
 	_, err = s.db.ExecContext(
 		ctx,
 		"UPDATE comment_message SET type_id = ?, item_id = ?, parent_id = null WHERE id = ?",
-		dstType, dstItemId, commentId,
+		dstType, dstItemID, commentID,
 	)
 	if err != nil {
 		return err
 	}
 
-	err = s.moveMessageRecursive(ctx, commentId, dstType, dstItemId)
+	err = s.moveMessageRecursive(ctx, commentID, dstType, dstItemID)
 	if err != nil {
 		return err
 	}
 
-	err = s.updateTopicStat(ctx, srcType, srcItemId)
+	err = s.updateTopicStat(ctx, srcType, srcItemID)
 	if err != nil {
 		return err
 	}
-	return s.updateTopicStat(ctx, dstType, dstItemId)
+
+	return s.updateTopicStat(ctx, dstType, dstItemID)
 }
 
-func (s *Repository) moveMessageRecursive(ctx context.Context, parentId int64, dstType CommentType, dstItemId int64) error {
+func (s *Repository) moveMessageRecursive(ctx context.Context, parentID int64, dstType CommentType, dstItemId int64) error {
 	_, err := s.db.ExecContext(
 		ctx,
 		"UPDATE comment_message SET type_id = ?, item_id = ? WHERE id = ?",
-		dstType, dstItemId, parentId,
+		dstType, dstItemId, parentID,
 	)
 	if err != nil {
 		return err
 	}
 
-	rows, err := s.db.QueryContext(ctx, "SELECT id FROM comment_message WHERE parent_id = ?", parentId)
-	if err != nil && err != sql.ErrNoRows {
+	rows, err := s.db.QueryContext(ctx, "SELECT id FROM comment_message WHERE parent_id = ?", parentID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
+
 	for rows.Next() {
 		var id int64
 		err = rows.Scan(&id)
+
 		if err != nil {
 			return err
 		}
@@ -217,6 +231,7 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 		"SELECT COUNT(1), MAX(datetime) FROM comment_message WHERE type_id = ? AND item_id = ?",
 		commentType, itemId,
 	).Scan(&messagesCount, &lastUpdate)
+
 	if err != nil {
 		return err
 	}
@@ -227,6 +242,7 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 			"DELETE FROM comment_topic WHERE type_id = ? AND item_id = ?",
 			commentType, itemId,
 		)
+
 		return err
 	}
 
@@ -242,7 +258,7 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 	return err
 }
 
-func (s *Repository) VoteComment(ctx context.Context, userId int64, commentId int64, vote int32) (int32, error) {
+func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID int64, vote int32) (int32, error) {
 
 	if vote > 0 {
 		vote = 1
@@ -250,15 +266,16 @@ func (s *Repository) VoteComment(ctx context.Context, userId int64, commentId in
 		vote = -1
 	}
 
-	var authorId int64
+	var authorID int64
 	err := s.db.QueryRowContext(
-		ctx, "SELECT author_id FROM comment_message WHERE id = ?", commentId,
-	).Scan(&authorId)
+		ctx, "SELECT author_id FROM comment_message WHERE id = ?", commentID,
+	).Scan(&authorID)
+
 	if err != nil {
 		return 0, err
 	}
 
-	if authorId == userId {
+	if authorID == userID {
 		return 0, errors.New("self-vote forbidden")
 	}
 
@@ -269,7 +286,7 @@ func (s *Repository) VoteComment(ctx context.Context, userId int64, commentId in
 			VALUES (?, ?, ?)
 			ON DUPLICATE KEY UPDATE vote = VALUES(vote)
         `,
-		commentId, userId, vote,
+		commentID, userID, vote,
 	)
 	if err != nil {
 		return 0, err
@@ -284,7 +301,7 @@ func (s *Repository) VoteComment(ctx context.Context, userId int64, commentId in
 		return 0, errors.New("already voted")
 	}
 
-	newVote, err := s.updateVote(ctx, commentId)
+	newVote, err := s.updateVote(ctx, commentID)
 	if err != nil {
 		return 0, err
 	}
@@ -292,19 +309,20 @@ func (s *Repository) VoteComment(ctx context.Context, userId int64, commentId in
 	return newVote, nil
 }
 
-func (s *Repository) updateVote(ctx context.Context, commentId int64) (int32, error) {
+func (s *Repository) updateVote(ctx context.Context, commentID int64) (int32, error) {
 	var count int32
 	err := s.db.QueryRowContext(
 		ctx,
 		"SELECT sum(vote) FROM comment_vote WHERE comment_id = ?",
-		commentId,
+		commentID,
 	).Scan(&count)
+
 	if err != nil {
 		return 0, err
 	}
 
 	_, err = s.db.ExecContext(
-		ctx, "UPDATE comment_message SET vote = ? WHERE id = ?", count, commentId,
+		ctx, "UPDATE comment_message SET vote = ? WHERE id = ?", count, commentID,
 	)
 
 	return count, err

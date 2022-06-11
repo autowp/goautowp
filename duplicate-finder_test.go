@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/autowp/goautowp/config"
+	"github.com/doug-martin/goqu/v9"
 	"io"
 	"os"
 	"path"
@@ -32,11 +33,11 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func addImage(t *testing.T, db *sql.DB, filepath string) int {
-
 	_, filename := path.Split(filepath)
 	extension := path.Ext(filename)
 	name := strings.TrimSuffix(filename, extension)
@@ -59,6 +60,7 @@ func addImage(t *testing.T, db *sql.DB, filepath string) int {
 		VALUES (?, 1, 1, 1, "picture")
 	`)
 	require.NoError(t, err)
+
 	defer util.Close(stmt)
 
 	res, err := stmt.Exec(newPath)
@@ -71,7 +73,6 @@ func addImage(t *testing.T, db *sql.DB, filepath string) int {
 }
 
 func addPicture(t *testing.T, db *sql.DB, filepath string) int {
-
 	imageID := addImage(t, db, filepath)
 
 	randBytes := make([]byte, 3)
@@ -85,6 +86,7 @@ func addPicture(t *testing.T, db *sql.DB, filepath string) int {
 		VALUES (?, ?, INET6_ATON("127.0.0.1"), NULL)
 	`)
 	require.NoError(t, err)
+
 	defer util.Close(stmt)
 
 	res, err := stmt.Exec(imageID, identity)
@@ -97,13 +99,14 @@ func addPicture(t *testing.T, db *sql.DB, filepath string) int {
 }
 
 func TestDuplicateFinder(t *testing.T) {
-
 	cfg := config.LoadConfig(".")
 
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	df, err := NewDuplicateFinder(db)
+	goquDB := goqu.New("mysql", db)
+
+	df, err := NewDuplicateFinder(goquDB)
 	require.NoError(t, err)
 
 	id1 := addPicture(t, db, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")

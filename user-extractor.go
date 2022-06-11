@@ -25,6 +25,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	if i == nil {
 		return nil
 	}
+
 	return &APIImage{
 		Id:       int32(i.Id()),
 		Width:    int32(i.Width()),
@@ -36,6 +37,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 
 func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*APIUser, error) {
 	longAway := true
+
 	if row.LastOnline != nil {
 		date := time.Now().AddDate(0, -6, 0)
 		longAway = date.After(*row.LastOnline)

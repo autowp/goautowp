@@ -141,7 +141,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 	key := fmt.Sprintf("GO_PERSONS_2_%d_%s", pictureItemType, in.Language)
 
 	item, err := s.memcached.Get(key)
-	if err != nil && err != memcache.ErrCacheMiss {
+	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

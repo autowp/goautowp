@@ -60,7 +60,7 @@ var formatExt = map[string]string{
 }
 
 func (f Format) FormatExtension() (string, error) {
-	if len(f.format) <= 0 {
+	if len(f.format) == 0 {
 		return "", nil
 	}
 

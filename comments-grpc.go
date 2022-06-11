@@ -33,6 +33,7 @@ func convertType(commentsType CommentsType) (comments.CommentType, error) {
 	case CommentsType_FORUMS_TYPE_ID:
 		return comments.TypeIDForums, nil
 	}
+
 	return 0, fmt.Errorf("`%v` is unknown comments type identifier", commentsType)
 }
 
@@ -70,6 +71,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVo
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+
 		result = append(result, &CommentVote{
 			Value: CommentVote_POSITIVE,
 			User:  extracted,
@@ -81,6 +83,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVo
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+
 		result = append(result, &CommentVote{
 			Value: CommentVote_NEGATIVE,
 			User:  extracted,
@@ -102,7 +105,9 @@ func (s *CommentsGRPCServer) Subscribe(ctx context.Context, in *CommentsSubscrib
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
+
 	err = s.repository.Subscribe(ctx, userID, commentsType, in.GetItemId())
+
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
@@ -120,6 +125,7 @@ func (s *CommentsGRPCServer) UnSubscribe(ctx context.Context, in *CommentsUnSubs
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
+
 	err = s.repository.UnSubscribe(ctx, userID, commentsType, in.GetItemId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
@@ -138,10 +144,12 @@ func (s *CommentsGRPCServer) View(ctx context.Context, in *CommentsViewRequest) 
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
+
 	err = s.repository.View(ctx, userID, commentsType, in.GetItemId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
+
 	return &emptypb.Empty{}, nil
 }
 
@@ -189,6 +197,7 @@ func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCo
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
+
 	if commentType != comments.TypeIDForums {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -197,7 +206,9 @@ func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCo
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
+
 	err = s.repository.MoveMessage(ctx, in.GetCommentId(), commentsType, in.GetItemId())
+
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}

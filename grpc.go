@@ -244,6 +244,7 @@ func wrapFieldViolations(fv []*errdetails.BadRequest_FieldViolation) error {
 		FieldViolations: fv,
 	}
 	st, err := st.WithDetails(br)
+
 	if err != nil {
 		return status.Error(codes.Internal, err.Error())
 	}

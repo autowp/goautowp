@@ -180,7 +180,7 @@ func (s *Storage) FormattedImage(id int, formatName string) (*Image, error) {
 		WHERE formated_image.image_id = ? AND formated_image.format = ?
 	`, id, formatName).Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir)
 
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 

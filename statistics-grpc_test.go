@@ -24,10 +24,13 @@ func assertGridNotEmpty(grid []*PulseGrid) error {
 			}
 		}
 	}
+
 	return errors.New("grid is empty")
 }
 
 func TestStatisticsPulse(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
@@ -40,7 +43,9 @@ func TestStatisticsPulse(t *testing.T) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	require.NoError(t, err)
+
 	defer util.Close(conn)
+
 	statisticsClient := NewStatisticsClient(conn)
 
 	cfg := config.LoadConfig(".")
@@ -94,6 +99,8 @@ func TestStatisticsPulse(t *testing.T) {
 }
 
 func TestAboutData(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)

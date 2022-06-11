@@ -37,36 +37,42 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
 	RegisterContactsServer(grpcServer, contactsSrv)
 
 	donationsSrv, err := cnt.DonationsGRPCServer()
 	if err != nil {
 		panic(err)
 	}
+
 	RegisterDonationsServer(grpcServer, donationsSrv)
 
 	usersSrv, err := cnt.UsersGRPCServer()
 	if err != nil {
 		panic(err)
 	}
+
 	RegisterUsersServer(grpcServer, usersSrv)
 
 	itemsSrv, err := cnt.ItemsGRPCServer()
 	if err != nil {
 		panic(err)
 	}
+
 	RegisterItemsServer(grpcServer, itemsSrv)
 
 	messagingSrv, err := cnt.MessagingGRPCServer()
 	if err != nil {
 		panic(err)
 	}
+
 	RegisterMessagingServer(grpcServer, messagingSrv)
 
 	statsSrv, err := cnt.StatisticsGRPCServer()
 	if err != nil {
 		panic(err)
 	}
+
 	RegisterStatisticsServer(grpcServer, statsSrv)
 
 	lis = bufconn.Listen(bufSize)

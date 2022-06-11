@@ -57,6 +57,7 @@ func (s *Repository) GetUserNewMessagesCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SqlSelect: s.getReceivedSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
+
 	return paginator.GetTotalItemCount()
 }
 
@@ -64,6 +65,7 @@ func (s *Repository) GetInboxCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SqlSelect: s.getInboxSelect(userID),
 	}
+
 	return paginator.GetTotalItemCount()
 }
 
@@ -71,6 +73,7 @@ func (s *Repository) GetInboxNewCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SqlSelect: s.getInboxSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
+
 	return paginator.GetTotalItemCount()
 }
 
@@ -78,6 +81,7 @@ func (s *Repository) GetSentCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SqlSelect: s.getSentSelect(userID),
 	}
+
 	return paginator.GetTotalItemCount()
 }
 
@@ -85,6 +89,7 @@ func (s *Repository) GetSystemCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SqlSelect: s.getSystemSelect(userID),
 	}
+
 	return paginator.GetTotalItemCount()
 }
 
@@ -92,6 +97,7 @@ func (s *Repository) GetSystemNewCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SqlSelect: s.getSystemSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
+
 	return paginator.GetTotalItemCount()
 }
 
@@ -99,6 +105,7 @@ func (s *Repository) GetDialogCount(userID int64, withUserID int64) (int32, erro
 	paginator := util.Paginator{
 		SqlSelect: s.getDialogSelect(userID, withUserID),
 	}
+
 	return paginator.GetTotalItemCount()
 }
 
@@ -178,11 +185,13 @@ func (s *Repository) markReaden(ids []int64) error {
 			).
 			Executor().Exec()
 	}
+
 	return err
 }
 
 func (s *Repository) markReadenRows(rows []messageRow, userId int64) error {
 	ids := make([]int64, 0)
+
 	for _, msg := range rows {
 		if (!msg.Readen) && (msg.ToUserID == userId) {
 			ids = append(ids, msg.ID)
@@ -192,9 +201,9 @@ func (s *Repository) markReadenRows(rows []messageRow, userId int64) error {
 	return s.markReaden(ids)
 }
 
-func (s *Repository) GetInbox(userId int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetInbox(userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
-		SqlSelect:         s.getInboxSelect(userId),
+		SqlSelect:         s.getInboxSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
@@ -206,11 +215,12 @@ func (s *Repository) GetInbox(userId int64, page int32) ([]Message, *util.Pages,
 
 	var msgs []messageRow
 	err = ds.ScanStructs(&msgs)
+
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = s.markReadenRows(msgs, userId)
+	err = s.markReadenRows(msgs, userID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -220,7 +230,7 @@ func (s *Repository) GetInbox(userId int64, page int32) ([]Message, *util.Pages,
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(userId, msgs, Options{AllMessagesLink: true})
+	list, err := s.prepareList(userID, msgs, Options{AllMessagesLink: true})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -228,9 +238,9 @@ func (s *Repository) GetInbox(userId int64, page int32) ([]Message, *util.Pages,
 	return list, pages, nil
 }
 
-func (s *Repository) GetSentbox(userId int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetSentbox(userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
-		SqlSelect:         s.getSentSelect(userId),
+		SqlSelect:         s.getSentSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
@@ -242,6 +252,7 @@ func (s *Repository) GetSentbox(userId int64, page int32) ([]Message, *util.Page
 
 	var msgs []messageRow
 	err = ds.ScanStructs(&msgs)
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -251,7 +262,7 @@ func (s *Repository) GetSentbox(userId int64, page int32) ([]Message, *util.Page
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(userId, msgs, Options{AllMessagesLink: true})
+	list, err := s.prepareList(userID, msgs, Options{AllMessagesLink: true})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -259,9 +270,9 @@ func (s *Repository) GetSentbox(userId int64, page int32) ([]Message, *util.Page
 	return list, pages, nil
 }
 
-func (s *Repository) GetSystembox(userId int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetSystembox(userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
-		SqlSelect:         s.getSystemSelect(userId),
+		SqlSelect:         s.getSystemSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
@@ -273,11 +284,12 @@ func (s *Repository) GetSystembox(userId int64, page int32) ([]Message, *util.Pa
 
 	var msgs []messageRow
 	err = ds.ScanStructs(&msgs)
+
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = s.markReadenRows(msgs, userId)
+	err = s.markReadenRows(msgs, userID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -287,7 +299,7 @@ func (s *Repository) GetSystembox(userId int64, page int32) ([]Message, *util.Pa
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(userId, msgs, Options{AllMessagesLink: true})
+	list, err := s.prepareList(userID, msgs, Options{AllMessagesLink: true})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -295,9 +307,9 @@ func (s *Repository) GetSystembox(userId int64, page int32) ([]Message, *util.Pa
 	return list, pages, nil
 }
 
-func (s *Repository) GetDialogbox(userId int64, withUserId int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetDialogbox(userID int64, withUserID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
-		SqlSelect:         s.getDialogSelect(userId, withUserId),
+		SqlSelect:         s.getDialogSelect(userID, withUserID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
@@ -309,11 +321,12 @@ func (s *Repository) GetDialogbox(userId int64, withUserId int64, page int32) ([
 
 	var msgs []messageRow
 	err = ds.ScanStructs(&msgs)
+
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = s.markReadenRows(msgs, userId)
+	err = s.markReadenRows(msgs, userID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -323,7 +336,7 @@ func (s *Repository) GetDialogbox(userId int64, withUserId int64, page int32) ([
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(userId, msgs, Options{AllMessagesLink: false})
+	list, err := s.prepareList(userID, msgs, Options{AllMessagesLink: false})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -331,45 +344,45 @@ func (s *Repository) GetDialogbox(userId int64, withUserId int64, page int32) ([
 	return list, pages, nil
 }
 
-func (s *Repository) getReceivedSelect(userId int64) *goqu.SelectDataset {
+func (s *Repository) getReceivedSelect(userID int64) *goqu.SelectDataset {
 	return s.db.From("personal_messages").
 		Where(
-			goqu.I("to_user_id").Eq(userId),
+			goqu.I("to_user_id").Eq(userID),
 			goqu.I("deleted_by_to").IsFalse(),
 		).
 		Order(goqu.I("add_datetime").Desc())
 }
 
-func (s *Repository) getSystemSelect(userId int64) *goqu.SelectDataset {
-	return s.getReceivedSelect(userId).Where(goqu.I("from_user_id").IsNull())
+func (s *Repository) getSystemSelect(userID int64) *goqu.SelectDataset {
+	return s.getReceivedSelect(userID).Where(goqu.I("from_user_id").IsNull())
 }
 
-func (s *Repository) getInboxSelect(userId int64) *goqu.SelectDataset {
-	return s.getReceivedSelect(userId).Where(goqu.I("from_user_id").IsNotNull())
+func (s *Repository) getInboxSelect(userID int64) *goqu.SelectDataset {
+	return s.getReceivedSelect(userID).Where(goqu.I("from_user_id").IsNotNull())
 }
 
-func (s *Repository) getSentSelect(userId int64) *goqu.SelectDataset {
+func (s *Repository) getSentSelect(userID int64) *goqu.SelectDataset {
 	return s.db.From("personal_messages").
 		Where(
-			goqu.I("from_user_id").Eq(userId),
+			goqu.I("from_user_id").Eq(userID),
 			goqu.I("deleted_by_from").IsNotTrue(),
 		).
 		Order(goqu.I("add_datetime").Desc())
 }
 
-func (s *Repository) getDialogSelect(userId int64, withUserId int64) *goqu.SelectDataset {
+func (s *Repository) getDialogSelect(userID int64, withUserID int64) *goqu.SelectDataset {
 
 	return s.db.From("personal_messages").
 		Where(
 			goqu.Or(
 				goqu.And(
-					goqu.I("from_user_id").Eq(userId),
-					goqu.I("to_user_id").Eq(withUserId),
+					goqu.I("from_user_id").Eq(userID),
+					goqu.I("to_user_id").Eq(withUserID),
 					goqu.I("deleted_by_from").IsNotTrue(),
 				),
 				goqu.And(
-					goqu.I("from_user_id").Eq(withUserId),
-					goqu.I("to_user_id").Eq(userId),
+					goqu.I("from_user_id").Eq(withUserID),
+					goqu.I("to_user_id").Eq(userID),
 					goqu.I("deleted_by_to").IsNotTrue(),
 				),
 			),
@@ -377,47 +390,52 @@ func (s *Repository) getDialogSelect(userId int64, withUserId int64) *goqu.Selec
 		Order(goqu.I("add_datetime").Desc())
 }
 
-func (s *Repository) prepareList(userId int64, rows []messageRow, options Options) ([]Message, error) {
+func (s *Repository) prepareList(userID int64, rows []messageRow, options Options) ([]Message, error) {
 	var err error
+
 	cache := make(map[int64]int32)
 
 	messages := make([]Message, len(rows))
+
 	for idx, msg := range rows {
-		isNew := msg.ToUserID == userId && !msg.Readen
-		canDelete := msg.FromUserID.Valid && msg.FromUserID.Int64 == userId || msg.ToUserID == userId
-		authorIsMe := msg.FromUserID.Valid && msg.FromUserID.Int64 == userId
+		isNew := msg.ToUserID == userID && !msg.Readen
+		canDelete := msg.FromUserID.Valid && msg.FromUserID.Int64 == userID || msg.ToUserID == userID
+		authorIsMe := msg.FromUserID.Valid && msg.FromUserID.Int64 == userID
 		canReply := msg.FromUserID.Valid && !authorIsMe //  && ! $author['deleted']
 
 		var dialogCount int32
+
 		var ok bool
 
 		if options.AllMessagesLink && msg.FromUserID.Valid {
 			dialogWith := msg.FromUserID.Int64
-			if msg.FromUserID.Valid && msg.FromUserID.Int64 == userId {
+			if msg.FromUserID.Valid && msg.FromUserID.Int64 == userID {
 				dialogWith = msg.ToUserID
 			}
 
 			if dialogCount, ok = cache[dialogWith]; !ok {
-				dialogCount, err = s.GetDialogCount(userId, dialogWith)
+				dialogCount, err = s.GetDialogCount(userID, dialogWith)
 				if err != nil {
 					return messages, err
 				}
+
 				cache[dialogWith] = dialogCount
 			}
 		}
 
 		var dialogWithUserID *int64
-		if msg.ToUserID == userId {
+
+		if msg.ToUserID == userID {
 			if msg.FromUserID.Valid {
 				dialogWithUserID = &msg.FromUserID.Int64
 			}
 		} else {
-			dialogWithUserID = &userId
+			dialogWithUserID = &userID
 		}
 
 		messages[idx] = Message{
 			ID:               msg.ID,
-			AuthorID:         util.SqlNullInt64ToPtr(msg.FromUserID),
+			AuthorID:         util.SQLNullInt64ToPtr(msg.FromUserID),
 			Text:             msg.Contents,
 			IsNew:            isNew,
 			CanDelete:        canDelete,

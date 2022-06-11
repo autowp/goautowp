@@ -73,16 +73,17 @@ type APITrafficWhitelistPostRequestBody struct {
 
 // NewTraffic constructor
 func NewTraffic(pool *pgxpool.Pool, autowpDB *goqu.Database, enforcer *casbin.Enforcer, ban *ban.Repository, userExtractor *UserExtractor) (*Traffic, error) {
-
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
 		logrus.Error(err)
+
 		return nil, err
 	}
 
 	whitelist, err := NewWhitelist(pool)
 	if err != nil {
 		logrus.Error(err)
+
 		return nil, err
 	}
 
@@ -99,7 +100,6 @@ func NewTraffic(pool *pgxpool.Pool, autowpDB *goqu.Database, enforcer *casbin.En
 }
 
 func (s *Traffic) AutoBanByProfile(profile AutobanProfile) error {
-
 	ips, err := s.Monitoring.ListByBanProfile(profile)
 	if err != nil {
 		return err
@@ -110,6 +110,7 @@ func (s *Traffic) AutoBanByProfile(profile AutobanProfile) error {
 		if err != nil {
 			return err
 		}
+
 		if exists {
 			continue
 		}
@@ -135,7 +136,6 @@ func (s *Traffic) AutoBan() error {
 }
 
 func (s *Traffic) AutoWhitelist() error {
-
 	items, err := s.Monitoring.ListOfTop(1000)
 	if err != nil {
 		return err
@@ -143,6 +143,7 @@ func (s *Traffic) AutoWhitelist() error {
 
 	for _, item := range items {
 		logrus.Infof("Check IP %v", item.IP)
+
 		if err = s.AutoWhitelistIP(item.IP); err != nil {
 			return err
 		}
@@ -191,6 +192,7 @@ func (s *Traffic) SetupPrivateRouter(r *gin.Engine) {
 		ip := net.ParseIP(c.Param("ip"))
 		if ip == nil {
 			c.String(http.StatusBadRequest, "Invalid IP")
+
 			return
 		}
 
@@ -198,11 +200,13 @@ func (s *Traffic) SetupPrivateRouter(r *gin.Engine) {
 		if err != nil {
 			logrus.Error(err.Error())
 			c.String(http.StatusInternalServerError, err.Error())
+
 			return
 		}
 
 		if b == nil {
 			c.Status(http.StatusNotFound)
+
 			return
 		}
 

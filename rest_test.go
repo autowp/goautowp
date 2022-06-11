@@ -13,6 +13,8 @@ import (
 )
 
 func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
@@ -23,6 +25,8 @@ func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
@@ -35,6 +39,8 @@ func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
@@ -47,6 +53,8 @@ func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
@@ -59,6 +67,8 @@ func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
 }
 
 func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig(".")
 
 	ctx := context.Background()
@@ -85,6 +95,8 @@ func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 }
 
 func TestGetVehicleTypes(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig(".")
 
 	ctx := context.Background()

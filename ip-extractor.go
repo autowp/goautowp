@@ -35,8 +35,8 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 	}
 
 	_, ok = fields["blacklist"]
-	if ok {
 
+	if ok {
 		enforcer := s.container.Enforcer()
 
 		canView := len(role) > 0 && enforcer.Enforce(role, "global", "moderate")
@@ -80,7 +80,6 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 						return nil, err
 					}
 				}
-
 			}
 		}
 	}

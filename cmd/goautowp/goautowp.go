@@ -36,7 +36,9 @@ func (r *ImageStorageGetImageCommand) Execute(_ []string) error {
 	if err != nil {
 		return err
 	}
+
 	log.Printf("%v", i)
+
 	return nil
 }
 
@@ -45,7 +47,9 @@ func (r *ImageStorageGetFormattedImage) Execute(_ []string) error {
 	if err != nil {
 		return err
 	}
+
 	log.Printf("%v", i)
+
 	return nil
 }
 
@@ -53,6 +57,7 @@ type AutobanCommand struct{}
 
 func (r *AutobanCommand) Execute(_ []string) error {
 	quit := captureOsInterrupt()
+
 	return app.Autoban(quit)
 }
 
@@ -60,6 +65,7 @@ type ListenDfAmqpCommand struct{}
 
 func (r *ListenDfAmqpCommand) Execute(_ []string) error {
 	quit := captureOsInterrupt()
+
 	return app.ListenDuplicateFinderAMQP(quit)
 }
 
@@ -89,6 +95,7 @@ type ServePrivateCommand struct{}
 
 func (r *ServePrivateCommand) Execute(_ []string) error {
 	quit := captureOsInterrupt()
+
 	return app.ServePrivate(quit)
 }
 
@@ -130,9 +137,11 @@ func (r *ExportUsersToKeycloakCommand) Execute(_ []string) error {
 
 func captureOsInterrupt() chan bool {
 	quit := make(chan bool)
+
 	go func() {
 		c := make(chan os.Signal, 2)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 		for sig := range c {
 			logrus.Infof("captured %v, stopping and exiting.", sig)
 
@@ -194,12 +203,14 @@ func mainReturnWithCode() int {
 	// args, err := flags.ParseArgs(&opts, os.Args)
 	if err != nil {
 		logrus.Error(err)
+
 		return 1
 	}
 
 	if err != nil {
 		logrus.Error(err)
 		sentry.CaptureException(err)
+
 		return 1
 	}
 

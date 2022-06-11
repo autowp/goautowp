@@ -40,12 +40,13 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if int64(in.UserId) == userID {
+	if in.UserId == userID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
 	deleted := false
 	user, err := s.userRepository.User(users.GetUsersOptions{ID: in.UserId, Deleted: &deleted})
+
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -54,7 +55,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 		return nil, status.Error(codes.NotFound, "NotFound")
 	}
 
-	err = s.contactsRepository.create(userID, int64(in.UserId))
+	err = s.contactsRepository.create(userID, in.UserId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -72,7 +73,7 @@ func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContac
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.contactsRepository.delete(userID, int64(in.UserId))
+	err = s.contactsRepository.delete(userID, in.UserId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -90,11 +91,11 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if int64(in.UserId) == userID {
+	if in.UserId == userID {
 		return nil, status.Error(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	exists, err := s.contactsRepository.isExists(userID, int64(in.UserId))
+	exists, err := s.contactsRepository.isExists(userID, in.UserId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -120,6 +121,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsReq
 
 	fields := in.Fields
 	m := make(map[string]bool)
+
 	for _, e := range fields {
 		m[e] = true
 	}
@@ -134,6 +136,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsReq
 	}
 
 	items := make([]*Contact, len(userRows))
+
 	for idx, userRow := range userRows {
 		user, err := s.userExtractor.Extract(&userRow, m)
 		if err != nil {

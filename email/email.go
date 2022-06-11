@@ -12,7 +12,7 @@ type Sender interface {
 	Send(from string, to []string, subject, body, replyTo string) error
 }
 
-type SmtpSender struct {
+type SMTPSender struct {
 	Config config.SMTPConfig
 }
 
@@ -20,7 +20,7 @@ type MockSender struct {
 	Body string
 }
 
-func (s *SmtpSender) Send(from string, to []string, subject, body, replyTo string) error {
+func (s *SMTPSender) Send(from string, to []string, subject, body, replyTo string) error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", from)
 	m.SetHeader("To", to...)
@@ -36,5 +36,6 @@ func (s *SmtpSender) Send(from string, to []string, subject, body, replyTo strin
 func (s *MockSender) Send(from string, to []string, subject, body, _ string) error {
 	logrus.Debugf("Subject: %s\nFrom: %s\nTo: %s\n%s", subject, from, strings.Join(to, ", "), body)
 	s.Body = body
+
 	return nil
 }

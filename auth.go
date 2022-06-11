@@ -20,7 +20,12 @@ type Auth struct {
 	repository  *users.Repository
 }
 
-func NewAuth(db *goqu.Database, keycloak gocloak.GoCloak, keycloakCfg config.KeycloakConfig, repository *users.Repository) *Auth {
+func NewAuth(
+	db *goqu.Database,
+	keycloak gocloak.GoCloak,
+	keycloakCfg config.KeycloakConfig,
+	repository *users.Repository,
+) *Auth {
 	return &Auth{
 		db:          db,
 		keycloak:    keycloak,

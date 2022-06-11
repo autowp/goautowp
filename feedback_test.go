@@ -11,6 +11,8 @@ import (
 )
 
 func TestFeedbackNoBody(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
@@ -23,6 +25,8 @@ func TestFeedbackNoBody(t *testing.T) {
 }
 
 func TestFeedbackEmptyValues(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
@@ -39,6 +43,8 @@ func TestFeedbackEmptyValues(t *testing.T) {
 }
 
 func TestFeedbackEmptyName(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
@@ -55,6 +61,8 @@ func TestFeedbackEmptyName(t *testing.T) {
 }
 
 func TestFeedbackEmptyEmail(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
@@ -71,6 +79,8 @@ func TestFeedbackEmptyEmail(t *testing.T) {
 }
 
 func TestFeedbackEmptyMessage(t *testing.T) {
+	t.Parallel()
+
 	cnt := NewContainer(config.LoadConfig("."))
 	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()

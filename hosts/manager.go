@@ -16,8 +16,7 @@ func NewManager(languages map[string]config.LanguageConfig) *Manager {
 	}
 }
 
-func (s *Manager) GetUriByLanguage(language string) (*url.URL, error) {
-
+func (s *Manager) GetURIByLanguage(language string) (*url.URL, error) {
 	langConfig, ok := s.languages[language]
 
 	if !ok {

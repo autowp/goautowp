@@ -91,6 +91,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 
 			var message MonitoringInputMessage
 			err = json.Unmarshal(d.Body, &message)
+
 			if err != nil {
 				logrus.Errorf("failed to parse json `%v`: %s", err, d.Body)
 				continue
@@ -113,7 +114,6 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 
 // Add item to Monitoring
 func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
-
 	_, err := s.db.Exec(context.Background(), `
 		INSERT INTO ip_monitoring (day_date, hour, tenminute, minute, ip, count)
 		VALUES (
@@ -132,7 +132,6 @@ func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
 
 // GC Garbage Collect
 func (s *Monitoring) GC() (int64, error) {
-
 	ct, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE day_date < CURRENT_DATE")
 	if err != nil {
 		return 0, err
@@ -159,7 +158,6 @@ func (s *Monitoring) ClearIP(ip net.IP) error {
 
 // ListOfTop ListOfTop
 func (s *Monitoring) ListOfTop(limit int) ([]ListOfTopItem, error) {
-
 	rows, err := s.db.Query(context.Background(), `
 		SELECT ip, SUM(count) AS c
 		FROM ip_monitoring

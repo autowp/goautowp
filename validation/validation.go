@@ -190,11 +190,13 @@ func filterString(value string, filters []FilterInterface) string {
 
 func validateString(value string, validators []ValidatorInterface) ([]string, error) {
 	result := make([]string, 0)
+
 	for _, validator := range validators {
 		violations, err := validator.IsValidString(value)
 		if err != nil {
 			return nil, err
 		}
+
 		if len(violations) > 0 {
 			return violations, nil
 		}

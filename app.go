@@ -26,7 +26,6 @@ type Application struct {
 
 // NewApplication constructor
 func NewApplication(cfg config.Config) *Application {
-
 	s := &Application{
 		container: NewContainer(cfg),
 	}
@@ -60,6 +59,7 @@ func (s *Application) ServePublic(quit chan bool) error {
 
 	go func() {
 		<-quit
+
 		if err := httpServer.Shutdown(context.Background()); err != nil {
 			logrus.Error(err.Error())
 		}
@@ -79,7 +79,6 @@ func (s *Application) ServePublic(quit chan bool) error {
 }
 
 func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
-
 	df, err := s.container.DuplicateFinder()
 	if err != nil {
 		return err
@@ -88,27 +87,31 @@ func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 	cfg := s.container.Config()
 
 	logrus.Println("DuplicateFinder listener started")
+
 	err = df.ListenAMQP(cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
+
 	if err != nil {
 		logrus.Error(err.Error())
 		sentry.CaptureException(err)
+
 		return err
 	}
+
 	logrus.Println("DuplicateFinder listener stopped")
 
 	return nil
 }
 
-// Close Destructor
+// Close Destructor.
 func (s *Application) Close() error {
 	logrus.Println("Closing service")
 
-	err := s.container.Close()
-	if err != nil {
+	if err := s.container.Close(); err != nil {
 		return err
 	}
 
 	logrus.Println("Service closed")
+
 	return nil
 }
 
@@ -121,6 +124,7 @@ func applyMigrations(config config.MigrationsConfig) error {
 		if err != nil {
 			return err
 		}
+
 		exPath := filepath.Dir(ex)
 		dir = exPath + "/migrations"
 	}
@@ -134,6 +138,7 @@ func applyMigrations(config config.MigrationsConfig) error {
 	if err != nil {
 		return err
 	}
+
 	logrus.Info("Migrations applied")
 
 	return nil
@@ -148,7 +153,7 @@ func (s *Application) MigrateTraffic() error {
 	cfg := s.container.Config()
 
 	err = applyMigrations(cfg.TrafficMigrations)
-	if err != nil && err != migrate.ErrNoChange {
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 
@@ -156,7 +161,6 @@ func (s *Application) MigrateTraffic() error {
 }
 
 func (s *Application) ServePrivate(quit chan bool) error {
-
 	httpServer, err := s.container.PrivateHTTPServer()
 	if err != nil {
 		return err
@@ -164,16 +168,19 @@ func (s *Application) ServePrivate(quit chan bool) error {
 
 	go func() {
 		<-quit
+
 		if err := httpServer.Shutdown(context.Background()); err != nil {
 			logrus.Error(err.Error())
 		}
 	}()
 
 	logrus.Info("HTTP server started")
+
 	if err = httpServer.ListenAndServe(); err != nil {
 		// cannot panic, because this probably is an intentional close
 		logrus.Infof("Httpserver: ListenAndServe() error: %s", err)
 	}
+
 	logrus.Info("HTTP server stopped")
 
 	return nil
@@ -188,20 +195,25 @@ func (s *Application) SchedulerHourly() error {
 	deleted, err := traffic.Monitoring.GC()
 	if err != nil {
 		logrus.Error(err.Error())
+
 		return err
 	}
+
 	logrus.Infof("`%v` items of monitoring deleted", deleted)
 
 	deleted, err = traffic.Ban.GC()
 	if err != nil {
 		logrus.Error(err.Error())
+
 		return err
 	}
+
 	logrus.Infof("`%v` items of ban deleted", deleted)
 
 	err = traffic.AutoWhitelist()
 	if err != nil {
 		logrus.Error(err.Error())
+
 		return err
 	}
 
@@ -217,6 +229,7 @@ func (s *Application) SchedulerDaily() error {
 	err = usersRep.UpdateSpecsVolumes()
 	if err != nil {
 		logrus.Error(err.Error())
+
 		return err
 	}
 
@@ -232,27 +245,30 @@ func (s *Application) SchedulerMidnight() error {
 	err = ur.RestoreVotes()
 	if err != nil {
 		logrus.Error(err.Error())
+
 		return err
 	}
 
 	affected, err := ur.UpdateVotesLimits()
 	if err != nil {
 		logrus.Error(err.Error())
+
 		return err
 	}
+
 	logrus.Infof("Updated %d users vote limits", affected)
 
 	return nil
 }
 
 func (s *Application) Autoban(quit chan bool) error {
-
 	traffic, err := s.container.Traffic()
 	if err != nil {
 		return err
 	}
 
 	banTicker := time.NewTicker(time.Minute)
+
 	logrus.Info("AutoBan scheduler started")
 loop:
 	for {
@@ -264,6 +280,7 @@ loop:
 			}
 		case <-quit:
 			banTicker.Stop()
+
 			break loop
 		}
 	}
@@ -278,6 +295,7 @@ func (s *Application) ExportUsersToKeycloak() error {
 	if err != nil {
 		return err
 	}
+
 	return ur.ExportUsersToKeycloak()
 }
 
@@ -290,11 +308,15 @@ func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
 	cfg := s.container.Config()
 
 	logrus.Info("Monitoring listener started")
+
 	err = traffic.Monitoring.Listen(cfg.RabbitMQ, cfg.MonitoringQueue, quit)
+
 	if err != nil {
 		logrus.Error(err.Error())
+
 		return err
 	}
+
 	logrus.Info("Monitoring listener stopped")
 
 	return nil
@@ -305,7 +327,9 @@ func (s *Application) ImageStorageGetImage(imageID int) (*APIImage, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	img, err := is.Image(imageID)
+
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +342,9 @@ func (s *Application) ImageStorageGetFormattedImage(imageID int, format string) 
 	if err != nil {
 		return nil, err
 	}
+
 	img, err := is.FormattedImage(imageID, format)
+
 	if err != nil {
 		return nil, err
 	}

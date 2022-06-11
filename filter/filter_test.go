@@ -6,6 +6,8 @@ import (
 )
 
 func TestSanitizeFilename(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		Input  string
 		Output string

@@ -13,10 +13,17 @@ import (
 )
 
 func TestMessaging(t *testing.T) {
+	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.DialContext(
+		ctx,
+		"bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
+
 	defer util.Close(conn)
 	messagingClient := NewMessagingClient(conn)
 

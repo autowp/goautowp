@@ -102,7 +102,6 @@ func NewRepository(
 	keyCloak gocloak.GoCloak,
 	keyCloakConfig config.KeycloakConfig,
 ) *Repository {
-
 	return &Repository{
 		autowpDB:       autowpDB,
 		usersSalt:      usersSalt,
@@ -113,13 +112,12 @@ func NewRepository(
 }
 
 func (s *Repository) User(options GetUsersOptions) (*DBUser, error) {
-
 	users, err := s.Users(options)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(users) <= 0 {
+	if len(users) == 0 {
 		return nil, nil
 	}
 
@@ -127,7 +125,6 @@ func (s *Repository) User(options GetUsersOptions) (*DBUser, error) {
 }
 
 func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
-
 	result := make([]DBUser, 0)
 
 	var r DBUser
@@ -160,9 +157,11 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 			switch field {
 			case "avatar":
 				sqSelect = sqSelect.Columns("users.img")
+
 				valuePtrs = append(valuePtrs, &r.Img)
 			case "gravatar":
 				sqSelect = sqSelect.Columns("users.e_mail")
+
 				valuePtrs = append(valuePtrs, &r.EMail)
 			}
 		}
@@ -172,6 +171,7 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return result, nil
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +183,7 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		result = append(result, r)
 	}
 
@@ -192,11 +193,13 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error) {
 	var votesLeft int
 	err := s.autowpDB.QueryRowContext(ctx, "SELECT votes_left FROM users WHERE id = ?", userID).Scan(&votesLeft)
+
 	return votesLeft, err
 }
 
-func (s *Repository) DecVotes(ctx context.Context, userId int64) error {
-	_, err := s.autowpDB.ExecContext(ctx, "UPDATE users SET votes_left = votes_left - 1 WHERE id = ?", userId)
+func (s *Repository) DecVotes(ctx context.Context, userID int64) error {
+	_, err := s.autowpDB.ExecContext(ctx, "UPDATE users SET votes_left = votes_left - 1 WHERE id = ?", userID)
+
 	return err
 }
 
@@ -216,24 +219,29 @@ func (s *Repository) AfterUserCreated(userID int64) error {
 	return err
 }
 
-func (s *Repository) UpdateUserVoteLimit(userId int64) error {
-
+func (s *Repository) UpdateUserVoteLimit(userID int64) error {
 	var age int
-	err := s.autowpDB.QueryRow("SELECT TIMESTAMPDIFF(YEAR, reg_date, NOW()) FROM users WHERE id = ?", userId).Scan(&age)
+	err := s.autowpDB.QueryRow("SELECT TIMESTAMPDIFF(YEAR, reg_date, NOW()) FROM users WHERE id = ?", userID).Scan(&age)
+
 	if err != nil {
 		return err
 	}
 
 	def := 10
 
-	avgVote, err := s.UserAvgVote(userId)
+	avgVote, err := s.UserAvgVote(userID)
 	if err != nil {
 		return err
 	}
 
 	var picturesExists int
-	err = s.autowpDB.QueryRow("SELECT count(1) FROM pictures WHERE owner_id = ? AND status = ? LIMIT 1", userId, "accepted").Scan(&picturesExists)
-	if err != nil && err != sql.ErrNoRows {
+	err = s.autowpDB.QueryRow(
+		"SELECT count(1) FROM pictures WHERE owner_id = ? AND status = ? LIMIT 1",
+		userID,
+		"accepted",
+	).Scan(&picturesExists)
+
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 
@@ -242,7 +250,7 @@ func (s *Repository) UpdateUserVoteLimit(userId int64) error {
 		value = 0
 	}
 
-	_, err = s.autowpDB.Exec("UPDATE users SET votes_per_day = ? WHERE id = ?", value, userId)
+	_, err = s.autowpDB.Exec("UPDATE users SET votes_per_day = ? WHERE id = ?", value, userID)
 	if err != nil {
 		return err
 	}
@@ -250,13 +258,14 @@ func (s *Repository) UpdateUserVoteLimit(userId int64) error {
 	return nil
 }
 
-func (s *Repository) UserAvgVote(userId int64) (float64, error) {
+func (s *Repository) UserAvgVote(userID int64) (float64, error) {
 	var result float64
-	err := s.autowpDB.QueryRow("SELECT IFNULL(avg(vote), 0) FROM comment_message WHERE author_id = ? AND vote <> 0", userId).Scan(&result)
+	err := s.autowpDB.QueryRow("SELECT IFNULL(avg(vote), 0) FROM comment_message WHERE author_id = ? AND vote <> 0", userID).Scan(&result)
+
 	return result, err
 }
 
-func (s *Repository) RefreshUserConflicts(userId int64) error {
+func (s *Repository) RefreshUserConflicts(userID int64) error {
 	_, err := s.autowpDB.Exec(`
 		UPDATE users 
 		SET users.specs_weight = (1.5 * ((1 + IFNULL((
@@ -265,14 +274,15 @@ func (s *Repository) RefreshUserConflicts(userId int64) error {
 			SELECT abs(sum(weight)) FROM attrs_user_values WHERE user_id = users.id AND weight < 0
 		), 0))))
 		WHERE users.id = ?
-	`, userId)
+	`, userID)
+
 	return err
 }
 
 func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int64, string, error) {
-
 	remoteAddr := "127.0.0.1"
 	p, ok := peer.FromContext(ctx)
+
 	if ok {
 		nw := p.Addr.String()
 		if nw != "bufconn" {
@@ -292,6 +302,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		locale = "en"
 		language, ok = s.languages["en"]
 	}
+
 	if !ok {
 		return 0, "", status.Errorf(codes.InvalidArgument, "language `%s` is not defined", locale)
 	}
@@ -309,9 +320,14 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 	var userID int64
 	err := s.autowpDB.
-		QueryRow("SELECT user_id FROM user_account WHERE service_id = ? AND external_id = ?", KeycloakExternalAccountID, guid).
+		QueryRow(
+			"SELECT user_id FROM user_account WHERE service_id = ? AND external_id = ?",
+			KeycloakExternalAccountID,
+			guid,
+		).
 		Scan(&userID)
-	if err != nil && err != sql.ErrNoRows {
+
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return 0, "", err
 	}
 
@@ -322,6 +338,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 							   last_online, timezone, last_ip, language, role)
 			VALUES (NULL, ?, NULL, NULL, 1, NULL, ?, NOW(), NOW(), ?, INET6_ATON(?), ?, ?)
 		`, emailAddr, name, language.Timezone, remoteAddr, locale, role)
+
 		if err != nil {
 			return 0, "", err
 		}
@@ -335,7 +352,6 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		if err != nil {
 			return 0, "", err
 		}
-
 	} else {
 		_, err = s.autowpDB.Exec(`
 			UPDATE users SET e_mail = ?, name = ?, last_ip = ?
@@ -371,16 +387,18 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) {
 	logrus.Debugf("Ensure user `%d` exported to Keycloak", userID)
-	var userGuid string
+	var userGUID string
+
 	err := s.autowpDB.
 		QueryRow("SELECT external_id FROM user_account WHERE service_id = ? AND user_id = ?", KeycloakExternalAccountID, userID).
-		Scan(&userGuid)
-	if err != nil && err != sql.ErrNoRows {
+		Scan(&userGUID)
+
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return "", err
 	}
 
 	if err == nil {
-		return userGuid, nil
+		return userGUID, nil
 	}
 
 	var deleted bool
@@ -388,12 +406,15 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 	var emailToCheck sql.NullString
 	var login sql.NullString
 	var name string
+
 	err = s.autowpDB.
 		QueryRow("SELECT deleted, e_mail, email_to_check, login, name FROM users WHERE id = ?", userID).
 		Scan(&deleted, &userEmail, &emailToCheck, &login, &name)
+
 	if err != nil {
 		return "", err
 	}
+
 	ctx := context.Background()
 	token, err := s.keycloak.LoginClient(
 		ctx,
@@ -401,23 +422,27 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 		s.keycloakConfig.ClientSecret,
 		s.keycloakConfig.Realm,
 	)
+
 	if err != nil {
 		return "", err
 	}
 
 	var keyCloakEmail = &userEmail.String
 	emailVerified := true
-	if !userEmail.Valid || len(userEmail.String) <= 0 {
+
+	if !userEmail.Valid || len(userEmail.String) == 0 {
 		keyCloakEmail = &emailToCheck.String
 		emailVerified = false
 	}
+
 	username := login.String
-	if (!login.Valid || len(login.String) <= 0) && keyCloakEmail != nil && len(*keyCloakEmail) > 0 {
+	if (!login.Valid || len(login.String) == 0) && keyCloakEmail != nil && len(*keyCloakEmail) > 0 {
 		username = *keyCloakEmail
 	}
+
 	f := false
 	enabled := !deleted
-	userGuid, err = s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
+	userGUID, err = s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		Enabled:       &enabled,
 		Totp:          &f,
 		EmailVerified: &emailVerified,
@@ -425,6 +450,7 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 		FirstName:     &name,
 		Email:         keyCloakEmail,
 	})
+
 	if err != nil {
 		return "", err
 	}
@@ -433,12 +459,12 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
 		VALUES (?, ?, ?, 0, ?, "")
 		ON DUPLICATE KEY UPDATE user_id=VALUES(user_id), name=VALUES(name);
-	`, KeycloakExternalAccountID, userGuid, userID, name)
+	`, KeycloakExternalAccountID, userGUID, userID, name)
 	if err != nil {
 		return "", err
 	}
 
-	return userGuid, err
+	return userGUID, err
 }
 
 func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) {
@@ -460,8 +486,7 @@ func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) 
 }
 
 func (s *Repository) DeleteUser(userID int64) (bool, error) {
-
-	userGuid, err := s.ensureUserExportedToKeycloak(userID)
+	userGUID, err := s.ensureUserExportedToKeycloak(userID)
 	if err != nil {
 		return false, err
 	}
@@ -473,15 +498,17 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 		s.keycloakConfig.ClientSecret,
 		s.keycloakConfig.Realm,
 	)
+
 	if err != nil {
 		return false, err
 	}
 
 	f := false
 	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
-		ID:      &userGuid,
+		ID:      &userGUID,
 		Enabled: &f,
 	})
+
 	if err != nil {
 		return false, err
 	}
@@ -539,11 +566,11 @@ func (s *Repository) RestoreVotes() error {
 	_, err := s.autowpDB.Exec(
 		"UPDATE users SET votes_left = votes_per_day WHERE votes_left < votes_per_day AND not deleted",
 	)
+
 	return err
 }
 
 func (s *Repository) UpdateVotesLimits() (int, error) {
-
 	rows, err := s.autowpDB.Query(
 		"SELECT id FROM users WHERE NOT deleted AND last_online > DATE_SUB(NOW(), INTERVAL 3 MONTH)",
 	)
@@ -557,10 +584,13 @@ func (s *Repository) UpdateVotesLimits() (int, error) {
 	for rows.Next() {
 		var userID int64
 		err = rows.Scan(&userID)
+
 		if err != nil {
 			return 0, err
 		}
+
 		err = s.UpdateUserVoteLimit(userID)
+
 		if err != nil {
 			return 0, err
 		}
@@ -571,7 +601,6 @@ func (s *Repository) UpdateVotesLimits() (int, error) {
 }
 
 func (s *Repository) UpdateSpecsVolumes() error {
-
 	rows, err := s.autowpDB.Query(`
 		SELECT id, count(attrs_user_values.user_id)
 		FROM users
@@ -587,18 +616,23 @@ func (s *Repository) UpdateSpecsVolumes() error {
 	for rows.Next() {
 		var userID int64
 		var count int
+
 		err = rows.Scan(&userID, &count)
+
 		if err != nil {
 			return err
 		}
+
 		_, err = s.autowpDB.Exec(
 			"UPDATE users SET specs_volume = ?, specs_volume_valid = 1 WHERE id = ?",
 			userID, count,
 		)
+
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -617,6 +651,7 @@ func (s *Repository) ExportUsersToKeycloak() error {
 	for rows.Next() {
 		var userID int64
 		err = rows.Scan(&userID)
+
 		if err != nil {
 			return err
 		}
@@ -624,18 +659,21 @@ func (s *Repository) ExportUsersToKeycloak() error {
 		guid, err := s.ensureUserExportedToKeycloak(userID)
 		if err != nil {
 			logrus.Debugf("Error exporting user %d", userID)
+
 			return err
 		}
 
 		logrus.Debugf("User %d exported to keycloak as %s", userID, guid)
 	}
+
 	return nil
 }
 
 func fullName(firstName, lastName, username string) string {
 	result := strings.TrimSpace(firstName + " " + lastName)
-	if len(result) <= 0 {
+	if len(result) == 0 {
 		result = username
 	}
+
 	return result
 }
