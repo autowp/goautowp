@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
@@ -89,7 +90,7 @@ func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 		WHERE ip = $1
 	`, ip.String()).Scan(&item.IP, item.Description)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 
@@ -132,7 +133,7 @@ func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 		WHERE ip = $1
 	`, ip.String()).Scan(&exists)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
 

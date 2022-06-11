@@ -1,9 +1,9 @@
 package goautowp
 
 import (
-	"database/sql"
 	"github.com/autowp/goautowp/ban"
 	"github.com/casbin/casbin"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
@@ -19,7 +19,7 @@ type Traffic struct {
 	Monitoring    *Monitoring
 	Whitelist     *Whitelist
 	Ban           *ban.Repository
-	autowpDB      *sql.DB
+	autowpDB      *goqu.Database
 	enforcer      *casbin.Enforcer
 	userExtractor *UserExtractor
 }
@@ -72,7 +72,7 @@ type APITrafficWhitelistPostRequestBody struct {
 }
 
 // NewTraffic constructor
-func NewTraffic(pool *pgxpool.Pool, autowpDB *sql.DB, enforcer *casbin.Enforcer, ban *ban.Repository, userExtractor *UserExtractor) (*Traffic, error) {
+func NewTraffic(pool *pgxpool.Pool, autowpDB *goqu.Database, enforcer *casbin.Enforcer, ban *ban.Repository, userExtractor *UserExtractor) (*Traffic, error) {
 
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {

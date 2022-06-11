@@ -3,6 +3,7 @@ package items
 import (
 	"database/sql"
 	"github.com/autowp/goautowp/config"
+	"github.com/doug-martin/goqu/v9"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -13,7 +14,9 @@ func TestTopBrandsListRu(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	repository := NewRepository(db)
+	goquDB := goqu.New("mysql", db)
+
+	repository := NewRepository(goquDB)
 	options := ItemsOptions{
 		Language: "ru",
 		Fields: ListFields{
@@ -41,7 +44,9 @@ func TestTopBrandsListZh(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	repository := NewRepository(db)
+	goquDB := goqu.New("mysql", db)
+
+	repository := NewRepository(goquDB)
 	options := ItemsOptions{
 		Language: "zh",
 		Fields: ListFields{

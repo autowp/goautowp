@@ -3,11 +3,13 @@ package users
 import (
 	"context"
 	"database/sql"
+	"errors"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/Nerzal/gocloak/v11/pkg/jwx"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
@@ -85,7 +87,7 @@ type CreateUserOptions struct {
 
 // Repository Main Object
 type Repository struct {
-	autowpDB       *sql.DB
+	autowpDB       *goqu.Database
 	usersSalt      string
 	languages      map[string]config.LanguageConfig
 	keycloak       gocloak.GoCloak
@@ -94,7 +96,7 @@ type Repository struct {
 
 // NewRepository constructor
 func NewRepository(
-	autowpDB *sql.DB,
+	autowpDB *goqu.Database,
 	usersSalt string,
 	languages map[string]config.LanguageConfig,
 	keyCloak gocloak.GoCloak,
@@ -167,7 +169,7 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 	}
 
 	rows, err := sqSelect.RunWith(s.autowpDB).Query()
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return result, nil
 	}
 	if err != nil {
@@ -313,7 +315,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		return 0, "", err
 	}
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		var r sql.Result
 		r, err = s.autowpDB.Exec(`
 			INSERT INTO users (login, e_mail, password, email_to_check, hide_e_mail, email_check_code, name, reg_date, 
@@ -445,7 +447,8 @@ func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) 
 		SELECT 1 FROM users 
 		WHERE password = MD5(CONCAT(?, ?)) AND id = ? AND NOT deleted
 	`, s.usersSalt, password, userID).Scan(&exists)
-	if err == sql.ErrNoRows {
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
 
@@ -485,9 +488,11 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 
 	var val int
 	err = s.autowpDB.QueryRow("SELECT 1 FROM users WHERE id = ? AND NOT deleted", userID).Scan(&val)
-	if err == sql.ErrNoRows {
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
+
 	if err != nil {
 		return false, err
 	}

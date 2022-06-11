@@ -183,7 +183,7 @@ func (s *Container) BanRepository() (*ban.Repository, error) {
 
 func (s *Container) Catalogue() (*Catalogue, error) {
 	if s.catalogue == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +199,7 @@ func (s *Container) Catalogue() (*Catalogue, error) {
 
 func (s *Container) CommentsRepository() (*comments.Repository, error) {
 	if s.commentsRepository == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +216,7 @@ func (s *Container) Config() config.Config {
 
 func (s *Container) ContactsRepository() (*ContactsRepository, error) {
 	if s.contactsRepository == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +229,7 @@ func (s *Container) ContactsRepository() (*ContactsRepository, error) {
 
 func (s *Container) DuplicateFinder() (*DuplicateFinder, error) {
 	if s.duplicateFinder == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -295,7 +295,7 @@ func (s *Container) Location() (*time.Location, error) {
 
 func (s *Container) PicturesRepository() (*pictures.Repository, error) {
 	if s.picturesRepository == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -462,7 +462,7 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 
 func (s *Container) TelegramService() (*telegram.Service, error) {
 	if s.telegramService == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -480,7 +480,7 @@ func (s *Container) Traffic() (*Traffic, error) {
 			return nil, err
 		}
 
-		autowpDB, err := s.AutowpDB()
+		autowpDB, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -559,7 +559,7 @@ func (s *Container) UserExtractor() *UserExtractor {
 
 func (s *Container) UsersRepository() (*users.Repository, error) {
 	if s.usersRepository == nil {
-		autowpDB, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -567,7 +567,7 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 		cfg := s.Config()
 
 		s.usersRepository = users.NewRepository(
-			autowpDB,
+			db,
 			cfg.UsersSalt,
 			cfg.Languages,
 			s.Keycloak(),
@@ -580,14 +580,12 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 
 func (s *Container) ItemsRepository() (*items.Repository, error) {
 	if s.itemsRepository == nil {
-		autowpDB, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
 
-		s.itemsRepository = items.NewRepository(
-			autowpDB,
-		)
+		s.itemsRepository = items.NewRepository(db)
 	}
 
 	return s.itemsRepository, nil
@@ -597,7 +595,7 @@ func (s *Container) Auth() (*Auth, error) {
 	if s.auth == nil {
 		cfg := s.Config()
 
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -678,7 +676,7 @@ func (s *Container) StatisticsGRPCServer() (*StatisticsGRPCServer, error) {
 
 func (s *Container) TrafficGRPCServer() (*TrafficGRPCServer, error) {
 	if s.trafficGrpcServer == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -751,7 +749,12 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.itemsGrpcServer = NewItemsGRPCServer(r, s.Memcached())
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		s.itemsGrpcServer = NewItemsGRPCServer(r, s.Memcached(), auth, s.Enforcer())
 	}
 
 	return s.itemsGrpcServer, nil
@@ -834,7 +837,7 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 
 func (s *Container) MapGRPCServer() (*MapGRPCServer, error) {
 	if s.mapGrpcServer == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -883,7 +886,7 @@ func (s *Container) MessagingGRPCServer() (*MessagingGRPCServer, error) {
 
 func (s *Container) Forums() (*Forums, error) {
 	if s.forums == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
@@ -955,12 +958,12 @@ func (s *Container) SetEmailSender(emailSender email.Sender) {
 
 func (s *Container) Events() (*Events, error) {
 	if s.events == nil {
-		autowpDB, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}
 
-		s.events = NewEvents(autowpDB)
+		s.events = NewEvents(db)
 	}
 
 	return s.events, nil
@@ -968,7 +971,7 @@ func (s *Container) Events() (*Events, error) {
 
 func (s *Container) ImageStorage() (*storage.Storage, error) {
 	if s.imageStorage == nil {
-		db, err := s.AutowpDB()
+		db, err := s.GoquDB()
 		if err != nil {
 			return nil, err
 		}

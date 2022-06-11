@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/casbin/casbin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -16,6 +18,8 @@ type ItemsGRPCServer struct {
 	UnimplementedItemsServer
 	repository *items.Repository
 	memcached  *memcache.Client
+	auth       *Auth
+	enforcer   *casbin.Enforcer
 }
 
 type BrandsCache struct {
@@ -26,10 +30,14 @@ type BrandsCache struct {
 func NewItemsGRPCServer(
 	repository *items.Repository,
 	memcached *memcache.Client,
+	auth *Auth,
+	enforcer *casbin.Enforcer,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository: repository,
 		memcached:  memcached,
+		auth:       auth,
+		enforcer:   enforcer,
 	}
 }
 
@@ -46,13 +54,13 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 	key := "GO_TOPBRANDSLIST_3_" + in.Language
 
 	item, err := s.memcached.Get(key)
-	if err != nil && err != memcache.ErrCacheMiss {
+	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var cache BrandsCache
 
-	if err == memcache.ErrCacheMiss {
+	if errors.Is(err, memcache.ErrCacheMiss) {
 		options := items.ItemsOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -139,7 +147,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 
 	var res []items.Item
 
-	if err == memcache.ErrCacheMiss {
+	if errors.Is(err, memcache.ErrCacheMiss) {
 
 		res, err = s.repository.List(items.ItemsOptions{
 			Language: in.Language,
@@ -174,7 +182,6 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
 	} else {
 		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
 		err = decoder.Decode(&res)
@@ -201,14 +208,13 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFacto
 	key := fmt.Sprintf("GO_FACTORIES_2_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
-	if err != nil && err != memcache.ErrCacheMiss {
+	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var res []items.Item
 
-	if err == memcache.ErrCacheMiss {
-
+	if errors.Is(err, memcache.ErrCacheMiss) {
 		res, err = s.repository.List(items.ItemsOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -270,13 +276,13 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCate
 	key := fmt.Sprintf("GO_CATEGORIES_4_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
-	if err != nil && err != memcache.ErrCacheMiss {
+	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var res []items.Item
 
-	if err == memcache.ErrCacheMiss {
+	if errors.Is(err, memcache.ErrCacheMiss) {
 
 		res, err = s.repository.List(items.ItemsOptions{
 			Language: in.Language,
@@ -336,7 +342,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwi
 	key := fmt.Sprintf("GO_TWINS_1_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
-	if err != nil && err != memcache.ErrCacheMiss {
+	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -348,7 +354,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwi
 		nil,
 	}
 
-	if err == memcache.ErrCacheMiss {
+	if errors.Is(err, memcache.ErrCacheMiss) {
 
 		twinsData.Res, err = s.repository.List(items.ItemsOptions{
 			Language: in.Language,
@@ -456,6 +462,7 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 	case ItemPictureType_ITEM_PICTURE_COPYRIGHTS:
 		dest.TypeID = pictures.ItemPictureCopyrights
 	}
+
 	dest.PerspectiveID = request.PerspectiveId
 }
 

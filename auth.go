@@ -2,11 +2,11 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
+	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -14,13 +14,13 @@ import (
 )
 
 type Auth struct {
-	db          *sql.DB
+	db          *goqu.Database
 	keycloak    gocloak.GoCloak
 	keycloakCfg config.KeycloakConfig
 	repository  *users.Repository
 }
 
-func NewAuth(db *sql.DB, keycloak gocloak.GoCloak, keycloakCfg config.KeycloakConfig, repository *users.Repository) *Auth {
+func NewAuth(db *goqu.Database, keycloak gocloak.GoCloak, keycloakCfg config.KeycloakConfig, repository *users.Repository) *Auth {
 	return &Auth{
 		db:          db,
 		keycloak:    keycloak,

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
 	"image"
 	_ "image/jpeg" // support JPEG decoding
@@ -24,7 +25,7 @@ const threshold = 3
 
 // DuplicateFinder Main Object
 type DuplicateFinder struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
 // DuplicateFinderInputMessage InputMessage
@@ -34,7 +35,7 @@ type DuplicateFinderInputMessage struct {
 }
 
 // NewDuplicateFinder constructor
-func NewDuplicateFinder(db *sql.DB) (*DuplicateFinder, error) {
+func NewDuplicateFinder(db *goqu.Database) (*DuplicateFinder, error) {
 
 	s := &DuplicateFinder{
 		db: db,
@@ -216,10 +217,12 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 		WHERE picture_id != ? 
 		HAVING distance <= ?
 	`, id, threshold)
+
 	if err != nil {
 		return err
 	}
-	if err == sql.ErrNoRows {
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 

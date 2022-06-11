@@ -2,6 +2,7 @@ package validation
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/dpapathanasiou/go-recaptcha"
 	"net/mail"
@@ -113,7 +114,8 @@ func (s *Recaptcha) IsValidString(value string) ([]string, error) {
 func (s *EmailNotExists) IsValidString(value string) ([]string, error) {
 	var exists bool
 	err := s.DB.QueryRow("SELECT 1 FROM users WHERE e_mail = ?", value).Scan(&exists)
-	if err == sql.ErrNoRows {
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return []string{}, nil
 	}
 
@@ -145,8 +147,7 @@ func (s *StringTrimFilter) FilterString(value string) string {
 
 // FilterString filter
 func (s *StringSingleSpaces) FilterString(value string) string {
-
-	if len(value) <= 0 {
+	if len(value) == 0 {
 		return ""
 	}
 
@@ -154,6 +155,7 @@ func (s *StringSingleSpaces) FilterString(value string) string {
 	lines := strings.Split(value, "\n")
 	re := regexp.MustCompile("[[:space:]]+")
 	out := make([]string, len(lines))
+
 	for idx, line := range lines {
 		out[idx] = re.ReplaceAllString(line, " ")
 	}
@@ -170,9 +172,11 @@ type InputFilter struct {
 func (s *InputFilter) IsValidString(value string) (string, []string, error) {
 	value = filterString(value, s.Filters)
 	violations, err := validateString(value, s.Validators)
+
 	if err != nil {
 		return "", nil, err
 	}
+
 	return value, violations, nil
 }
 
@@ -180,6 +184,7 @@ func filterString(value string, filters []FilterInterface) string {
 	for _, filter := range filters {
 		value = filter.FilterString(value)
 	}
+
 	return value
 }
 

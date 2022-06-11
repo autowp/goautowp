@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"errors"
 	"github.com/autowp/goautowp/config"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -44,7 +45,7 @@ func (s *Application) MigrateAutowp() error {
 	cfg := s.container.Config()
 
 	err = applyMigrations(cfg.AutowpMigrations)
-	if err != nil && err != migrate.ErrNoChange {
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 

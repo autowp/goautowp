@@ -2,6 +2,7 @@ package ban
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -95,7 +96,7 @@ func (s *Repository) Get(ip net.IP) (*Item, error) {
 		WHERE ip = $1 AND until >= NOW()
 	`, ip.String()).Scan(&item.IP, &item.Until, &item.Reason, &item.ByUserID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 

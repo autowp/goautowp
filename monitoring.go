@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
@@ -228,7 +229,7 @@ func (s *Monitoring) ExistsIP(ip net.IP) (bool, error) {
 		LIMIT 1
 	`, ip.String()).Scan(&exists)
 	if err != nil {
-		if err != pgx.ErrNoRows {
+		if !errors.Is(err, pgx.ErrNoRows) {
 			return false, err
 		}
 

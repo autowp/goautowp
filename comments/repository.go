@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 )
 
 type CommentType int32
@@ -33,21 +34,17 @@ type GetVotesResult struct {
 
 // Repository Main Object
 type Repository struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
 // NewRepository constructor
-func NewRepository(
-	db *sql.DB,
-) *Repository {
-
+func NewRepository(db *goqu.Database) *Repository {
 	return &Repository{
 		db: db,
 	}
 }
 
 func (s *Repository) GetVotes(id int64) (*GetVotesResult, error) {
-
 	rows, err := s.db.Query(`
 		SELECT users.id, users.name, users.deleted, users.identity, users.last_online, users.role, users.specs_weight, comment_vote.vote
 		FROM comment_vote

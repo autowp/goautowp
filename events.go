@@ -1,7 +1,7 @@
 package goautowp
 
 import (
-	"database/sql"
+	"github.com/doug-martin/goqu/v9"
 )
 
 type Event struct {
@@ -11,28 +11,32 @@ type Event struct {
 }
 
 type Events struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
-func NewEvents(db *sql.DB) *Events {
+func NewEvents(db *goqu.Database) *Events {
 	return &Events{
 		db: db,
 	}
 }
 
 func (s *Events) Add(event Event) error {
-	r, err := s.db.Exec("INSERT INTO log_events (description, user_id, add_datetime) VALUES (?, ?, NOW())", event.Message, event.UserID)
+	res, err := s.db.Insert("log_events").Cols("description", "user_id", "add_datetime").
+		Vals(goqu.Vals{event.Message, event.UserID, goqu.L("NOW()")}).Executor().Exec()
+
 	if err != nil {
 		return err
 	}
 
-	rowId, err := r.LastInsertId()
+	rowID, err := res.LastInsertId()
 	if err != nil {
 		return err
 	}
 
 	for _, id := range event.Users {
-		_, err = s.db.Exec("INSERT INTO log_events_user (log_event_id, user_id) VALUES (?, ?)", rowId, id)
+		_, err = s.db.Insert("log_events_user").Cols("log_event_id", "user_id").
+			Vals(goqu.Vals{rowID, id}).Executor().Exec()
+
 		if err != nil {
 			return err
 		}

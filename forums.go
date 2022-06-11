@@ -2,16 +2,18 @@ package goautowp
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 )
 
 // Forums Main Object
 type Forums struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
-func NewForums(db *sql.DB) *Forums {
+func NewForums(db *goqu.Database) *Forums {
 	return &Forums{
 		db: db,
 	}
@@ -30,7 +32,8 @@ func (s *Forums) GetUserSummary(userID int64) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if err == sql.ErrNoRows {
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
 

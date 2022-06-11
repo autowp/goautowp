@@ -7,6 +7,7 @@ import (
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/encoding/wkb"
 	"google.golang.org/grpc/codes"
@@ -17,11 +18,11 @@ import (
 
 type MapGRPCServer struct {
 	UnimplementedMapServer
-	db           *sql.DB
+	db           *goqu.Database
 	imageStorage *storage.Storage
 }
 
-func NewMapGRPCServer(db *sql.DB, imageStorage *storage.Storage) *MapGRPCServer {
+func NewMapGRPCServer(db *goqu.Database, imageStorage *storage.Storage) *MapGRPCServer {
 	return &MapGRPCServer{
 		db:           db,
 		imageStorage: imageStorage,

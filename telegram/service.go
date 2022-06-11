@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/doug-martin/goqu/v9"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"net/url"
 	"strings"
@@ -14,12 +15,12 @@ import (
 
 type Service struct {
 	accessToken  string
-	db           *sql.DB
+	db           *goqu.Database
 	hostsManager *hosts.Manager
 	botAPI       *tgbotapi.BotAPI
 }
 
-func NewService(config config.TelegramConfig, db *sql.DB, hostsManager *hosts.Manager) *Service {
+func NewService(config config.TelegramConfig, db *goqu.Database, hostsManager *hosts.Manager) *Service {
 	return &Service{
 		accessToken:  config.AccessToken,
 		db:           db,

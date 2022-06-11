@@ -52,6 +52,7 @@ service Items {
   rpc GetTopCategoriesList(GetTopCategoriesListRequest) returns (APITopCategoriesList) {}
   rpc GetTopTwinsBrandsList(GetTopTwinsBrandsListRequest) returns (APITopTwinsBrandsList) {}
   rpc List(ListItemsRequest) returns (APIItemList) {}
+  rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
 }
 
 service Comments {
@@ -521,6 +522,17 @@ message ListItemsRequest {
   ItemPicturesRequest descendant_pictures = 4;
   ItemPicturesRequest preview_pictures = 5;
   uint64 limit = 6;
+}
+
+message GetTreeRequest {
+  string id = 1;
+}
+
+message APITreeItem {
+  string id = 1;
+  string name = 2;
+  repeated APITreeItem childs = 3;
+  int32 type = 4;
 }
 
 message APIItem {

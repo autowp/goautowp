@@ -2,8 +2,8 @@ package pictures
 
 import (
 	"context"
-	"database/sql"
 	"github.com/autowp/goautowp/validation"
+	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
@@ -40,10 +40,10 @@ type VoteSummary struct {
 }
 
 type Repository struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
-func NewRepository(db *sql.DB) *Repository {
+func NewRepository(db *goqu.Database) *Repository {
 	return &Repository{
 		db: db,
 	}

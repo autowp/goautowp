@@ -1,11 +1,13 @@
 package items
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 	"regexp"
@@ -18,6 +20,13 @@ const TopPersonsCount = 5
 const TopFactoriesCount = 8
 const TopCategoriesCount = 15
 const TopTwinsBrandsCount = 20
+
+type TreeItem struct {
+	ID       int64
+	Name     string
+	Childs   []TreeItem
+	ItemType ItemType
+}
 
 var languagePriority = map[string][]string{
 	"xx":    {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
@@ -47,7 +56,7 @@ const (
 
 // Repository Main Object
 type Repository struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
 type Item struct {
@@ -64,10 +73,10 @@ type Item struct {
 
 // NewRepository constructor
 func NewRepository(
-	autowpDB *sql.DB,
+	db *goqu.Database,
 ) *Repository {
 	return &Repository{
-		db: autowpDB,
+		db: db,
 	}
 }
 
@@ -184,6 +193,7 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 			Join("item_parent AS " + ipcAlias + " ON " + alias + ".id = " + ipcAlias + ".parent_id").
 			Join("item AS " + iAlias + " ON " + ipcAlias + ".item_id = " + iAlias + ".id")
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ChildItems)
+
 		if err != nil {
 			return sqSelect, err
 		}
@@ -196,6 +206,7 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 			Join("item_parent AS " + ippAlias + " ON " + alias + ".id = " + ippAlias + ".item_id").
 			Join("item AS " + iAlias + " ON " + ippAlias + ".parent_id = " + iAlias + ".id")
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ParentItems)
+
 		if err != nil {
 			return sqSelect, err
 		}
@@ -208,6 +219,7 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 			Join("item_parent_cache AS " + ipcdAlias + " ON " + alias + ".id = " + ipcdAlias + ".parent_id").
 			Join("item AS " + iAlias + " ON " + ipcdAlias + ".item_id = " + iAlias + ".id")
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.DescendantItems)
+
 		if err != nil {
 			return sqSelect, err
 		}
@@ -220,6 +232,7 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 			Join("item_parent_cache AS " + ipcaAlias + " ON " + alias + ".id = " + ipcaAlias + ".item_id").
 			Join("item AS " + iAlias + " ON " + ipcaAlias + ".parent_id = " + iAlias + ".id")
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.AncestorItems)
+
 		if err != nil {
 			return sqSelect, err
 		}
@@ -245,7 +258,6 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 		}
 
 		if options.Fields.Name {
-
 			langPriority, ok := languagePriority[options.Language]
 			if !ok {
 				return sqSelect, fmt.Errorf("language `%s` not found", options.Language)
@@ -310,6 +322,7 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 
 func (s *Repository) Count(options ItemsOptions) (int, error) {
 	var err error
+
 	sqSelect := sq.Select("COUNT(1)").From("item AS i")
 
 	sqSelect, err = applyItem("i", sqSelect, false, &options)
@@ -319,6 +332,7 @@ func (s *Repository) Count(options ItemsOptions) (int, error) {
 
 	var count int
 	err = sqSelect.RunWith(s.db).QueryRow().Scan(&count)
+
 	if err != nil {
 		return 0, err
 	}
@@ -328,6 +342,7 @@ func (s *Repository) Count(options ItemsOptions) (int, error) {
 
 func (s *Repository) CountDistinct(options ItemsOptions) (int, error) {
 	var err error
+
 	sqSelect := sq.Select("COUNT(distinct i.id)").From("item AS i")
 
 	sqSelect, err = applyItem("i", sqSelect, false, &options)
@@ -337,6 +352,7 @@ func (s *Repository) CountDistinct(options ItemsOptions) (int, error) {
 
 	var count int
 	err = sqSelect.RunWith(s.db).QueryRow().Scan(&count)
+
 	if err != nil {
 		return 0, err
 	}
@@ -350,6 +366,7 @@ func (s *Repository) List(options ItemsOptions) ([]Item, error) {
 		return nil, fmt.Errorf("language `%s` not found", options.Language)
 	}*/
 	var err error
+
 	sqSelect := sq.Select("i.id", "i.catname").From("item AS i").GroupBy("i.id")
 
 	sqSelect, err = applyItem("i", sqSelect, true, &options)
@@ -360,6 +377,7 @@ func (s *Repository) List(options ItemsOptions) ([]Item, error) {
 	if len(options.OrderBy) > 0 {
 		sqSelect = sqSelect.OrderBy(options.OrderBy)
 	}
+
 	if options.Limit > 0 {
 		sqSelect = sqSelect.Limit(options.Limit)
 	}
@@ -376,12 +394,14 @@ func (s *Repository) List(options ItemsOptions) ([]Item, error) {
 	}
 
 	var result []Item
-	for rows.Next() {
 
+	for rows.Next() {
 		var r Item
+
 		var catname sql.NullString
 
 		pointers := make([]interface{}, len(columnNames))
+
 		for i, colName := range columnNames {
 			switch colName {
 			case "id":
@@ -421,6 +441,7 @@ func (s *Repository) List(options ItemsOptions) ([]Item, error) {
 
 	if options.SortByName {
 		tag := language.English
+
 		switch options.Language {
 		case "ru":
 			tag = language.Russian
@@ -442,6 +463,7 @@ func (s *Repository) List(options ItemsOptions) ([]Item, error) {
 		han := regexp.MustCompile(`^\p{Han}`)
 
 		cl := collate.New(tag, collate.IgnoreCase, collate.IgnoreDiacritics)
+
 		sort.SliceStable(result, func(i, j int) bool {
 			a := result[i].Name
 			b := result[j].Name
@@ -476,4 +498,31 @@ func (s *Repository) List(options ItemsOptions) ([]Item, error) {
 	}
 
 	return result, nil
+}
+
+func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
+	type row struct {
+		ID       int64    `db:"id"`
+		Name     string   `db:"name"`
+		ItemType ItemType `db:"item_type_id"`
+	}
+
+	var item row
+
+	success, err := s.db.Select("id", "name", "").From("item").
+		Where(goqu.I("id").Eq(id)).ScanStructContext(ctx, item)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, nil
+	}
+
+	return &TreeItem{
+		ID:       item.ID,
+		Name:     item.Name,
+		ItemType: item.ItemType,
+	}, nil
 }

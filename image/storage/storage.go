@@ -3,9 +3,11 @@ package storage
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/autowp/goautowp/config"
 	"github.com/aws/aws-sdk-go/private/protocol/rest"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
 	"image"
 	"io"
@@ -52,7 +54,7 @@ var formats2ContentType = map[string]string{
 
 type Storage struct {
 	config                config.ImageStorageConfig
-	db                    *sql.DB
+	db                    *goqu.Database
 	dirs                  map[string]*Dir
 	formats               map[string]*sampler.Format
 	formattedImageDirName string
@@ -84,7 +86,7 @@ type FlushOptions struct {
 	Format string
 }
 
-func NewStorage(db *sql.DB, config config.ImageStorageConfig) (*Storage, error) {
+func NewStorage(db *goqu.Database, config config.ImageStorageConfig) (*Storage, error) {
 	dirs := make(map[string]*Dir)
 	for dirName, dirConfig := range config.Dirs {
 		dir, err := NewDir(dirConfig.Bucket, dirConfig.NamingStrategy)
@@ -117,9 +119,11 @@ func (s *Storage) Image(id int) (*Image, error) {
 		FROM image
 		WHERE id = ?
 	`, id).Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir)
-	if err == sql.ErrNoRows {
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -695,9 +699,11 @@ func (s *Storage) Flush(options FlushOptions) error {
 	}
 
 	rows, err := sqSelect.RunWith(s.db).Query()
-	if err == sql.ErrNoRows {
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
+
 	if err != nil {
 		return err
 	}
@@ -1120,7 +1126,7 @@ func (s *Storage) images(imageIds []int) (map[int]Image, error) {
 		Where(sq.Eq{"id": imageIds})
 
 	rows, err := sqSelect.RunWith(s.db).Query()
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return make(map[int]Image), nil
 	}
 	if err != nil {
@@ -1157,7 +1163,7 @@ func (s *Storage) FormattedImages(imageIds []int, formatName string) (map[int]Im
 		Where(sq.Eq{"formated_image.format": formatName})
 
 	rows, err := sqSelect.RunWith(s.db).Query()
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return make(map[int]Image), nil
 	}
 	if err != nil {

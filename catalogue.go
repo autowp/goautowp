@@ -1,8 +1,8 @@
 package goautowp
 
 import (
-	"database/sql"
 	"fmt"
+	"github.com/doug-martin/goqu/v9"
 	"math/rand"
 	"sync"
 	"time"
@@ -13,12 +13,11 @@ import (
 
 // Catalogue service
 type Catalogue struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
 // NewCatalogue constructor
-func NewCatalogue(db *sql.DB) (*Catalogue, error) {
-
+func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
 	}
@@ -31,7 +30,6 @@ func NewCatalogue(db *sql.DB) (*Catalogue, error) {
 }
 
 func (s *Catalogue) getVehicleTypesTree(parentID int32) ([]*VehicleType, error) {
-
 	sqSelect := sq.Select("id, name").From("car_types").OrderBy("position")
 
 	if parentID != 0 {

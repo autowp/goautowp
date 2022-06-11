@@ -3,10 +3,12 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
+	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -19,7 +21,7 @@ import (
 type TrafficGRPCServer struct {
 	UnimplementedTrafficServer
 	auth          *Auth
-	db            *sql.DB
+	db            *goqu.Database
 	enforcer      *casbin.Enforcer
 	userExtractor *UserExtractor
 	traffic       *Traffic
@@ -27,7 +29,7 @@ type TrafficGRPCServer struct {
 
 func NewTrafficGRPCServer(
 	auth *Auth,
-	db *sql.DB,
+	db *goqu.Database,
 	enforcer *casbin.Enforcer,
 	userExtractor *UserExtractor,
 	traffic *Traffic,
@@ -225,7 +227,7 @@ func (s *TrafficGRPCServer) getUser(id int64) (*users.DBUser, error) {
 		FROM users
 		WHERE id = ?
 	`, id)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
