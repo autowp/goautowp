@@ -20,6 +20,8 @@ import (
 	"time"
 )
 
+var ErrUserNotFound = errors.New("user not found")
+
 type Claims struct {
 	jwx.Claims
 	Audience       interface{}    `json:"aud,omitempty"`
@@ -45,7 +47,7 @@ type GetUsersOptions struct {
 	Deleted    *bool
 }
 
-// APIUser APIUser
+// APIUser APIUser.
 type APIUser struct {
 	ID         int        `json:"id"`
 	Name       string     `json:"name"`
@@ -59,7 +61,7 @@ type APIUser struct {
 	LastOnline *time.Time `json:"last_online,omitempty"`
 }
 
-// DBUser DBUser
+// DBUser DBUser.
 type DBUser struct {
 	ID          int64
 	Name        string
@@ -72,7 +74,7 @@ type DBUser struct {
 	SpecsWeight float64
 }
 
-// CreateUserOptions CreateUserOptions
+// CreateUserOptions CreateUserOptions.
 type CreateUserOptions struct {
 	UserName        string `json:"user_name"`
 	FirstName       string `json:"first_name"`
@@ -85,7 +87,7 @@ type CreateUserOptions struct {
 	Captcha         string `json:"captcha"`
 }
 
-// Repository Main Object
+// Repository Main Object.
 type Repository struct {
 	autowpDB       *goqu.Database
 	usersSalt      string
@@ -94,7 +96,7 @@ type Repository struct {
 	keycloakConfig config.KeycloakConfig
 }
 
-// NewRepository constructor
+// NewRepository constructor.
 func NewRepository(
 	autowpDB *goqu.Database,
 	usersSalt string,
@@ -118,7 +120,7 @@ func (s *Repository) User(options GetUsersOptions) (*DBUser, error) {
 	}
 
 	if len(users) == 0 {
-		return nil, nil
+		return nil, ErrUserNotFound
 	}
 
 	return &users[0], nil
@@ -130,14 +132,17 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 	var r DBUser
 	valuePtrs := []interface{}{&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight}
 
-	sqSelect := sq.Select("users.id, users.name, users.deleted, users.identity, users.last_online, users.role, users.specs_weight").From("users")
+	sqSelect := sq.Select(
+		"users.id, users.name, users.deleted, users.identity, users.last_online, users.role, users.specs_weight",
+	).From("users")
 
 	if options.ID != 0 {
 		sqSelect = sqSelect.Where(sq.Eq{"users.id": options.ID})
 	}
 
 	if options.InContacts != 0 {
-		sqSelect = sqSelect.Join("contact ON users.id = contact.contact_user_id").Where(sq.Eq{"contact.user_id": options.InContacts})
+		sqSelect = sqSelect.Join("contact ON users.id = contact.contact_user_id").
+			Where(sq.Eq{"contact.user_id": options.InContacts})
 	}
 
 	if options.Deleted != nil {
@@ -260,7 +265,10 @@ func (s *Repository) UpdateUserVoteLimit(userID int64) error {
 
 func (s *Repository) UserAvgVote(userID int64) (float64, error) {
 	var result float64
-	err := s.autowpDB.QueryRow("SELECT IFNULL(avg(vote), 0) FROM comment_message WHERE author_id = ? AND vote <> 0", userID).Scan(&result)
+	err := s.autowpDB.QueryRow(
+		"SELECT IFNULL(avg(vote), 0) FROM comment_message WHERE author_id = ? AND vote <> 0",
+		userID,
+	).Scan(&result)
 
 	return result, err
 }
@@ -387,10 +395,15 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) {
 	logrus.Debugf("Ensure user `%d` exported to Keycloak", userID)
+
 	var userGUID string
 
 	err := s.autowpDB.
-		QueryRow("SELECT external_id FROM user_account WHERE service_id = ? AND user_id = ?", KeycloakExternalAccountID, userID).
+		QueryRow(
+			"SELECT external_id FROM user_account WHERE service_id = ? AND user_id = ?",
+			KeycloakExternalAccountID,
+			userID,
+		).
 		Scan(&userGUID)
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -401,11 +414,13 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 		return userGUID, nil
 	}
 
-	var deleted bool
-	var userEmail sql.NullString
-	var emailToCheck sql.NullString
-	var login sql.NullString
-	var name string
+	var (
+		deleted      bool
+		userEmail    sql.NullString
+		emailToCheck sql.NullString
+		login        sql.NullString
+		name         string
+	)
 
 	err = s.autowpDB.
 		QueryRow("SELECT deleted, e_mail, email_to_check, login, name FROM users WHERE id = ?", userID).
@@ -427,8 +442,10 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 		return "", err
 	}
 
-	var keyCloakEmail = &userEmail.String
-	emailVerified := true
+	var (
+		keyCloakEmail = &userEmail.String
+		emailVerified = true
+	)
 
 	if !userEmail.Valid || len(userEmail.String) == 0 {
 		keyCloakEmail = &emailToCheck.String
@@ -614,8 +631,10 @@ func (s *Repository) UpdateSpecsVolumes() error {
 	defer util.Close(rows)
 
 	for rows.Next() {
-		var userID int64
-		var count int
+		var (
+			userID int64
+			count  int
+		)
 
 		err = rows.Scan(&userID, &count)
 

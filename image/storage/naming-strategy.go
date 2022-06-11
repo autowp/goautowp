@@ -55,11 +55,12 @@ func normalizePattern(pattern string) string {
 func (s NamingStrategyPattern) Generate(options GenerateOptions) string {
 	pattern := normalizePattern(options.Pattern)
 	components := make([]string, 0)
+
 	if len(pattern) > 0 {
 		components = append(components, pattern)
 	}
 
-	if options.Index > 0 || len(pattern) <= 0 {
+	if options.Index > 0 || len(pattern) == 0 {
 		components = append(components, strconv.Itoa(options.Index))
 	}
 
@@ -73,7 +74,6 @@ func (s NamingStrategyPattern) Generate(options GenerateOptions) string {
 }
 
 func (s NamingStrategySerial) Generate(options GenerateOptions) string {
-
 	fileIndex := options.Count + 1
 
 	dirPath := path(fileIndex, s.deep)
@@ -99,6 +99,7 @@ func (s NamingStrategySerial) Generate(options GenerateOptions) string {
 func path(index int, deep int) string {
 	chars := len(strconv.Itoa(ItemPerDir - 1)) // use log10, fkn n00b
 	path := ""
+
 	if deep > 0 {
 		cur := index / ItemPerDir
 		for i := 0; i < deep; i++ {
@@ -108,5 +109,6 @@ func path(index int, deep int) string {
 			cur = div
 		}
 	}
+
 	return path
 }

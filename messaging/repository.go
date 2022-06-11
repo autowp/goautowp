@@ -55,7 +55,7 @@ func NewRepository(db *goqu.Database, telegramService *telegram.Service) *Reposi
 
 func (s *Repository) GetUserNewMessagesCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SqlSelect: s.getReceivedSelect(userID).Where(goqu.I("readen").IsNotTrue()),
+		SQLSelect: s.getReceivedSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount()
@@ -63,7 +63,7 @@ func (s *Repository) GetUserNewMessagesCount(userID int64) (int32, error) {
 
 func (s *Repository) GetInboxCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SqlSelect: s.getInboxSelect(userID),
+		SQLSelect: s.getInboxSelect(userID),
 	}
 
 	return paginator.GetTotalItemCount()
@@ -71,7 +71,7 @@ func (s *Repository) GetInboxCount(userID int64) (int32, error) {
 
 func (s *Repository) GetInboxNewCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SqlSelect: s.getInboxSelect(userID).Where(goqu.I("readen").IsNotTrue()),
+		SQLSelect: s.getInboxSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount()
@@ -79,7 +79,7 @@ func (s *Repository) GetInboxNewCount(userID int64) (int32, error) {
 
 func (s *Repository) GetSentCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SqlSelect: s.getSentSelect(userID),
+		SQLSelect: s.getSentSelect(userID),
 	}
 
 	return paginator.GetTotalItemCount()
@@ -87,7 +87,7 @@ func (s *Repository) GetSentCount(userID int64) (int32, error) {
 
 func (s *Repository) GetSystemCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SqlSelect: s.getSystemSelect(userID),
+		SQLSelect: s.getSystemSelect(userID),
 	}
 
 	return paginator.GetTotalItemCount()
@@ -95,7 +95,7 @@ func (s *Repository) GetSystemCount(userID int64) (int32, error) {
 
 func (s *Repository) GetSystemNewCount(userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SqlSelect: s.getSystemSelect(userID).Where(goqu.I("readen").IsNotTrue()),
+		SQLSelect: s.getSystemSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount()
@@ -103,7 +103,7 @@ func (s *Repository) GetSystemNewCount(userID int64) (int32, error) {
 
 func (s *Repository) GetDialogCount(userID int64, withUserID int64) (int32, error) {
 	paginator := util.Paginator{
-		SqlSelect: s.getDialogSelect(userID, withUserID),
+		SQLSelect: s.getDialogSelect(userID, withUserID),
 	}
 
 	return paginator.GetTotalItemCount()
@@ -189,11 +189,11 @@ func (s *Repository) markReaden(ids []int64) error {
 	return err
 }
 
-func (s *Repository) markReadenRows(rows []messageRow, userId int64) error {
+func (s *Repository) markReadenRows(rows []messageRow, userID int64) error {
 	ids := make([]int64, 0)
 
 	for _, msg := range rows {
-		if (!msg.Readen) && (msg.ToUserID == userId) {
+		if (!msg.Readen) && (msg.ToUserID == userID) {
 			ids = append(ids, msg.ID)
 		}
 	}
@@ -203,7 +203,7 @@ func (s *Repository) markReadenRows(rows []messageRow, userId int64) error {
 
 func (s *Repository) GetInbox(userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
-		SqlSelect:         s.getInboxSelect(userID),
+		SQLSelect:         s.getInboxSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
@@ -240,7 +240,7 @@ func (s *Repository) GetInbox(userID int64, page int32) ([]Message, *util.Pages,
 
 func (s *Repository) GetSentbox(userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
-		SqlSelect:         s.getSentSelect(userID),
+		SQLSelect:         s.getSentSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
@@ -272,7 +272,7 @@ func (s *Repository) GetSentbox(userID int64, page int32) ([]Message, *util.Page
 
 func (s *Repository) GetSystembox(userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
-		SqlSelect:         s.getSystemSelect(userID),
+		SQLSelect:         s.getSystemSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
@@ -309,7 +309,7 @@ func (s *Repository) GetSystembox(userID int64, page int32) ([]Message, *util.Pa
 
 func (s *Repository) GetDialogbox(userID int64, withUserID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
-		SqlSelect:         s.getDialogSelect(userID, withUserID),
+		SQLSelect:         s.getDialogSelect(userID, withUserID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
@@ -371,7 +371,6 @@ func (s *Repository) getSentSelect(userID int64) *goqu.SelectDataset {
 }
 
 func (s *Repository) getDialogSelect(userID int64, withUserID int64) *goqu.SelectDataset {
-
 	return s.db.From("personal_messages").
 		Where(
 			goqu.Or(

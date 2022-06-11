@@ -12,9 +12,19 @@ import (
 	"time"
 )
 
-const banByUserID = 9
+const autowhitelistLimit = 1000
 
-// Traffic Traffic
+const banByUserID = 9
+const hoursInDay = 24
+const halfDay = time.Hour * hoursInDay / 2
+const hourlyLimitDuration = time.Hour * 5 * hoursInDay
+const dailyLimitDuration = time.Hour * 10 * hoursInDay
+const dailyLimit = 10000
+const hourlyLimit = 3600
+const tenMinsLimit = 1200
+const oneMinLimit = 700
+
+// Traffic Traffic.
 type Traffic struct {
 	Monitoring    *Monitoring
 	Whitelist     *Whitelist
@@ -24,7 +34,7 @@ type Traffic struct {
 	userExtractor *UserExtractor
 }
 
-// AutobanProfile AutobanProfile
+// AutobanProfile AutobanProfile.
 type AutobanProfile struct {
 	Limit  int
 	Reason string
@@ -32,35 +42,35 @@ type AutobanProfile struct {
 	Time   time.Duration
 }
 
-// AutobanProfiles AutobanProfiles
+// AutobanProfiles AutobanProfiles.
 var AutobanProfiles = []AutobanProfile{
 	{
-		Limit:  10000,
+		Limit:  dailyLimit,
 		Reason: "daily limit",
 		Group:  []string{},
-		Time:   time.Hour * 10 * 24,
+		Time:   dailyLimitDuration,
 	},
 	{
-		Limit:  3600,
+		Limit:  hourlyLimit,
 		Reason: "hourly limit",
 		Group:  []string{"hour"},
-		Time:   time.Hour * 5 * 24,
+		Time:   hourlyLimitDuration,
 	},
 	{
-		Limit:  1200,
+		Limit:  tenMinsLimit,
 		Reason: "ten min limit",
 		Group:  []string{"hour", "tenminute"},
-		Time:   time.Hour * 24,
+		Time:   time.Hour * hoursInDay,
 	},
 	{
-		Limit:  700,
+		Limit:  oneMinLimit,
 		Reason: "min limit",
 		Group:  []string{"hour", "tenminute", "minute"},
-		Time:   time.Hour * 12,
+		Time:   halfDay,
 	},
 }
 
-// APITrafficBlacklistPostRequestBody APITrafficBlacklistPostRequestBody
+// APITrafficBlacklistPostRequestBody APITrafficBlacklistPostRequestBody.
 type APITrafficBlacklistPostRequestBody struct {
 	IP     net.IP `json:"ip"`
 	Period int    `json:"period"`
@@ -71,8 +81,14 @@ type APITrafficWhitelistPostRequestBody struct {
 	IP net.IP `json:"ip"`
 }
 
-// NewTraffic constructor
-func NewTraffic(pool *pgxpool.Pool, autowpDB *goqu.Database, enforcer *casbin.Enforcer, ban *ban.Repository, userExtractor *UserExtractor) (*Traffic, error) {
+// NewTraffic constructor.
+func NewTraffic(
+	pool *pgxpool.Pool,
+	autowpDB *goqu.Database,
+	enforcer *casbin.Enforcer,
+	ban *ban.Repository,
+	userExtractor *UserExtractor,
+) (*Traffic, error) {
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
 		logrus.Error(err)
@@ -136,7 +152,7 @@ func (s *Traffic) AutoBan() error {
 }
 
 func (s *Traffic) AutoWhitelist() error {
-	items, err := s.Monitoring.ListOfTop(1000)
+	items, err := s.Monitoring.ListOfTop(autowhitelistLimit)
 	if err != nil {
 		return err
 	}

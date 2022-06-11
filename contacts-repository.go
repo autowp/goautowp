@@ -6,12 +6,12 @@ import (
 	"github.com/doug-martin/goqu/v9"
 )
 
-// ContactsRepository Main Object
+// ContactsRepository Main Object.
 type ContactsRepository struct {
 	autowpDB *goqu.Database
 }
 
-// NewContactsRepository constructor
+// NewContactsRepository constructor.
 func NewContactsRepository(db *goqu.Database) *ContactsRepository {
 	return &ContactsRepository{
 		autowpDB: db,

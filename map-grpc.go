@@ -31,26 +31,32 @@ func NewMapGRPCServer(db *goqu.Database, imageStorage *storage.Storage) *MapGRPC
 }
 
 func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) (*MapPoints, error) {
+	const numberOfBounds = 4
 
 	bounds := strings.Split(in.GetBounds(), ",")
 
-	if len(bounds) < 4 {
+	if len(bounds) < numberOfBounds {
 		return nil, status.Error(codes.InvalidArgument, "Invalid bounds")
 	}
 
-	lngLo, err := strconv.ParseFloat(bounds[0], 64)
+	const bitSize64 = 64
+
+	lngLo, err := strconv.ParseFloat(bounds[0], bitSize64)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	latLo, err := strconv.ParseFloat(bounds[1], 64)
+
+	latLo, err := strconv.ParseFloat(bounds[1], bitSize64)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	lngHi, err := strconv.ParseFloat(bounds[2], 64)
+
+	lngHi, err := strconv.ParseFloat(bounds[2], bitSize64)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	latHi, err := strconv.ParseFloat(bounds[3], 64)
+
+	latHi, err := strconv.ParseFloat(bounds[3], bitSize64)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -107,7 +113,8 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 		rows, err := s.db.QueryContext(
 			ctx,
 			`
-				SELECT ST_AsBinary(item_point.point), item.id, item.name, item.begin_year, item.end_year, item.item_type_id, item.today
+				SELECT ST_AsBinary(item_point.point), item.id, item.name, item.begin_year, item.end_year,
+                    item.item_type_id, item.today
 				FROM item
 					INNER JOIN item_point ON item.id = item_point.item_id
 				WHERE ST_Contains(ST_GeomFromText(?), item_point.point)
@@ -127,9 +134,9 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			var name string
 			var nullableBeginYear sql.NullInt32
 			var nullableEndYear sql.NullInt32
-			var itemTypeId items.ItemType
+			var itemTypeID items.ItemType
 			var today sql.NullBool
-			err = rows.Scan(wkb.Scanner(&p), &id, &name, &nullableBeginYear, &nullableEndYear, &itemTypeId, &today)
+			err = rows.Scan(wkb.Scanner(&p), &id, &name, &nullableBeginYear, &nullableEndYear, &itemTypeID, &today)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -163,26 +170,28 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				}, in.GetLanguage()),
 			}
 
-			switch itemTypeId {
+			const decimal = 10
+
+			switch itemTypeID { //nolint:exhaustive
 			case items.FACTORY:
-				mapPoint.Url = []string{"/factories", strconv.FormatInt(id, 10)}
+				mapPoint.Url = []string{"/factories", strconv.FormatInt(id, decimal)}
 			case items.MUSEUM:
-				mapPoint.Url = []string{"/museums", strconv.FormatInt(id, 10)}
+				mapPoint.Url = []string{"/museums", strconv.FormatInt(id, decimal)}
 			}
 
-			var imageId sql.NullInt64
+			var imageID sql.NullInt64
 			err = s.db.QueryRowContext(ctx, `
 				SELECT pictures.image_id
 				FROM pictures 
 				    INNER JOIN picture_item ON pictures.id = picture_item.picture_id
 				WHERE pictures.status = ? AND picture_item.item_id = ?
-			`, pictures.StatusAccepted, id).Scan(&imageId)
+			`, pictures.StatusAccepted, id).Scan(&imageID)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			if !errors.Is(err, sql.ErrNoRows) && imageId.Valid {
-				image, err := s.imageStorage.FormattedImage(int(imageId.Int64), "format9")
+			if !errors.Is(err, sql.ErrNoRows) && imageID.Valid {
+				image, err := s.imageStorage.FormattedImage(int(imageID.Int64), "format9")
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}

@@ -41,7 +41,7 @@ func (s *MessagingGRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptyp
 	}
 
 	return &APIMessageNewCount{
-		Count: int32(count),
+		Count: count,
 	}, nil
 }
 
@@ -81,13 +81,12 @@ func (s *MessagingGRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb
 	}
 
 	return &APIMessageSummary{
-		InboxCount:     int32(inbox),
-		InboxNewCount:  int32(inboxNew),
-		SentCount:      int32(sent),
-		SystemCount:    int32(system),
-		SystemNewCount: int32(systemNew),
+		InboxCount:     inbox,
+		InboxNewCount:  inboxNew,
+		SentCount:      sent,
+		SystemCount:    system,
+		SystemNewCount: systemNew,
 	}, nil
-
 }
 
 func (s *MessagingGRPCServer) DeleteMessage(ctx context.Context, in *MessagingDeleteMessage) (*emptypb.Empty, error) {
@@ -147,8 +146,10 @@ func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCr
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	fvs := make([]*errdetails.BadRequest_FieldViolation, 0)
-	var problems []string
+	var (
+		fvs      = make([]*errdetails.BadRequest_FieldViolation, 0)
+		problems []string
+	)
 
 	message := in.GetText()
 
@@ -156,10 +157,12 @@ func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCr
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}},
 	}
+
 	message, problems, err = messageInputFilter.IsValidString(message)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, fv := range problems {
 		fvs = append(fvs, &errdetails.BadRequest_FieldViolation{
 			Field:       "message",
@@ -179,7 +182,10 @@ func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCr
 	return &emptypb.Empty{}, nil
 }
 
-func (s *MessagingGRPCServer) GetMessages(ctx context.Context, in *MessagingGetMessagesRequest) (*MessagingGetMessagesResponse, error) {
+func (s *MessagingGRPCServer) GetMessages(
+	ctx context.Context,
+	in *MessagingGetMessagesRequest,
+) (*MessagingGetMessagesResponse, error) {
 	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -189,8 +195,11 @@ func (s *MessagingGRPCServer) GetMessages(ctx context.Context, in *MessagingGetM
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	var messages []messaging.Message
-	var pages *util.Pages
+	var (
+		messages []messaging.Message
+		pages    *util.Pages
+	)
+
 	switch in.GetFolder() {
 	case "inbox":
 		messages, pages, err = s.repository.GetInbox(userID, in.GetPage())
@@ -207,11 +216,13 @@ func (s *MessagingGRPCServer) GetMessages(ctx context.Context, in *MessagingGetM
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected folder value")
 	}
+
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	items := make([]*APIMessage, len(messages))
+
 	for idx, msg := range messages {
 		item := APIMessage{
 			Id:              msg.ID,
@@ -224,12 +235,15 @@ func (s *MessagingGRPCServer) GetMessages(ctx context.Context, in *MessagingGetM
 			DialogCount:     msg.DialogCount,
 			ToUserId:        msg.ToUserID,
 		}
+
 		if msg.AuthorID != nil {
 			item.AuthorId = *msg.AuthorID
 		}
+
 		if msg.DialogWithUserID != nil {
 			item.DialogWithUserId = *msg.DialogWithUserID
 		}
+
 		items[idx] = &item
 	}
 
@@ -246,6 +260,7 @@ func (s *MessagingGRPCServer) GetMessages(ctx context.Context, in *MessagingGetM
 	if pages.Next != nil {
 		paginator.Next = *pages.Next
 	}
+
 	if pages.Previous != nil {
 		paginator.Previous = *pages.Previous
 	}

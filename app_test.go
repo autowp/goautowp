@@ -9,6 +9,7 @@ import (
 )
 
 func TestTrafficMigrations(t *testing.T) {
+	t.Parallel()
 
 	cfg := config.LoadConfig(".")
 
@@ -19,6 +20,7 @@ func TestTrafficMigrations(t *testing.T) {
 }
 
 func TestAutowpMigrations(t *testing.T) {
+	t.Parallel()
 
 	cfg := config.LoadConfig(".")
 

@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+
 	"github.com/autowp/goautowp/users"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -46,7 +47,6 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 
 	deleted := false
 	user, err := s.userRepository.User(users.GetUsersOptions{ID: in.UserId, Deleted: &deleted})
-
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -137,8 +137,8 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsReq
 
 	items := make([]*Contact, len(userRows))
 
-	for idx, userRow := range userRows {
-		user, err := s.userExtractor.Extract(&userRow, m)
+	for idx := range userRows {
+		user, err := s.userExtractor.Extract(&userRows[idx], m)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

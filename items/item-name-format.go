@@ -92,11 +92,11 @@ func (s *ItemNameFormatter) getModelYearsPrefix(
 		return fmt.Sprintf("%d%s", begin, endFraction)
 	}
 
-	bms := begin / hundred
-	ems := end / hundred
+	bms := begin / hundred // nolint: ifshort
+	ems := end / hundred   // nolint: ifshort
 
 	if bms == ems {
-		return fmt.Sprintf("%d%s–%02d%s", begin, beginFraction, end%100, endFraction)
+		return fmt.Sprintf("%d%s–%02d%s", begin, beginFraction, end%hundred, endFraction)
 	}
 
 	if begin <= 0 {

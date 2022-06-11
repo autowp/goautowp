@@ -6,11 +6,9 @@ import (
 	"io"
 )
 
-// Close resource and prints error
+// Close resource and prints error.
 func Close(c io.Closer) {
-	err := c.Close()
-
-	if err != nil {
+	if err := c.Close(); err != nil {
 		logrus.Error(err)
 	}
 }

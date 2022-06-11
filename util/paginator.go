@@ -8,7 +8,7 @@ import (
 const DefaultItemCountPerPage = 10
 
 type Paginator struct {
-	SqlSelect           *goqu.SelectDataset
+	SQLSelect           *goqu.SelectDataset
 	pageCount           int32
 	pageCountCalculated bool
 	ItemCountPerPage    int32
@@ -55,7 +55,7 @@ func (s *Paginator) calculatePageCount() (int32, error) {
 }
 
 func (s *Paginator) calculateCount() (int32, error) {
-	res, err := s.SqlSelect.ClearOrder().
+	res, err := s.SQLSelect.ClearOrder().
 		ClearOffset().
 		ClearLimit().
 		ClearSelect().
@@ -134,7 +134,7 @@ func (s *Paginator) GetPages() (*Pages, error) {
 	}
 
 	// Pages in range
-	pageRange := int32(10)
+	var pageRange int32 = 10
 
 	pageNumber := currentPageNumber
 
@@ -221,7 +221,7 @@ func (s *Paginator) GetItemsByPage(pageNumber int32) (*goqu.SelectDataset, error
 	}
 
 	offset := (pageNumber - 1) * s.getItemCountPerPage()
-	ds := *s.SqlSelect
+	ds := *s.SQLSelect
 
 	return ds.Offset(uint(offset)).Limit(uint(s.getItemCountPerPage())), nil
 }

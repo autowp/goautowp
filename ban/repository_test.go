@@ -11,6 +11,8 @@ import (
 )
 
 func createBanService(t *testing.T) *Repository {
+	t.Helper()
+
 	cfg := config.LoadConfig("..")
 
 	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
@@ -23,6 +25,7 @@ func createBanService(t *testing.T) *Repository {
 }
 
 func TestAddRemove(t *testing.T) {
+	t.Parallel()
 
 	s := createBanService(t)
 

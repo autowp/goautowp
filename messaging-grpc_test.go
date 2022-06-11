@@ -29,8 +29,8 @@ func TestMessaging(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	//cnt := NewContainer(cfg)
-	//defer util.Close(cnt)
+	// cnt := NewContainer(cfg)
+	// defer util.Close(cnt)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	usersClient := NewUsersClient(conn)

@@ -34,7 +34,7 @@ const thousands = 1000
 const tensOfThousands = 10 * thousands
 const numberOfTopUploadersToShowInAboutUs = 20
 
-var failedToFetchRow = errors.New("failed to fetch row")
+var errFailedToFetchRow = errors.New("failed to fetch row")
 
 func roundTo(value int32, to int32) int32 {
 	var rest = value % to
@@ -114,7 +114,7 @@ func (s *StatisticsGRPCServer) totalUsers(ctx context.Context) (int32, error) {
 	}
 
 	if !success {
-		return 0, failedToFetchRow
+		return 0, errFailedToFetchRow
 	}
 
 	return roundTo(result, thousands), nil
@@ -184,7 +184,7 @@ func (s *StatisticsGRPCServer) picturesStat(ctx context.Context) (int32, int32, 
 	}
 
 	if !success {
-		return 0, 0, failedToFetchRow
+		return 0, 0, errFailedToFetchRow
 	}
 
 	return roundTo(picsStat.Count, tensOfThousands), picsStat.Size.Int32, nil
@@ -201,7 +201,7 @@ func (s *StatisticsGRPCServer) totalItems(ctx context.Context) (int32, error) {
 	}
 
 	if !success {
-		return 0, failedToFetchRow
+		return 0, errFailedToFetchRow
 	}
 
 	return roundTo(result, thousands), nil
@@ -220,7 +220,7 @@ func (s *StatisticsGRPCServer) totalComments(ctx context.Context) (int32, error)
 	}
 
 	if !success {
-		return 0, failedToFetchRow
+		return 0, errFailedToFetchRow
 	}
 
 	return roundTo(result, thousands), nil
@@ -308,14 +308,15 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 }
 
 func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (*PulseResponse, error) {
-	now := time.Now()
+	var (
+		now                          = time.Now()
+		from, to                     time.Time
+		subPeriodMonth, subPeriodDay int
+		subPeriodTime                time.Duration
+		format, dateExpr             string
+	)
 
-	var from, to time.Time
-	var subPeriodMonth, subPeriodDay int
-	var subPeriodHour time.Duration
-	var format, dateExpr string
-
-	switch in.GetPeriod() {
+	switch in.GetPeriod() { // nolint: exhaustive
 	case PulseRequest_YEAR:
 		from = time.Now().AddDate(-1, 0, 0)
 		from = time.Date(from.Year(), from.Month(), 1, 0, 0, 0, 0, from.Location())
@@ -336,7 +337,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 		from = time.Now().AddDate(0, 0, -1)
 		from = time.Date(from.Year(), from.Month(), from.Day(), from.Hour(), 0, 0, 0, from.Location())
 		to = time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, now.Location())
-		subPeriodHour = time.Hour
+		subPeriodTime = time.Hour
 		format = "2006-01-02 15"
 		dateExpr = "DATE_FORMAT(add_datetime, '%Y-%m-%d %H')"
 	}
@@ -379,7 +380,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 
 			line = append(line, dates[dateStr])
 
-			cDate = cDate.AddDate(0, subPeriodMonth, subPeriodDay).Add(subPeriodHour)
+			cDate = cDate.AddDate(0, subPeriodMonth, subPeriodDay).Add(subPeriodTime)
 		}
 
 		color := s.randomColor()
@@ -402,7 +403,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 	for to.After(cDate) {
 		labels = append(labels, cDate.Format(format))
 
-		cDate = cDate.AddDate(0, subPeriodMonth, subPeriodDay).Add(subPeriodHour)
+		cDate = cDate.AddDate(0, subPeriodMonth, subPeriodDay).Add(subPeriodTime)
 	}
 
 	return &PulseResponse{

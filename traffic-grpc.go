@@ -5,18 +5,23 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
+	"time"
+
+	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/users"
-	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"net"
-	"net/url"
-	"time"
 )
+
+const trafficTopLimit = 50
+
+var ErrUserNotFound = errors.New("user not found")
 
 type TrafficGRPCServer struct {
 	UnimplementedTrafficServer
@@ -46,30 +51,26 @@ func NewTrafficGRPCServer(
 func (s *TrafficGRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
 	var err error
 
-	items, err := s.traffic.Monitoring.ListOfTop(50)
-
+	items, err := s.traffic.Monitoring.ListOfTop(trafficTopLimit)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	result := make([]*APITrafficTopItem, len(items))
+
 	for idx, item := range items {
-
-		ban, err := s.traffic.Ban.Get(item.IP)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+		banItem, banErr := s.traffic.Ban.Get(item.IP)
+		if banErr != nil && !errors.Is(banErr, ban.ErrBanItemNotFound) {
+			return nil, status.Error(codes.Internal, banErr.Error())
 		}
 
-		inWhitelist, err := s.traffic.Whitelist.Exists(item.IP)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
+		var (
+			user       *users.DBUser
+			topItemBan *APIBanItem
+		)
 
-		var user *users.DBUser
-		var topItemBan *APIBanItem
-
-		if ban != nil {
-			user, err = s.getUser(ban.ByUserID)
+		if banItem != nil {
+			user, err = s.getUser(banItem.ByUserID)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -80,11 +81,16 @@ func (s *TrafficGRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (
 			}
 
 			topItemBan = &APIBanItem{
-				Until:    timestamppb.New(ban.Until),
-				ByUserId: ban.ByUserID,
+				Until:    timestamppb.New(banItem.Until),
+				ByUserId: banItem.ByUserID,
 				ByUser:   extractedUser,
-				Reason:   ban.Reason,
+				Reason:   banItem.Reason,
 			}
+		}
+
+		inWhitelist, err := s.traffic.Whitelist.Exists(item.IP)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		result[idx] = &APITrafficTopItem{
@@ -101,8 +107,10 @@ func (s *TrafficGRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (
 	}, nil
 }
 
-func (s *TrafficGRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error) {
-
+func (s *TrafficGRPCServer) DeleteFromTrafficBlacklist(
+	ctx context.Context,
+	in *DeleteFromTrafficBlacklistRequest,
+) (*emptypb.Empty, error) {
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -125,7 +133,10 @@ func (s *TrafficGRPCServer) DeleteFromTrafficBlacklist(ctx context.Context, in *
 	return &emptypb.Empty{}, nil
 }
 
-func (s *TrafficGRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error) {
+func (s *TrafficGRPCServer) DeleteFromTrafficWhitelist(
+	ctx context.Context,
+	in *DeleteFromTrafficWhitelistRequest,
+) (*emptypb.Empty, error) {
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -148,7 +159,10 @@ func (s *TrafficGRPCServer) DeleteFromTrafficWhitelist(ctx context.Context, in *
 	return &emptypb.Empty{}, nil
 }
 
-func (s *TrafficGRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddToTrafficBlacklistRequest) (*emptypb.Empty, error) {
+func (s *TrafficGRPCServer) AddToTrafficBlacklist(
+	ctx context.Context,
+	in *AddToTrafficBlacklistRequest,
+) (*emptypb.Empty, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -173,7 +187,10 @@ func (s *TrafficGRPCServer) AddToTrafficBlacklist(ctx context.Context, in *AddTo
 	return &emptypb.Empty{}, nil
 }
 
-func (s *TrafficGRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddToTrafficWhitelistRequest) (*emptypb.Empty, error) {
+func (s *TrafficGRPCServer) AddToTrafficWhitelist(
+	ctx context.Context,
+	in *AddToTrafficWhitelistRequest,
+) (*emptypb.Empty, error) {
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -201,7 +218,10 @@ func (s *TrafficGRPCServer) AddToTrafficWhitelist(ctx context.Context, in *AddTo
 	return &emptypb.Empty{}, nil
 }
 
-func (s *TrafficGRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.Empty) (*APITrafficWhitelistItems, error) {
+func (s *TrafficGRPCServer) GetTrafficWhitelist(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*APITrafficWhitelistItems, error) {
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -222,26 +242,17 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(ctx context.Context, _ *emptypb.
 }
 
 func (s *TrafficGRPCServer) getUser(id int64) (*users.DBUser, error) {
-	rows, err := s.db.Query(`
+	var r users.DBUser
+
+	err := s.db.QueryRow(`
 		SELECT id, name, deleted, identity, last_online, role, specs_weight
 		FROM users
 		WHERE id = ?
-	`, id)
+	`, id).Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
+		return nil, ErrUserNotFound
 	}
 
-	defer util.Close(rows)
-
-	if !rows.Next() {
-		return nil, nil
-	}
-
-	var r users.DBUser
-	err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight)
 	if err != nil {
 		return nil, err
 	}

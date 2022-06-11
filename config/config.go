@@ -74,7 +74,7 @@ type RestCorsConfig struct {
 	Origin []string `mapstructure:"origin"`
 }
 
-// RestConfig RestConfig
+// RestConfig RestConfig.
 type RestConfig struct {
 	Listen string         `mapstructure:"listen"`
 	Cors   RestCorsConfig `mapstructure:"cors"`
@@ -105,7 +105,7 @@ type AboutConfig struct {
 	PtBrTranslator string `yaml:"pt-br-translator" mapstructure:"pt-br-translator"`
 }
 
-// Config Application config definition
+// Config Application config definition.
 type Config struct {
 	GinMode           string                    `yaml:"gin-mode"            mapstructure:"gin-mode"`
 	PublicRest        RestConfig                `yaml:"public-rest"         mapstructure:"public-rest"`
@@ -159,13 +159,13 @@ func LoadConfig(path string) Config {
 
 	err = viper.Unmarshal(&cfg)
 	if err != nil {
-		panic(fmt.Errorf("fatal error unmarshal config: %s", err))
+		panic(fmt.Errorf("fatal error unmarshal config: %w", err))
 	}
 
 	return cfg
 }
 
-// ValidateConfig ValidateConfig
+// ValidateConfig ValidateConfig.
 func ValidateConfig(config Config) {
 	if config.DuplicateFinder.RabbitMQ == "" {
 		logrus.Error("Address not provided")

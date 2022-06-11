@@ -4,34 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/sirupsen/logrus"
+
 	"github.com/autowp/goautowp/util"
 )
 
-// Monitoring Main Object
+// Monitoring Main Object.
 type Monitoring struct {
 	db *pgxpool.Pool
 }
 
-// MonitoringInputMessage InputMessage
+// MonitoringInputMessage InputMessage.
 type MonitoringInputMessage struct {
 	IP        net.IP    `json:"ip"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// ListOfTopItem ListOfTopItem
+// ListOfTopItem ListOfTopItem.
 type ListOfTopItem struct {
 	IP    net.IP `json:"ip"`
 	Count int    `json:"count"`
 }
 
-// NewMonitoring constructor
+// NewMonitoring constructor.
 func NewMonitoring(db *pgxpool.Pool) (*Monitoring, error) {
 	s := &Monitoring{
 		db: db,
@@ -40,12 +41,12 @@ func NewMonitoring(db *pgxpool.Pool) (*Monitoring, error) {
 	return s, nil
 }
 
-// Listen for incoming messages
+// Listen for incoming messages.
 func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error {
-
 	conn, err := connectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)
+
 		return err
 	}
 
@@ -86,6 +87,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
 				logrus.Errorf("unexpected mime `%s`", d.ContentType)
+
 				continue
 			}
 
@@ -94,6 +96,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 
 			if err != nil {
 				logrus.Errorf("failed to parse json `%v`: %s", err, d.Body)
+
 				continue
 			}
 
@@ -108,11 +111,11 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 	}
 
 	logrus.Info("Disconnecting RabbitMQ")
-	return conn.Close()
 
+	return conn.Close()
 }
 
-// Add item to Monitoring
+// Add item to Monitoring.
 func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
 	_, err := s.db.Exec(context.Background(), `
 		INSERT INTO ip_monitoring (day_date, hour, tenminute, minute, ip, count)
@@ -130,7 +133,7 @@ func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
 	return err
 }
 
-// GC Garbage Collect
+// GC Garbage Collect.
 func (s *Monitoring) GC() (int64, error) {
 	ct, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE day_date < CURRENT_DATE")
 	if err != nil {
@@ -142,13 +145,14 @@ func (s *Monitoring) GC() (int64, error) {
 	return affected, nil
 }
 
-// Clear removes all collected data
+// Clear removes all collected data.
 func (s *Monitoring) Clear() error {
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring")
+
 	return err
 }
 
-// ClearIP removes all data collected for IP
+// ClearIP removes all data collected for IP.
 func (s *Monitoring) ClearIP(ip net.IP) error {
 	logrus.Info(ip.String() + ": clear monitoring")
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE ip = $1", ip.String())
@@ -156,7 +160,7 @@ func (s *Monitoring) ClearIP(ip net.IP) error {
 	return err
 }
 
-// ListOfTop ListOfTop
+// ListOfTop ListOfTop.
 func (s *Monitoring) ListOfTop(limit int) ([]ListOfTopItem, error) {
 	rows, err := s.db.Query(context.Background(), `
 		SELECT ip, SUM(count) AS c
@@ -185,7 +189,7 @@ func (s *Monitoring) ListOfTop(limit int) ([]ListOfTopItem, error) {
 	return result, nil
 }
 
-// ListByBanProfile ListByBanProfile
+// ListByBanProfile ListByBanProfile.
 func (s *Monitoring) ListByBanProfile(profile AutobanProfile) ([]net.IP, error) {
 	group := append([]string{"ip"}, profile.Group...)
 
@@ -205,8 +209,11 @@ func (s *Monitoring) ListByBanProfile(profile AutobanProfile) ([]net.IP, error) 
 	result := []net.IP{}
 
 	for rows.Next() {
-		var ip net.IP
-		var c int
+		var (
+			ip net.IP
+			c  int
+		)
+
 		if err := rows.Scan(&ip, &c); err != nil {
 			return nil, err
 		}
@@ -217,9 +224,10 @@ func (s *Monitoring) ListByBanProfile(profile AutobanProfile) ([]net.IP, error) 
 	return result, nil
 }
 
-// ExistsIP ban list already contains IP
+// ExistsIP ban list already contains IP.
 func (s *Monitoring) ExistsIP(ip net.IP) (bool, error) {
 	var exists bool
+
 	err := s.db.QueryRow(context.Background(), `
 		SELECT true
 		FROM ip_monitoring

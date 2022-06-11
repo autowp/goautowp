@@ -100,7 +100,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 		return nil, errors.New("no endpoints provided")
 	}
 
-	endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))]
+	endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))] // nolint: gosec
 
 	parsedURL, err := url.Parse(endpoint)
 
@@ -120,8 +120,10 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 	}, nil
 }
 
-func (s *GRPCServer) AclEnforce(ctx context.Context, in *AclEnforceRequest) (*AclEnforceResult, error) {
-
+func (s *GRPCServer) AclEnforce( //nolint
+	ctx context.Context,
+	in *AclEnforceRequest,
+) (*AclEnforceResult, error) {
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

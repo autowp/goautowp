@@ -11,12 +11,12 @@ import (
 	"github.com/autowp/goautowp/util"
 )
 
-// Catalogue service
+// Catalogue service.
 type Catalogue struct {
 	db *goqu.Database
 }
 
-// NewCatalogue constructor
+// NewCatalogue constructor.
 func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
@@ -85,6 +85,7 @@ func (s *Catalogue) getSpecs(parentID int32) ([]*Spec, error) {
 
 	for rows.Next() {
 		var r Spec
+
 		err = rows.Scan(&r.Id, &r.Name, &r.ShortName)
 		if err != nil {
 			return nil, err
@@ -125,15 +126,18 @@ func (s *Catalogue) getPerspectiveGroups(pageID int32) ([]*PerspectiveGroup, err
 		}
 
 		wg.Add(1)
+
 		go func() {
 			perspectives, err := s.getPerspectives(&r.Id)
 			if err != nil {
 				return
 			}
+
 			r.Perspectives = perspectives
 
 			wg.Done()
 		}()
+
 		perspectiveGroups = append(perspectiveGroups, &r)
 	}
 
@@ -154,22 +158,28 @@ func (s *Catalogue) getPerspectivePages() ([]*PerspectivePage, error) {
 	var wg sync.WaitGroup
 
 	var perspectivePages []*PerspectivePage
+
 	for rows.Next() {
 		var r PerspectivePage
+
 		err = rows.Scan(&r.Id, &r.Name)
 		if err != nil {
 			return nil, err
 		}
+
 		wg.Add(1)
+
 		go func() {
 			groups, err := s.getPerspectiveGroups(r.Id)
 			if err != nil {
 				return
 			}
+
 			r.Groups = groups
 
 			wg.Done()
 		}()
+
 		perspectivePages = append(perspectivePages, &r)
 	}
 
@@ -197,12 +207,15 @@ func (s *Catalogue) getPerspectives(groupID *int32) ([]*Perspective, error) {
 	defer util.Close(rows)
 
 	var perspectives []*Perspective
+
 	for rows.Next() {
 		var r Perspective
+
 		err = rows.Scan(&r.Id, &r.Name)
 		if err != nil {
 			return nil, err
 		}
+
 		perspectives = append(perspectives, &r)
 	}
 
@@ -224,17 +237,21 @@ func (s *Catalogue) getBrandVehicleTypes(brandID int32) ([]*BrandVehicleType, er
 
 	rows, err := sqSelect.RunWith(s.db).Query()
 	defer util.Close(rows)
+
 	if err != nil {
 		return nil, err
 	}
 
 	result := []*BrandVehicleType{}
+
 	for rows.Next() {
 		var r BrandVehicleType
+
 		err = rows.Scan(&r.Id, &r.Name, &r.Catname, &r.ItemsCount)
 		if err != nil {
 			return nil, err
 		}
+
 		result = append(result, &r)
 	}
 

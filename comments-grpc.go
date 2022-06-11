@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"fmt"
+
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
@@ -21,7 +22,7 @@ type CommentsGRPCServer struct {
 }
 
 func convertType(commentsType CommentsType) (comments.CommentType, error) {
-	switch commentsType {
+	switch commentsType { //nolint:exhaustive
 	case CommentsType_PICTURES_TYPE_ID:
 		return comments.TypeIDPictures, nil
 	case CommentsType_ITEM_TYPE_ID:
@@ -55,7 +56,6 @@ func NewCommentsGRPCServer(
 
 func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVotesRequest) (*CommentVoteItems, error) {
 	votes, err := s.repository.GetVotes(in.CommentId)
-
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -66,8 +66,8 @@ func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVo
 
 	result := make([]*CommentVote, 0)
 
-	for _, user := range votes.PositiveVotes {
-		extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
+	for idx := range votes.PositiveVotes {
+		extracted, err := s.userExtractor.Extract(&votes.PositiveVotes[idx], map[string]bool{})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -78,8 +78,8 @@ func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVo
 		})
 	}
 
-	for _, user := range votes.NegativeVotes {
-		extracted, err := s.userExtractor.Extract(&user, map[string]bool{})
+	for idx := range votes.NegativeVotes {
+		extracted, err := s.userExtractor.Extract(&votes.NegativeVotes[idx], map[string]bool{})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -172,6 +172,7 @@ func (s *CommentsGRPCServer) SetDeleted(ctx context.Context, in *CommentsSetDele
 	} else {
 		err = s.repository.RestoreMessage(ctx, in.GetCommentId())
 	}
+
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
@@ -216,7 +217,10 @@ func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCo
 	return &emptypb.Empty{}, nil
 }
 
-func (s *CommentsGRPCServer) VoteComment(ctx context.Context, in *CommentsVoteCommentRequest) (*CommentsVoteCommentResponse, error) {
+func (s *CommentsGRPCServer) VoteComment(
+	ctx context.Context,
+	in *CommentsVoteCommentRequest,
+) (*CommentsVoteCommentResponse, error) {
 	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

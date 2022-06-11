@@ -6,6 +6,7 @@ import (
 )
 
 func TestPatternStrategy(t *testing.T) {
+	t.Parallel()
 
 	testCases := []struct {
 		Pattern   string

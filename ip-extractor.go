@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"errors"
 	"github.com/autowp/goautowp/users"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -68,7 +69,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 				}
 
 				user, err := userRepository.User(users.GetUsersOptions{ID: ban.ByUserID})
-				if err != nil {
+				if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 					return nil, err
 				}
 

@@ -12,7 +12,9 @@ import (
 	"time"
 )
 
-// Item Item
+var ErrBanItemNotFound = errors.New("ban item not found")
+
+// Item Item.
 type Item struct {
 	IP       net.IP    `json:"ip"`
 	Until    time.Time `json:"up_to"`
@@ -20,12 +22,12 @@ type Item struct {
 	Reason   string    `json:"reason"`
 }
 
-// Repository Main Object
+// Repository Main Object.
 type Repository struct {
 	db *pgxpool.Pool
 }
 
-// NewRepository constructor
+// NewRepository constructor.
 func NewRepository(db *pgxpool.Pool) (*Repository, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
@@ -38,7 +40,7 @@ func NewRepository(db *pgxpool.Pool) (*Repository, error) {
 	return s, nil
 }
 
-// Add IP to list of banned
+// Add IP to list of banned.
 func (s *Repository) Add(ip net.IP, duration time.Duration, byUserID int64, reason string) error {
 	reason = strings.TrimSpace(reason)
 	upTo := time.Now().Add(duration)
@@ -59,7 +61,7 @@ func (s *Repository) Add(ip net.IP, duration time.Duration, byUserID int64, reas
 	return nil
 }
 
-// Remove IP from list of banned
+// Remove IP from list of banned.
 func (s *Repository) Remove(ip net.IP) error {
 	logrus.Info(ip.String() + ": unban")
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE ip = $1", ip.String())
@@ -67,7 +69,7 @@ func (s *Repository) Remove(ip net.IP) error {
 	return err
 }
 
-// Exists ban list already contains IP
+// Exists ban list already contains IP.
 func (s *Repository) Exists(ip net.IP) (bool, error) {
 	var exists bool
 	err := s.db.QueryRow(context.Background(), `
@@ -83,9 +85,8 @@ func (s *Repository) Exists(ip net.IP) (bool, error) {
 	return !errors.Is(err, pgx.ErrNoRows), nil
 }
 
-// Get ban info
+// Get ban info.
 func (s *Repository) Get(ip net.IP) (*Item, error) {
-
 	item := Item{}
 	err := s.db.QueryRow(context.Background(), `
 		SELECT ip, until, reason, by_user_id
@@ -95,7 +96,7 @@ func (s *Repository) Get(ip net.IP) (*Item, error) {
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return nil, ErrBanItemNotFound
 		}
 
 		return nil, err
@@ -104,7 +105,7 @@ func (s *Repository) Get(ip net.IP) (*Item, error) {
 	return &item, nil
 }
 
-// GC Garbage Collect
+// GC Garbage Collect.
 func (s *Repository) GC() (int64, error) {
 	ct, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban WHERE until < NOW()")
 	if err != nil {
@@ -116,7 +117,7 @@ func (s *Repository) GC() (int64, error) {
 	return affected, nil
 }
 
-// Clear removes all collected data
+// Clear removes all collected data.
 func (s *Repository) Clear() error {
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_ban")
 

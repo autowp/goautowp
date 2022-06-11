@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+const sentryFlushTime = time.Second * 5
+
 var app *goautowp.Application
 
 type ImageStorageCommand struct {
@@ -61,18 +63,19 @@ func (r *AutobanCommand) Execute(_ []string) error {
 	return app.Autoban(quit)
 }
 
-type ListenDfAmqpCommand struct{}
+type ListenDfAMQPCommand struct{}
 
-func (r *ListenDfAmqpCommand) Execute(_ []string) error {
+func (r *ListenDfAMQPCommand) Execute(_ []string) error {
 	quit := captureOsInterrupt()
 
 	return app.ListenDuplicateFinderAMQP(quit)
 }
 
-type ListenMonitoringAmqpCommand struct{}
+type ListenMonitoringAMQPCommand struct{}
 
-func (r *ListenMonitoringAmqpCommand) Execute(_ []string) error {
+func (r *ListenMonitoringAMQPCommand) Execute(_ []string) error {
 	quit := captureOsInterrupt()
+
 	return app.ListenMonitoringAMQP(quit)
 }
 
@@ -83,11 +86,14 @@ func (r *ServePublicCommand) Execute(_ []string) error {
 	if err != nil {
 		return err
 	}
+
 	err = app.MigrateTraffic()
 	if err != nil {
 		return err
 	}
+
 	quit := captureOsInterrupt()
+
 	return app.ServePublic(quit)
 }
 
@@ -147,6 +153,7 @@ func captureOsInterrupt() chan bool {
 
 			quit <- true
 			close(quit)
+
 			break
 		}
 	}()
@@ -172,10 +179,12 @@ func mainReturnWithCode() int {
 	})
 	if err != nil {
 		logrus.Error(err)
+
 		return 1
 	}
+
 	defer func() {
-		sentry.Flush(time.Second * 5)
+		sentry.Flush(sentryFlushTime)
 	}()
 
 	app = goautowp.NewApplication(cfg)
@@ -184,8 +193,8 @@ func mainReturnWithCode() int {
 	var opts struct {
 		ImageStorage          ImageStorageCommand          `command:"image-storage"`
 		Autoban               AutobanCommand               `command:"autoban"`
-		ListenDfAmqp          ListenDfAmqpCommand          `command:"listen-df-amqp"`
-		ListenMonitoringAmqp  ListenMonitoringAmqpCommand  `command:"listen-monitoring-amqp"`
+		ListenDfAMQP          ListenDfAMQPCommand          `command:"listen-df-amqp"`
+		ListenMonitoringAMQP  ListenMonitoringAMQPCommand  `command:"listen-monitoring-amqp"`
 		ServePublic           ServePublicCommand           `command:"serve-public"`
 		ServePrivate          ServePrivateCommand          `command:"serve-private"`
 		MigrateAutowp         MigrateAutowpCommand         `command:"migrate-autowp"`

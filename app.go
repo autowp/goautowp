@@ -19,12 +19,12 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"       // enable file migration source
 )
 
-// Application is Service Main Object
+// Application is Service Main Object.
 type Application struct {
 	container *Container
 }
 
-// NewApplication constructor
+// NewApplication constructor.
 func NewApplication(cfg config.Config) *Application {
 	s := &Application{
 		container: NewContainer(cfg),

@@ -54,7 +54,7 @@ const (
 	COPYRIGHT ItemType = 9
 )
 
-// Repository Main Object
+// Repository Main Object.
 type Repository struct {
 	db *goqu.Database
 }
@@ -71,7 +71,7 @@ type Item struct {
 	NewDescendantsCount int32
 }
 
-// NewRepository constructor
+// NewRepository constructor.
 func NewRepository(
 	db *goqu.Database,
 ) *Repository {
@@ -252,7 +252,8 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 
 		if options.Fields.NewChildItemsCount {
 			sqSelect = sqSelect.Column(
-				"count(distinct IF("+ipcAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+ipcAlias+".item_id, NULL)) AS new_child_items_count",
+				"count(distinct IF("+ipcAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+
+					ipcAlias+".item_id, NULL)) AS new_child_items_count",
 				NewDays,
 			)
 		}
@@ -517,7 +518,7 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 	}
 
 	if !success {
-		return nil, nil
+		return nil, nil // nolint: nilnil
 	}
 
 	return &TreeItem{

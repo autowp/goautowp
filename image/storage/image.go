@@ -10,7 +10,7 @@ type Image struct {
 	dir      string
 }
 
-func (s Image) Id() int {
+func (s Image) ID() int {
 	return s.id
 }
 

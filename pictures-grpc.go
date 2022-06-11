@@ -48,7 +48,7 @@ func (s *PicturesGRPCServer) Vote(ctx context.Context, in *PicturesVoteRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err, vote := s.repository.GetVote(ctx, in.GetPictureId(), userID)
+	vote, err := s.repository.GetVote(ctx, in.GetPictureId(), userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

@@ -8,7 +8,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
-// Feedback Main Object
+// Feedback Main Object.
 type Feedback struct {
 	captchaEnabled  bool
 	config          config.FeedbackConfig
@@ -16,7 +16,7 @@ type Feedback struct {
 	emailSender     email.Sender
 }
 
-// CreateFeedbackRequest CreateFeedbackRequest
+// CreateFeedbackRequest CreateFeedbackRequest.
 type CreateFeedbackRequest struct {
 	Name    string `json:"name"`
 	Email   string `json:"email"`
@@ -25,7 +25,7 @@ type CreateFeedbackRequest struct {
 	IP      string
 }
 
-// NewFeedback constructor
+// NewFeedback constructor.
 func NewFeedback(
 	config config.FeedbackConfig,
 	recaptchaConfig config.RecaptchaConfig,
@@ -63,10 +63,11 @@ func (s *CreateFeedbackRequest) Validate(
 	captchaEnabled bool,
 	ip string,
 ) ([]*errdetails.BadRequest_FieldViolation, error) {
-	result := make([]*errdetails.BadRequest_FieldViolation, 0)
-
-	var problems []string
-	var err error
+	var (
+		result   = make([]*errdetails.BadRequest_FieldViolation, 0)
+		problems []string
+		err      error
+	)
 
 	nameInputFilter := validation.InputFilter{
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},

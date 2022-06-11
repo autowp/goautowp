@@ -22,19 +22,20 @@ import (
 )
 
 const threshold = 3
+const decimal = 10
 
-// DuplicateFinder Main Object
+// DuplicateFinder Main Object.
 type DuplicateFinder struct {
 	db *goqu.Database
 }
 
-// DuplicateFinderInputMessage InputMessage
+// DuplicateFinderInputMessage InputMessage.
 type DuplicateFinderInputMessage struct {
 	PictureID int    `json:"picture_id"`
 	URL       string `json:"url"`
 }
 
-// NewDuplicateFinder constructor
+// NewDuplicateFinder constructor.
 func NewDuplicateFinder(db *goqu.Database) (*DuplicateFinder, error) {
 	s := &DuplicateFinder{
 		db: db,
@@ -44,33 +45,39 @@ func NewDuplicateFinder(db *goqu.Database) (*DuplicateFinder, error) {
 }
 
 func connectRabbitMQ(config string) (*amqp.Connection, error) {
-	start := time.Now()
-	timeout := 60 * time.Second
+	const (
+		connectionTimeout = 60 * time.Second
+		reconnectDelay    = 100 * time.Millisecond
+	)
 
 	logrus.Info("Waiting for rabbitMQ")
 
-	var rabbitMQ *amqp.Connection
-	var err error
+	var (
+		rabbitMQ *amqp.Connection
+		err      error
+		start    = time.Now()
+	)
 
 	for {
 		rabbitMQ, err = amqp.Dial(config)
 		if err == nil {
 			logrus.Info("Started.")
+
 			break
 		}
 
-		if time.Since(start) > timeout {
+		if time.Since(start) > connectionTimeout {
 			return nil, err
 		}
 
 		logrus.Info(".")
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(reconnectDelay)
 	}
 
 	return rabbitMQ, nil
 }
 
-// Listen for incoming messages
+// ListenAMQP for incoming messages.
 func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan bool) error {
 	rabbitMQ, err := connectRabbitMQ(url)
 	if err != nil {
@@ -115,6 +122,7 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 		select {
 		case <-quitChan:
 			logrus.Info("DuplicateFinder got quit signal")
+
 			done = true
 
 			break
@@ -126,9 +134,10 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 			}
 
 			var message DuplicateFinderInputMessage
+
 			err := json.Unmarshal(d.Body, &message)
 			if err != nil {
-				sentry.CaptureException(fmt.Errorf("failed to parse json `%v`: %s", err, d.Body))
+				sentry.CaptureException(fmt.Errorf("failed to parse json `%w`: %s", err, d.Body))
 
 				continue
 			}
@@ -201,6 +210,7 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	}
 
 	var hash uint64
+
 	err := s.db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id).Scan(&hash)
 	if err != nil {
 		return err
@@ -216,9 +226,8 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	}
 	defer util.Close(insertStmt)
 
-	// nolint: gosec
 	rows, err := s.db.Query(`
-		SELECT picture_id, BIT_COUNT(hash ^ `+strconv.FormatUint(hash, 10)+`) AS distance
+		SELECT picture_id, BIT_COUNT(hash ^ `+strconv.FormatUint(hash, decimal)+`) AS distance
 		FROM df_hash 
 		WHERE picture_id != ? 
 		HAVING distance <= ?
@@ -235,8 +244,10 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	defer util.Close(rows)
 
 	for rows.Next() {
-		var pictureID int
-		var distance int
+		var (
+			pictureID int
+			distance  int
+		)
 
 		serr := rows.Scan(&pictureID, &distance)
 

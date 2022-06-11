@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Sender Sender
+// Sender Sender.
 type Sender interface {
 	Send(from string, to []string, subject, body, replyTo string) error
 }

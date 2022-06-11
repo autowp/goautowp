@@ -13,8 +13,15 @@ import (
 )
 
 func TestCreateDeleteContact(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.DialContext(
+		ctx,
+		"bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
 
 	defer util.Close(conn)
@@ -75,6 +82,7 @@ func TestCreateDeleteContact(t *testing.T) {
 	for _, i := range items.Items {
 		if i.ContactUserId == tester.Id {
 			contactUser = i
+
 			break
 		}
 	}

@@ -34,7 +34,7 @@ import (
 	"time"
 )
 
-// Container Container
+// Container Container.
 type Container struct {
 	autowpDB             *sql.DB
 	banRepository        *ban.Repository
@@ -80,7 +80,7 @@ type Container struct {
 	statisticsGrpcServer *StatisticsGRPCServer
 }
 
-// NewContainer constructor
+// NewContainer constructor.
 func NewContainer(cfg config.Config) *Container {
 	return &Container{
 		config: cfg,
@@ -121,12 +121,18 @@ func (s *Container) AutowpDB() (*sql.DB, error) {
 	}
 
 	start := time.Now()
-	timeout := 60 * time.Second
+
+	const (
+		connectionTimeout = 60 * time.Second
+		reconnectDelay    = 100 * time.Millisecond
+	)
 
 	logrus.Info("Waiting for mysql")
 
-	var db *sql.DB
-	var err error
+	var (
+		db  *sql.DB
+		err error
+	)
 
 	for {
 		db, err = sql.Open("mysql", s.config.AutowpDSN)
@@ -137,15 +143,16 @@ func (s *Container) AutowpDB() (*sql.DB, error) {
 		err = db.Ping()
 		if err == nil {
 			logrus.Info("Started.")
+
 			break
 		}
 
-		if time.Since(start) > timeout {
+		if time.Since(start) > connectionTimeout {
 			return nil, err
 		}
 
 		logrus.Info(".")
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(reconnectDelay)
 	}
 
 	s.autowpDB = db
@@ -259,6 +266,7 @@ func (s *Container) Feedback() (*Feedback, error) {
 		emailSender := s.EmailSender()
 
 		var err error
+
 		s.feedback, err = NewFeedback(cfg.Feedback, cfg.Recaptcha, cfg.Captcha, emailSender)
 		if err != nil {
 			return nil, err
@@ -280,7 +288,7 @@ func (s *Container) HostsManager() *hosts.Manager {
 	return s.hostsManager
 }
 
-// Location Location
+// Location Location.
 func (s *Container) Location() (*time.Location, error) {
 	if s.location == nil {
 		loc, err := time.LoadLocation("UTC")
@@ -498,6 +506,7 @@ func (s *Container) Traffic() (*Traffic, error) {
 		traffic, err := NewTraffic(db, autowpDB, enforcer, banRepository, userExtractor)
 		if err != nil {
 			logrus.Error(err.Error())
+
 			return nil, err
 		}
 
@@ -512,15 +521,20 @@ func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
 		return s.trafficDB, nil
 	}
 
-	cfg := s.Config()
-
-	start := time.Now()
-	timeout := 60 * time.Second
+	const (
+		connectionTimeout = 60 * time.Second
+		reconnectDelay    = 100 * time.Millisecond
+	)
 
 	logrus.Info("Waiting for postgres")
 
-	var pool *pgxpool.Pool
-	var err error
+	var (
+		cfg   = s.Config()
+		start = time.Now()
+		pool  *pgxpool.Pool
+		err   error
+	)
+
 	for {
 		pool, err = pgxpool.Connect(context.Background(), cfg.TrafficDSN)
 		if err != nil {
@@ -537,16 +551,17 @@ func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
 
 		if err == nil {
 			logrus.Info("Started.")
+
 			break
 		}
 
-		if time.Since(start) > timeout {
+		if time.Since(start) > connectionTimeout {
 			return nil, err
 		}
 
 		logrus.Error(err)
 		logrus.Info(".")
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(reconnectDelay)
 	}
 
 	s.trafficDB = pool

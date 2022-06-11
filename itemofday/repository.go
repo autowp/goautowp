@@ -2,8 +2,9 @@ package itemofday
 
 import (
 	"context"
-	"github.com/doug-martin/goqu/v9"
 	"time"
+
+	"github.com/doug-martin/goqu/v9"
 )
 
 type Repository struct {
@@ -33,11 +34,11 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 
 	for i := 0; i < 10; i++ {
 		found := false
+
 		_, err := s.db.Select(goqu.L("1")).From("of_day").Where(
 			goqu.I("day_date").Eq(now.Format("2006-01-02")),
 			goqu.I("item_id").IsNotNull(),
 		).ScanValContext(ctx, &found)
-
 		if err != nil {
 			return nil, err
 		}

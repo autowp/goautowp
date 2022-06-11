@@ -15,6 +15,8 @@ import (
 )
 
 func createTrafficService(t *testing.T) *Traffic {
+	t.Helper()
+
 	s, err := getContainer().Traffic()
 	require.NoError(t, err)
 
@@ -22,6 +24,7 @@ func createTrafficService(t *testing.T) *Traffic {
 }
 
 func TestAutoWhitelist(t *testing.T) {
+	t.Parallel()
 
 	s := createTrafficService(t)
 
@@ -58,6 +61,7 @@ func TestAutoWhitelist(t *testing.T) {
 }
 
 func TestAutoBanByProfile(t *testing.T) {
+	t.Parallel()
 
 	s := createTrafficService(t)
 
@@ -83,6 +87,7 @@ func TestAutoBanByProfile(t *testing.T) {
 
 	err = s.Monitoring.Add(ip1, time.Now())
 	require.NoError(t, err)
+
 	for i := 0; i < 4; i++ {
 		err = s.Monitoring.Add(ip2, time.Now())
 		require.NoError(t, err)
@@ -101,6 +106,7 @@ func TestAutoBanByProfile(t *testing.T) {
 }
 
 func TestWhitelistedNotBanned(t *testing.T) {
+	t.Parallel()
 
 	s := createTrafficService(t)
 
@@ -133,6 +139,8 @@ func TestWhitelistedNotBanned(t *testing.T) {
 }
 
 func TestHttpBanPost(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig(".")
 
 	cnt := NewContainer(cfg)
@@ -180,6 +188,7 @@ func TestHttpBanPost(t *testing.T) {
 }
 
 func TestTop(t *testing.T) {
+	t.Parallel()
 
 	s := createTrafficService(t)
 
@@ -221,5 +230,4 @@ func TestTop(t *testing.T) {
 	require.Equal(t, top.Items[0].Ip, "::1")
 	require.EqualValues(t, top.Items[0].Count, 10)
 	require.Equal(t, top.Items[0].WhoisUrl, "https://nic.ru/whois/?query=%3A%3A1")
-	// require.Equal(t, `{"items":[{"ip":"::1","count":10,"ban":null,"in_whitelist":false,"whois_url":"http://nic.ru/whois/?query=%3A%3A1"},{"ip":"192.168.0.1","count":1,"ban":null,"in_whitelist":false,"whois_url":"http://nic.ru/whois/?query=192.168.0.1"}]}`, string(body))
 }

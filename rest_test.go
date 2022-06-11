@@ -12,6 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const tokenWithInvalidSignature = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9." +
+	"eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9." +
+	"yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ"
+
 func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
 	t.Parallel()
 
@@ -46,7 +50,10 @@ func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer abc"}))
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		metadata.New(map[string]string{"authorization": "Bearer abc"}),
+	)
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.Error(t, err)
@@ -60,7 +67,12 @@ func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJkZWZhdWx0Iiwic3ViIjoiMSJ9.yuzUurjlDfEKchYseIrHQ1D5_RWnSuMxM-iK9FDNlQBBw8kCz3H-94xHvyd9pAA6Ry2-YkGi1v6Y3AHIpkDpcQ"}))
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		metadata.New(map[string]string{
+			"authorization": "Bearer " + tokenWithInvalidSignature,
+		}),
+	)
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.Error(t, err)

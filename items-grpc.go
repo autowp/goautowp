@@ -14,6 +14,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const defaultCacheExpiration = 180
+
 type ItemsGRPCServer struct {
 	UnimplementedItemsServer
 	repository *items.Repository
@@ -42,7 +44,6 @@ func NewItemsGRPCServer(
 }
 
 func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsListRequest) (*APITopBrandsList, error) {
-
 	if s == nil {
 		return nil, status.Error(codes.Internal, "self not initialized")
 	}
@@ -73,6 +74,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 			OrderBy:    "descendants_count DESC",
 			SortByName: true,
 		}
+
 		list, err := s.repository.List(options)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -87,6 +89,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 		cache.Total = count
 
 		b := new(bytes.Buffer)
+
 		err = gob.NewEncoder(b).Encode(cache)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -95,12 +98,11 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 		err = s.memcached.Set(&memcache.Item{
 			Key:        key,
 			Value:      b.Bytes(),
-			Expiration: 180,
+			Expiration: defaultCacheExpiration,
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
 	} else {
 		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
 		err = decoder.Decode(&cache)
@@ -126,10 +128,13 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersonsListRequest) (*APITopPersonsList, error) {
+func (s *ItemsGRPCServer) GetTopPersonsList(
+	_ context.Context,
+	in *GetTopPersonsListRequest,
+) (*APITopPersonsList, error) {
 	var pictureItemType pictures.ItemPictureType
 
-	switch in.PictureItemType {
+	switch in.PictureItemType { //nolint:exhaustive
 	case PictureItemType_PICTURE_CONTENT:
 		pictureItemType = pictures.ItemPictureContent
 	case PictureItemType_PICTURE_AUTHOR:
@@ -148,7 +153,6 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 	var res []items.Item
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-
 		res, err = s.repository.List(items.ItemsOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -169,6 +173,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 		}
 
 		b := new(bytes.Buffer)
+
 		err = gob.NewEncoder(b).Encode(res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -177,7 +182,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 		err = s.memcached.Set(&memcache.Item{
 			Key:        key,
 			Value:      b.Bytes(),
-			Expiration: 180,
+			Expiration: defaultCacheExpiration,
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -203,8 +208,10 @@ func (s *ItemsGRPCServer) GetTopPersonsList(_ context.Context, in *GetTopPersons
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFactoriesListRequest) (*APITopFactoriesList, error) {
-
+func (s *ItemsGRPCServer) GetTopFactoriesList(
+	_ context.Context,
+	in *GetTopFactoriesListRequest,
+) (*APITopFactoriesList, error) {
 	key := fmt.Sprintf("GO_FACTORIES_2_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
@@ -234,6 +241,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFacto
 		}
 
 		b := new(bytes.Buffer)
+
 		err = gob.NewEncoder(b).Encode(res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -242,12 +250,11 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFacto
 		err = s.memcached.Set(&memcache.Item{
 			Key:        key,
 			Value:      b.Bytes(),
-			Expiration: 180,
+			Expiration: defaultCacheExpiration,
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
 	} else {
 		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
 		err = decoder.Decode(&res)
@@ -271,8 +278,10 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(_ context.Context, in *GetTopFacto
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCategoriesListRequest) (*APITopCategoriesList, error) {
-
+func (s *ItemsGRPCServer) GetTopCategoriesList(
+	_ context.Context,
+	in *GetTopCategoriesListRequest,
+) (*APITopCategoriesList, error) {
 	key := fmt.Sprintf("GO_CATEGORIES_4_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
@@ -283,7 +292,6 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCate
 	var res []items.Item
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-
 		res, err = s.repository.List(items.ItemsOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -301,6 +309,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCate
 		}
 
 		b := new(bytes.Buffer)
+
 		err = gob.NewEncoder(b).Encode(res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -309,12 +318,11 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCate
 		err = s.memcached.Set(&memcache.Item{
 			Key:        key,
 			Value:      b.Bytes(),
-			Expiration: 180,
+			Expiration: defaultCacheExpiration,
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
 	} else {
 		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
 		err = decoder.Decode(&res)
@@ -338,7 +346,10 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(_ context.Context, in *GetTopCate
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error) {
+func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
+	_ context.Context,
+	in *GetTopTwinsBrandsListRequest,
+) (*APITopTwinsBrandsList, error) {
 	key := fmt.Sprintf("GO_TWINS_1_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
@@ -355,7 +366,6 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwi
 	}
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-
 		twinsData.Res, err = s.repository.List(items.ItemsOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -391,6 +401,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwi
 		}
 
 		b := new(bytes.Buffer)
+
 		err = gob.NewEncoder(b).Encode(twinsData)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -399,12 +410,11 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(_ context.Context, in *GetTopTwi
 		err = s.memcached.Set(&memcache.Item{
 			Key:        key,
 			Value:      b.Bytes(),
-			Expiration: 180,
+			Expiration: defaultCacheExpiration,
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
 	} else {
 		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
 		err = decoder.Decode(&twinsData)
@@ -467,7 +477,6 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 }
 
 func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIItemList, error) {
-
 	options := items.ItemsOptions{
 		Limit: in.Limit,
 		Fields: items.ListFields{
@@ -512,6 +521,7 @@ func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIIte
 	if in.DescendantPictures != nil {
 		mapItemPicturesRequest(in.DescendantPictures, options.DescendantPictures)
 	}
+
 	if in.PreviewPictures != nil {
 		mapItemPicturesRequest(in.PreviewPictures, options.PreviewPictures)
 	}

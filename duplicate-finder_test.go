@@ -38,6 +38,8 @@ func copyFile(src, dst string) error {
 }
 
 func addImage(t *testing.T, db *sql.DB, filepath string) int {
+	t.Helper()
+
 	_, filename := path.Split(filepath)
 	extension := path.Ext(filename)
 	name := strings.TrimSuffix(filename, extension)
@@ -73,6 +75,8 @@ func addImage(t *testing.T, db *sql.DB, filepath string) int {
 }
 
 func addPicture(t *testing.T, db *sql.DB, filepath string) int {
+	t.Helper()
+
 	imageID := addImage(t, db, filepath)
 
 	randBytes := make([]byte, 3)
@@ -99,6 +103,8 @@ func addPicture(t *testing.T, db *sql.DB, filepath string) int {
 }
 
 func TestDuplicateFinder(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig(".")
 
 	db, err := sql.Open("mysql", cfg.AutowpDSN)

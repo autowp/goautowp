@@ -11,28 +11,30 @@ import (
 	"strings"
 )
 
-// Whitelist Main Object
+var ErrWhitelistItemNotFound = errors.New("whitelist item not found")
+
+// Whitelist Main Object.
 type Whitelist struct {
 	db *pgxpool.Pool
 }
 
-// WhitelistItem WhitelistItem
+// WhitelistItem WhitelistItem.
 type WhitelistItem struct {
 	IP          net.IP `json:"ip"`
 	Description string `json:"description"`
 }
 
-// NewWhitelist constructor
+// NewWhitelist constructor.
 func NewWhitelist(db *pgxpool.Pool) (*Whitelist, error) {
 	return &Whitelist{
 		db: db,
 	}, nil
 }
 
-// MatchAuto MatchAuto
+// MatchAuto MatchAuto.
 func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
 	ipText := ip.String()
-	ipWithDashes := strings.Replace(ipText, ".", "-", -1)
+	ipWithDashes := strings.ReplaceAll(ipText, ".", "-")
 
 	msnHost := "msnbot-" + ipWithDashes + ".search.msn.com."
 	yandexComHost := ipWithDashes + ".spider.yandex.com."
@@ -71,7 +73,7 @@ func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
 	return false, ""
 }
 
-// Add IP to whitelist
+// Add IP to whitelist.
 func (s *Whitelist) Add(ip net.IP, desc string) error {
 	_, err := s.db.Exec(context.Background(), `
 		INSERT INTO ip_whitelist (ip, description)
@@ -82,7 +84,7 @@ func (s *Whitelist) Add(ip net.IP, desc string) error {
 	return err
 }
 
-// Get whitelist item
+// Get whitelist item.
 func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 	var item WhitelistItem
 	err := s.db.QueryRow(context.Background(), `
@@ -93,7 +95,7 @@ func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return nil, ErrWhitelistItemNotFound
 		}
 
 		return nil, err
@@ -102,7 +104,7 @@ func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 	return &item, nil
 }
 
-// List whitelist items
+// List whitelist items.
 func (s *Whitelist) List() ([]*APITrafficWhitelistItem, error) {
 	result := make([]*APITrafficWhitelistItem, 0)
 	rows, err := s.db.Query(context.Background(), `
@@ -127,7 +129,7 @@ func (s *Whitelist) List() ([]*APITrafficWhitelistItem, error) {
 	return result, nil
 }
 
-// Exists whitelist already contains IP
+// Exists whitelist already contains IP.
 func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 	var exists bool
 	err := s.db.QueryRow(context.Background(), `
@@ -147,7 +149,7 @@ func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 	return true, nil
 }
 
-// Remove IP from whitelist
+// Remove IP from whitelist.
 func (s *Whitelist) Remove(ip net.IP) error {
 	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_whitelist WHERE ip = $1", ip.String())
 

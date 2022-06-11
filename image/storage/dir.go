@@ -20,6 +20,7 @@ func (d *Dir) NamingStrategy() NamingStrategy {
 
 func NewDir(bucket string, config config.ImageStorageNamingStrategyConfig) (*Dir, error) {
 	var strategy NamingStrategy
+
 	switch config.Strategy {
 	case NamingStrategyTypeSerial:
 		strategy = NamingStrategySerial{

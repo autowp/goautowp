@@ -10,9 +10,16 @@ import (
 )
 
 func TestTopBrandsList(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
+
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
@@ -26,9 +33,17 @@ func TestTopBrandsList(t *testing.T) {
 }
 
 func TestTopPersonsAuthorList(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.DialContext(
+		ctx,
+		"bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
+
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
@@ -38,13 +53,19 @@ func TestTopPersonsAuthorList(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
-	//require.NotEmpty(t, r.Items)
 }
 
 func TestTopPersonsContentList(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
+
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
@@ -54,13 +75,19 @@ func TestTopPersonsContentList(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
-	//require.NotEmpty(t, r.Items)
 }
 
 func TestTopFactoriesList(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
+
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
@@ -69,5 +96,4 @@ func TestTopFactoriesList(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
-	//require.NotEmpty(t, r.Items)
 }

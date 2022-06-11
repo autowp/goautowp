@@ -43,7 +43,6 @@ func TestMatchAuto(t *testing.T) {
 
 	match, _ = s.MatchAuto(net.IPv4(127, 0, 0, 1)) // loopback
 	require.False(t, match)
-
 }
 
 func TestContains(t *testing.T) {
@@ -59,5 +58,4 @@ func TestContains(t *testing.T) {
 	exists, err := s.Exists(ip)
 	require.NoError(t, err)
 	require.True(t, exists)
-
 }

@@ -7,13 +7,19 @@ import (
 	"testing"
 )
 
+const towerFilePath = "./_files/Towers_Schiphol_small.jpg"
+
 func TestShouldResizeOddWidthPictureStrictlyToTargetWidthByOuterFitType(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
-	file := "./_files/Towers_Schiphol_small.jpg"
 	mw := imagick.NewMagickWand()
+
 	defer mw.Destroy()
-	err := mw.ReadImage(file)
+
+	err := mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      102,
@@ -26,12 +32,16 @@ func TestShouldResizeOddWidthPictureStrictlyToTargetWidthByOuterFitType(t *testi
 }
 
 func TestShouldResizeOddHeightPictureStrictlyToTargetHeightByOuterFitType(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
-	file := "./_files/Towers_Schiphol_small.jpg"
 	mw := imagick.NewMagickWand()
+
 	defer mw.Destroy()
-	err := mw.ReadImage(file)
+
+	err := mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      101,
@@ -44,13 +54,17 @@ func TestShouldResizeOddHeightPictureStrictlyToTargetHeightByOuterFitType(t *tes
 }
 
 func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
-	file := "./_files/Towers_Schiphol_small.jpg"
 	mw := imagick.NewMagickWand()
+
 	defer mw.Destroy()
+
 	// both size less
-	err := mw.ReadImage(file)
+	err := mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeInner,
 		Width:      150,
@@ -64,8 +78,9 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	mw.Clear()
 
 	// width less
-	err = mw.ReadImage(file)
+	err = mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeInner,
 		Width:      150,
@@ -79,8 +94,9 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	mw.Clear()
 
 	// height less
-	err = mw.ReadImage(file)
+	err = mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeInner,
 		Width:      50,
@@ -94,8 +110,9 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	mw.Clear()
 
 	// not less
-	err = mw.ReadImage(file)
+	err = mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeInner,
 		Width:      50,
@@ -109,8 +126,9 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	mw.Clear()
 
 	// both size less, reduceOnly off
-	err = mw.ReadImage(file)
+	err = mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeInner,
 		Width:      150,
@@ -124,8 +142,9 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	mw.Clear()
 
 	// width less, reduceOnly off
-	err = mw.ReadImage(file)
+	err = mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeInner,
 		Width:      150,
@@ -139,8 +158,9 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	mw.Clear()
 
 	// height less, reduceOnly off
-	err = mw.ReadImage(file)
+	err = mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeInner,
 		Width:      50,
@@ -154,8 +174,9 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 	mw.Clear()
 
 	// not less, reduceOnly off
-	err = mw.ReadImage(file)
+	err = mw.ReadImage(towerFilePath)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeInner,
 		Width:      50,
@@ -170,14 +191,18 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 }
 
 func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
-	file := "./_files/Towers_Schiphol_small.jpg"
+	file := towerFilePath
 	mw := imagick.NewMagickWand()
+
 	defer mw.Destroy()
 
 	// both size less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      150,
@@ -193,6 +218,7 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// width less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      150,
@@ -208,6 +234,7 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// height less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      50,
@@ -223,6 +250,7 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      50,
@@ -238,6 +266,7 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// both size less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      150,
@@ -253,6 +282,7 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// width less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      150,
@@ -268,6 +298,7 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// height less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      50,
@@ -283,6 +314,7 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeOuter,
 		Width:      50,
@@ -297,14 +329,18 @@ func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
 }
 
 func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
-	file := "./_files/Towers_Schiphol_small.jpg"
+	file := towerFilePath
 	mw := imagick.NewMagickWand()
+
 	defer mw.Destroy()
 
 	// both size less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeMaximum,
 		Width:      150,
@@ -320,6 +356,7 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// width less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeMaximum,
 		Width:      150,
@@ -335,6 +372,7 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// height less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeMaximum,
 		Width:      50,
@@ -350,6 +388,7 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeMaximum,
 		Width:      50,
@@ -365,6 +404,7 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// both size less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeMaximum,
 		Width:      150,
@@ -380,6 +420,7 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// width less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeMaximum,
 		Width:      150,
@@ -395,6 +436,7 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// height less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeMaximum,
 		Width:      50,
@@ -410,6 +452,7 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:    config.FitTypeMaximum,
 		Width:      50,
@@ -424,14 +467,18 @@ func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
 }
 
 func TestReduceOnlyByWidthWorks(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
-	file := "./_files/Towers_Schiphol_small.jpg"
+	file := towerFilePath
 	mw := imagick.NewMagickWand()
+
 	defer mw.Destroy()
 
 	// width less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		Width:      150,
 		ReduceOnly: true,
@@ -445,6 +492,7 @@ func TestReduceOnlyByWidthWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Width:      50,
 		ReduceOnly: true,
@@ -458,6 +506,7 @@ func TestReduceOnlyByWidthWorks(t *testing.T) {
 	// width less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Width:      150,
 		ReduceOnly: false,
@@ -471,6 +520,7 @@ func TestReduceOnlyByWidthWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Width:      50,
 		ReduceOnly: false,
@@ -483,14 +533,18 @@ func TestReduceOnlyByWidthWorks(t *testing.T) {
 }
 
 func TestReduceOnlyByHeightWorks(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
-	file := "./_files/Towers_Schiphol_small.jpg"
+	file := towerFilePath
 	mw := imagick.NewMagickWand()
+
 	defer mw.Destroy()
 
 	// height less
 	err := mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		Height:     200,
 		ReduceOnly: true,
@@ -504,6 +558,7 @@ func TestReduceOnlyByHeightWorks(t *testing.T) {
 	// not less
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Height:     100,
 		ReduceOnly: true,
@@ -517,6 +572,7 @@ func TestReduceOnlyByHeightWorks(t *testing.T) {
 	// height less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Height:     200,
 		ReduceOnly: false,
@@ -530,6 +586,7 @@ func TestReduceOnlyByHeightWorks(t *testing.T) {
 	// not less, reduceOnly off
 	err = mw.ReadImage(file)
 	require.NoError(t, err)
+
 	format = NewFormat(config.ImageStorageSamplerFormatConfig{
 		Height:     100,
 		ReduceOnly: false,
@@ -542,6 +599,8 @@ func TestReduceOnlyByHeightWorks(t *testing.T) {
 }
 
 func TestAnimationPreservedDueResample(t *testing.T) {
+	t.Parallel()
+
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 	err := mw.ReadImage("./_files/icon-animation.gif")
@@ -566,6 +625,8 @@ func TestAnimationPreservedDueResample(t *testing.T) {
 }
 
 func TestResizeGif(t *testing.T) {
+	t.Parallel()
+
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 	err := mw.ReadImage("./_files/rudolp-jumping-rope.gif")
@@ -591,6 +652,8 @@ func TestResizeGif(t *testing.T) {
 }
 
 func TestResizeGifWithProportionsConstraints(t *testing.T) {
+	t.Parallel()
+
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 	err := mw.ReadImage("./_files/rudolp-jumping-rope.gif")
@@ -618,6 +681,8 @@ func TestResizeGifWithProportionsConstraints(t *testing.T) {
 }
 
 func TestVerticalProportional(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
 
 	mw := imagick.NewMagickWand()
@@ -625,6 +690,7 @@ func TestVerticalProportional(t *testing.T) {
 	// both size less
 	err := mw.ReadImage("./_files/mazda3_sedan_us-spec_11.jpg")
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:          config.FitTypeInner,
 		Width:            200,
@@ -641,6 +707,8 @@ func TestVerticalProportional(t *testing.T) {
 }
 
 func TestHorizontalProportional(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
 
 	mw := imagick.NewMagickWand()
@@ -649,6 +717,7 @@ func TestHorizontalProportional(t *testing.T) {
 	// both size less
 	err := mw.ReadImage("./_files/mazda3_sedan_us-spec_11.jpg")
 	require.NoError(t, err)
+
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
 		FitType:          config.FitTypeInner,
 		Width:            400,
@@ -664,17 +733,15 @@ func TestHorizontalProportional(t *testing.T) {
 	mw.Clear()
 }
 
-/**
- * @throws Sampler\Exception
- * @throws ImagickException
- */
 func TestWidest(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
 
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 	// height less
-	err := mw.ReadImage("./_files/wide-image.png") //1000x229
+	err := mw.ReadImage("./_files/wide-image.png") // 1000x229
 	require.NoError(t, err)
 
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
@@ -688,12 +755,14 @@ func TestWidest(t *testing.T) {
 }
 
 func TestHighest(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
 
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 	// height less
-	err := mw.ReadImage("./_files/Towers_Schiphol_small.jpg") //101x149
+	err := mw.ReadImage(towerFilePath) // 101x149
 	require.NoError(t, err)
 
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{
@@ -707,6 +776,8 @@ func TestHighest(t *testing.T) {
 }
 
 func TestPngAvatar(t *testing.T) {
+	t.Parallel()
+
 	sampler := NewSampler()
 
 	mw := imagick.NewMagickWand()
@@ -714,6 +785,7 @@ func TestPngAvatar(t *testing.T) {
 	// height less
 	err := mw.ReadImage("./_files/test.png")
 	require.NoError(t, err)
+
 	defer mw.Clear()
 
 	format := NewFormat(config.ImageStorageSamplerFormatConfig{

@@ -1,7 +1,7 @@
 package goautowp
 
 import (
-	"crypto/md5"
+	"crypto/md5" // nolint: gosec
 	"encoding/hex"
 	"fmt"
 	"github.com/autowp/goautowp/image/storage"
@@ -27,7 +27,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	}
 
 	return &APIImage{
-		Id:       int32(i.Id()),
+		Id:       int32(i.ID()),
 		Width:    int32(i.Width()),
 		Height:   int32(i.Height()),
 		Filesize: int32(i.FileSize()),
@@ -87,7 +87,7 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*API
 
 		case "gravatar":
 			if row.EMail != nil {
-				hash := md5.Sum([]byte(*row.EMail))
+				hash := md5.Sum([]byte(*row.EMail)) // nolint: gosec
 				str := fmt.Sprintf(
 					"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
 					hex.EncodeToString(hash[:]),

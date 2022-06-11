@@ -8,7 +8,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 )
 
-// Forums Main Object
+// Forums Main Object.
 type Forums struct {
 	db *goqu.Database
 }

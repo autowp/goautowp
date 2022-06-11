@@ -59,7 +59,7 @@ func (s Repository) IncView(ctx context.Context, id int64) error {
 	return err
 }
 
-func (s Repository) GetVote(ctx context.Context, id int64, userID int64) (error, *VoteSummary) {
+func (s Repository) GetVote(ctx context.Context, id int64, userID int64) (*VoteSummary, error) {
 	var value, positive, negative int32
 	if userID > 0 {
 		err := s.db.QueryRowContext(
@@ -68,7 +68,7 @@ func (s Repository) GetVote(ctx context.Context, id int64, userID int64) (error,
 			id, userID,
 		).Scan(&value)
 		if err != nil {
-			return err, nil
+			return nil, err
 		}
 	}
 
@@ -79,14 +79,14 @@ func (s Repository) GetVote(ctx context.Context, id int64, userID int64) (error,
 	).Scan(&positive, &negative)
 
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, &VoteSummary{
+	return &VoteSummary{
 		Value:    value,
 		Positive: positive,
 		Negative: negative,
-	}
+	}, nil
 }
 
 func (s Repository) Vote(ctx context.Context, id int64, value int32, userID int64) error {
@@ -187,8 +187,10 @@ func (s Repository) updatePictureSummary(ctx context.Context, id int64) error {
 func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
 	result := make([]*errdetails.BadRequest_FieldViolation, 0)
 
-	var problems []string
-	var err error
+	var (
+		problems []string
+		err      error
+	)
 
 	messageInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
