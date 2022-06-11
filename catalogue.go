@@ -2,10 +2,11 @@ package goautowp
 
 import (
 	"fmt"
-	"github.com/doug-martin/goqu/v9"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/doug-martin/goqu/v9"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/util"
@@ -92,7 +93,6 @@ func (s *Catalogue) getSpecs(parentID int32) ([]*Spec, error) {
 		}
 
 		childs, err := s.getSpecs(r.Id)
-
 		if err != nil {
 			return nil, err
 		}

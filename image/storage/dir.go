@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+
 	"github.com/autowp/goautowp/config"
 )
 

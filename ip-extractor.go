@@ -2,10 +2,11 @@ package goautowp
 
 import (
 	"errors"
+	"net"
+
 	"github.com/autowp/goautowp/users"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"net"
 )
 
 type IPExtractor struct {

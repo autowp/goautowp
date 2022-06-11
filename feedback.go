@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"fmt"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/validation"

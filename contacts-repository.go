@@ -3,6 +3,7 @@ package goautowp
 import (
 	"database/sql"
 	"errors"
+
 	"github.com/doug-martin/goqu/v9"
 )
 

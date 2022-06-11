@@ -2,6 +2,8 @@ package goautowp
 
 import (
 	"context"
+	"testing"
+
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
@@ -9,7 +11,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-	"testing"
 )
 
 func TestMessaging(t *testing.T) {

@@ -4,18 +4,21 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/dpapathanasiou/go-recaptcha"
 	"net/mail"
 	"regexp"
 	"strings"
+
+	"github.com/dpapathanasiou/go-recaptcha"
 )
 
-const NotEmptyIsEmpty = "Value is required and can't be empty"
-const EmailAddressInvalidFormat = "The input is not a valid email address"
-const StringLengthTooShort = "The input is less than %d characters long"
-const StringLengthTooLong = "The input is more than %d characters long"
-const EmailNotExistsExists = "E-mail already registered"
-const IdenticalStringsNotSame = "The two given tokens do not match"
+const (
+	NotEmptyIsEmpty           = "Value is required and can't be empty"
+	EmailAddressInvalidFormat = "The input is not a valid email address"
+	StringLengthTooShort      = "The input is less than %d characters long"
+	StringLengthTooLong       = "The input is more than %d characters long"
+	EmailNotExistsExists      = "E-mail already registered"
+	IdenticalStringsNotSame   = "The two given tokens do not match"
+)
 
 type FilterInterface interface {
 	FilterString(value string) string
@@ -26,8 +29,7 @@ type ValidatorInterface interface {
 }
 
 // NotEmpty validator.
-type NotEmpty struct {
-}
+type NotEmpty struct{}
 
 // StringLength validator.
 type StringLength struct {
@@ -36,8 +38,7 @@ type StringLength struct {
 }
 
 // EmailAddress validator.
-type EmailAddress struct {
-}
+type EmailAddress struct{}
 
 // Recaptcha validator.
 type Recaptcha struct {
@@ -60,12 +61,10 @@ type Callback struct {
 }
 
 // StringTrimFilter filter.
-type StringTrimFilter struct {
-}
+type StringTrimFilter struct{}
 
 // StringSingleSpaces filter.
-type StringSingleSpaces struct {
-}
+type StringSingleSpaces struct{}
 
 // IsValidString IsValidString.
 func (s *NotEmpty) IsValidString(value string) ([]string, error) {
@@ -171,8 +170,8 @@ type InputFilter struct {
 // IsValidString IsValidString.
 func (s *InputFilter) IsValidString(value string) (string, []string, error) {
 	value = filterString(value, s.Filters)
-	violations, err := validateString(value, s.Validators)
 
+	violations, err := validateString(value, s.Validators)
 	if err != nil {
 		return "", nil, err
 	}

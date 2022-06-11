@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -122,7 +123,6 @@ func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, by
 
 	err := s.db.QueryRowContext(ctx, "SELECT moderator_attention FROM comment_message WHERE id = ?", commentID).
 		Scan(&moderatorAttention)
-
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,6 @@ func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType C
 
 	err := s.db.QueryRowContext(ctx, "SELECT type_id, item_id FROM comment_message WHERE id = ?", commentID).
 		Scan(&srcType, &srcItemID)
-
 	if err != nil {
 		return err
 	}
@@ -247,7 +246,6 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 		"SELECT COUNT(1), MAX(datetime) FROM comment_message WHERE type_id = ? AND item_id = ?",
 		commentType, itemID,
 	).Scan(&messagesCount, &lastUpdate)
-
 	if err != nil {
 		return err
 	}
@@ -283,10 +281,10 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 	}
 
 	var authorID int64
+
 	err := s.db.QueryRowContext(
 		ctx, "SELECT author_id FROM comment_message WHERE id = ?", commentID,
 	).Scan(&authorID)
-
 	if err != nil {
 		return 0, err
 	}
@@ -327,12 +325,12 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 
 func (s *Repository) updateVote(ctx context.Context, commentID int64) (int32, error) {
 	var count int32
+
 	err := s.db.QueryRowContext(
 		ctx,
 		"SELECT sum(vote) FROM comment_vote WHERE comment_id = ?",
 		commentID,
 	).Scan(&count)
-
 	if err != nil {
 		return 0, err
 	}

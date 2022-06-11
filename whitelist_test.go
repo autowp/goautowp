@@ -2,11 +2,12 @@ package goautowp
 
 import (
 	"context"
+	"net"
+	"testing"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
-	"net"
-	"testing"
 )
 
 func createWhitelistService(t *testing.T) *Whitelist {

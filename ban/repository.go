@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/sirupsen/logrus"
 )
 
 var ErrBanItemNotFound = errors.New("ban item not found")
@@ -88,12 +89,12 @@ func (s *Repository) Exists(ip net.IP) (bool, error) {
 // Get ban info.
 func (s *Repository) Get(ip net.IP) (*Item, error) {
 	item := Item{}
+
 	err := s.db.QueryRow(context.Background(), `
 		SELECT ip, until, reason, by_user_id
 		FROM ip_ban
 		WHERE ip = $1 AND until >= NOW()
 	`, ip.String()).Scan(&item.IP, &item.Until, &item.Reason, &item.ByUserID)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrBanItemNotFound

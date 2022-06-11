@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -62,7 +63,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 	var cache BrandsCache
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		options := items.ItemsOptions{
+		options := items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name:                true,
@@ -153,7 +154,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 	var res []items.Item
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		res, err = s.repository.List(items.ItemsOptions{
+		res, err = s.repository.List(items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name: true,
@@ -222,7 +223,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 	var res []items.Item
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		res, err = s.repository.List(items.ItemsOptions{
+		res, err = s.repository.List(items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name:               true,
@@ -230,7 +231,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 				NewChildItemsCount: true,
 			},
 			TypeID: []items.ItemType{items.FACTORY},
-			ChildItems: &items.ItemsOptions{
+			ChildItems: &items.ListOptions{
 				TypeID: []items.ItemType{items.VEHICLE, items.ENGINE},
 			},
 			Limit:   items.TopFactoriesCount,
@@ -292,7 +293,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 	var res []items.Item
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		res, err = s.repository.List(items.ItemsOptions{
+		res, err = s.repository.List(items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name:                true,
@@ -366,13 +367,13 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 	}
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		twinsData.Res, err = s.repository.List(items.ItemsOptions{
+		twinsData.Res, err = s.repository.List(items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name: true,
 			},
-			DescendantItems: &items.ItemsOptions{
-				ParentItems: &items.ItemsOptions{
+			DescendantItems: &items.ListOptions{
+				ParentItems: &items.ListOptions{
 					TypeID: []items.ItemType{items.TWINS},
 					Fields: items.ListFields{
 						ItemsCount:    true,
@@ -388,9 +389,9 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		twinsData.Count, err = s.repository.CountDistinct(items.ItemsOptions{
-			DescendantItems: &items.ItemsOptions{
-				ParentItems: &items.ItemsOptions{
+		twinsData.Count, err = s.repository.CountDistinct(items.ListOptions{
+			DescendantItems: &items.ListOptions{
+				ParentItems: &items.ListOptions{
 					TypeID: []items.ItemType{items.TWINS},
 				},
 			},
@@ -477,10 +478,10 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 }
 
 func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIItemList, error) {
-	options := items.ItemsOptions{
+	options := items.ListOptions{
 		Limit: in.Limit,
 		Fields: items.ListFields{
-			NameHtml:    in.Fields.NameHtml,
+			NameHTML:    in.Fields.NameHtml,
 			NameDefault: in.Fields.NameDefault,
 			Description: in.Fields.Description,
 			HasText:     in.Fields.HasText,

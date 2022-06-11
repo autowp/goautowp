@@ -2,12 +2,13 @@ package goautowp
 
 import (
 	"context"
+	"net"
+	"testing"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/peer"
-	"net"
-	"testing"
 )
 
 func TestFeedbackNoBody(t *testing.T) {

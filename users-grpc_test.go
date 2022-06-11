@@ -2,6 +2,11 @@ package goautowp
 
 import (
 	"context"
+	"math/rand"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
@@ -10,10 +15,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-	"math/rand"
-	"strconv"
-	"testing"
-	"time"
 )
 
 const TestImageFile = "./image/storage/_files/Towers_Schiphol_small.jpg"

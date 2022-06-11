@@ -4,11 +4,12 @@ import (
 	"crypto/md5" // nolint: gosec
 	"encoding/hex"
 	"fmt"
+	"net/url"
+	"time"
+
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"net/url"
-	"time"
 )
 
 type UserExtractor struct {

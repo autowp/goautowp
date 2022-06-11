@@ -2,12 +2,13 @@ package goautowp
 
 import (
 	"context"
-	"github.com/autowp/goautowp/config"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/autowp/goautowp/config"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/stretchr/testify/require"
 )
 
 func createMonitoringService(t *testing.T) *Monitoring {

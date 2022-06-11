@@ -2,6 +2,7 @@ package pictures
 
 import (
 	"context"
+
 	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -77,7 +78,6 @@ func (s Repository) GetVote(ctx context.Context, id int64, userID int64) (*VoteS
 		"SELECT positive, negative FROM picture_vote_summary WHERE picture_id = ?",
 		id,
 	).Scan(&positive, &negative)
-
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,6 @@ func (s Repository) Vote(ctx context.Context, id int64, value int32, userID int6
 		ON DUPLICATE KEY UPDATE value = VALUES(value),
 		timestamp = VALUES(timestamp)
     `, id, userID, normalizedValue)
-
 	if err != nil {
 		return err
 	}
@@ -122,7 +121,6 @@ func (s Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteTe
         INSERT INTO picture_moder_vote_template (user_id, reason, vote)
 		VALUES (?, ?, ?)
     `, tpl.UserID, tpl.Message, tpl.Vote)
-
 	if err != nil {
 		return tpl, err
 	}

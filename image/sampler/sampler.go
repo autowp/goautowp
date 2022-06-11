@@ -2,15 +2,15 @@ package sampler
 
 import (
 	"fmt"
+	"math"
+
 	"github.com/autowp/goautowp/config"
 	"gopkg.in/gographics/imagick.v2/imagick"
-	"math"
 )
 
 const rationComparePrecision = 0.001
 
-type Sampler struct {
-}
+type Sampler struct{}
 
 func NewSampler() *Sampler {
 	return &Sampler{}
@@ -76,8 +76,8 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 		pw := imagick.NewPixelWand()
 		defer pw.Destroy()
 		pw.SetColor(background)
-		err := decomposed.SetBackgroundColor(pw)
 
+		err := decomposed.SetBackgroundColor(pw)
 		if err != nil {
 			return nil, err
 		}
@@ -542,8 +542,8 @@ func (s Sampler) convertByInnerFit(mw *imagick.MagickWand, format Format) error 
 			// resize by height
 			scaleHeight := formatHeight
 			scaleWidth := int(math.Round(float64(scaleHeight) * srcRatio))
-			err := s.scaleImage(mw, scaleWidth, scaleHeight)
 
+			err := s.scaleImage(mw, scaleWidth, scaleHeight)
 			if err != nil {
 				return err
 			}
@@ -551,6 +551,7 @@ func (s Sampler) convertByInnerFit(mw *imagick.MagickWand, format Format) error 
 			// resize by width
 			scaleWidth := formatWidth
 			scaleHeight := int(math.Round(float64(scaleWidth) / srcRatio))
+
 			err := s.scaleImage(mw, scaleWidth, scaleHeight)
 			if err != nil {
 				return err
@@ -607,8 +608,8 @@ func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error 
 			// resize by height
 			scaleHeight := formatHeight
 			scaleWidth := int(math.Round(float64(scaleHeight) * srcRatio))
-			err := s.scaleImage(mw, scaleWidth, scaleHeight)
 
+			err := s.scaleImage(mw, scaleWidth, scaleHeight)
 			if err != nil {
 				return err
 			}
@@ -617,7 +618,6 @@ func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error 
 			scaleWidth := formatWidth
 			scaleHeight := int(math.Round(float64(scaleWidth) / srcRatio))
 			err := s.scaleImage(mw, scaleWidth, scaleHeight)
-
 			if err != nil {
 				return err
 			}

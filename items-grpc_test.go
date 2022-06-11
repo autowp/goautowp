@@ -2,11 +2,12 @@ package goautowp
 
 import (
 	"context"
+	"testing"
+
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"testing"
 )
 
 func TestTopBrandsList(t *testing.T) {

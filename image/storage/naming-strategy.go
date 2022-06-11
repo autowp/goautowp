@@ -2,10 +2,11 @@ package storage
 
 import (
 	"fmt"
-	"github.com/autowp/goautowp/filter"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/autowp/goautowp/filter"
 )
 
 const (
@@ -31,8 +32,7 @@ type NamingStrategySerial struct {
 	deep int
 }
 
-type NamingStrategyPattern struct {
-}
+type NamingStrategyPattern struct{}
 
 func normalizePattern(pattern string) string {
 	a := regexp.MustCompile(`[/\\]+`)

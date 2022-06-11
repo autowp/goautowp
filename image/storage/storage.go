@@ -28,12 +28,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/go-sql-driver/mysql"
 	"gopkg.in/gographics/imagick.v2/imagick"
-)
 
-import (
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/gif"  // GIF support
+	_ "image/jpeg" // JPEG support
+	_ "image/png"  // PNG support
 )
 
 const (

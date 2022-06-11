@@ -1,8 +1,9 @@
 package util
 
 import (
-	"github.com/doug-martin/goqu/v9"
 	"math"
+
+	"github.com/doug-martin/goqu/v9"
 )
 
 const DefaultItemCountPerPage = 10
@@ -61,7 +62,6 @@ func (s *Paginator) calculateCount() (int32, error) {
 		ClearSelect().
 		Prepared(true).
 		Count()
-
 	if err != nil {
 		return 0, err
 	}
@@ -78,7 +78,7 @@ func (s *Paginator) getItemCountPerPage() int32 {
 }
 
 func MinMax(array []int32) (int32, int32) {
-	var max, min = array[0], array[0]
+	max, min := array[0], array[0]
 
 	for _, value := range array {
 		if max < value {
@@ -95,13 +95,11 @@ func MinMax(array []int32) (int32, int32) {
 
 func (s *Paginator) GetPages() (*Pages, error) {
 	pageCount, err := s.Count()
-
 	if err != nil {
 		return nil, err
 	}
 
 	currentPageNumber, err := s.getCurrentPageNumber()
-
 	if err != nil {
 		return nil, err
 	}

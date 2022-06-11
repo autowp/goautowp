@@ -4,13 +4,14 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"github.com/autowp/goautowp/config"
-	"github.com/doug-martin/goqu/v9"
 	"io"
 	"os"
 	"path"
 	"strings"
 	"testing"
+
+	"github.com/autowp/goautowp/config"
+	"github.com/doug-martin/goqu/v9"
 
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"

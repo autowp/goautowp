@@ -2,8 +2,9 @@ package hosts
 
 import (
 	"errors"
-	"github.com/autowp/goautowp/config"
 	"net/url"
+
+	"github.com/autowp/goautowp/config"
 )
 
 type Manager struct {

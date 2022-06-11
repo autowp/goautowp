@@ -1,6 +1,12 @@
 package main
 
 import (
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/autowp/goautowp"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
@@ -8,11 +14,6 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v2/imagick"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 const sentryFlushTime = time.Second * 5

@@ -1,10 +1,11 @@
 package sampler
 
 import (
+	"testing"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/gographics/imagick.v2/imagick"
-	"testing"
 )
 
 const towerFilePath = "./_files/Towers_Schiphol_small.jpg"
@@ -53,7 +54,7 @@ func TestShouldResizeOddHeightPictureStrictlyToTargetHeightByOuterFitType(t *tes
 	require.EqualValues(t, mw.GetImageHeight(), 150)
 }
 
-func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
+func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	sampler := NewSampler()
@@ -61,541 +62,352 @@ func TestReduceOnlyWithInnerFitWorks(t *testing.T) {
 
 	defer mw.Destroy()
 
-	// both size less
-	err := mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format := NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeInner,
-		Width:      150,
-		Height:     200,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 101)
-	require.EqualValues(t, mw.GetImageHeight(), 149)
-	mw.Clear()
-
-	// width less
-	err = mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeInner,
-		Width:      150,
-		Height:     100,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 68)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// height less
-	err = mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeInner,
-		Width:      50,
-		Height:     200,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 74)
-	mw.Clear()
-
-	// not less
-	err = mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeInner,
-		Width:      50,
-		Height:     100,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// both size less, reduceOnly off
-	err = mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeInner,
-		Width:      150,
-		Height:     200,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 150)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
-	mw.Clear()
-
-	// width less, reduceOnly off
-	err = mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeInner,
-		Width:      150,
-		Height:     100,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 150)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// height less, reduceOnly off
-	err = mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeInner,
-		Width:      50,
-		Height:     200,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
-	mw.Clear()
-
-	// not less, reduceOnly off
-	err = mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeInner,
-		Width:      50,
-		Height:     100,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-}
-
-func TestReduceOnlyWithOuterFitWorks(t *testing.T) {
-	t.Parallel()
-
-	sampler := NewSampler()
-	file := towerFilePath
-	mw := imagick.NewMagickWand()
-
-	defer mw.Destroy()
-
-	// both size less
-	err := mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format := NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      150,
-		Height:     200,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 150)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
-	mw.Clear()
-
-	// width less
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      150,
-		Height:     100,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 150)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// height less
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      50,
-		Height:     200,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
-	mw.Clear()
-
-	// not less
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      50,
-		Height:     100,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// both size less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      150,
-		Height:     200,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 150)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
-	mw.Clear()
-
-	// width less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      150,
-		Height:     100,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 150)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// height less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      50,
-		Height:     200,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
-	mw.Clear()
-
-	// not less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      50,
-		Height:     100,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-}
-
-func TestReduceOnlyWithMaximumFitWorks(t *testing.T) {
-	t.Parallel()
-
-	sampler := NewSampler()
-	file := towerFilePath
-	mw := imagick.NewMagickWand()
-
-	defer mw.Destroy()
-
-	// both size less
-	err := mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format := NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeMaximum,
-		Width:      150,
-		Height:     200,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 101)
-	require.EqualValues(t, mw.GetImageHeight(), 149)
-	mw.Clear()
-
-	// width less
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeMaximum,
-		Width:      150,
-		Height:     100,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 68)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// height less
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeMaximum,
-		Width:      50,
-		Height:     200,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 74)
-	mw.Clear()
-
-	// not less
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeMaximum,
-		Width:      50,
-		Height:     100,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 74)
-	mw.Clear()
-
-	// both size less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeMaximum,
-		Width:      150,
-		Height:     200,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 136)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
-	mw.Clear()
-
-	// width less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeMaximum,
-		Width:      150,
-		Height:     100,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 68)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// height less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeMaximum,
-		Width:      50,
-		Height:     200,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 74)
-	mw.Clear()
-
-	// not less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeMaximum,
-		Width:      50,
-		Height:     100,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 74)
-	mw.Clear()
-}
-
-func TestReduceOnlyByWidthWorks(t *testing.T) {
-	t.Parallel()
-
-	sampler := NewSampler()
-	file := towerFilePath
-	mw := imagick.NewMagickWand()
-
-	defer mw.Destroy()
-
-	// width less
-	err := mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format := NewFormat(config.ImageStorageSamplerFormatConfig{
-		Width:      150,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 101)
-	require.EqualValues(t, mw.GetImageHeight(), 149)
-	mw.Clear()
-
-	// not less
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		Width:      50,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 74)
-	mw.Clear()
-
-	// width less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		Width:      150,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 150)
-	require.EqualValues(t, mw.GetImageHeight(), 221)
-	mw.Clear()
-
-	// not less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		Width:      50,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 50)
-	require.EqualValues(t, mw.GetImageHeight(), 74)
-	mw.Clear()
-}
-
-func TestReduceOnlyByHeightWorks(t *testing.T) {
-	t.Parallel()
-
-	sampler := NewSampler()
-	file := towerFilePath
-	mw := imagick.NewMagickWand()
-
-	defer mw.Destroy()
-
-	// height less
-	err := mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format := NewFormat(config.ImageStorageSamplerFormatConfig{
-		Height:     200,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 101)
-	require.EqualValues(t, mw.GetImageHeight(), 149)
-
-	mw.Clear()
-	// not less
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		Height:     100,
-		ReduceOnly: true,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 68)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
-
-	// height less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		Height:     200,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 136)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
-	mw.Clear()
-
-	// not less, reduceOnly off
-	err = mw.ReadImage(file)
-	require.NoError(t, err)
-
-	format = NewFormat(config.ImageStorageSamplerFormatConfig{
-		Height:     100,
-		ReduceOnly: false,
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 68)
-	require.EqualValues(t, mw.GetImageHeight(), 100)
-	mw.Clear()
+	tests := []struct {
+		formatConfig config.ImageStorageSamplerFormatConfig
+		width        int
+		height       int
+	}{
+		// both size less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeInner,
+				Width:      150,
+				Height:     200,
+				ReduceOnly: true,
+			},
+			width:  101,
+			height: 149,
+		},
+		// height less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeInner,
+				Width:      50,
+				Height:     200,
+				ReduceOnly: true,
+			},
+			width:  50,
+			height: 74,
+		},
+		// not less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeInner,
+				Width:      50,
+				Height:     100,
+				ReduceOnly: true,
+			},
+			width:  50,
+			height: 100,
+		},
+		// both size less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeInner,
+				Width:      150,
+				Height:     200,
+				ReduceOnly: false,
+			},
+			width:  150,
+			height: 200,
+		},
+		// width less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeInner,
+				Width:      150,
+				Height:     100,
+				ReduceOnly: false,
+			},
+			width:  150,
+			height: 100,
+		},
+		// height less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeInner,
+				Width:      50,
+				Height:     200,
+				ReduceOnly: false,
+			},
+			width:  50,
+			height: 200,
+		},
+		// not less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeInner,
+				Width:      50,
+				Height:     100,
+				ReduceOnly: false,
+			},
+			width:  50,
+			height: 100,
+		},
+		// FitTypeOuter
+		// both size less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      150,
+				Height:     200,
+				ReduceOnly: true,
+			},
+			width:  150,
+			height: 200,
+		},
+		// width less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      150,
+				Height:     100,
+				ReduceOnly: true,
+			},
+			width:  150,
+			height: 100,
+		},
+		// height less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      50,
+				Height:     200,
+				ReduceOnly: true,
+			},
+			width:  50,
+			height: 200,
+		},
+		// not less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      50,
+				Height:     100,
+				ReduceOnly: true,
+			},
+			width:  50,
+			height: 100,
+		},
+		// both size less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      150,
+				Height:     200,
+				ReduceOnly: false,
+			},
+			width:  150,
+			height: 200,
+		},
+		// width less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      150,
+				Height:     100,
+				ReduceOnly: false,
+			},
+			width:  150,
+			height: 100,
+		},
+		// height less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      50,
+				Height:     200,
+				ReduceOnly: false,
+			},
+			width:  50,
+			height: 200,
+		},
+		// not less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      50,
+				Height:     100,
+				ReduceOnly: false,
+			},
+			width:  50,
+			height: 100,
+		},
+		// ReduceOnlyWithMaximumFit
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeMaximum,
+				Width:      150,
+				Height:     200,
+				ReduceOnly: true,
+			},
+			width:  101,
+			height: 149,
+		},
+		// width less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeMaximum,
+				Width:      150,
+				Height:     100,
+				ReduceOnly: true,
+			},
+			width:  68,
+			height: 100,
+		},
+		// height less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeMaximum,
+				Width:      50,
+				Height:     200,
+				ReduceOnly: true,
+			},
+			width:  50,
+			height: 74,
+		},
+		// not less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeMaximum,
+				Width:      50,
+				Height:     100,
+				ReduceOnly: true,
+			},
+			width:  50,
+			height: 74,
+		},
+		// both size less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeMaximum,
+				Width:      150,
+				Height:     200,
+				ReduceOnly: false,
+			},
+			width:  136,
+			height: 200,
+		},
+		// width less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeMaximum,
+				Width:      150,
+				Height:     100,
+				ReduceOnly: false,
+			},
+			width:  68,
+			height: 100,
+		},
+		// height less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeMaximum,
+				Width:      50,
+				Height:     200,
+				ReduceOnly: false,
+			},
+			width:  50,
+			height: 74,
+		},
+		// not less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeMaximum,
+				Width:      50,
+				Height:     100,
+				ReduceOnly: false,
+			},
+			width:  50,
+			height: 74,
+		},
+		// ReduceOnlyByWidth
+		// width less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				Width:      150,
+				ReduceOnly: true,
+			},
+			width:  101,
+			height: 149,
+		},
+		// not less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				Width:      50,
+				ReduceOnly: true,
+			},
+			width:  50,
+			height: 74,
+		},
+		// width less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				Width:      150,
+				ReduceOnly: false,
+			},
+			width:  150,
+			height: 221,
+		},
+		// not less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				Width:      50,
+				ReduceOnly: false,
+			},
+			width:  50,
+			height: 74,
+		},
+		// ReduceOnlyByHeight
+		// height less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				Height:     200,
+				ReduceOnly: true,
+			},
+			width:  101,
+			height: 149,
+		},
+		// not less
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				Height:     100,
+				ReduceOnly: true,
+			},
+			width:  68,
+			height: 100,
+		},
+		// height less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				Height:     200,
+				ReduceOnly: false,
+			},
+			width:  136,
+			height: 200,
+		},
+		// not less, reduceOnly off
+		{
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				Height:     100,
+				ReduceOnly: false,
+			},
+			width:  68,
+			height: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		err := mw.ReadImage(towerFilePath)
+		require.NoError(t, err)
+
+		format := NewFormat(tt.formatConfig)
+		mw, err = sampler.ConvertImage(mw, Crop{}, *format)
+		require.NoError(t, err)
+		require.EqualValues(t, mw.GetImageWidth(), tt.width)
+		require.EqualValues(t, mw.GetImageHeight(), tt.height)
+		mw.Clear()
+	}
 }
 
 func TestAnimationPreservedDueResample(t *testing.T) {

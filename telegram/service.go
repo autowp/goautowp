@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/doug-martin/goqu/v9"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"net/url"
-	"strings"
 )
 
 type Service struct {

@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"fmt"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"

@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/doug-martin/goqu/v9"
-	"github.com/sirupsen/logrus"
 	"image"
 	_ "image/jpeg" // support JPEG decoding
 	_ "image/png"  // support PNG decoding
@@ -15,14 +13,19 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
+	"github.com/sirupsen/logrus"
+
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
 	"github.com/getsentry/sentry-go"
 	"github.com/streadway/amqp"
 )
 
-const threshold = 3
-const decimal = 10
+const (
+	threshold = 3
+	decimal   = 10
+)
 
 // DuplicateFinder Main Object.
 type DuplicateFinder struct {
@@ -196,7 +199,6 @@ func getFileHash(reader io.Reader) (uint64, error) {
 	}
 
 	hash, err := goimagehash.PerceptionHash(img)
-
 	if err != nil {
 		return 0, err
 	}
@@ -232,7 +234,6 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 		WHERE picture_id != ? 
 		HAVING distance <= ?
 	`, id, threshold)
-
 	if err != nil {
 		return err
 	}

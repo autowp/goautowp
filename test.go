@@ -2,11 +2,12 @@ package goautowp
 
 import (
 	"context"
+	"net"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
-	"net"
 )
 
 const bufSize = 1024 * 1024
@@ -28,7 +29,7 @@ func getContainer() *Container {
 	return container
 }
 
-func init() {
+func init() { // nolint: gochecknoinits
 	cnt := getContainer()
 
 	grpcServer := grpc.NewServer()

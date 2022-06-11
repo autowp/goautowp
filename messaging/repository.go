@@ -4,19 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
-	"strings"
-	"time"
 )
 
 type Options struct {
 	AllMessagesLink bool
 }
 
-const MaxText = 2000
-const MessagesPerPage = 20
+const (
+	MaxText         = 2000
+	MessagesPerPage = 20
+)
 
 type Repository struct {
 	db              *goqu.Database
@@ -113,7 +116,6 @@ func (s *Repository) DeleteMessage(ctx context.Context, userID int64, messageID 
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE personal_messages SET deleted_by_from = 1 WHERE from_user_id = ? AND id = ?
     `, userID, messageID)
-
 	if err != nil {
 		return err
 	}
@@ -162,7 +164,6 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 			"readen":       false,
 		},
 	).Executor().ExecContext(ctx)
-
 	if err != nil {
 		return err
 	}

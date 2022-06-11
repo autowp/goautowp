@@ -3,6 +3,10 @@ package goautowp
 import (
 	"context"
 	"errors"
+	"math/rand"
+	"net"
+	"net/url"
+
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/casbin/casbin"
@@ -11,9 +15,6 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"math/rand"
-	"net"
-	"net/url"
 )
 
 type GRPCServer struct {
@@ -103,7 +104,6 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 	endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))] // nolint: gosec
 
 	parsedURL, err := url.Parse(endpoint)
-
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,6 @@ func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*Ve
 	}
 
 	items, err := s.catalogue.getVehicleTypesTree(0)
-
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -160,7 +159,6 @@ func (s *GRPCServer) GetBrandVehicleTypes(
 	in *GetBrandVehicleTypesRequest,
 ) (*BrandVehicleTypeItems, error) {
 	items, err := s.catalogue.getBrandVehicleTypes(in.BrandId)
-
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -245,8 +243,8 @@ func wrapFieldViolations(fv []*errdetails.BadRequest_FieldViolation) error {
 	br := &errdetails.BadRequest{
 		FieldViolations: fv,
 	}
-	st, err := st.WithDetails(br)
 
+	st, err := st.WithDetails(br)
 	if err != nil {
 		return status.Error(codes.Internal, err.Error())
 	}

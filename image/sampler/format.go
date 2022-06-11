@@ -2,6 +2,7 @@ package sampler
 
 import (
 	"fmt"
+
 	"github.com/autowp/goautowp/config"
 )
 

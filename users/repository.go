@@ -4,6 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
+	"net"
+	"strings"
+	"time"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/Nerzal/gocloak/v11/pkg/jwx"
@@ -14,10 +19,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
-	"math"
-	"net"
-	"strings"
-	"time"
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -226,8 +227,8 @@ func (s *Repository) AfterUserCreated(userID int64) error {
 
 func (s *Repository) UpdateUserVoteLimit(userID int64) error {
 	var age int
-	err := s.autowpDB.QueryRow("SELECT TIMESTAMPDIFF(YEAR, reg_date, NOW()) FROM users WHERE id = ?", userID).Scan(&age)
 
+	err := s.autowpDB.QueryRow("SELECT TIMESTAMPDIFF(YEAR, reg_date, NOW()) FROM users WHERE id = ?", userID).Scan(&age)
 	if err != nil {
 		return err
 	}
@@ -431,13 +432,13 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 	}
 
 	ctx := context.Background()
+
 	token, err := s.keycloak.LoginClient(
 		ctx,
 		s.keycloakConfig.ClientID,
 		s.keycloakConfig.ClientSecret,
 		s.keycloakConfig.Realm,
 	)
-
 	if err != nil {
 		return "", err
 	}
@@ -509,13 +510,13 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 	}
 
 	ctx := context.Background()
+
 	token, err := s.keycloak.LoginClient(
 		ctx,
 		s.keycloakConfig.ClientID,
 		s.keycloakConfig.ClientSecret,
 		s.keycloakConfig.Realm,
 	)
-
 	if err != nil {
 		return false, err
 	}

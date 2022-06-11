@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"net"
+	"strings"
+
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
-	"net"
-	"strings"
 )
 
 var ErrWhitelistItemNotFound = errors.New("whitelist item not found")
@@ -87,12 +88,12 @@ func (s *Whitelist) Add(ip net.IP, desc string) error {
 // Get whitelist item.
 func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 	var item WhitelistItem
+
 	err := s.db.QueryRow(context.Background(), `
 		SELECT ip, description
 		FROM ip_whitelist
 		WHERE ip = $1
 	`, ip.String()).Scan(&item.IP, item.Description)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrWhitelistItemNotFound
@@ -107,11 +108,11 @@ func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 // List whitelist items.
 func (s *Whitelist) List() ([]*APITrafficWhitelistItem, error) {
 	result := make([]*APITrafficWhitelistItem, 0)
+
 	rows, err := s.db.Query(context.Background(), `
 		SELECT ip, description
 		FROM ip_whitelist
 	`)
-
 	if err != nil {
 		return nil, err
 	}
@@ -132,12 +133,12 @@ func (s *Whitelist) List() ([]*APITrafficWhitelistItem, error) {
 // Exists whitelist already contains IP.
 func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 	var exists bool
+
 	err := s.db.QueryRow(context.Background(), `
 		SELECT true
 		FROM ip_whitelist
 		WHERE ip = $1
 	`, ip.String()).Scan(&exists)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil

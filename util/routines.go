@@ -2,8 +2,9 @@ package util
 
 import (
 	"database/sql"
-	"github.com/sirupsen/logrus"
 	"io"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Close resource and prints error.

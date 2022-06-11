@@ -1,28 +1,30 @@
 package goautowp
 
 import (
+	"net"
+	"net/http"
+	"time"
+
 	"github.com/autowp/goautowp/ban"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
-	"net"
-	"net/http"
-	"time"
 )
 
-const autowhitelistLimit = 1000
-
-const banByUserID = 9
-const hoursInDay = 24
-const halfDay = time.Hour * hoursInDay / 2
-const hourlyLimitDuration = time.Hour * 5 * hoursInDay
-const dailyLimitDuration = time.Hour * 10 * hoursInDay
-const dailyLimit = 10000
-const hourlyLimit = 3600
-const tenMinsLimit = 1200
-const oneMinLimit = 700
+const (
+	autowhitelistLimit  = 1000
+	banByUserID         = 9
+	hoursInDay          = 24
+	halfDay             = time.Hour * hoursInDay / 2
+	hourlyLimitDuration = time.Hour * 5 * hoursInDay
+	dailyLimitDuration  = time.Hour * 10 * hoursInDay
+	dailyLimit          = 10000
+	hourlyLimit         = 3600
+	tenMinsLimit        = 1200
+	oneMinLimit         = 700
+)
 
 // Traffic Traffic.
 type Traffic struct {

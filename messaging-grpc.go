@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"

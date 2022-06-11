@@ -2,14 +2,15 @@ package goautowp
 
 import (
 	"context"
+	"net"
+	"testing"
+	"time"
+
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"net"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )

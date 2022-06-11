@@ -3,6 +3,8 @@ package messaging
 import (
 	"context"
 	"database/sql"
+	"testing"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/telegram"
@@ -10,7 +12,6 @@ import (
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
 	_ "github.com/go-sql-driver/mysql"               // enable mysql driver
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func createRepository(t *testing.T) *Repository {

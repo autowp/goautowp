@@ -2,10 +2,11 @@ package goautowp
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestTrafficMigrations(t *testing.T) {

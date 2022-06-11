@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sync"
+	"time"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
@@ -11,8 +14,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"sync"
-	"time"
 )
 
 var colors = []string{
@@ -30,16 +31,16 @@ var colors = []string{
 	"#008888",
 }
 
-const thousands = 1000
-const tensOfThousands = 10 * thousands
-const numberOfTopUploadersToShowInAboutUs = 20
+const (
+	thousands                           = 1000
+	tensOfThousands                     = 10 * thousands
+	numberOfTopUploadersToShowInAboutUs = 20
+)
 
 var errFailedToFetchRow = errors.New("failed to fetch row")
 
 func roundTo(value int32, to int32) int32 {
-	var rest = value % to
-
-	if rest > to/2 {
+	if rest := value % to; rest > to/2 {
 		value = value - rest + to
 	} else {
 		value -= rest
@@ -108,7 +109,6 @@ func (s *StatisticsGRPCServer) totalUsers(ctx context.Context) (int32, error) {
 		From("users").
 		Where(goqu.L("NOT deleted")).
 		ScanValContext(ctx, &result)
-
 	if err != nil {
 		return 0, err
 	}
@@ -150,18 +150,17 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 			goqu.L("(identity is null or identity <> ?)", "autowp"),
 			goqu.L("last_online > DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"),
 		).ScanValsContext(ctx, &contributors)
-
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	picturesUsers := make([]string, 0)
+
 	err := s.db.Select("id").From("users").
 		Where(goqu.I("deleted").IsFalse()).
 		Order(goqu.I("pictures_total").Desc()).
 		Limit(numberOfTopUploadersToShowInAboutUs).ScanValsContext(ctx, &picturesUsers)
-
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +177,6 @@ func (s *StatisticsGRPCServer) picturesStat(ctx context.Context) (int32, int32, 
 	).
 		From("pictures").
 		ScanStructContext(ctx, &picsStat)
-
 	if err != nil {
 		return 0, 0, err
 	}
@@ -214,7 +212,6 @@ func (s *StatisticsGRPCServer) totalComments(ctx context.Context) (int32, error)
 		From("comment_message").
 		Where(goqu.I("deleted").IsFalse()).
 		ScanValContext(ctx, &result)
-
 	if err != nil {
 		return 0, err
 	}

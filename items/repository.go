@@ -4,22 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
+	"sort"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
-	"regexp"
-	"sort"
 )
 
-const TopBrandsCount = 150
-const NewDays = 7
-const TopPersonsCount = 5
-const TopFactoriesCount = 8
-const TopCategoriesCount = 15
-const TopTwinsBrandsCount = 20
+const (
+	TopBrandsCount      = 150
+	NewDays             = 7
+	TopPersonsCount     = 5
+	TopFactoriesCount   = 8
+	TopCategoriesCount  = 15
+	TopTwinsBrandsCount = 20
+)
 
 type TreeItem struct {
 	ID       int64
@@ -102,7 +105,7 @@ type ListPreviewPicturesFields struct {
 
 type ListFields struct {
 	Name                bool
-	NameHtml            bool
+	NameHTML            bool
 	NameDefault         bool
 	Description         bool
 	HasText             bool
@@ -116,7 +119,7 @@ type ListFields struct {
 	NewDescendantsCount bool
 }
 
-type ItemsOptions struct {
+type ListOptions struct {
 	Language           string
 	Fields             ListFields
 	TypeID             []ItemType
@@ -125,10 +128,10 @@ type ItemsOptions struct {
 	Limit              uint64
 	OrderBy            string
 	SortByName         bool
-	ChildItems         *ItemsOptions
-	DescendantItems    *ItemsOptions
-	ParentItems        *ItemsOptions
-	AncestorItems      *ItemsOptions
+	ChildItems         *ListOptions
+	DescendantItems    *ListOptions
+	ParentItems        *ListOptions
+	AncestorItems      *ListOptions
 	NoParents          bool
 }
 
@@ -174,7 +177,7 @@ func applyItemPicture(alias string, sqSelect sq.SelectBuilder, options *ItemPict
 	return sqSelect
 }
 
-func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *ItemsOptions) (sq.SelectBuilder, error) {
+func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *ListOptions) (sq.SelectBuilder, error) {
 	var err error
 
 	if options.TypeID != nil && len(options.TypeID) > 0 {
@@ -321,7 +324,7 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *It
 	return sqSelect, nil
 }
 
-func (s *Repository) Count(options ItemsOptions) (int, error) {
+func (s *Repository) Count(options ListOptions) (int, error) {
 	var err error
 
 	sqSelect := sq.Select("COUNT(1)").From("item AS i")
@@ -341,7 +344,7 @@ func (s *Repository) Count(options ItemsOptions) (int, error) {
 	return count, nil
 }
 
-func (s *Repository) CountDistinct(options ItemsOptions) (int, error) {
+func (s *Repository) CountDistinct(options ListOptions) (int, error) {
 	var err error
 
 	sqSelect := sq.Select("COUNT(distinct i.id)").From("item AS i")
@@ -361,7 +364,7 @@ func (s *Repository) CountDistinct(options ItemsOptions) (int, error) {
 	return count, nil
 }
 
-func (s *Repository) List(options ItemsOptions) ([]Item, error) {
+func (s *Repository) List(options ListOptions) ([]Item, error) {
 	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
 		return nil, fmt.Errorf("language `%s` not found", options.Language)
@@ -512,7 +515,6 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 
 	success, err := s.db.Select("id", "name", "").From("item").
 		Where(goqu.I("id").Eq(id)).ScanStructContext(ctx, item)
-
 	if err != nil {
 		return nil, err
 	}

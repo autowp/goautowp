@@ -2,12 +2,13 @@ package ban
 
 import (
 	"context"
-	"github.com/autowp/goautowp/config"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/autowp/goautowp/config"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/stretchr/testify/require"
 )
 
 func createBanService(t *testing.T) *Repository {

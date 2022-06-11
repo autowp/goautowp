@@ -1,10 +1,11 @@
 package email
 
 import (
+	"strings"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gomail.v2"
-	"strings"
 )
 
 // Sender Sender.

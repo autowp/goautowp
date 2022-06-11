@@ -3,6 +3,9 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"net/http"
+	"time"
+
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/comments"
@@ -30,8 +33,6 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"net/http"
-	"time"
 )
 
 // Container Container.

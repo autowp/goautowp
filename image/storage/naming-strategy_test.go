@@ -1,8 +1,9 @@
 package storage
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPatternStrategy(t *testing.T) {

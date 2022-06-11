@@ -1,9 +1,10 @@
 package filter
 
 import (
-	"github.com/fiam/gounidecode/unidecode"
 	"regexp"
 	"strings"
+
+	"github.com/fiam/gounidecode/unidecode"
 )
 
 var specialCharacters = map[rune]string{

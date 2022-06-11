@@ -2,11 +2,12 @@ package items
 
 import (
 	"database/sql"
+	"testing"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestTopBrandsListRu(t *testing.T) {
@@ -19,7 +20,7 @@ func TestTopBrandsListRu(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 
 	repository := NewRepository(goquDB)
-	options := ItemsOptions{
+	options := ListOptions{
 		Language: "ru",
 		Fields: ListFields{
 			Name:                true,
@@ -51,7 +52,7 @@ func TestTopBrandsListZh(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 
 	repository := NewRepository(goquDB)
-	options := ItemsOptions{
+	options := ListOptions{
 		Language: "zh",
 		Fields: ListFields{
 			Name:                true,

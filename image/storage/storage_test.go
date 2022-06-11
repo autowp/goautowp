@@ -2,19 +2,22 @@ package storage
 
 import (
 	"database/sql"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"testing"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"testing"
 )
 
-const TestImageFile = "./_files/Towers_Schiphol_small.jpg"
-const TestImageFile2 = "./_files/mazda3_sedan_us-spec_11.jpg"
+const (
+	TestImageFile  = "./_files/Towers_Schiphol_small.jpg"
+	TestImageFile2 = "./_files/mazda3_sedan_us-spec_11.jpg"
+)
 
 func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
 	t.Parallel()

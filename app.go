@@ -3,11 +3,12 @@ package goautowp
 import (
 	"context"
 	"errors"
-	"github.com/autowp/goautowp/config"
-	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/autowp/goautowp/config"
+	"github.com/sirupsen/logrus"
 
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
 	"github.com/getsentry/sentry-go"
@@ -329,7 +330,6 @@ func (s *Application) ImageStorageGetImage(imageID int) (*APIImage, error) {
 	}
 
 	img, err := is.Image(imageID)
-
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +344,6 @@ func (s *Application) ImageStorageGetFormattedImage(imageID int, format string) 
 	}
 
 	img, err := is.FormattedImage(imageID, format)
-
 	if err != nil {
 		return nil, err
 	}
