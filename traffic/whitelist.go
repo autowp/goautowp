@@ -1,4 +1,4 @@
-package goautowp
+package traffic
 
 import (
 	"context"
@@ -106,8 +106,8 @@ func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 }
 
 // List whitelist items.
-func (s *Whitelist) List() ([]*APITrafficWhitelistItem, error) {
-	result := make([]*APITrafficWhitelistItem, 0)
+func (s *Whitelist) List() ([]*WhitelistItem, error) {
+	result := make([]*WhitelistItem, 0)
 
 	rows, err := s.db.Query(context.Background(), `
 		SELECT ip, description
@@ -119,8 +119,8 @@ func (s *Whitelist) List() ([]*APITrafficWhitelistItem, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var item APITrafficWhitelistItem
-		if err := rows.Scan(&item.Ip, &item.Description); err != nil {
+		var item WhitelistItem
+		if err := rows.Scan(&item.IP, &item.Description); err != nil {
 			return nil, err
 		}
 

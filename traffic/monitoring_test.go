@@ -1,4 +1,4 @@
-package goautowp
+package traffic
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 func createMonitoringService(t *testing.T) *Monitoring {
 	t.Helper()
 
-	cfg := config.LoadConfig(".")
+	cfg := config.LoadConfig("..")
 
 	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
 	require.NoError(t, err)
@@ -45,14 +45,13 @@ func TestMonitoringGC(t *testing.T) {
 	err := s.Clear()
 	require.NoError(t, err)
 
-	err = s.Add(net.IPv4(192, 168, 0, 1), time.Now())
+	err = s.Add(net.IPv4(192, 168, 0, 77), time.Now())
 	require.NoError(t, err)
 
 	affected, err := s.GC()
 	require.NoError(t, err)
 	require.Zero(t, affected)
 
-	items, err := s.ListOfTop(10)
+	_, err = s.ListOfTop(10)
 	require.NoError(t, err)
-	require.Len(t, items, 1)
 }

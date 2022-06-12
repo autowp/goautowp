@@ -3,6 +3,9 @@ package util
 import (
 	"database/sql"
 	"io"
+	"time"
+
+	"github.com/streadway/amqp"
 
 	"github.com/sirupsen/logrus"
 )
@@ -32,4 +35,37 @@ func SQLNullInt64ToPtr(v sql.NullInt64) *int64 {
 	}
 
 	return r
+}
+
+func ConnectRabbitMQ(config string) (*amqp.Connection, error) {
+	const (
+		connectionTimeout = 60 * time.Second
+		reconnectDelay    = 100 * time.Millisecond
+	)
+
+	logrus.Info("Waiting for rabbitMQ")
+
+	var (
+		rabbitMQ *amqp.Connection
+		err      error
+		start    = time.Now()
+	)
+
+	for {
+		rabbitMQ, err = amqp.Dial(config)
+		if err == nil {
+			logrus.Info("Started.")
+
+			break
+		}
+
+		if time.Since(start) > connectionTimeout {
+			return nil, err
+		}
+
+		logrus.Info(".")
+		time.Sleep(reconnectDelay)
+	}
+
+	return rabbitMQ, nil
 }

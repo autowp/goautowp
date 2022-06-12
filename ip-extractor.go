@@ -4,18 +4,33 @@ import (
 	"errors"
 	"net"
 
+	"github.com/autowp/goautowp/ban"
+
+	"github.com/casbin/casbin"
+
 	"github.com/autowp/goautowp/users"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type IPExtractor struct {
-	container *Container
+	enforcer       *casbin.Enforcer
+	banRepository  *ban.Repository
+	userRepository *users.Repository
+	userExtractor  *users.UserExtractor
 }
 
-func NewIPExtractor(container *Container) *IPExtractor {
+func NewIPExtractor(
+	enforcer *casbin.Enforcer,
+	banRepository *ban.Repository,
+	userRepository *users.Repository,
+	userExtractor *users.UserExtractor,
+) *IPExtractor {
 	return &IPExtractor{
-		container: container,
+		enforcer:       enforcer,
+		banRepository:  banRepository,
+		userRepository: userRepository,
+		userExtractor:  userExtractor,
 	}
 }
 
@@ -39,48 +54,36 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 	_, ok = fields["blacklist"]
 
 	if ok {
-		enforcer := s.container.Enforcer()
-
-		canView := len(role) > 0 && enforcer.Enforce(role, "global", "moderate")
+		canView := len(role) > 0 && s.enforcer.Enforce(role, "global", "moderate")
 
 		if canView {
 			result.Blacklist = nil
 
-			banRepository, err := s.container.BanRepository()
+			banItem, err := s.banRepository.Get(ip)
 			if err != nil {
 				return nil, err
 			}
 
-			ban, err := banRepository.Get(ip)
-			if err != nil {
-				return nil, err
-			}
-
-			if ban != nil {
+			if banItem != nil {
 				result.Blacklist = &APIBanItem{
-					Until:    timestamppb.New(ban.Until),
-					ByUserId: ban.ByUserID,
+					Until:    timestamppb.New(banItem.Until),
+					ByUserId: banItem.ByUserID,
 					ByUser:   nil,
-					Reason:   ban.Reason,
+					Reason:   banItem.Reason,
 				}
 
-				userRepository, err := s.container.UsersRepository()
-				if err != nil {
-					return nil, err
-				}
-
-				user, err := userRepository.User(users.GetUsersOptions{ID: ban.ByUserID})
+				user, err := s.userRepository.User(users.GetUsersOptions{ID: banItem.ByUserID})
 				if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 					return nil, err
 				}
 
 				if user != nil {
-					userExtractor := s.container.UserExtractor()
-
-					result.Blacklist.ByUser, err = userExtractor.Extract(user, map[string]bool{})
+					apiUser, err := s.userExtractor.Extract(user, map[string]bool{})
 					if err != nil {
 						return nil, err
 					}
+
+					result.Blacklist.ByUser = APIUserToGRPC(apiUser)
 				}
 			}
 		}
@@ -88,9 +91,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 
 	_, ok = fields["rights"]
 	if ok {
-		enforcer := s.container.Enforcer()
-
-		canBan := len(role) > 0 && enforcer.Enforce(role, "user", "ban")
+		canBan := len(role) > 0 && s.enforcer.Enforce(role, "user", "ban")
 
 		result.Rights = &APIIPRights{
 			AddToBlacklist:      canBan,

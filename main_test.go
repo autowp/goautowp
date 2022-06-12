@@ -3,34 +3,29 @@ package goautowp
 import (
 	"context"
 	"net"
+	"os"
+	"testing"
+
+	"google.golang.org/grpc"
 
 	"github.com/autowp/goautowp/config"
+
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 )
 
-const bufSize = 1024 * 1024
+var (
+	cnt       *Container
+	bufDialer func(context.Context, string) (net.Conn, error)
+)
 
-var container *Container
+func TestMain(m *testing.M) {
+	const bufSize = 1024 * 1024
 
-var lis *bufconn.Listener
+	var lis *bufconn.Listener
 
-func bufDialer(context.Context, string) (net.Conn, error) {
-	return lis.Dial()
-}
-
-func getContainer() *Container {
-	if container == nil {
-		cfg := config.LoadConfig(".")
-		container = NewContainer(cfg)
-	}
-
-	return container
-}
-
-func init() { // nolint: gochecknoinits
-	cnt := getContainer()
+	cfg := config.LoadConfig(".")
+	cnt = NewContainer(cfg)
 
 	grpcServer := grpc.NewServer()
 
@@ -78,9 +73,25 @@ func init() { // nolint: gochecknoinits
 
 	lis = bufconn.Listen(bufSize)
 
+	bufDialer = func(context.Context, string) (net.Conn, error) {
+		return lis.Dial()
+	}
+
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
 			logrus.Errorf("Server exited with error: %v", err)
 		}
 	}()
+
+	/*return cnt, func(context.Context, string) (net.Conn, error) {
+		return lis.Dial()
+	}*/
+
+	go func() {
+		if err := grpcServer.Serve(lis); err != nil {
+			logrus.Errorf("Server exited with error: %v", err)
+		}
+	}()
+
+	os.Exit(m.Run())
 }

@@ -77,7 +77,6 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, me)
 
-	cnt := getContainer()
 	db, err := cnt.AutowpDB()
 	require.NoError(t, err)
 

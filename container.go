@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/autowp/goautowp/traffic"
+
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/comments"
@@ -68,7 +70,7 @@ type Container struct {
 	publicHTTPServer     *http.Server
 	publicRouter         http.HandlerFunc
 	telegramService      *telegram.Service
-	traffic              *Traffic
+	traffic              *traffic.Traffic
 	trafficDB            *pgxpool.Pool
 	trafficGrpcServer    *TrafficGRPCServer
 	usersRepository      *users.Repository
@@ -277,8 +279,23 @@ func (s *Container) Feedback() (*Feedback, error) {
 	return s.feedback, nil
 }
 
-func (s *Container) IPExtractor() *IPExtractor {
-	return NewIPExtractor(s)
+func (s *Container) IPExtractor() (*IPExtractor, error) {
+	banRepository, err := s.BanRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	userRepository, err := s.UsersRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	userExtractor, err := s.UserExtractor()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewIPExtractor(s.Enforcer(), banRepository, userRepository, userExtractor), nil
 }
 
 func (s *Container) HostsManager() *hosts.Manager {
@@ -336,7 +353,7 @@ func (s *Container) PrivateRouter() (*gin.Engine, error) {
 		return s.privateRouter, nil
 	}
 
-	traffic, err := s.Traffic()
+	repo, err := s.Traffic()
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +362,7 @@ func (s *Container) PrivateRouter() (*gin.Engine, error) {
 	r.Use(gin.Recovery())
 	r.Use(sentrygin.New(sentrygin.Options{}))
 
-	traffic.SetupPrivateRouter(r)
+	repo.SetupPrivateRouter(r)
 
 	s.privateRouter = r
 
@@ -483,7 +500,7 @@ func (s *Container) TelegramService() (*telegram.Service, error) {
 	return s.telegramService, nil
 }
 
-func (s *Container) Traffic() (*Traffic, error) {
+func (s *Container) Traffic() (*traffic.Traffic, error) {
 	if s.traffic == nil {
 		db, err := s.TrafficDB()
 		if err != nil {
@@ -500,18 +517,19 @@ func (s *Container) Traffic() (*Traffic, error) {
 			return nil, err
 		}
 
-		enforcer := s.Enforcer()
+		userExtractor, err := s.UserExtractor()
+		if err != nil {
+			return nil, err
+		}
 
-		userExtractor := s.UserExtractor()
-
-		traffic, err := NewTraffic(db, autowpDB, enforcer, banRepository, userExtractor)
+		traf, err := traffic.NewTraffic(db, autowpDB, s.Enforcer(), banRepository, userExtractor)
 		if err != nil {
 			logrus.Error(err.Error())
 
 			return nil, err
 		}
 
-		s.traffic = traffic
+		s.traffic = traf
 	}
 
 	return s.traffic, nil
@@ -570,8 +588,13 @@ func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-func (s *Container) UserExtractor() *UserExtractor {
-	return NewUserExtractor(s)
+func (s *Container) UserExtractor() (*users.UserExtractor, error) {
+	is, err := s.ImageStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	return users.NewUserExtractor(s.Enforcer(), is), nil
 }
 
 func (s *Container) UsersRepository() (*users.Repository, error) {
@@ -657,15 +680,19 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
+		ipExtractor, err := s.IPExtractor()
+		if err != nil {
+			return nil, err
+		}
+
 		s.grpcServer = NewGRPCServer(
 			auth,
 			catalogue,
 			cfg.Recaptcha,
 			cfg.FileStorage,
 			s.Enforcer(),
-			s.UserExtractor(),
 			commentsRepository,
-			s.IPExtractor(),
+			ipExtractor,
 			feedback,
 			forums,
 		)
@@ -698,7 +725,7 @@ func (s *Container) TrafficGRPCServer() (*TrafficGRPCServer, error) {
 			return nil, err
 		}
 
-		traffic, err := s.Traffic()
+		traf, err := s.Traffic()
 		if err != nil {
 			return nil, err
 		}
@@ -708,12 +735,17 @@ func (s *Container) TrafficGRPCServer() (*TrafficGRPCServer, error) {
 			return nil, err
 		}
 
+		userExtractor, err := s.UserExtractor()
+		if err != nil {
+			return nil, err
+		}
+
 		s.trafficGrpcServer = NewTrafficGRPCServer(
 			auth,
 			db,
 			s.Enforcer(),
-			s.UserExtractor(),
-			traffic,
+			userExtractor,
+			traf,
 		)
 	}
 
@@ -744,6 +776,11 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			return nil, err
 		}
 
+		userExtractor, err := s.UserExtractor()
+		if err != nil {
+			return nil, err
+		}
+
 		s.usersGrpcServer = NewUsersGRPCServer(
 			auth,
 			s.Enforcer(),
@@ -752,7 +789,7 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			events,
 			cfg.Languages,
 			cfg.Captcha,
-			s.UserExtractor(),
+			userExtractor,
 		)
 	}
 
@@ -794,11 +831,16 @@ func (s *Container) CommentsGRPCServer() (*CommentsGRPCServer, error) {
 			return nil, err
 		}
 
+		userExtractor, err := s.UserExtractor()
+		if err != nil {
+			return nil, err
+		}
+
 		s.commentsGrpcServer = NewCommentsGRPCServer(
 			auth,
 			commentsRepository,
 			usersRepository,
-			s.UserExtractor(),
+			userExtractor,
 			s.Enforcer(),
 		)
 	}
@@ -823,11 +865,16 @@ func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 			return nil, err
 		}
 
+		userExtractor, err := s.UserExtractor()
+		if err != nil {
+			return nil, err
+		}
+
 		s.contactsGrpcServer = NewContactsGRPCServer(
 			auth,
 			contactsRepository,
 			userRepository,
-			s.UserExtractor(),
+			userExtractor,
 		)
 	}
 

@@ -1,4 +1,4 @@
-package goautowp
+package traffic
 
 import (
 	"net"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/ban"
+	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
@@ -33,7 +34,7 @@ type Traffic struct {
 	Ban           *ban.Repository
 	autowpDB      *goqu.Database
 	enforcer      *casbin.Enforcer
-	userExtractor *UserExtractor
+	userExtractor *users.UserExtractor
 }
 
 // AutobanProfile AutobanProfile.
@@ -89,7 +90,7 @@ func NewTraffic(
 	autowpDB *goqu.Database,
 	enforcer *casbin.Enforcer,
 	ban *ban.Repository,
-	userExtractor *UserExtractor,
+	userExtractor *users.UserExtractor,
 ) (*Traffic, error) {
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {

@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/autowp/goautowp/traffic"
+
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
@@ -28,16 +30,16 @@ type TrafficGRPCServer struct {
 	auth          *Auth
 	db            *goqu.Database
 	enforcer      *casbin.Enforcer
-	userExtractor *UserExtractor
-	traffic       *Traffic
+	userExtractor *users.UserExtractor
+	traffic       *traffic.Traffic
 }
 
 func NewTrafficGRPCServer(
 	auth *Auth,
 	db *goqu.Database,
 	enforcer *casbin.Enforcer,
-	userExtractor *UserExtractor,
-	traffic *Traffic,
+	userExtractor *users.UserExtractor,
+	traffic *traffic.Traffic,
 ) *TrafficGRPCServer {
 	return &TrafficGRPCServer{
 		auth:          auth,
@@ -83,7 +85,7 @@ func (s *TrafficGRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (
 			topItemBan = &APIBanItem{
 				Until:    timestamppb.New(banItem.Until),
 				ByUserId: banItem.ByUserID,
-				ByUser:   extractedUser,
+				ByUser:   APIUserToGRPC(extractedUser),
 				Reason:   banItem.Reason,
 			}
 		}
@@ -236,8 +238,16 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	result := make([]*APITrafficWhitelistItem, len(list))
+	for idx, i := range list {
+		result[idx] = &APITrafficWhitelistItem{
+			Ip:          i.IP.String(),
+			Description: i.Description,
+		}
+	}
+
 	return &APITrafficWhitelistItems{
-		Items: list,
+		Items: result,
 	}, nil
 }
 

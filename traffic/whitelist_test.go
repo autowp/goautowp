@@ -1,4 +1,4 @@
-package goautowp
+package traffic
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 func createWhitelistService(t *testing.T) *Whitelist {
 	t.Helper()
 
-	cfg := config.LoadConfig(".")
+	cfg := config.LoadConfig("..")
 
 	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
 	require.NoError(t, err)

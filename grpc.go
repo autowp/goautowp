@@ -7,6 +7,9 @@ import (
 	"net"
 	"net/url"
 
+	"github.com/autowp/goautowp/users"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/casbin/casbin"
@@ -17,6 +20,46 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+func APIImageToGRPC(image *users.APIImage) *APIImage {
+	if image == nil {
+		return nil
+	}
+
+	return &APIImage{
+		Id:       image.ID,
+		Src:      image.Src,
+		Width:    image.Width,
+		Height:   image.Height,
+		Filesize: image.Filesize,
+	}
+}
+
+func APIUserToGRPC(user *users.APIUser) *APIUser {
+	if user == nil {
+		return nil
+	}
+
+	var ts *timestamppb.Timestamp
+
+	if user.LastOnline != nil {
+		ts = timestamppb.New(*user.LastOnline)
+	}
+
+	return &APIUser{
+		Id:          user.ID,
+		Name:        user.Name,
+		Deleted:     user.Deleted,
+		LongAway:    user.LongAway,
+		Green:       user.Green,
+		Route:       user.Route,
+		Identity:    user.Identity,
+		Avatar:      APIImageToGRPC(user.Avatar),
+		Gravatar:    user.Gravatar,
+		LastOnline:  ts,
+		SpecsWeight: user.SpecsWeight,
+	}
+}
+
 type GRPCServer struct {
 	UnimplementedAutowpServer
 	auth              *Auth
@@ -24,7 +67,6 @@ type GRPCServer struct {
 	reCaptchaConfig   config.RecaptchaConfig
 	fileStorageConfig config.FileStorageConfig
 	enforcer          *casbin.Enforcer
-	userExtractor     *UserExtractor
 	comments          *comments.Repository
 	ipExtractor       *IPExtractor
 	feedback          *Feedback
@@ -37,7 +79,6 @@ func NewGRPCServer(
 	reCaptchaConfig config.RecaptchaConfig,
 	fileStorageConfig config.FileStorageConfig,
 	enforcer *casbin.Enforcer,
-	userExtractor *UserExtractor,
 	comments *comments.Repository,
 	ipExtractor *IPExtractor,
 	feedback *Feedback,
@@ -49,7 +90,6 @@ func NewGRPCServer(
 		reCaptchaConfig:   reCaptchaConfig,
 		fileStorageConfig: fileStorageConfig,
 		enforcer:          enforcer,
-		userExtractor:     userExtractor,
 		comments:          comments,
 		ipExtractor:       ipExtractor,
 		feedback:          feedback,

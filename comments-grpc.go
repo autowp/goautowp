@@ -17,7 +17,7 @@ type CommentsGRPCServer struct {
 	auth            *Auth
 	repository      *comments.Repository
 	usersRepository *users.Repository
-	userExtractor   *UserExtractor
+	userExtractor   *users.UserExtractor
 	enforcer        *casbin.Enforcer
 }
 
@@ -42,7 +42,7 @@ func NewCommentsGRPCServer(
 	auth *Auth,
 	commentsRepository *comments.Repository,
 	usersRepository *users.Repository,
-	userExtractor *UserExtractor,
+	userExtractor *users.UserExtractor,
 	enforcer *casbin.Enforcer,
 ) *CommentsGRPCServer {
 	return &CommentsGRPCServer{
@@ -74,7 +74,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVo
 
 		result = append(result, &CommentVote{
 			Value: CommentVote_POSITIVE,
-			User:  extracted,
+			User:  APIUserToGRPC(extracted),
 		})
 	}
 
@@ -86,7 +86,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVo
 
 		result = append(result, &CommentVote{
 			Value: CommentVote_NEGATIVE,
-			User:  extracted,
+			User:  APIUserToGRPC(extracted),
 		})
 	}
 

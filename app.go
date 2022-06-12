@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/autowp/goautowp/users"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/sirupsen/logrus"
 
@@ -334,7 +336,7 @@ func (s *Application) ImageStorageGetImage(imageID int) (*APIImage, error) {
 		return nil, err
 	}
 
-	return ImageToAPIImage(img), nil
+	return APIImageToGRPC(users.ImageToAPIImage(img)), nil
 }
 
 func (s *Application) ImageStorageGetFormattedImage(imageID int, format string) (*APIImage, error) {
@@ -348,5 +350,5 @@ func (s *Application) ImageStorageGetFormattedImage(imageID int, format string) 
 		return nil, err
 	}
 
-	return ImageToAPIImage(img), nil
+	return APIImageToGRPC(users.ImageToAPIImage(img)), nil
 }

@@ -10,65 +10,39 @@ import (
 
 const towerFilePath = "./_files/Towers_Schiphol_small.jpg"
 
-func TestShouldResizeOddWidthPictureStrictlyToTargetWidthByOuterFitType(t *testing.T) {
+func TestFormat(t *testing.T) { //nolint:maintidx
 	t.Parallel()
-
-	sampler := NewSampler()
-	mw := imagick.NewMagickWand()
-
-	defer mw.Destroy()
-
-	err := mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format := NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      102,
-		Height:     149,
-		Background: "red",
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 102)
-}
-
-func TestShouldResizeOddHeightPictureStrictlyToTargetHeightByOuterFitType(t *testing.T) {
-	t.Parallel()
-
-	sampler := NewSampler()
-	mw := imagick.NewMagickWand()
-
-	defer mw.Destroy()
-
-	err := mw.ReadImage(towerFilePath)
-	require.NoError(t, err)
-
-	format := NewFormat(config.ImageStorageSamplerFormatConfig{
-		FitType:    config.FitTypeOuter,
-		Width:      101,
-		Height:     150,
-		Background: "red",
-	})
-	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageHeight(), 150)
-}
-
-func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
-	t.Parallel()
-
-	sampler := NewSampler()
-	mw := imagick.NewMagickWand()
-
-	defer mw.Destroy()
 
 	tests := []struct {
+		name         string
 		formatConfig config.ImageStorageSamplerFormatConfig
 		width        int
 		height       int
 	}{
-		// both size less
 		{
+			name: "ShouldResizeOddWidthPictureStrictlyToTargetWidthByOuterFitType",
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      102,
+				Height:     149,
+				Background: "red",
+			},
+			width:  102,
+			height: 149,
+		},
+		{
+			name: "ShouldResizeOddHeightPictureStrictlyToTargetHeightByOuterFitType",
+			formatConfig: config.ImageStorageSamplerFormatConfig{
+				FitType:    config.FitTypeOuter,
+				Width:      101,
+				Height:     150,
+				Background: "red",
+			},
+			width:  101,
+			height: 150,
+		},
+		{
+			name: "FitTypeInner: both size less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeInner,
 				Width:      150,
@@ -78,8 +52,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  101,
 			height: 149,
 		},
-		// height less
 		{
+			name: "FitTypeInner: height less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeInner,
 				Width:      50,
@@ -89,8 +63,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 74,
 		},
-		// not less
 		{
+			name: "FitTypeInner: not less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeInner,
 				Width:      50,
@@ -100,8 +74,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 100,
 		},
-		// both size less, reduceOnly off
 		{
+			name: "FitTypeInner: both size less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeInner,
 				Width:      150,
@@ -111,8 +85,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  150,
 			height: 200,
 		},
-		// width less, reduceOnly off
 		{
+			name: "FitTypeInner: width less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeInner,
 				Width:      150,
@@ -122,8 +96,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  150,
 			height: 100,
 		},
-		// height less, reduceOnly off
 		{
+			name: "FitTypeInner: height less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeInner,
 				Width:      50,
@@ -133,8 +107,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 200,
 		},
-		// not less, reduceOnly off
 		{
+			name: "FitTypeInner: not less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeInner,
 				Width:      50,
@@ -144,9 +118,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 100,
 		},
-		// FitTypeOuter
-		// both size less
 		{
+			name: "FitTypeOuter: both size less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeOuter,
 				Width:      150,
@@ -156,8 +129,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  150,
 			height: 200,
 		},
-		// width less
 		{
+			name: "FitTypeOuter: width less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeOuter,
 				Width:      150,
@@ -167,8 +140,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  150,
 			height: 100,
 		},
-		// height less
 		{
+			name: "FitTypeOuter: height less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeOuter,
 				Width:      50,
@@ -178,8 +151,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 200,
 		},
-		// not less
 		{
+			name: "FitTypeOuter: not less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeOuter,
 				Width:      50,
@@ -189,8 +162,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 100,
 		},
-		// both size less, reduceOnly off
 		{
+			name: "FitTypeOuter: both size less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeOuter,
 				Width:      150,
@@ -200,8 +173,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  150,
 			height: 200,
 		},
-		// width less, reduceOnly off
 		{
+			name: "FitTypeOuter: width less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeOuter,
 				Width:      150,
@@ -211,8 +184,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  150,
 			height: 100,
 		},
-		// height less, reduceOnly off
 		{
+			name: "FitTypeOuter: height less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeOuter,
 				Width:      50,
@@ -222,8 +195,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 200,
 		},
-		// not less, reduceOnly off
 		{
+			name: "FitTypeOuter: not less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeOuter,
 				Width:      50,
@@ -233,8 +206,9 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 100,
 		},
-		// ReduceOnlyWithMaximumFit
+		//
 		{
+			name: "MaximumFit: both size less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeMaximum,
 				Width:      150,
@@ -244,8 +218,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  101,
 			height: 149,
 		},
-		// width less
 		{
+			name: "MaximumFit: width less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeMaximum,
 				Width:      150,
@@ -255,8 +229,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  68,
 			height: 100,
 		},
-		// height less
 		{
+			name: "MaximumFit: height less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeMaximum,
 				Width:      50,
@@ -266,8 +240,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 74,
 		},
-		// not less
 		{
+			name: "MaximumFit: not less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeMaximum,
 				Width:      50,
@@ -277,8 +251,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 74,
 		},
-		// both size less, reduceOnly off
 		{
+			name: "MaximumFit: both size less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeMaximum,
 				Width:      150,
@@ -288,8 +262,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  136,
 			height: 200,
 		},
-		// width less, reduceOnly off
 		{
+			name: "MaximumFit: width less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeMaximum,
 				Width:      150,
@@ -299,8 +273,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  68,
 			height: 100,
 		},
-		// height less, reduceOnly off
 		{
+			name: "MaximumFit: height less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeMaximum,
 				Width:      50,
@@ -310,8 +284,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 74,
 		},
-		// not less, reduceOnly off
 		{
+			name: "MaximumFit: not less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				FitType:    config.FitTypeMaximum,
 				Width:      50,
@@ -321,9 +295,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 74,
 		},
-		// ReduceOnlyByWidth
-		// width less
 		{
+			name: "ReduceOnlyByWidth: width less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				Width:      150,
 				ReduceOnly: true,
@@ -331,8 +304,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  101,
 			height: 149,
 		},
-		// not less
 		{
+			name: "ReduceOnlyByWidth: not less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				Width:      50,
 				ReduceOnly: true,
@@ -340,8 +313,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 74,
 		},
-		// width less, reduceOnly off
 		{
+			name: "ReduceOnlyByWidth: width less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				Width:      150,
 				ReduceOnly: false,
@@ -349,8 +322,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  150,
 			height: 221,
 		},
-		// not less, reduceOnly off
 		{
+			name: "ReduceOnlyByWidth: not less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				Width:      50,
 				ReduceOnly: false,
@@ -358,9 +331,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  50,
 			height: 74,
 		},
-		// ReduceOnlyByHeight
-		// height less
 		{
+			name: "ReduceOnlyByHeight: height less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				Height:     200,
 				ReduceOnly: true,
@@ -368,8 +340,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  101,
 			height: 149,
 		},
-		// not less
 		{
+			name: "ReduceOnlyByHeight: not less",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				Height:     100,
 				ReduceOnly: true,
@@ -377,8 +349,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  68,
 			height: 100,
 		},
-		// height less, reduceOnly off
 		{
+			name: "ReduceOnlyByHeight: height less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				Height:     200,
 				ReduceOnly: false,
@@ -386,8 +358,8 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 			width:  136,
 			height: 200,
 		},
-		// not less, reduceOnly off
 		{
+			name: "ReduceOnlyByHeight: not less, reduceOnly off",
 			formatConfig: config.ImageStorageSamplerFormatConfig{
 				Height:     100,
 				ReduceOnly: false,
@@ -397,16 +369,26 @@ func TestReduceOnlyWorks(t *testing.T) { //nolint:maintidx
 		},
 	}
 
-	for _, tt := range tests {
-		err := mw.ReadImage(towerFilePath)
-		require.NoError(t, err)
+	for idx := range tests {
+		tt := tests[idx]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-		format := NewFormat(tt.formatConfig)
-		mw, err = sampler.ConvertImage(mw, Crop{}, *format)
-		require.NoError(t, err)
-		require.EqualValues(t, mw.GetImageWidth(), tt.width)
-		require.EqualValues(t, mw.GetImageHeight(), tt.height)
-		mw.Clear()
+			sampler := NewSampler()
+			mw := imagick.NewMagickWand()
+
+			defer mw.Destroy()
+
+			err := mw.ReadImage(towerFilePath)
+			require.NoError(t, err)
+
+			format := NewFormat(tt.formatConfig)
+			mw, err = sampler.ConvertImage(mw, Crop{}, *format)
+			require.NoError(t, err)
+			require.EqualValues(t, tt.width, mw.GetImageWidth())
+			require.EqualValues(t, tt.height, mw.GetImageHeight())
+			mw.Clear()
+		})
 	}
 }
 

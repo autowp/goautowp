@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/autowp/goautowp/users"
+
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
@@ -197,7 +199,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 					return nil, status.Error(codes.Internal, err.Error())
 				}
 
-				mapPoint.Image = ImageToAPIImage(image)
+				mapPoint.Image = APIImageToGRPC(users.ImageToAPIImage(image))
 			}
 
 			mapPoints = append(mapPoints, mapPoint)

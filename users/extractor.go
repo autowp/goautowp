@@ -1,4 +1,4 @@
-package goautowp
+package users
 
 import (
 	"crypto/md5" // nolint: gosec
@@ -8,17 +8,26 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/image/storage"
-	"github.com/autowp/goautowp/users"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/casbin/casbin"
 )
 
 type UserExtractor struct {
-	container *Container
+	enforcer     *casbin.Enforcer
+	imageStorage *storage.Storage
 }
 
-func NewUserExtractor(container *Container) *UserExtractor {
+type APIImage struct {
+	ID       int32
+	Src      string
+	Width    int32
+	Height   int32
+	Filesize int32
+}
+
+func NewUserExtractor(enforcer *casbin.Enforcer, imageStorage *storage.Storage) *UserExtractor {
 	return &UserExtractor{
-		container: container,
+		enforcer:     enforcer,
+		imageStorage: imageStorage,
 	}
 }
 
@@ -28,7 +37,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	}
 
 	return &APIImage{
-		Id:       int32(i.ID()),
+		ID:       int32(i.ID()),
 		Width:    int32(i.Width()),
 		Height:   int32(i.Height()),
 		Filesize: int32(i.FileSize()),
@@ -36,7 +45,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	}
 }
 
-func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*APIUser, error) {
+func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, error) {
 	longAway := true
 
 	if row.LastOnline != nil {
@@ -44,9 +53,7 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*API
 		longAway = date.After(*row.LastOnline)
 	}
 
-	enforcer := s.container.Enforcer()
-
-	isGreen := row.Role != "" && enforcer.Enforce(row.Role, "status", "be-green")
+	isGreen := row.Role != "" && s.enforcer.Enforce(row.Role, "status", "be-green")
 
 	route := []string{"/users", fmt.Sprintf("user%d", row.ID)}
 	if row.Identity != nil {
@@ -59,7 +66,7 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*API
 	}
 
 	user := APIUser{
-		Id:          row.ID,
+		ID:          row.ID,
 		Name:        row.Name,
 		Deleted:     row.Deleted,
 		LongAway:    longAway,
@@ -73,12 +80,7 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*API
 		switch field {
 		case "avatar":
 			if row.Img != nil {
-				is, err := s.container.ImageStorage()
-				if err != nil {
-					return nil, err
-				}
-
-				avatar, err := is.FormattedImage(*row.Img, "avatar")
+				avatar, err := s.imageStorage.FormattedImage(*row.Img, "avatar")
 				if err != nil {
 					return nil, err
 				}
@@ -97,9 +99,7 @@ func (s *UserExtractor) Extract(row *users.DBUser, fields map[string]bool) (*API
 				user.Gravatar = str
 			}
 		case "last_online":
-			if row.LastOnline != nil {
-				user.LastOnline = timestamppb.New(*row.LastOnline)
-			}
+			user.LastOnline = row.LastOnline
 		}
 	}
 

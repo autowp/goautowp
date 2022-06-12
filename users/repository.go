@@ -50,16 +50,17 @@ type GetUsersOptions struct {
 
 // APIUser APIUser.
 type APIUser struct {
-	ID         int        `json:"id"`
-	Name       string     `json:"name"`
-	Deleted    bool       `json:"deleted"`
-	LongAway   bool       `json:"long_away"`
-	Green      bool       `json:"green"`
-	Route      []string   `json:"route"`
-	Identity   *string    `json:"identity"`
-	Avatar     *string    `json:"avatar,omitempty"`
-	Gravatar   *string    `json:"gravatar,omitempty"`
-	LastOnline *time.Time `json:"last_online,omitempty"`
+	ID          int64      `json:"id"`
+	Name        string     `json:"name"`
+	Deleted     bool       `json:"deleted"`
+	LongAway    bool       `json:"long_away"`
+	Green       bool       `json:"green"`
+	Route       []string   `json:"route"`
+	Identity    string     `json:"identity"`
+	Avatar      *APIImage  `json:"avatar,omitempty"`
+	Gravatar    string     `json:"gravatar,omitempty"`
+	LastOnline  *time.Time `json:"last_online,omitempty"`
+	SpecsWeight float64    `json:"specs_weight,omitempty"`
 }
 
 // DBUser DBUser.

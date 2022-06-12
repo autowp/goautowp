@@ -4,7 +4,6 @@ run:
     - spec_grpc.pb.go
     - spec.pb.go
   allow-parallel-runners: true
-  go: '1.18'
 linters:
   enable:
     - asciicheck

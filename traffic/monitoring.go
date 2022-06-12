@@ -1,4 +1,4 @@
-package goautowp
+package traffic
 
 import (
 	"context"
@@ -43,7 +43,7 @@ func NewMonitoring(db *pgxpool.Pool) (*Monitoring, error) {
 
 // Listen for incoming messages.
 func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error {
-	conn, err := connectRabbitMQ(url)
+	conn, err := util.ConnectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)
 

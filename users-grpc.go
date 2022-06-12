@@ -22,7 +22,7 @@ type UsersGRPCServer struct {
 	events             *Events
 	languages          map[string]config.LanguageConfig
 	captcha            bool
-	userExtractor      *UserExtractor
+	userExtractor      *users.UserExtractor
 }
 
 func NewUsersGRPCServer(
@@ -33,7 +33,7 @@ func NewUsersGRPCServer(
 	events *Events,
 	languages map[string]config.LanguageConfig,
 	captcha bool,
-	userExtractor *UserExtractor,
+	userExtractor *users.UserExtractor,
 ) *UsersGRPCServer {
 	return &UsersGRPCServer{
 		auth:               auth,
@@ -79,7 +79,12 @@ func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*AP
 		return nil, status.Error(codes.NotFound, "User not found")
 	}
 
-	return s.userExtractor.Extract(dbUser, m)
+	apiUser, err := s.userExtractor.Extract(dbUser, m)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return APIUserToGRPC(apiUser), err
 }
 
 func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {

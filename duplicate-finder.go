@@ -6,20 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/jpeg" // support JPEG decoding
-	_ "image/png"  // support PNG decoding
+	_ "image/jpeg" // support JPEG decoding.
+	_ "image/png"  // support PNG decoding.
 	"io"
 	"net/http"
 	"strconv"
-	"time"
-
-	"github.com/doug-martin/goqu/v9"
-	"github.com/sirupsen/logrus"
 
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/getsentry/sentry-go"
-	"github.com/streadway/amqp"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -47,42 +44,9 @@ func NewDuplicateFinder(db *goqu.Database) (*DuplicateFinder, error) {
 	return s, nil
 }
 
-func connectRabbitMQ(config string) (*amqp.Connection, error) {
-	const (
-		connectionTimeout = 60 * time.Second
-		reconnectDelay    = 100 * time.Millisecond
-	)
-
-	logrus.Info("Waiting for rabbitMQ")
-
-	var (
-		rabbitMQ *amqp.Connection
-		err      error
-		start    = time.Now()
-	)
-
-	for {
-		rabbitMQ, err = amqp.Dial(config)
-		if err == nil {
-			logrus.Info("Started.")
-
-			break
-		}
-
-		if time.Since(start) > connectionTimeout {
-			return nil, err
-		}
-
-		logrus.Info(".")
-		time.Sleep(reconnectDelay)
-	}
-
-	return rabbitMQ, nil
-}
-
 // ListenAMQP for incoming messages.
 func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan bool) error {
-	rabbitMQ, err := connectRabbitMQ(url)
+	rabbitMQ, err := util.ConnectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)
 

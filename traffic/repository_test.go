@@ -1,27 +1,49 @@
-package goautowp
+package traffic
 
 import (
 	"context"
+	"database/sql"
 	"net"
 	"testing"
 	"time"
 
-	"github.com/Nerzal/gocloak/v11"
+	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/emptypb"
-
+	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/users"
+	"github.com/casbin/casbin"
+	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
 func createTrafficService(t *testing.T) *Traffic {
 	t.Helper()
 
-	s, err := getContainer().Traffic()
+	cfg := config.LoadConfig("..")
+
+	db, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
 	require.NoError(t, err)
 
-	return s
+	autowpDB, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", autowpDB)
+
+	banRepository, err := ban.NewRepository(db)
+	require.NoError(t, err)
+
+	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	userExtractor := users.NewUserExtractor(enforcer, imageStorage)
+
+	traf, err := NewTraffic(db, goquDB, enforcer, banRepository, userExtractor)
+	require.NoError(t, err)
+
+	return traf
 }
 
 func TestAutoWhitelist(t *testing.T) {
@@ -139,55 +161,6 @@ func TestWhitelistedNotBanned(t *testing.T) {
 	require.False(t, exists)
 }
 
-func TestHttpBanPost(t *testing.T) {
-	t.Parallel()
-
-	cfg := config.LoadConfig(".")
-
-	cnt := NewContainer(cfg)
-	defer util.Close(cnt)
-
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
-	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, token)
-
-	srv, err := cnt.GRPCServer()
-	require.NoError(t, err)
-
-	trafficSrv, err := cnt.TrafficGRPCServer()
-	require.NoError(t, err)
-
-	ctx := metadata.NewIncomingContext(
-		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
-	)
-
-	_, err = trafficSrv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
-	require.NoError(t, err)
-
-	_, err = trafficSrv.AddToTrafficBlacklist(ctx, &AddToTrafficBlacklistRequest{
-		Ip:     "127.0.0.1",
-		Period: 3,
-		Reason: "Test",
-	})
-	require.NoError(t, err)
-
-	ip, err := srv.GetIP(ctx, &APIGetIPRequest{
-		Ip:     "127.0.0.1",
-		Fields: []string{"blacklist"},
-	})
-	require.NoError(t, err)
-	require.NotNil(t, ip.Blacklist)
-
-	_, err = trafficSrv.DeleteFromTrafficBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
-	require.NoError(t, err)
-
-	ip, err = srv.GetIP(ctx, &APIGetIPRequest{Ip: "127.0.0.1"})
-	require.NoError(t, err)
-	require.Nil(t, ip.Blacklist)
-}
-
 func TestTop(t *testing.T) {
 	t.Parallel()
 
@@ -207,28 +180,4 @@ func TestTop(t *testing.T) {
 		err = s.Monitoring.Add(net.IPv6loopback, now)
 		require.NoError(t, err)
 	}
-
-	cfg := config.LoadConfig(".")
-
-	cnt := NewContainer(cfg)
-	defer util.Close(cnt)
-
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
-	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, token)
-
-	srv, err := cnt.TrafficGRPCServer()
-	require.NoError(t, err)
-
-	ctx := metadata.NewIncomingContext(
-		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
-	)
-
-	top, err := srv.GetTrafficTop(ctx, &emptypb.Empty{})
-	require.NoError(t, err)
-	require.Equal(t, top.Items[0].Ip, "::1")
-	require.EqualValues(t, top.Items[0].Count, 10)
-	require.Equal(t, top.Items[0].WhoisUrl, "https://nic.ru/whois/?query=%3A%3A1")
 }
