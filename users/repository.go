@@ -362,10 +362,8 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		return 0, "", err
 	}
 
-	var userID int64
-
 	if affected == 1 { // row just inserted
-		userID, err = r.LastInsertId()
+		userID, err := r.LastInsertId()
 		if err != nil {
 			return 0, "", err
 		}
@@ -393,10 +391,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		return 0, "", ErrUserNotFound
 	}
 
-	userID = row.ID
-	role = row.Role
-
-	return userID, role, nil
+	return row.ID, row.Role, nil
 }
 
 func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) {
