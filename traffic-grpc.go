@@ -73,13 +73,17 @@ func (s *TrafficGRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (
 
 		if banItem != nil {
 			user, err = s.getUser(banItem.ByUserID)
-			if err != nil {
+			if err != nil && !errors.Is(err, ErrUserNotFound) {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			extractedUser, err := s.userExtractor.Extract(user, map[string]bool{})
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
+			var extractedUser *users.APIUser
+
+			if user != nil {
+				extractedUser, err = s.userExtractor.Extract(user, map[string]bool{})
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
 			}
 
 			topItemBan = &APIBanItem{

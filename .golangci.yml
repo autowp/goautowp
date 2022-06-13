@@ -44,7 +44,6 @@ linters:
     - gofumpt
     - goheader
     - goimports
-    - golint
     - gomnd
     - gomoddirectives
     - gomodguard
@@ -56,7 +55,6 @@ linters:
     - ifshort
     - importas
     - ineffassign
-    - interfacer
     # - ireturn
     - lll
     - maintidx
@@ -78,7 +76,6 @@ linters:
     - promlinter
     - revive
     - rowserrcheck
-    - scopelint
     - sqlclosecheck
     - staticcheck
     - structcheck

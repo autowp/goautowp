@@ -328,31 +328,43 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 	logrus.Debugf("Ensure user `%s` imported", guid)
 
-	var userID int64
-	err := s.autowpDB.
-		QueryRow(
-			"SELECT user_id FROM user_account WHERE service_id = ? AND external_id = ?",
-			KeycloakExternalAccountID,
-			guid,
-		).
-		Scan(&userID)
+	var r sql.Result
 
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	r, err := s.autowpDB.Insert("users").
+		Rows(goqu.Record{
+			"login":            nil,
+			"e_mail":           emailAddr,
+			"password":         nil,
+			"email_to_check":   nil,
+			"hide_e_mail":      1,
+			"email_check_code": nil,
+			"name":             name,
+			"reg_date":         goqu.L("NOW()"),
+			"last_online":      goqu.L("NOW()"),
+			"timezone":         language.Timezone,
+			"last_ip":          goqu.L("INET6_ATON(?)", remoteAddr),
+			"language":         locale,
+			"role":             role,
+			"uuid":             goqu.L("UUID_TO_BIN(?)", guid),
+		}).
+		OnConflict(goqu.DoUpdate("uuid", goqu.Record{
+			"e_mail":  goqu.L("values(e_mail)"),
+			"name":    goqu.L("values(name)"),
+			"last_ip": goqu.L("values(last_ip)"),
+		})).
+		Executor().Exec()
+	if err != nil {
 		return 0, "", err
 	}
 
-	if errors.Is(err, sql.ErrNoRows) {
-		var r sql.Result
-		r, err = s.autowpDB.Exec(`
-			INSERT INTO users (login, e_mail, password, email_to_check, hide_e_mail, email_check_code, name, reg_date, 
-							   last_online, timezone, last_ip, language, role)
-			VALUES (NULL, ?, NULL, NULL, 1, NULL, ?, NOW(), NOW(), ?, INET6_ATON(?), ?, ?)
-		`, emailAddr, name, language.Timezone, remoteAddr, locale, role)
+	affected, err := r.RowsAffected()
+	if err != nil {
+		return 0, "", err
+	}
 
-		if err != nil {
-			return 0, "", err
-		}
+	var userID int64
 
+	if affected == 1 { // row just inserted
 		userID, err = r.LastInsertId()
 		if err != nil {
 			return 0, "", err
@@ -362,35 +374,27 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		if err != nil {
 			return 0, "", err
 		}
-	} else {
-		_, err = s.autowpDB.Exec(`
-			UPDATE users SET e_mail = ?, name = ?, last_ip = ?
-			WHERE id = ?
-		`, emailAddr, name, remoteAddr, userID)
-		if err != nil {
-			return 0, "", err
-		}
-
-		err = s.autowpDB.
-			QueryRow("SELECT role FROM users WHERE id = ?", userID).
-			Scan(&role)
-		if err != nil {
-			return 0, "", err
-		}
 	}
 
-	_, err = s.autowpDB.Exec(`
-		INSERT INTO user_account (user_id, service_id, external_id, used_for_reg, name, link)
-		VALUES (?, ?, ?, 0, ?, "")
-		ON DUPLICATE KEY UPDATE user_id=VALUES(user_id), name=VALUES(name)`,
-		userID,
-		KeycloakExternalAccountID,
-		guid,
-		name,
-	)
+	row := struct {
+		ID   int64  `db:"id"`
+		Role string `db:"role"`
+	}{}
+
+	success, err := s.autowpDB.Select("id", "role").
+		From("users").
+		Where(goqu.L("uuid = UUID_TO_BIN(?)", guid)).
+		ScanStructContext(ctx, &row)
 	if err != nil {
 		return 0, "", err
 	}
+
+	if !success {
+		return 0, "", ErrUserNotFound
+	}
+
+	userID = row.ID
+	role = row.Role
 
 	return userID, role, nil
 }
@@ -398,25 +402,8 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) {
 	logrus.Debugf("Ensure user `%d` exported to Keycloak", userID)
 
-	var userGUID string
-
-	err := s.autowpDB.
-		QueryRow(
-			"SELECT external_id FROM user_account WHERE service_id = ? AND user_id = ?",
-			KeycloakExternalAccountID,
-			userID,
-		).
-		Scan(&userGUID)
-
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", err
-	}
-
-	if err == nil {
-		return userGUID, nil
-	}
-
 	var (
+		userGUID     string
 		deleted      bool
 		userEmail    sql.NullString
 		emailToCheck sql.NullString
@@ -424,12 +411,17 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 		name         string
 	)
 
-	err = s.autowpDB.
-		QueryRow("SELECT deleted, e_mail, email_to_check, login, name FROM users WHERE id = ?", userID).
-		Scan(&deleted, &userEmail, &emailToCheck, &login, &name)
-
+	err := s.autowpDB.
+		QueryRow(
+			"SELECT deleted, e_mail, email_to_check, login, name, IFNULL(BIN_TO_UUID(uuid), '') FROM users WHERE id = ?",
+			userID,
+		).Scan(&deleted, &userEmail, &emailToCheck, &login, &name, &userGUID)
 	if err != nil {
 		return "", err
+	}
+
+	if len(userGUID) > 0 {
+		return userGUID, nil
 	}
 
 	ctx := context.Background()
@@ -474,11 +466,7 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 		return "", err
 	}
 
-	_, err = s.autowpDB.Exec(`
-		INSERT INTO user_account (service_id, external_id, user_id, used_for_reg, name, link)
-		VALUES (?, ?, ?, 0, ?, "")
-		ON DUPLICATE KEY UPDATE user_id=VALUES(user_id), name=VALUES(name);
-	`, KeycloakExternalAccountID, userGUID, userID, name)
+	_, err = s.autowpDB.Exec("UPDATE users SET uuid = UUID_TO_BIN(?) WHERE user_id = ?", userGUID, userID)
 	if err != nil {
 		return "", err
 	}

@@ -33,7 +33,7 @@ func createTrafficService(t *testing.T) *Traffic {
 	banRepository, err := ban.NewRepository(db)
 	require.NoError(t, err)
 
-	enforcer := casbin.NewEnforcer("model.conf", "policy.csv")
+	enforcer := casbin.NewEnforcer("../model.conf", "../policy.csv")
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -95,8 +95,8 @@ func TestAutoBanByProfile(t *testing.T) {
 		Time:   time.Hour,
 	}
 
-	ip1 := net.IPv4(127, 0, 0, 1)
-	ip2 := net.IPv4(127, 0, 0, 2)
+	ip1 := net.IPv4(127, 0, 0, 11)
+	ip2 := net.IPv4(127, 0, 0, 12)
 
 	err := s.Monitoring.ClearIP(ip1)
 	require.NoError(t, err)

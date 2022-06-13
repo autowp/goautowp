@@ -19,7 +19,7 @@ const (
 	TestImageFile2 = "./_files/mazda3_sedan_us-spec_11.jpg"
 )
 
-func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
+func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig("../../")
@@ -28,16 +28,16 @@ func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 
-	mw, err := NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := mw.AddImageFromFile(TestImageFile, "brand", GenerateOptions{
+	imageID, err := imageStorage.AddImageFromFile(TestImageFile, "brand", GenerateOptions{
 		Pattern: "folder/file",
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID)
 
-	imageInfo, err := mw.Image(imageID)
+	imageInfo, err := imageStorage.Image(imageID)
 	require.NoError(t, err)
 
 	require.Contains(t, imageInfo.Src(), "folder/file")
@@ -53,17 +53,16 @@ func TestS3AddImageFromFileChangeNameAndDelete2(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, filesize.Size(), len(body))
 
-	err = mw.ChangeImageName(imageID, GenerateOptions{
+	err = imageStorage.ChangeImageName(imageID, GenerateOptions{
 		Pattern: "new-name/by-pattern",
 	})
 	require.NoError(t, err)
 
-	err = mw.RemoveImage(imageID)
+	err = imageStorage.RemoveImage(imageID)
 	require.NoError(t, err)
 
-	result, err := mw.Image(imageID)
-	require.NoError(t, err)
-	require.Nil(t, result)
+	_, err = imageStorage.Image(imageID)
+	require.ErrorIs(t, ErrImageNotFound, err)
 }
 
 func TestAddImageFromBlobAndFormat(t *testing.T) {

@@ -49,7 +49,7 @@ const (
 	gifExtension     = "gif"
 )
 
-var errImageNotFound = errors.New("image not found")
+var ErrImageNotFound = errors.New("image not found")
 
 var publicRead = "public-read"
 
@@ -130,7 +130,7 @@ func (s *Storage) Image(id int) (*Image, error) {
 	`, id).Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, errImageNotFound
+		return nil, ErrImageNotFound
 	}
 
 	if err != nil {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -136,8 +137,13 @@ type Config struct {
 	About             AboutConfig               `yaml:"about"               mapstructure:"about"`
 }
 
+var configMutex = sync.RWMutex{}
+
 // LoadConfig LoadConfig.
 func LoadConfig(path string) Config {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+
 	cfg := Config{}
 
 	viper.SetConfigName("defaults")
