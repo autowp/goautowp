@@ -1,6 +1,7 @@
 package traffic
 
 import (
+	"errors"
 	"net"
 	"net/http"
 	"time"
@@ -217,14 +218,13 @@ func (s *Traffic) SetupPrivateRouter(r *gin.Engine) {
 
 		b, err := s.Ban.Get(ip)
 		if err != nil {
+			if errors.Is(err, ban.ErrBanItemNotFound) {
+				c.Status(http.StatusNotFound)
+
+				return
+			}
 			logrus.Error(err.Error())
 			c.String(http.StatusInternalServerError, err.Error())
-
-			return
-		}
-
-		if b == nil {
-			c.Status(http.StatusNotFound)
 
 			return
 		}
