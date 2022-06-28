@@ -1,4 +1,4 @@
-image: autowp/runner-base-image
+image: $CI_REGISTRY/autowp/runner-base-image
 
 variables:
   DOCKER_DRIVER: overlay2
@@ -36,23 +36,73 @@ test:
     - gotestsum --junitfile report.xml --format testname -- -coverprofile=cov.out -covermode count
     - gocover-cobertura < cov.out > coverage.xml
     - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN
+    - npx semantic-release
   artifacts:
     reports:
       junit: report.xml
       cobertura: coverage.xml
+  interruptible: true
+  rules:
+    - if: $CI_COMMIT_TAG !~ /^v\d.*/
 
 publish:
   stage: publish
   services:
     - name: docker:dind
       alias: docker
-  script:
+  before_script:
+
+    - git config --global user.email "$GITLAB_USER_EMAIL"
+    - git config --global user.name "$GITLAB_USER_NAME"
     - waitforit -address=tcp://docker:2375 -timeout=30
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u="$CI_REGISTRY_USER" --password-stdin
     - echo "$DOCKER_PASSWORD" | docker login -u="$DOCKER_USERNAME" --password-stdin
+  script:
+    - sentry-cli releases new "$CI_COMMIT_TAG"
+
     - docker pull "$CI_REGISTRY_IMAGE" || true
-    - docker build -f build/package/Dockerfile . -t "$CI_REGISTRY_IMAGE" -t autowp/goautowp
-    - docker push "$CI_REGISTRY_IMAGE"
-    - docker push autowp/goautowp
-  only:
-    - master
+    - docker build -f build/package/Dockerfile . -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG" -t autowp/goautowp:$CI_COMMIT_TAG
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+    - docker push autowp/goautowp:$CI_COMMIT_TAG
+
+    - git clone -b master https://gitpush:${GITPUSH_TOKEN}@gitlab.pereslegin.ru/autowp/helm.git
+    - cd helm
+    - export IMAGE=$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-autoban.yaml
+    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-listen-df-amqp.yaml
+    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-listen-monitoring-amqp.yaml
+    - yq -i '.spec.jobTemplate.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-scheduler-daily.yaml
+    - yq -i '.spec.jobTemplate.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-scheduler-hourly.yaml
+    - yq -i '.spec.jobTemplate.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-scheduler-midnight.yaml
+    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-serve-private.yaml
+    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-serve-public.yaml
+    - git add templates/goautowp-autoban.yaml templates/goautowp-listen-df-amqp.yaml templates/goautowp-listen-monitoring-amqp.yaml
+    - git add templates/goautowp-scheduler-daily.yaml templates/goautowp-scheduler-hourly.yaml templates/goautowp-scheduler-midnight.yaml
+    - git add templates/goautowp-serve-private.yaml templates/goautowp-serve-public.yaml
+    - "git commit -m \"feat: Update go-backend to $CI_COMMIT_TAG\""
+    - git push origin master
+
+    - sentry-cli releases finalize "$CI_COMMIT_TAG"
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d.*/
+  environment:
+    name: production
+    url: https://www.wheelsage.org/
+
+publish-master-to-github:
+  stage: publish
+  before_script:
+    - mkdir -p /root/.ssh
+    - touch /root/.ssh/known_hosts
+    - chmod 0600 ~/.ssh/known_hosts
+    - cat "$SSHKEY" > ~/.ssh/id_rsa
+    - chmod 0400 ~/.ssh/id_rsa
+    - ssh-keygen -R github.com
+    - git config --global user.email "$GITLAB_USER_EMAIL"
+    - git config --global user.name "$GITLAB_USER_NAME"
+  script:
+    - git checkout -b "$CI_COMMIT_BRANCH"
+    - git remote add github git@github.com:autowp/goautowp.git
+    - git push github "$CI_COMMIT_BRANCH"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
