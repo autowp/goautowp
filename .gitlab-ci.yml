@@ -67,19 +67,7 @@ publish:
 
     - git clone -b master https://gitpush:${GITPUSH_TOKEN}@gitlab.pereslegin.ru/autowp/helm.git
     - cd helm
-    - export IMAGE=$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
-    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-autoban.yaml
-    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-listen-df-amqp.yaml
-    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-listen-monitoring-amqp.yaml
-    - yq -i '.spec.jobTemplate.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-scheduler-daily.yaml
-    - yq -i '.spec.jobTemplate.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-scheduler-hourly.yaml
-    - yq -i '.spec.jobTemplate.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-scheduler-midnight.yaml
-    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-serve-private.yaml
-    - yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' templates/goautowp-serve-public.yaml
-    - git add templates/goautowp-autoban.yaml templates/goautowp-listen-df-amqp.yaml templates/goautowp-listen-monitoring-amqp.yaml
-    - git add templates/goautowp-scheduler-daily.yaml templates/goautowp-scheduler-hourly.yaml templates/goautowp-scheduler-midnight.yaml
-    - git add templates/goautowp-serve-private.yaml templates/goautowp-serve-public.yaml
-    - "git commit -m \"feat: Update go-backend to $CI_COMMIT_TAG\""
+    - ../tools/update-helm-chart.sh
     - git push origin master
 
     - sentry-cli releases finalize "$CI_COMMIT_TAG"
