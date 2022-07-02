@@ -88,7 +88,7 @@ func (r *ServePublicCommand) Execute(_ []string) error {
 		return err
 	}
 
-	err = app.MigrateTraffic()
+	err = app.MigratePostgres()
 	if err != nil {
 		return err
 	}
@@ -112,10 +112,10 @@ func (r *MigrateAutowpCommand) Execute(_ []string) error {
 	return app.MigrateAutowp()
 }
 
-type MigrateTrafficCommand struct{}
+type MigratePostgresCommand struct{}
 
-func (r *MigrateTrafficCommand) Execute(_ []string) error {
-	return app.MigrateTraffic()
+func (r *MigratePostgresCommand) Execute(_ []string) error {
+	return app.MigratePostgres()
 }
 
 type SchedulerHourlyCommand struct{}
@@ -199,7 +199,7 @@ func mainReturnWithCode() int {
 		ServePublic           ServePublicCommand           `command:"serve-public"`
 		ServePrivate          ServePrivateCommand          `command:"serve-private"`
 		MigrateAutowp         MigrateAutowpCommand         `command:"migrate-autowp"`
-		MigrateTraffic        MigrateTrafficCommand        `command:"migrate-traffic"`
+		MigratePostgres       MigratePostgresCommand       `command:"migrate-postgres"`
 		SchedulerHourly       SchedulerHourlyCommand       `command:"scheduler-hourly"`
 		SchedulerDaily        SchedulerDailyCommand        `command:"scheduler-daily"`
 		SchedulerMidnight     SchedulerMidnightCommand     `command:"scheduler-midnight"`

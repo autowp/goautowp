@@ -22,7 +22,7 @@ func createTrafficService(t *testing.T) *Traffic {
 
 	cfg := config.LoadConfig("..")
 
-	db, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
+	db, err := pgxpool.Connect(context.Background(), cfg.PostgresDSN)
 	require.NoError(t, err)
 
 	autowpDB, err := sql.Open("mysql", cfg.AutowpDSN)

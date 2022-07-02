@@ -71,7 +71,7 @@ type Container struct {
 	publicRouter         http.HandlerFunc
 	telegramService      *telegram.Service
 	traffic              *traffic.Traffic
-	trafficDB            *pgxpool.Pool
+	postgresDB           *pgxpool.Pool
 	trafficGrpcServer    *TrafficGRPCServer
 	usersRepository      *users.Repository
 	usersGrpcServer      *UsersGRPCServer
@@ -110,9 +110,9 @@ func (s *Container) Close() error {
 		s.autowpDB = nil
 	}
 
-	if s.trafficDB != nil {
-		s.trafficDB.Close()
-		s.trafficDB = nil
+	if s.postgresDB != nil {
+		s.postgresDB.Close()
+		s.postgresDB = nil
 	}
 
 	return nil
@@ -178,7 +178,7 @@ func (s *Container) GoquDB() (*goqu.Database, error) {
 
 func (s *Container) BanRepository() (*ban.Repository, error) {
 	if s.banRepository == nil {
-		db, err := s.TrafficDB()
+		db, err := s.PostgresDB()
 		if err != nil {
 			return nil, err
 		}
@@ -502,7 +502,7 @@ func (s *Container) TelegramService() (*telegram.Service, error) {
 
 func (s *Container) Traffic() (*traffic.Traffic, error) {
 	if s.traffic == nil {
-		db, err := s.TrafficDB()
+		db, err := s.PostgresDB()
 		if err != nil {
 			return nil, err
 		}
@@ -535,9 +535,9 @@ func (s *Container) Traffic() (*traffic.Traffic, error) {
 	return s.traffic, nil
 }
 
-func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
-	if s.trafficDB != nil {
-		return s.trafficDB, nil
+func (s *Container) PostgresDB() (*pgxpool.Pool, error) {
+	if s.postgresDB != nil {
+		return s.postgresDB, nil
 	}
 
 	const (
@@ -555,7 +555,7 @@ func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
 	)
 
 	for {
-		pool, err = pgxpool.Connect(context.Background(), cfg.TrafficDSN)
+		pool, err = pgxpool.Connect(context.Background(), cfg.PostgresDSN)
 		if err != nil {
 			return nil, err
 		}
@@ -583,7 +583,7 @@ func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
 		time.Sleep(reconnectDelay)
 	}
 
-	s.trafficDB = pool
+	s.postgresDB = pool
 
 	return pool, nil
 }

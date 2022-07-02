@@ -16,7 +16,7 @@ func createBanService(t *testing.T) *Repository {
 
 	cfg := config.LoadConfig("..")
 
-	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
+	pool, err := pgxpool.Connect(context.Background(), cfg.PostgresDSN)
 	require.NoError(t, err)
 
 	s, err := NewRepository(pool)

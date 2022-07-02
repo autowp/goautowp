@@ -147,15 +147,15 @@ func applyMigrations(config config.MigrationsConfig) error {
 	return nil
 }
 
-func (s *Application) MigrateTraffic() error {
-	_, err := s.container.TrafficDB()
+func (s *Application) MigratePostgres() error {
+	_, err := s.container.PostgresDB()
 	if err != nil {
 		return err
 	}
 
 	cfg := s.container.Config()
 
-	err = applyMigrations(cfg.TrafficMigrations)
+	err = applyMigrations(cfg.PostgresMigrations)
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
