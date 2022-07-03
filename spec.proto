@@ -43,6 +43,9 @@ service Users {
   rpc DeleteUser(APIDeleteUserRequest) returns (google.protobuf.Empty) {}
   rpc GetUser(APIGetUserRequest) returns (APIUser) {}
   rpc Me(APIMeRequest) returns (APIUser) {}
+  rpc GetUserPreferences(APIUserPreferencesRequest) returns (APIUserPreferencesResponse) {}
+  rpc DisableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
+  rpc EnableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
 }
 
 service Items {
@@ -718,4 +721,12 @@ message AboutDataResponse {
   int32 total_users = 9;
   int32 total_items = 10;
   int32 total_comments = 11;
+}
+
+message APIUserPreferencesRequest {
+  int64 user_id = 1;
+}
+
+message APIUserPreferencesResponse {
+  bool disable_comments_notifications = 1;
 }

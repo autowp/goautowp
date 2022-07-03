@@ -92,15 +92,22 @@ type CreateUserOptions struct {
 // Repository Main Object.
 type Repository struct {
 	autowpDB       *goqu.Database
+	db             *goqu.Database
 	usersSalt      string
 	languages      map[string]config.LanguageConfig
 	keycloak       gocloak.GoCloak
 	keycloakConfig config.KeycloakConfig
 }
 
+// UserPreferences object
+type UserPreferences struct {
+	DisableCommentsNotifications bool `db:"disable_comments_notifications"`
+}
+
 // NewRepository constructor.
 func NewRepository(
 	autowpDB *goqu.Database,
+	db *goqu.Database,
 	usersSalt string,
 	languages map[string]config.LanguageConfig,
 	keyCloak gocloak.GoCloak,
@@ -108,6 +115,7 @@ func NewRepository(
 ) *Repository {
 	return &Repository{
 		autowpDB:       autowpDB,
+		db:             db,
 		usersSalt:      usersSalt,
 		languages:      languages,
 		keycloak:       keyCloak,
@@ -671,6 +679,40 @@ func (s *Repository) ExportUsersToKeycloak() error {
 	}
 
 	return nil
+}
+
+func (s *Repository) SetDisableUserCommentsNotifications(
+	ctx context.Context,
+	userID int64,
+	toUserID int64,
+	disabled bool,
+) error {
+	query := s.db.Insert("user_user_preferences").
+		Rows(goqu.Record{
+			"user_id":                        userID,
+			"to_user_id":                     toUserID,
+			"disable_comments_notifications": disabled,
+		}).
+		OnConflict(goqu.DoUpdate("user_id, to_user_id", goqu.Record{
+			"disable_comments_notifications": goqu.L("EXCLUDED.disable_comments_notifications"),
+		}))
+
+	_, err := query.Executor().ExecContext(ctx)
+
+	return err
+}
+
+func (s *Repository) UserPreferences(ctx context.Context, userID int64, toUserID int64) (*UserPreferences, error) {
+	var row UserPreferences
+
+	_, err := s.db.Select("disable_comments_notifications").
+		From("user_user_preferences").
+		Where(
+			goqu.I("user_id").Eq(userID),
+			goqu.I("to_user_id").Eq(toUserID),
+		).ScanStructContext(ctx, &row)
+
+	return &row, err
 }
 
 func fullName(firstName, lastName, username string) string {

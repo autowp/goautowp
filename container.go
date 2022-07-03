@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"database/sql"
 	"net/http"
 	"time"
@@ -32,7 +31,6 @@ import (
 	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -55,6 +53,7 @@ type Container struct {
 	feedback             *Feedback
 	forums               *Forums
 	goquDB               *goqu.Database
+	goquPostgresDB       *goqu.Database
 	grpcServer           *GRPCServer
 	hostsManager         *hosts.Manager
 	imageStorage         *storage.Storage
@@ -71,7 +70,6 @@ type Container struct {
 	publicRouter         http.HandlerFunc
 	telegramService      *telegram.Service
 	traffic              *traffic.Traffic
-	postgresDB           *pgxpool.Pool
 	trafficGrpcServer    *TrafficGRPCServer
 	usersRepository      *users.Repository
 	usersGrpcServer      *UsersGRPCServer
@@ -110,10 +108,10 @@ func (s *Container) Close() error {
 		s.autowpDB = nil
 	}
 
-	if s.postgresDB != nil {
-		s.postgresDB.Close()
-		s.postgresDB = nil
-	}
+	/*if s.goquPostgresDB != nil {
+		s.goquPostgresDB.Close()
+		s.goquPostgresDB = nil
+	}*/
 
 	return nil
 }
@@ -176,9 +174,54 @@ func (s *Container) GoquDB() (*goqu.Database, error) {
 	return s.goquDB, nil
 }
 
+func (s *Container) GoquPostgresDB() (*goqu.Database, error) {
+	if s.goquPostgresDB != nil {
+		return s.goquPostgresDB, nil
+	}
+
+	start := time.Now()
+
+	const (
+		connectionTimeout = 60 * time.Second
+		reconnectDelay    = 100 * time.Millisecond
+	)
+
+	logrus.Info("Waiting for postgres (goqu)")
+
+	var (
+		db  *sql.DB
+		err error
+	)
+
+	for {
+		db, err = sql.Open("postgres", s.config.PostgresDSN)
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.Ping()
+		if err == nil {
+			logrus.Info("Started.")
+
+			break
+		}
+
+		if time.Since(start) > connectionTimeout {
+			return nil, err
+		}
+
+		logrus.Info(".")
+		time.Sleep(reconnectDelay)
+	}
+
+	s.goquPostgresDB = goqu.New("postgres", db)
+
+	return s.goquPostgresDB, nil
+}
+
 func (s *Container) BanRepository() (*ban.Repository, error) {
 	if s.banRepository == nil {
-		db, err := s.PostgresDB()
+		db, err := s.GoquPostgresDB()
 		if err != nil {
 			return nil, err
 		}
@@ -502,7 +545,7 @@ func (s *Container) TelegramService() (*telegram.Service, error) {
 
 func (s *Container) Traffic() (*traffic.Traffic, error) {
 	if s.traffic == nil {
-		db, err := s.PostgresDB()
+		db, err := s.GoquPostgresDB()
 		if err != nil {
 			return nil, err
 		}
@@ -535,59 +578,6 @@ func (s *Container) Traffic() (*traffic.Traffic, error) {
 	return s.traffic, nil
 }
 
-func (s *Container) PostgresDB() (*pgxpool.Pool, error) {
-	if s.postgresDB != nil {
-		return s.postgresDB, nil
-	}
-
-	const (
-		connectionTimeout = 60 * time.Second
-		reconnectDelay    = 100 * time.Millisecond
-	)
-
-	logrus.Info("Waiting for postgres")
-
-	var (
-		cfg   = s.Config()
-		start = time.Now()
-		pool  *pgxpool.Pool
-		err   error
-	)
-
-	for {
-		pool, err = pgxpool.Connect(context.Background(), cfg.PostgresDSN)
-		if err != nil {
-			return nil, err
-		}
-
-		db, err := pool.Acquire(context.Background())
-		if err != nil {
-			return nil, err
-		}
-
-		err = db.Conn().Ping(context.Background())
-		db.Release()
-
-		if err == nil {
-			logrus.Info("Started.")
-
-			break
-		}
-
-		if time.Since(start) > connectionTimeout {
-			return nil, err
-		}
-
-		logrus.Error(err)
-		logrus.Info(".")
-		time.Sleep(reconnectDelay)
-	}
-
-	s.postgresDB = pool
-
-	return pool, nil
-}
-
 func (s *Container) UserExtractor() (*users.UserExtractor, error) {
 	is, err := s.ImageStorage()
 	if err != nil {
@@ -604,10 +594,16 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 			return nil, err
 		}
 
+		postgresDB, err := s.GoquPostgresDB()
+		if err != nil {
+			return nil, err
+		}
+
 		cfg := s.Config()
 
 		s.usersRepository = users.NewRepository(
 			db,
+			postgresDB,
 			cfg.UsersSalt,
 			cfg.Languages,
 			s.Keycloak(),

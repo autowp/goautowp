@@ -138,3 +138,80 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *UsersGRPCServer) DisableUserCommentsNotifications(
+	ctx context.Context,
+	in *APIUserPreferencesRequest,
+) (*emptypb.Empty, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if in.UserId == userID {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
+	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.UserId, true)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *UsersGRPCServer) EnableUserCommentsNotifications(
+	ctx context.Context,
+	in *APIUserPreferencesRequest,
+) (*emptypb.Empty, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if in.UserId == userID {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
+	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.UserId, false)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *UsersGRPCServer) GetUserPreferences(
+	ctx context.Context,
+	in *APIUserPreferencesRequest,
+) (*APIUserPreferencesResponse, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if in.UserId == userID {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
+	prefs, err := s.userRepository.UserPreferences(ctx, userID, in.UserId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &APIUserPreferencesResponse{
+		DisableCommentsNotifications: prefs.DisableCommentsNotifications,
+	}, nil
+}

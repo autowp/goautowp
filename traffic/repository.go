@@ -11,7 +11,6 @@ import (
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
 )
 
@@ -87,7 +86,7 @@ type APITrafficWhitelistPostRequestBody struct {
 
 // NewTraffic constructor.
 func NewTraffic(
-	pool *pgxpool.Pool,
+	pool *goqu.Database,
 	autowpDB *goqu.Database,
 	enforcer *casbin.Enforcer,
 	ban *ban.Repository,

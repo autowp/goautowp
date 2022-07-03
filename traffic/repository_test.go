@@ -1,7 +1,6 @@
 package traffic
 
 import (
-	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -13,7 +12,6 @@ import (
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,15 +20,17 @@ func createTrafficService(t *testing.T) *Traffic {
 
 	cfg := config.LoadConfig("..")
 
-	db, err := pgxpool.Connect(context.Background(), cfg.PostgresDSN)
-	require.NoError(t, err)
-
 	autowpDB, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", autowpDB)
 
-	banRepository, err := ban.NewRepository(db)
+	db, err := sql.Open("postgres", cfg.PostgresDSN)
+	require.NoError(t, err)
+
+	goquPostgresDB := goqu.New("postgres", db)
+
+	banRepository, err := ban.NewRepository(goquPostgresDB)
 	require.NoError(t, err)
 
 	enforcer := casbin.NewEnforcer("../model.conf", "../policy.csv")
@@ -40,7 +40,7 @@ func createTrafficService(t *testing.T) *Traffic {
 
 	userExtractor := users.NewUserExtractor(enforcer, imageStorage)
 
-	traf, err := NewTraffic(db, goquDB, enforcer, banRepository, userExtractor)
+	traf, err := NewTraffic(goquPostgresDB, goquDB, enforcer, banRepository, userExtractor)
 	require.NoError(t, err)
 
 	return traf

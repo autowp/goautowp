@@ -148,7 +148,7 @@ func applyMigrations(config config.MigrationsConfig) error {
 }
 
 func (s *Application) MigratePostgres() error {
-	_, err := s.container.PostgresDB()
+	_, err := s.container.GoquPostgresDB()
 	if err != nil {
 		return err
 	}

@@ -1,13 +1,14 @@
 package ban
 
 import (
-	"context"
+	"database/sql"
 	"net"
 	"testing"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
+
 	"github.com/autowp/goautowp/config"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,10 +17,12 @@ func createBanService(t *testing.T) *Repository {
 
 	cfg := config.LoadConfig("..")
 
-	pool, err := pgxpool.Connect(context.Background(), cfg.PostgresDSN)
+	db, err := sql.Open("postgres", cfg.PostgresDSN)
 	require.NoError(t, err)
 
-	s, err := NewRepository(pool)
+	goquDB := goqu.New("postgres", db)
+
+	s, err := NewRepository(goquDB)
 	require.NoError(t, err)
 
 	return s

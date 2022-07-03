@@ -1,12 +1,13 @@
 package traffic
 
 import (
-	"context"
+	"database/sql"
 	"net"
 	"testing"
 
+	"github.com/doug-martin/goqu/v9"
+
 	"github.com/autowp/goautowp/config"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,10 +16,12 @@ func createWhitelistService(t *testing.T) *Whitelist {
 
 	cfg := config.LoadConfig("..")
 
-	pool, err := pgxpool.Connect(context.Background(), cfg.PostgresDSN)
+	db, err := sql.Open("postgres", cfg.PostgresDSN)
 	require.NoError(t, err)
 
-	s, err := NewWhitelist(pool)
+	goquDB := goqu.New("postgres", db)
+
+	s, err := NewWhitelist(goquDB)
 	require.NoError(t, err)
 
 	return s

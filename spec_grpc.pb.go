@@ -4,6 +4,7 @@ package goautowp
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -158,39 +159,48 @@ type AutowpServer interface {
 }
 
 // UnimplementedAutowpServer must be embedded to have forward compatible implementations.
-type UnimplementedAutowpServer struct {
-}
+type UnimplementedAutowpServer struct{}
 
 func (UnimplementedAutowpServer) AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AclEnforce not implemented")
 }
+
 func (UnimplementedAutowpServer) CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFeedback not implemented")
 }
+
 func (UnimplementedAutowpServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrandIcons not implemented")
 }
+
 func (UnimplementedAutowpServer) GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrandVehicleTypes not implemented")
 }
+
 func (UnimplementedAutowpServer) GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetForumsUserSummary not implemented")
 }
+
 func (UnimplementedAutowpServer) GetIP(context.Context, *APIGetIPRequest) (*APIIP, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetIP not implemented")
 }
+
 func (UnimplementedAutowpServer) GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPerspectives not implemented")
 }
+
 func (UnimplementedAutowpServer) GetPerspectivePages(context.Context, *emptypb.Empty) (*PerspectivePagesItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPerspectivePages not implemented")
 }
+
 func (UnimplementedAutowpServer) GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReCaptchaConfig not implemented")
 }
+
 func (UnimplementedAutowpServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSpecs not implemented")
 }
+
 func (UnimplementedAutowpServer) GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVehicleTypes not implemented")
 }
@@ -549,24 +559,28 @@ type TrafficServer interface {
 }
 
 // UnimplementedTrafficServer must be embedded to have forward compatible implementations.
-type UnimplementedTrafficServer struct {
-}
+type UnimplementedTrafficServer struct{}
 
 func (UnimplementedTrafficServer) AddToBlacklist(context.Context, *AddToTrafficBlacklistRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddToBlacklist not implemented")
 }
+
 func (UnimplementedTrafficServer) AddToWhitelist(context.Context, *AddToTrafficWhitelistRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddToWhitelist not implemented")
 }
+
 func (UnimplementedTrafficServer) DeleteFromBlacklist(context.Context, *DeleteFromTrafficBlacklistRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFromBlacklist not implemented")
 }
+
 func (UnimplementedTrafficServer) DeleteFromWhitelist(context.Context, *DeleteFromTrafficWhitelistRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFromWhitelist not implemented")
 }
+
 func (UnimplementedTrafficServer) GetTop(context.Context, *emptypb.Empty) (*APITrafficTopResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTop not implemented")
 }
+
 func (UnimplementedTrafficServer) GetWhitelist(context.Context, *emptypb.Empty) (*APITrafficWhitelistItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetWhitelist not implemented")
 }
@@ -793,18 +807,20 @@ type ContactsServer interface {
 }
 
 // UnimplementedContactsServer must be embedded to have forward compatible implementations.
-type UnimplementedContactsServer struct {
-}
+type UnimplementedContactsServer struct{}
 
 func (UnimplementedContactsServer) CreateContact(context.Context, *CreateContactRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateContact not implemented")
 }
+
 func (UnimplementedContactsServer) DeleteContact(context.Context, *DeleteContactRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteContact not implemented")
 }
+
 func (UnimplementedContactsServer) GetContact(context.Context, *GetContactRequest) (*Contact, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContact not implemented")
 }
+
 func (UnimplementedContactsServer) GetContacts(context.Context, *GetContactsRequest) (*ContactItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContacts not implemented")
 }
@@ -928,6 +944,9 @@ type UsersClient interface {
 	DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUser(ctx context.Context, in *APIGetUserRequest, opts ...grpc.CallOption) (*APIUser, error)
 	Me(ctx context.Context, in *APIMeRequest, opts ...grpc.CallOption) (*APIUser, error)
+	GetUserPreferences(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*APIUserPreferencesResponse, error)
+	DisableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	EnableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type usersClient struct {
@@ -965,6 +984,33 @@ func (c *usersClient) Me(ctx context.Context, in *APIMeRequest, opts ...grpc.Cal
 	return out, nil
 }
 
+func (c *usersClient) GetUserPreferences(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*APIUserPreferencesResponse, error) {
+	out := new(APIUserPreferencesResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/GetUserPreferences", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) DisableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/DisableUserCommentsNotifications", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) EnableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/EnableUserCommentsNotifications", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UsersServer is the server API for Users service.
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
@@ -972,21 +1018,37 @@ type UsersServer interface {
 	DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error)
 	GetUser(context.Context, *APIGetUserRequest) (*APIUser, error)
 	Me(context.Context, *APIMeRequest) (*APIUser, error)
+	GetUserPreferences(context.Context, *APIUserPreferencesRequest) (*APIUserPreferencesResponse, error)
+	DisableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
+	EnableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
 // UnimplementedUsersServer must be embedded to have forward compatible implementations.
-type UnimplementedUsersServer struct {
-}
+type UnimplementedUsersServer struct{}
 
 func (UnimplementedUsersServer) DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
 }
+
 func (UnimplementedUsersServer) GetUser(context.Context, *APIGetUserRequest) (*APIUser, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
 }
+
 func (UnimplementedUsersServer) Me(context.Context, *APIMeRequest) (*APIUser, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Me not implemented")
+}
+
+func (UnimplementedUsersServer) GetUserPreferences(context.Context, *APIUserPreferencesRequest) (*APIUserPreferencesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserPreferences not implemented")
+}
+
+func (UnimplementedUsersServer) DisableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DisableUserCommentsNotifications not implemented")
+}
+
+func (UnimplementedUsersServer) EnableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnableUserCommentsNotifications not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -1055,6 +1117,60 @@ func _Users_Me_Handler(srv interface{}, ctx context.Context, dec func(interface{
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Users_GetUserPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIUserPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).GetUserPreferences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/GetUserPreferences",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).GetUserPreferences(ctx, req.(*APIUserPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_DisableUserCommentsNotifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIUserPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).DisableUserCommentsNotifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/DisableUserCommentsNotifications",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).DisableUserCommentsNotifications(ctx, req.(*APIUserPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_EnableUserCommentsNotifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIUserPreferencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).EnableUserCommentsNotifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/EnableUserCommentsNotifications",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).EnableUserCommentsNotifications(ctx, req.(*APIUserPreferencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Users_ServiceDesc is the grpc.ServiceDesc for Users service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1073,6 +1189,18 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Me",
 			Handler:    _Users_Me_Handler,
+		},
+		{
+			MethodName: "GetUserPreferences",
+			Handler:    _Users_GetUserPreferences_Handler,
+		},
+		{
+			MethodName: "DisableUserCommentsNotifications",
+			Handler:    _Users_DisableUserCommentsNotifications_Handler,
+		},
+		{
+			MethodName: "EnableUserCommentsNotifications",
+			Handler:    _Users_EnableUserCommentsNotifications_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1178,27 +1306,32 @@ type ItemsServer interface {
 }
 
 // UnimplementedItemsServer must be embedded to have forward compatible implementations.
-type UnimplementedItemsServer struct {
-}
+type UnimplementedItemsServer struct{}
 
 func (UnimplementedItemsServer) GetTopBrandsList(context.Context, *GetTopBrandsListRequest) (*APITopBrandsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopBrandsList not implemented")
 }
+
 func (UnimplementedItemsServer) GetTopPersonsList(context.Context, *GetTopPersonsListRequest) (*APITopPersonsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopPersonsList not implemented")
 }
+
 func (UnimplementedItemsServer) GetTopFactoriesList(context.Context, *GetTopFactoriesListRequest) (*APITopFactoriesList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopFactoriesList not implemented")
 }
+
 func (UnimplementedItemsServer) GetTopCategoriesList(context.Context, *GetTopCategoriesListRequest) (*APITopCategoriesList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopCategoriesList not implemented")
 }
+
 func (UnimplementedItemsServer) GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopTwinsBrandsList not implemented")
 }
+
 func (UnimplementedItemsServer) List(context.Context, *ListItemsRequest) (*APIItemList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
+
 func (UnimplementedItemsServer) GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTree not implemented")
 }
@@ -1480,27 +1613,32 @@ type CommentsServer interface {
 }
 
 // UnimplementedCommentsServer must be embedded to have forward compatible implementations.
-type UnimplementedCommentsServer struct {
-}
+type UnimplementedCommentsServer struct{}
 
 func (UnimplementedCommentsServer) GetCommentVotes(context.Context, *GetCommentVotesRequest) (*CommentVoteItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCommentVotes not implemented")
 }
+
 func (UnimplementedCommentsServer) Subscribe(context.Context, *CommentsSubscribeRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
+
 func (UnimplementedCommentsServer) UnSubscribe(context.Context, *CommentsUnSubscribeRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnSubscribe not implemented")
 }
+
 func (UnimplementedCommentsServer) View(context.Context, *CommentsViewRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method View not implemented")
 }
+
 func (UnimplementedCommentsServer) SetDeleted(context.Context, *CommentsSetDeletedRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDeleted not implemented")
 }
+
 func (UnimplementedCommentsServer) MoveComment(context.Context, *CommentsMoveCommentRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MoveComment not implemented")
 }
+
 func (UnimplementedCommentsServer) VoteComment(context.Context, *CommentsVoteCommentRequest) (*CommentsVoteCommentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VoteComment not implemented")
 }
@@ -1716,8 +1854,7 @@ type MapServer interface {
 }
 
 // UnimplementedMapServer must be embedded to have forward compatible implementations.
-type UnimplementedMapServer struct {
-}
+type UnimplementedMapServer struct{}
 
 func (UnimplementedMapServer) GetPoints(context.Context, *MapGetPointsRequest) (*MapPoints, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPoints not implemented")
@@ -1846,21 +1983,24 @@ type PicturesServer interface {
 }
 
 // UnimplementedPicturesServer must be embedded to have forward compatible implementations.
-type UnimplementedPicturesServer struct {
-}
+type UnimplementedPicturesServer struct{}
 
 func (UnimplementedPicturesServer) View(context.Context, *PicturesViewRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method View not implemented")
 }
+
 func (UnimplementedPicturesServer) Vote(context.Context, *PicturesVoteRequest) (*PicturesVoteSummary, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Vote not implemented")
 }
+
 func (UnimplementedPicturesServer) CreateModerVoteTemplate(context.Context, *ModerVoteTemplate) (*ModerVoteTemplate, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateModerVoteTemplate not implemented")
 }
+
 func (UnimplementedPicturesServer) DeleteModerVoteTemplate(context.Context, *DeleteModerVoteTemplateRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteModerVoteTemplate not implemented")
 }
+
 func (UnimplementedPicturesServer) GetModerVoteTemplates(context.Context, *emptypb.Empty) (*ModerVoteTemplates, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetModerVoteTemplates not implemented")
 }
@@ -2087,24 +2227,28 @@ type MessagingServer interface {
 }
 
 // UnimplementedMessagingServer must be embedded to have forward compatible implementations.
-type UnimplementedMessagingServer struct {
-}
+type UnimplementedMessagingServer struct{}
 
 func (UnimplementedMessagingServer) GetMessagesNewCount(context.Context, *emptypb.Empty) (*APIMessageNewCount, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMessagesNewCount not implemented")
 }
+
 func (UnimplementedMessagingServer) GetMessagesSummary(context.Context, *emptypb.Empty) (*APIMessageSummary, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMessagesSummary not implemented")
 }
+
 func (UnimplementedMessagingServer) DeleteMessage(context.Context, *MessagingDeleteMessage) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteMessage not implemented")
 }
+
 func (UnimplementedMessagingServer) ClearFolder(context.Context, *MessagingClearFolder) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearFolder not implemented")
 }
+
 func (UnimplementedMessagingServer) CreateMessage(context.Context, *MessagingCreateMessage) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMessage not implemented")
 }
+
 func (UnimplementedMessagingServer) GetMessages(context.Context, *MessagingGetMessagesRequest) (*MessagingGetMessagesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMessages not implemented")
 }
@@ -2309,12 +2453,12 @@ type StatisticsServer interface {
 }
 
 // UnimplementedStatisticsServer must be embedded to have forward compatible implementations.
-type UnimplementedStatisticsServer struct {
-}
+type UnimplementedStatisticsServer struct{}
 
 func (UnimplementedStatisticsServer) GetPulse(context.Context, *PulseRequest) (*PulseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPulse not implemented")
 }
+
 func (UnimplementedStatisticsServer) GetAboutData(context.Context, *emptypb.Empty) (*AboutDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAboutData not implemented")
 }
@@ -2420,8 +2564,7 @@ type DonationsServer interface {
 }
 
 // UnimplementedDonationsServer must be embedded to have forward compatible implementations.
-type UnimplementedDonationsServer struct {
-}
+type UnimplementedDonationsServer struct{}
 
 func (UnimplementedDonationsServer) GetVODData(context.Context, *emptypb.Empty) (*VODDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVODData not implemented")
