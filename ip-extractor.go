@@ -60,7 +60,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 			result.Blacklist = nil
 
 			banItem, err := s.banRepository.Get(ip)
-			if err != nil {
+			if err != nil && !errors.Is(err, ban.ErrBanItemNotFound) {
 				return nil, err
 			}
 
