@@ -396,7 +396,12 @@ func (s *Container) PrivateRouter() (*gin.Engine, error) {
 		return s.privateRouter, nil
 	}
 
-	repo, err := s.Traffic()
+	trafficRepo, err := s.Traffic()
+	if err != nil {
+		return nil, err
+	}
+
+	usersRepo, err := s.UsersRepository()
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +410,8 @@ func (s *Container) PrivateRouter() (*gin.Engine, error) {
 	r.Use(gin.Recovery())
 	r.Use(sentrygin.New(sentrygin.Options{}))
 
-	repo.SetupPrivateRouter(r)
+	trafficRepo.SetupPrivateRouter(r)
+	usersRepo.SetupPrivateRouter(r)
 
 	s.privateRouter = r
 

@@ -6,8 +6,12 @@ import (
 	"errors"
 	"math"
 	"net"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/Nerzal/gocloak/v11"
@@ -19,6 +23,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	Decimal   = 10
+	BitSize64 = 64
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -99,9 +108,9 @@ type Repository struct {
 	keycloakConfig config.KeycloakConfig
 }
 
-// UserPreferences object
+// UserPreferences object.
 type UserPreferences struct {
-	DisableCommentsNotifications bool `db:"disable_comments_notifications"`
+	DisableCommentsNotifications bool `db:"disable_comments_notifications" json:"disable_comments_notifications"`
 }
 
 // NewRepository constructor.
@@ -713,6 +722,33 @@ func (s *Repository) UserPreferences(ctx context.Context, userID int64, toUserID
 		).ScanStructContext(ctx, &row)
 
 	return &row, err
+}
+
+func (s *Repository) SetupPrivateRouter(r *gin.Engine) {
+	r.GET("/user-user-preferences/:user_id/:to_user_id", func(c *gin.Context) {
+		userID, err := strconv.ParseInt(c.Param("user_id"), Decimal, BitSize64)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid user_id")
+
+			return
+		}
+
+		toUserID, err := strconv.ParseInt(c.Param("to_user_id"), Decimal, BitSize64)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid to_user_id")
+
+			return
+		}
+
+		prefs, err := s.UserPreferences(c, userID, toUserID)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "InternalServerError")
+
+			return
+		}
+
+		c.JSON(http.StatusOK, prefs)
+	})
 }
 
 func fullName(firstName, lastName, username string) string {
