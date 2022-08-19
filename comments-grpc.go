@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"google.golang.org/grpc/peer"
+
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
@@ -252,4 +254,130 @@ func (s *CommentsGRPCServer) VoteComment(
 	return &CommentsVoteCommentResponse{
 		Votes: votes,
 	}, nil
+}
+
+func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*AddCommentResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	/*
+		if ($this->needWait()) {
+			return new ApiProblemResponse(
+				new ApiProblem(
+					400,
+					'Data is invalid. Check `detail`.',
+					null,
+					'Validation error',
+					[
+						'invalid_params' => [
+							'message' => [
+								'invalid' => 'Too often',
+							],
+						],
+					]
+				)
+			);
+		}*/
+
+	switch in.TypeId {
+	case CommentsType_PICTURES_TYPE_ID:
+	//$object = $this->picture->getRow(['id' => $itemId]);
+
+	case CommentsType_ITEM_TYPE_ID:
+	//$object = $this->item->getRow(['id' => $itemId]);
+
+	case CommentsType_VOTINGS_TYPE_ID:
+	//$object = $this->votings->isVotingExists($itemId);
+	//break;
+
+	case CommentsType_ARTICLES_TYPE_ID:
+	//$object = currentFromResultSetInterface($this->articleTable->select(['id' => $itemId]));
+
+	case CommentsType_FORUMS_TYPE_ID:
+	//$object = currentFromResultSetInterface($this->forums->getTopicTable()->select(['id' => $itemId]));
+
+	default:
+		return nil, status.Error(codes.InvalidArgument, "Invalid type")
+	}
+
+	/*if (! $object) {
+		return $this->notFoundAction();
+	}*/
+
+	moderatorAttention := false
+	if res := s.enforcer.Enforce(role, "comment", "moderator-attention"); !res {
+		moderatorAttention = in.ModeratorAttention
+	}
+
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "Failed extract peer from context")
+	}
+
+	remoteAddr := p.Addr.String()
+
+	messageId := s.repository.Add(in.TypeId, in.ItemId, in.ParentId, userID, in.Message, remoteAddr, moderatorAttention)
+
+	if !messageId {
+		return nil, status.Errorf(codes.Internal, "Message add failed")
+	}
+
+	if s.enforcer.Enforce(role, "global", "moderate") && in.ParentId > 0 && in.Resolve {
+		s.repository.CompleteMessage(in.ParentId)
+	}
+
+	if in.TypeId == CommentsType_FORUMS_TYPE_ID {
+		s.usersRepository.IncForumMessages()
+		/*$this->userModel->getTable()->update([
+			'forums_messages'   => new Sql\Expression('forums_messages + 1'),
+			'last_message_time' => new Sql\Expression('NOW()'),
+		], [
+			'id' => $currentUser['id'],
+		]);*/
+	} else {
+		s.usersRepository.TouchLastMessage()
+
+		/*$this->userModel->getTable()->update([
+			'last_message_time' => new Sql\Expression('NOW()'),
+		], [
+			'id' => $currentUser['id'],
+		]);*/
+	}
+
+	/*if ($data['parent_id']) {
+		$authorId = $this->comments->service()->getMessageAuthorId($data['parent_id']);
+		if ($authorId && ($authorId !== (int) $currentUser['id'])) {
+			$parentMessageAuthor = currentFromResultSetInterface(
+			$this->userModel->getTable()->select(['id' => $authorId])
+			);
+			if ($parentMessageAuthor && ! $parentMessageAuthor['deleted']) {
+				$uri = $this->hostManager->getUriByLanguage($parentMessageAuthor['language']);
+
+				$url      = $this->comments->getMessageUrl($messageId, $uri);
+				$path     = '/users/'
+				. ($currentUser['identity'] ? $currentUser['identity'] : 'user' . $currentUser['id']);
+				$moderUrl = $uri->setPath($path)->toString();
+				$message  = sprintf(
+				$this->translate(
+				'pm/user-%s-replies-to-you-%s',
+				'default',
+				$parentMessageAuthor['language']
+				),
+				$moderUrl,
+				$url
+				);
+				$this->message->send(null, $parentMessageAuthor['id'], $message);
+			}
+		}
+	}*/
+
+	s.repository.NotifySubscribers(messageId)
+
+	return &AddCommentResponse{}, nil
 }

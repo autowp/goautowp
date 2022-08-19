@@ -1525,6 +1525,7 @@ type CommentsClient interface {
 	SetDeleted(ctx context.Context, in *CommentsSetDeletedRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	MoveComment(ctx context.Context, in *CommentsMoveCommentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	VoteComment(ctx context.Context, in *CommentsVoteCommentRequest, opts ...grpc.CallOption) (*CommentsVoteCommentResponse, error)
+	Add(ctx context.Context, in *AddCommentRequest, opts ...grpc.CallOption) (*AddCommentResponse, error)
 }
 
 type commentsClient struct {
@@ -1598,6 +1599,15 @@ func (c *commentsClient) VoteComment(ctx context.Context, in *CommentsVoteCommen
 	return out, nil
 }
 
+func (c *commentsClient) Add(ctx context.Context, in *AddCommentRequest, opts ...grpc.CallOption) (*AddCommentResponse, error) {
+	out := new(AddCommentResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/Add", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CommentsServer is the server API for Comments service.
 // All implementations must embed UnimplementedCommentsServer
 // for forward compatibility
@@ -1609,6 +1619,7 @@ type CommentsServer interface {
 	SetDeleted(context.Context, *CommentsSetDeletedRequest) (*emptypb.Empty, error)
 	MoveComment(context.Context, *CommentsMoveCommentRequest) (*emptypb.Empty, error)
 	VoteComment(context.Context, *CommentsVoteCommentRequest) (*CommentsVoteCommentResponse, error)
+	Add(context.Context, *AddCommentRequest) (*AddCommentResponse, error)
 	mustEmbedUnimplementedCommentsServer()
 }
 
@@ -1641,6 +1652,10 @@ func (UnimplementedCommentsServer) MoveComment(context.Context, *CommentsMoveCom
 
 func (UnimplementedCommentsServer) VoteComment(context.Context, *CommentsVoteCommentRequest) (*CommentsVoteCommentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VoteComment not implemented")
+}
+
+func (UnimplementedCommentsServer) Add(context.Context, *AddCommentRequest) (*AddCommentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
 }
 func (UnimplementedCommentsServer) mustEmbedUnimplementedCommentsServer() {}
 
@@ -1781,6 +1796,24 @@ func _Comments_VoteComment_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Comments_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddCommentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).Add(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/Add",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).Add(ctx, req.(*AddCommentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Comments_ServiceDesc is the grpc.ServiceDesc for Comments service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1815,6 +1848,10 @@ var Comments_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VoteComment",
 			Handler:    _Comments_VoteComment_Handler,
+		},
+		{
+			MethodName: "Add",
+			Handler:    _Comments_Add_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

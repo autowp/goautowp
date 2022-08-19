@@ -66,6 +66,7 @@ service Comments {
   rpc SetDeleted(CommentsSetDeletedRequest) returns (google.protobuf.Empty) {}
   rpc MoveComment(CommentsMoveCommentRequest) returns (google.protobuf.Empty) {}
   rpc VoteComment(CommentsVoteCommentRequest) returns (CommentsVoteCommentResponse) {}
+  rpc Add(AddCommentRequest) returns (AddCommentResponse) {}
 }
 
 service Map {
@@ -729,4 +730,17 @@ message APIUserPreferencesRequest {
 
 message APIUserPreferencesResponse {
   bool disable_comments_notifications = 1;
+}
+
+message AddCommentRequest {
+  int64 item_id = 1;
+  CommentsType type_id = 2;
+  string message = 3;
+  bool moderator_attention = 4;
+  int64 parent_id = 5;
+  bool resolve = 6;
+}
+
+message AddCommentResponse {
+
 }
