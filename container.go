@@ -531,7 +531,15 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
 	}
 	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
-	s.publicRouter = wrappedGrpc.ServeHTTP
+
+	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
+		if wrappedGrpc.IsGrpcWebRequest(req) {
+			wrappedGrpc.ServeHTTP(resp, req)
+			return
+		}
+		// Fall back to gRPC server
+		grpcServer.ServeHTTP(resp, req)
+	}
 
 	return s.publicRouter, nil
 }
