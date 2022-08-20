@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"database/sql"
+	"google.golang.org/grpc/reflection"
 	"net/http"
 	"time"
 
@@ -526,6 +527,8 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterStatisticsServer(grpcServer, statSrv)
 	RegisterTrafficServer(grpcServer, trafficSrv)
 	RegisterUsersServer(grpcServer, usersSrv)
+
+	reflection.Register(grpcServer)
 
 	originFunc := func(origin string) bool {
 		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
