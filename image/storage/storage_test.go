@@ -1,8 +1,9 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -42,12 +43,17 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 
 	require.Contains(t, imageInfo.Src(), "folder/file")
 
-	resp, err := http.Get(imageInfo.Src())
+	ctx := context.Background()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageInfo.Src(), nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
 	require.NoError(t, err)
 
 	defer util.Close(resp.Body)
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	filesize, err := os.Stat(TestImageFile)
 	require.NoError(t, err)
@@ -77,7 +83,7 @@ func TestAddImageFromBlobAndFormat(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	blob, err := ioutil.ReadFile(TestImageFile)
+	blob, err := os.ReadFile(TestImageFile)
 	require.NoError(t, err)
 
 	imageID, err := mw.AddImageFromBlob(blob, "test", GenerateOptions{})
@@ -151,12 +157,17 @@ func TestAddImageAndCrop(t *testing.T) {
 	imageInfo, err := mw.Image(imageID)
 	require.NoError(t, err)
 
-	resp, err := http.Get(imageInfo.Src())
+	ctx := context.Background()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, imageInfo.Src(), nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
 	require.NoError(t, err)
 
 	defer util.Close(resp.Body)
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
 	filesize, err := os.Stat(TestImageFile2)

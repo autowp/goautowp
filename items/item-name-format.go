@@ -80,6 +80,7 @@ func (s *ItemNameFormatter) Format(item ItemNameFormatterOptions, language strin
 	return result
 }
 
+//nolint:unparam
 func (s *ItemNameFormatter) getModelYearsPrefix(
 	begin int,
 	beginFraction string,
@@ -193,6 +194,7 @@ func (s *ItemNameFormatter) renderYears(
 	return result1 + result2 + result3
 }
 
+//nolint:unparam
 func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int, language string) string {
 	currentYear := time.Now().Year()
 

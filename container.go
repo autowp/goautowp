@@ -2,9 +2,10 @@ package goautowp
 
 import (
 	"database/sql"
-	"google.golang.org/grpc/reflection"
 	"net/http"
 	"time"
+
+	"google.golang.org/grpc/reflection"
 
 	"github.com/autowp/goautowp/traffic"
 
@@ -35,6 +36,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
+
+const readHeaderTimeout = time.Second * 30
 
 // Container Container.
 type Container struct {
@@ -386,7 +389,11 @@ func (s *Container) PrivateHTTPServer() (*http.Server, error) {
 			return nil, err
 		}
 
-		s.privateHTTPServer = &http.Server{Addr: cfg.PrivateRest.Listen, Handler: router}
+		s.privateHTTPServer = &http.Server{
+			Addr:              cfg.PrivateRest.Listen,
+			Handler:           router,
+			ReadHeaderTimeout: readHeaderTimeout,
+		}
 	}
 
 	return s.privateHTTPServer, nil
@@ -428,7 +435,11 @@ func (s *Container) PublicHTTPServer() (*http.Server, error) {
 			return nil, err
 		}
 
-		s.publicHTTPServer = &http.Server{Addr: cfg.PublicRest.Listen, Handler: r}
+		s.publicHTTPServer = &http.Server{
+			Addr:              cfg.PublicRest.Listen,
+			Handler:           r,
+			ReadHeaderTimeout: readHeaderTimeout,
+		}
 	}
 
 	return s.publicHTTPServer, nil
@@ -538,6 +549,7 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsGrpcWebRequest(req) {
 			wrappedGrpc.ServeHTTP(resp, req)
+
 			return
 		}
 		// Fall back to gRPC server
