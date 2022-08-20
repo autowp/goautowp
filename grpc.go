@@ -141,7 +141,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 		return nil, errors.New("no endpoints provided")
 	}
 
-	endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))] // nolint: gosec
+	endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))] //nolint: gosec
 
 	parsedURL, err := url.Parse(endpoint)
 	if err != nil {

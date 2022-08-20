@@ -1,7 +1,7 @@
 package users
 
 import (
-	"crypto/md5" // nolint: gosec
+	"crypto/md5" //nolint: gosec
 	"encoding/hex"
 	"fmt"
 	"net/url"
@@ -90,7 +90,7 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, 
 
 		case "gravatar":
 			if row.EMail != nil {
-				hash := md5.Sum([]byte(*row.EMail)) // nolint: gosec
+				hash := md5.Sum([]byte(*row.EMail)) //nolint: gosec
 				str := fmt.Sprintf(
 					"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
 					hex.EncodeToString(hash[:]),

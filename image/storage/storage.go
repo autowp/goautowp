@@ -645,7 +645,7 @@ func indexByAttempt(attempt int) int {
 	min := int(math.Pow(powBase, float-1))
 	max := int(math.Pow(powBase, float) - 1)
 
-	return rand.Intn(max-min+1) + min // nolint: gosec
+	return rand.Intn(max-min+1) + min //nolint: gosec
 }
 
 func (s *Storage) createImagePath(dirName string, options GenerateOptions) (string, error) {
