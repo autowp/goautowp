@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/net/http2"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/autowp/goautowp/traffic"
@@ -72,7 +71,6 @@ type Container struct {
 	privateHTTPServer      *http.Server
 	privateRouter          *gin.Engine
 	publicHTTPServer       *http.Server
-	publicGRPCServer       *http2.Server
 	publicRouter           http.HandlerFunc
 	grpcServerWithServices *grpc.Server
 	telegramService        *telegram.Service
