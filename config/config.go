@@ -109,7 +109,10 @@ type AboutConfig struct {
 
 // Config Application config definition.
 type Config struct {
-	GinMode            string                    `yaml:"gin-mode"            mapstructure:"gin-mode"`
+	GinMode string `yaml:"gin-mode"            mapstructure:"gin-mode"`
+	GRPC    struct {
+		Listen string `mapstructure:"listen"`
+	} `yaml:"grpc"            mapstructure:"grpc"`
 	PublicRest         RestConfig                `yaml:"public-rest"         mapstructure:"public-rest"`
 	DuplicateFinder    DuplicateFinderConfig     `yaml:"duplicate_finder"    mapstructure:"duplicate_finder"`
 	AutowpDSN          string                    `yaml:"autowp-dsn"          mapstructure:"autowp-dsn"`

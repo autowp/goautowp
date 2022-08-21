@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -50,6 +51,36 @@ func (s *Application) MigrateAutowp() error {
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
+
+	return nil
+}
+
+func (s *Application) ServeGRPC(quit chan bool) error {
+	grpcServer, err := s.container.GRPCServerWithServices()
+	if err != nil {
+		return err
+	}
+
+	lis, err := net.Listen("tcp", s.container.Config().GRPC.Listen)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		<-quit
+
+		grpcServer.GracefulStop()
+	}()
+
+	logrus.Println("gRPC listener started")
+
+	err = grpcServer.Serve(lis)
+	if err != nil {
+		// cannot panic, because this probably is an intentional close
+		logrus.Printf("gRPC: Serve() error: %s", err)
+	}
+
+	logrus.Println("gRPC listener stopped")
 
 	return nil
 }

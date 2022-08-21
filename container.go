@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	"google.golang.org/grpc/reflection"
 
 	"github.com/autowp/goautowp/traffic"
@@ -44,48 +42,50 @@ const readHeaderTimeout = time.Second * 30
 
 // Container Container.
 type Container struct {
-	autowpDB             *sql.DB
-	banRepository        *ban.Repository
-	catalogue            *Catalogue
-	commentsRepository   *comments.Repository
-	config               config.Config
-	commentsGrpcServer   *CommentsGRPCServer
-	contactsGrpcServer   *ContactsGRPCServer
-	contactsRepository   *ContactsRepository
-	duplicateFinder      *DuplicateFinder
-	donationsGrpcServer  *DonationsGRPCServer
-	emailSender          email.Sender
-	enforcer             *casbin.Enforcer
-	events               *Events
-	feedback             *Feedback
-	forums               *Forums
-	goquDB               *goqu.Database
-	goquPostgresDB       *goqu.Database
-	grpcServer           *GRPCServer
-	hostsManager         *hosts.Manager
-	imageStorage         *storage.Storage
-	itemOfDayRepository  *itemofday.Repository
-	itemsGrpcServer      *ItemsGRPCServer
-	itemsRepository      *items.Repository
-	keyCloak             gocloak.GoCloak
-	location             *time.Location
-	messagingGrpcServer  *MessagingGRPCServer
-	messagingRepository  *messaging.Repository
-	privateHTTPServer    *http.Server
-	privateRouter        *gin.Engine
-	publicHTTPServer     *http.Server
-	publicRouter         http.HandlerFunc
-	telegramService      *telegram.Service
-	traffic              *traffic.Traffic
-	trafficGrpcServer    *TrafficGRPCServer
-	usersRepository      *users.Repository
-	usersGrpcServer      *UsersGRPCServer
-	memcached            *memcache.Client
-	auth                 *Auth
-	mapGrpcServer        *MapGRPCServer
-	picturesRepository   *pictures.Repository
-	picturesGrpcServer   *PicturesGRPCServer
-	statisticsGrpcServer *StatisticsGRPCServer
+	autowpDB               *sql.DB
+	banRepository          *ban.Repository
+	catalogue              *Catalogue
+	commentsRepository     *comments.Repository
+	config                 config.Config
+	commentsGrpcServer     *CommentsGRPCServer
+	contactsGrpcServer     *ContactsGRPCServer
+	contactsRepository     *ContactsRepository
+	duplicateFinder        *DuplicateFinder
+	donationsGrpcServer    *DonationsGRPCServer
+	emailSender            email.Sender
+	enforcer               *casbin.Enforcer
+	events                 *Events
+	feedback               *Feedback
+	forums                 *Forums
+	goquDB                 *goqu.Database
+	goquPostgresDB         *goqu.Database
+	grpcServer             *GRPCServer
+	hostsManager           *hosts.Manager
+	imageStorage           *storage.Storage
+	itemOfDayRepository    *itemofday.Repository
+	itemsGrpcServer        *ItemsGRPCServer
+	itemsRepository        *items.Repository
+	keyCloak               gocloak.GoCloak
+	location               *time.Location
+	messagingGrpcServer    *MessagingGRPCServer
+	messagingRepository    *messaging.Repository
+	privateHTTPServer      *http.Server
+	privateRouter          *gin.Engine
+	publicHTTPServer       *http.Server
+	publicGRPCServer       *http2.Server
+	publicRouter           http.HandlerFunc
+	grpcServerWithServices *grpc.Server
+	telegramService        *telegram.Service
+	traffic                *traffic.Traffic
+	trafficGrpcServer      *TrafficGRPCServer
+	usersRepository        *users.Repository
+	usersGrpcServer        *UsersGRPCServer
+	memcached              *memcache.Client
+	auth                   *Auth
+	mapGrpcServer          *MapGRPCServer
+	picturesRepository     *pictures.Repository
+	picturesGrpcServer     *PicturesGRPCServer
+	statisticsGrpcServer   *StatisticsGRPCServer
 }
 
 // NewContainer constructor.
@@ -460,6 +460,28 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 		return s.publicRouter, nil
 	}
 
+	grpcServer, err := s.GRPCServerWithServices()
+	if err != nil {
+		return nil, err
+	}
+
+	originFunc := func(origin string) bool {
+		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
+	}
+	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
+
+	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
+		wrappedGrpc.ServeHTTP(resp, req)
+	}
+
+	return s.publicRouter, nil
+}
+
+func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
+	if s.grpcServerWithServices != nil {
+		return s.grpcServerWithServices, nil
+	}
+
 	srv, err := s.GRPCServer()
 	if err != nil {
 		return nil, err
@@ -544,24 +566,9 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 
 	reflection.Register(grpcServer)
 
-	originFunc := func(origin string) bool {
-		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
-	}
-	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
+	s.grpcServerWithServices = grpcServer
 
-	h := h2c.NewHandler(grpcServer, &http2.Server{})
-
-	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
-		if wrappedGrpc.IsGrpcWebRequest(req) {
-			wrappedGrpc.ServeHTTP(resp, req)
-
-			return
-		}
-		// Fall back to gRPC+h2c server
-		h.ServeHTTP(resp, req)
-	}
-
-	return s.publicRouter, nil
+	return s.grpcServerWithServices, nil
 }
 
 func (s *Container) TelegramService() (*telegram.Service, error) {
