@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"google.golang.org/grpc/reflection"
 
 	"github.com/autowp/goautowp/traffic"
@@ -546,14 +549,16 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	}
 	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
 
+	h := h2c.NewHandler(grpcServer, &http2.Server{})
+
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsGrpcWebRequest(req) {
 			wrappedGrpc.ServeHTTP(resp, req)
 
 			return
 		}
-		// Fall back to gRPC server
-		grpcServer.ServeHTTP(resp, req)
+		// Fall back to gRPC+h2c server
+		h.ServeHTTP(resp, req)
 	}
 
 	return s.publicRouter, nil
