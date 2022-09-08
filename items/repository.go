@@ -520,7 +520,7 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 	}
 
 	if !success {
-		return nil, nil // nolint: nilnil
+		return nil, nil //nolint: nilnil
 	}
 
 	return &TreeItem{

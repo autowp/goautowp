@@ -153,10 +153,7 @@ func (s *Storage) populateSrc(r *Image) error {
 
 	bucket := dir.Bucket()
 
-	s3Client, err := s.s3Client()
-	if err != nil {
-		return err
-	}
+	s3Client := s.s3Client()
 
 	req, _ := s3Client.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: &bucket,
@@ -221,7 +218,7 @@ func (s *Storage) dir(dirName string) *Dir {
 	return nil
 }
 
-func (s *Storage) s3Client() (*s3.S3, error) {
+func (s *Storage) s3Client() *s3.S3 {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region:           &s.config.S3.Region,
 		Endpoint:         &s.config.S3.Endpoint,
@@ -230,7 +227,7 @@ func (s *Storage) s3Client() (*s3.S3, error) {
 	}))
 	svc := s3.New(sess)
 
-	return svc, nil
+	return svc
 }
 
 func getCropSuffix(i imageRow) string {
@@ -283,10 +280,7 @@ func (s *Storage) doFormatImage(imageID int, formatName string) (int, error) {
 
 	bucket := dir.Bucket()
 
-	s3Client, err := s.s3Client()
-	if err != nil {
-		return 0, err
-	}
+	s3Client := s.s3Client()
 
 	object, err := s3Client.GetObject(&s3.GetObjectInput{
 		Bucket: &bucket,
@@ -503,10 +497,7 @@ func (s *Storage) addImageFromImagick(mw *imagick.MagickWand, dirName string, op
 		width,
 		height,
 		func(fileName string) error {
-			s3c, err := s.s3Client()
-			if err != nil {
-				return err
-			}
+			s3c := s.s3Client()
 			r := bytes.NewReader(blob)
 			bucket := dir.Bucket()
 
@@ -645,7 +636,7 @@ func indexByAttempt(attempt int) int {
 	min := int(math.Pow(powBase, float-1))
 	max := int(math.Pow(powBase, float) - 1)
 
-	return rand.Intn(max-min+1) + min // nolint: gosec
+	return rand.Intn(max-min+1) + min //nolint: gosec
 }
 
 func (s *Storage) createImagePath(dirName string, options GenerateOptions) (string, error) {
@@ -717,10 +708,7 @@ func (s *Storage) RemoveImage(imageID int) error {
 		return fmt.Errorf("dir '%s' not defined", r.Dir())
 	}
 
-	s3c, err := s.s3Client()
-	if err != nil {
-		return err
-	}
+	s3c := s.s3Client()
 
 	bucket := dir.Bucket()
 	key := r.Filepath()
@@ -810,17 +798,14 @@ func (s *Storage) ChangeImageName(imageID int, options GenerateOptions) error {
 
 	var insertAttemptException error
 
-	s3c, err := s.s3Client()
-	if err != nil {
-		return err
-	}
+	s3c := s.s3Client()
 
 	for attemptIndex := 0; attemptIndex < maxInsertAttempts; attemptIndex++ {
 		options.Index = indexByAttempt(attemptIndex)
 
 		destFileName, err := s.createImagePath(r.Dir(), options)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		if destFileName == r.Filepath() {
@@ -904,10 +889,6 @@ func (s *Storage) AddImageFromFile(file string, dirName string, options Generate
 		imageInfo.Width,
 		imageInfo.Height,
 		func(fileName string) error {
-			s3c, err := s.s3Client()
-			if err != nil {
-				return err
-			}
 			bucket := dir.Bucket()
 
 			contentType, err := imageFormatContentType(options.Extension)
@@ -921,7 +902,7 @@ func (s *Storage) AddImageFromFile(file string, dirName string, options Generate
 			}
 			defer util.Close(handle)
 
-			_, err = s3c.PutObject(&s3.PutObjectInput{
+			_, err = s.s3Client().PutObject(&s3.PutObjectInput{
 				Key:         &fileName,
 				Body:        handle,
 				Bucket:      &bucket,
@@ -998,10 +979,7 @@ func (s *Storage) doImagickOperation(imageID int, callback func(*imagick.MagickW
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 
-	s3c, err := s.s3Client()
-	if err != nil {
-		return err
-	}
+	s3c := s.s3Client()
 
 	bucket := dir.Bucket()
 	fpath := r.Filepath()

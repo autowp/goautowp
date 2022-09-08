@@ -93,7 +93,7 @@ func (s *StringLength) IsValidString(value string) ([]string, error) {
 func (s *EmailAddress) IsValidString(value string) ([]string, error) {
 	_, err := mail.ParseAddress(value)
 	if err != nil {
-		return []string{EmailAddressInvalidFormat}, nil
+		return []string{EmailAddressInvalidFormat}, nil //nolint:nilerr
 	}
 
 	return []string{}, nil
@@ -103,7 +103,7 @@ func (s *EmailAddress) IsValidString(value string) ([]string, error) {
 func (s *Recaptcha) IsValidString(value string) ([]string, error) {
 	_, err := recaptcha.Confirm(s.ClientIP, value)
 	if err != nil {
-		return []string{err.Error()}, nil
+		return []string{err.Error()}, nil //nolint:nilerr
 	}
 
 	return []string{}, nil

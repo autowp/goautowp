@@ -5,6 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
+	"google.golang.org/grpc/reflection"
+
 	"github.com/autowp/goautowp/traffic"
 
 	"github.com/Nerzal/gocloak/v11"
@@ -34,6 +39,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
+
+const readHeaderTimeout = time.Second * 30
 
 // Container Container.
 type Container struct {
@@ -385,7 +392,11 @@ func (s *Container) PrivateHTTPServer() (*http.Server, error) {
 			return nil, err
 		}
 
-		s.privateHTTPServer = &http.Server{Addr: cfg.PrivateRest.Listen, Handler: router}
+		s.privateHTTPServer = &http.Server{
+			Addr:              cfg.PrivateRest.Listen,
+			Handler:           router,
+			ReadHeaderTimeout: readHeaderTimeout,
+		}
 	}
 
 	return s.privateHTTPServer, nil
@@ -427,7 +438,11 @@ func (s *Container) PublicHTTPServer() (*http.Server, error) {
 			return nil, err
 		}
 
-		s.publicHTTPServer = &http.Server{Addr: cfg.PublicRest.Listen, Handler: r}
+		s.publicHTTPServer = &http.Server{
+			Addr:              cfg.PublicRest.Listen,
+			Handler:           r,
+			ReadHeaderTimeout: readHeaderTimeout,
+		}
 	}
 
 	return s.publicHTTPServer, nil
@@ -527,11 +542,24 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterTrafficServer(grpcServer, trafficSrv)
 	RegisterUsersServer(grpcServer, usersSrv)
 
+	reflection.Register(grpcServer)
+
 	originFunc := func(origin string) bool {
 		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
 	}
 	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
-	s.publicRouter = wrappedGrpc.ServeHTTP
+
+	h := h2c.NewHandler(grpcServer, &http2.Server{})
+
+	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
+		if wrappedGrpc.IsGrpcWebRequest(req) {
+			wrappedGrpc.ServeHTTP(resp, req)
+
+			return
+		}
+		// Fall back to gRPC+h2c server
+		h.ServeHTTP(resp, req)
+	}
 
 	return s.publicRouter, nil
 }

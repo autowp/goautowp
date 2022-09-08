@@ -35,7 +35,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	rand.Seed(time.Now().UnixNano())
-	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" // nolint: gosec
+	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
 
 	name := "ivan"
 	lastName := "ivanov"
@@ -123,7 +123,7 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	rand.Seed(time.Now().UnixNano())
-	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" // nolint: gosec
+	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
 
 	name := "ivan"
 	password := "password"
