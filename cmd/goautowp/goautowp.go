@@ -80,6 +80,24 @@ func (r *ListenMonitoringAMQPCommand) Execute(_ []string) error {
 	return app.ListenMonitoringAMQP(quit)
 }
 
+type ServeGRPCCommand struct{}
+
+func (r *ServeGRPCCommand) Execute(_ []string) error {
+	err := app.MigrateAutowp()
+	if err != nil {
+		return err
+	}
+
+	err = app.MigratePostgres()
+	if err != nil {
+		return err
+	}
+
+	quit := captureOsInterrupt()
+
+	return app.ServeGRPC(quit)
+}
+
 type ServePublicCommand struct{}
 
 func (r *ServePublicCommand) Execute(_ []string) error {
@@ -196,6 +214,7 @@ func mainReturnWithCode() int {
 		Autoban               AutobanCommand               `command:"autoban"`
 		ListenDfAMQP          ListenDfAMQPCommand          `command:"listen-df-amqp"`
 		ListenMonitoringAMQP  ListenMonitoringAMQPCommand  `command:"listen-monitoring-amqp"`
+		ServeGRPC             ServeGRPCCommand             `command:"serve-grpc"`
 		ServePublic           ServePublicCommand           `command:"serve-public"`
 		ServePrivate          ServePrivateCommand          `command:"serve-private"`
 		MigrateAutowp         MigrateAutowpCommand         `command:"migrate-autowp"`

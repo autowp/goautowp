@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/Masterminds/squirrel v1.5.3
 	github.com/Nerzal/gocloak/v11 v11.2.0
-	github.com/aws/aws-sdk-go v1.44.95
+	github.com/aws/aws-sdk-go v1.44.101
 	github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.1.0
@@ -16,7 +16,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/gin-gonic/gin v1.8.1
-	github.com/go-playground/validator/v10 v10.11.0 // indirect
+	github.com/go-playground/validator/v10 v10.11.1 // indirect
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/golang-migrate/migrate/v4 v4.15.2
@@ -25,7 +25,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/improbable-eng/grpc-web v0.15.0
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/klauspost/compress v1.15.9 // indirect
+	github.com/klauspost/compress v1.15.10 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
@@ -40,11 +40,11 @@ require (
 	github.com/spf13/viper v1.13.0
 	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.8.0
-	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
-	golang.org/x/net v0.0.0-20220909164309-bea034e7d591
-	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
+	golang.org/x/crypto v0.0.0-20220919173607-35f4265a4bc0 // indirect
+	golang.org/x/net v0.0.0-20220919171627-f8f703f97925 // indirect
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/text v0.3.7
-	google.golang.org/genproto v0.0.0-20220909194730-69f6226f97e5
+	google.golang.org/genproto v0.0.0-20220919141832-68c03719ef51
 	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect

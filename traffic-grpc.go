@@ -50,7 +50,7 @@ func NewTrafficGRPCServer(
 	}
 }
 
-func (s *TrafficGRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
+func (s *TrafficGRPCServer) GetTop(_ context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
 	var err error
 
 	items, err := s.traffic.Monitoring.ListOfTop(trafficTopLimit)
@@ -113,7 +113,7 @@ func (s *TrafficGRPCServer) GetTrafficTop(_ context.Context, _ *emptypb.Empty) (
 	}, nil
 }
 
-func (s *TrafficGRPCServer) DeleteFromTrafficBlacklist(
+func (s *TrafficGRPCServer) DeleteFromBlacklist(
 	ctx context.Context,
 	in *DeleteFromTrafficBlacklistRequest,
 ) (*emptypb.Empty, error) {
@@ -139,7 +139,7 @@ func (s *TrafficGRPCServer) DeleteFromTrafficBlacklist(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *TrafficGRPCServer) DeleteFromTrafficWhitelist(
+func (s *TrafficGRPCServer) DeleteFromWhitelist(
 	ctx context.Context,
 	in *DeleteFromTrafficWhitelistRequest,
 ) (*emptypb.Empty, error) {
@@ -165,7 +165,7 @@ func (s *TrafficGRPCServer) DeleteFromTrafficWhitelist(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *TrafficGRPCServer) AddToTrafficBlacklist(
+func (s *TrafficGRPCServer) AddToBlacklist(
 	ctx context.Context,
 	in *AddToTrafficBlacklistRequest,
 ) (*emptypb.Empty, error) {
@@ -193,7 +193,7 @@ func (s *TrafficGRPCServer) AddToTrafficBlacklist(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *TrafficGRPCServer) AddToTrafficWhitelist(
+func (s *TrafficGRPCServer) AddToWhitelist(
 	ctx context.Context,
 	in *AddToTrafficWhitelistRequest,
 ) (*emptypb.Empty, error) {
