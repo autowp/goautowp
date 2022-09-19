@@ -1,0 +1,3 @@
+{
+  "pm/user-%s-post-new-message-%s": "{{.Name}} postou nova mensagem\n{{.Message}}"
+}

@@ -285,30 +285,15 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 			);
 		}*/
 
-	switch in.TypeId {
-	case CommentsType_PICTURES_TYPE_ID:
-	//$object = $this->picture->getRow(['id' => $itemId]);
-
-	case CommentsType_ITEM_TYPE_ID:
-	//$object = $this->item->getRow(['id' => $itemId]);
-
-	case CommentsType_VOTINGS_TYPE_ID:
-	//$object = $this->votings->isVotingExists($itemId);
-	//break;
-
-	case CommentsType_ARTICLES_TYPE_ID:
-	//$object = currentFromResultSetInterface($this->articleTable->select(['id' => $itemId]));
-
-	case CommentsType_FORUMS_TYPE_ID:
-	//$object = currentFromResultSetInterface($this->forums->getTopicTable()->select(['id' => $itemId]));
-
-	default:
-		return nil, status.Error(codes.InvalidArgument, "Invalid type")
+	commentsType, err := convertType(in.GetTypeId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	/*if (! $object) {
-		return $this->notFoundAction();
-	}*/
+	err = s.repository.AssertItem(ctx, commentsType, in.ItemId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 
 	moderatorAttention := false
 	if res := s.enforcer.Enforce(role, "comment", "moderator-attention"); !res {
@@ -322,32 +307,32 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 
 	remoteAddr := p.Addr.String()
 
-	messageId := s.repository.Add(in.TypeId, in.ItemId, in.ParentId, userID, in.Message, remoteAddr, moderatorAttention)
+	messageId, err := s.repository.Add(
+		ctx,
+		commentsType, in.ItemId, in.ParentId, userID, in.Message, remoteAddr, moderatorAttention,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
-	if !messageId {
+	if messageId == 0 {
 		return nil, status.Errorf(codes.Internal, "Message add failed")
 	}
 
 	if s.enforcer.Enforce(role, "global", "moderate") && in.ParentId > 0 && in.Resolve {
-		s.repository.CompleteMessage(in.ParentId)
+		err = s.repository.CompleteMessage(ctx, in.ParentId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	if in.TypeId == CommentsType_FORUMS_TYPE_ID {
-		s.usersRepository.IncForumMessages()
-		/*$this->userModel->getTable()->update([
-			'forums_messages'   => new Sql\Expression('forums_messages + 1'),
-			'last_message_time' => new Sql\Expression('NOW()'),
-		], [
-			'id' => $currentUser['id'],
-		]);*/
+		err = s.usersRepository.IncForumMessages(ctx, in.ItemId)
 	} else {
-		s.usersRepository.TouchLastMessage()
-
-		/*$this->userModel->getTable()->update([
-			'last_message_time' => new Sql\Expression('NOW()'),
-		], [
-			'id' => $currentUser['id'],
-		]);*/
+		err = s.usersRepository.TouchLastMessage(ctx, in.ItemId)
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	/*if ($data['parent_id']) {
@@ -377,7 +362,10 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		}
 	}*/
 
-	s.repository.NotifySubscribers(messageId)
+	err = s.repository.NotifySubscribers(messageId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	return &AddCommentResponse{}, nil
 }

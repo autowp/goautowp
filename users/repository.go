@@ -751,6 +751,26 @@ func (s *Repository) SetupPrivateRouter(r *gin.Engine) {
 	})
 }
 
+func (s *Repository) IncForumMessages(ctx context.Context, userID int64) error {
+	_, err := s.db.ExecContext(
+		ctx,
+		"UPDATE users SET forums_messages = forums_messages + 1, last_message_time = NOW() WHERE id = ?",
+		userID,
+	)
+
+	return err
+}
+
+func (s *Repository) TouchLastMessage(ctx context.Context, userID int64) error {
+	_, err := s.db.ExecContext(
+		ctx,
+		"UPDATE users SET last_message_time = NOW() WHERE id = ?",
+		userID,
+	)
+
+	return err
+}
+
 func fullName(firstName, lastName, username string) string {
 	result := strings.TrimSpace(firstName + " " + lastName)
 	if len(result) == 0 {

@@ -265,7 +265,17 @@ func (s *Container) CommentsRepository() (*comments.Repository, error) {
 			return nil, err
 		}
 
-		s.commentsRepository = comments.NewRepository(db)
+		usersRepository, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		messagingRepository, err := s.MessagingRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.commentsRepository = comments.NewRepository(db, usersRepository, messagingRepository, s.HostsManager())
 	}
 
 	return s.commentsRepository, nil
