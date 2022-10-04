@@ -177,8 +177,6 @@ func (s *Storage) populateSrc(r *Image) error {
 }
 
 func (s *Storage) FormattedImage(id int, formatName string) (*Image, error) {
-	logrus.Debugf("FormattedImage %d, %s", id, formatName)
-
 	var r Image
 
 	err := s.db.QueryRow(`
