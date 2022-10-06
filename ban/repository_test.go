@@ -1,6 +1,7 @@
 package ban
 
 import (
+	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -33,19 +34,21 @@ func TestAddRemove(t *testing.T) {
 
 	s := createBanService(t)
 
+	ctx := context.Background()
+
 	ip := net.IPv4(66, 249, 73, 139)
 
-	err := s.Add(ip, time.Hour, 1, "Test")
+	err := s.Add(ctx, ip, time.Hour, 1, "Test")
 	require.NoError(t, err)
 
-	exists, err := s.Exists(ip)
+	exists, err := s.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	err = s.Remove(ip)
+	err = s.Remove(ctx, ip)
 	require.NoError(t, err)
 
-	exists, err = s.Exists(ip)
+	exists, err = s.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 }

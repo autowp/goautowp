@@ -220,13 +220,13 @@ func (s *Application) ServePrivate(quit chan bool) error {
 	return nil
 }
 
-func (s *Application) SchedulerHourly() error {
+func (s *Application) SchedulerHourly(ctx context.Context) error {
 	traffic, err := s.container.Traffic()
 	if err != nil {
 		return err
 	}
 
-	deleted, err := traffic.Monitoring.GC()
+	deleted, err := traffic.Monitoring.GC(ctx)
 	if err != nil {
 		logrus.Error(err.Error())
 
@@ -235,7 +235,7 @@ func (s *Application) SchedulerHourly() error {
 
 	logrus.Infof("`%v` items of monitoring deleted", deleted)
 
-	deleted, err = traffic.Ban.GC()
+	deleted, err = traffic.Ban.GC(ctx)
 	if err != nil {
 		logrus.Error(err.Error())
 
@@ -244,7 +244,7 @@ func (s *Application) SchedulerHourly() error {
 
 	logrus.Infof("`%v` items of ban deleted", deleted)
 
-	err = traffic.AutoWhitelist()
+	err = traffic.AutoWhitelist(ctx)
 	if err != nil {
 		logrus.Error(err.Error())
 
@@ -270,20 +270,20 @@ func (s *Application) SchedulerDaily() error {
 	return nil
 }
 
-func (s *Application) SchedulerMidnight() error {
+func (s *Application) SchedulerMidnight(ctx context.Context) error {
 	ur, err := s.container.UsersRepository()
 	if err != nil {
 		return err
 	}
 
-	err = ur.RestoreVotes()
+	err = ur.RestoreVotes(ctx)
 	if err != nil {
 		logrus.Error(err.Error())
 
 		return err
 	}
 
-	affected, err := ur.UpdateVotesLimits()
+	affected, err := ur.UpdateVotesLimits(ctx)
 	if err != nil {
 		logrus.Error(err.Error())
 
@@ -308,7 +308,7 @@ loop:
 	for {
 		select {
 		case <-banTicker.C:
-			err := traffic.AutoBan()
+			err := traffic.AutoBan(context.Background())
 			if err != nil {
 				logrus.Error(err.Error())
 			}
@@ -324,13 +324,13 @@ loop:
 	return nil
 }
 
-func (s *Application) ExportUsersToKeycloak() error {
+func (s *Application) ExportUsersToKeycloak(ctx context.Context) error {
 	ur, err := s.container.UsersRepository()
 	if err != nil {
 		return err
 	}
 
-	return ur.ExportUsersToKeycloak()
+	return ur.ExportUsersToKeycloak(ctx)
 }
 
 func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
@@ -356,13 +356,13 @@ func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
 	return nil
 }
 
-func (s *Application) ImageStorageGetImage(imageID int) (*APIImage, error) {
+func (s *Application) ImageStorageGetImage(ctx context.Context, imageID int) (*APIImage, error) {
 	is, err := s.container.ImageStorage()
 	if err != nil {
 		return nil, err
 	}
 
-	img, err := is.Image(imageID)
+	img, err := is.Image(ctx, imageID)
 	if err != nil {
 		return nil, err
 	}
@@ -370,13 +370,17 @@ func (s *Application) ImageStorageGetImage(imageID int) (*APIImage, error) {
 	return APIImageToGRPC(users.ImageToAPIImage(img)), nil
 }
 
-func (s *Application) ImageStorageGetFormattedImage(imageID int, format string) (*APIImage, error) {
+func (s *Application) ImageStorageGetFormattedImage(
+	ctx context.Context,
+	imageID int,
+	format string,
+) (*APIImage, error) {
 	is, err := s.container.ImageStorage()
 	if err != nil {
 		return nil, err
 	}
 
-	img, err := is.FormattedImage(imageID, format)
+	img, err := is.FormattedImage(ctx, imageID, format)
 	if err != nil {
 		return nil, err
 	}

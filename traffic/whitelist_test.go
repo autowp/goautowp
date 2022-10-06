@@ -1,6 +1,7 @@
 package traffic
 
 import (
+	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -54,12 +55,14 @@ func TestContains(t *testing.T) {
 
 	s := createWhitelistService(t)
 
+	ctx := context.Background()
+
 	ip := net.IPv4(66, 249, 73, 139)
 
-	err := s.Add(ip, "test")
+	err := s.Add(ctx, ip, "test")
 	require.NoError(t, err)
 
-	exists, err := s.Exists(ip)
+	exists, err := s.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 }

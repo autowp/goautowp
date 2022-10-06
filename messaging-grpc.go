@@ -36,7 +36,7 @@ func (s *MessagingGRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptyp
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	count, err := s.repository.GetUserNewMessagesCount(userID)
+	count, err := s.repository.GetUserNewMessagesCount(ctx, userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -56,27 +56,27 @@ func (s *MessagingGRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	inbox, err := s.repository.GetInboxCount(userID)
+	inbox, err := s.repository.GetInboxCount(ctx, userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	inboxNew, err := s.repository.GetInboxNewCount(userID)
+	inboxNew, err := s.repository.GetInboxNewCount(ctx, userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	sent, err := s.repository.GetSentCount(userID)
+	sent, err := s.repository.GetSentCount(ctx, userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	system, err := s.repository.GetSystemCount(userID)
+	system, err := s.repository.GetSystemCount(ctx, userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	systemNew, err := s.repository.GetSystemNewCount(userID)
+	systemNew, err := s.repository.GetSystemNewCount(ctx, userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -203,13 +203,14 @@ func (s *MessagingGRPCServer) GetMessages(
 
 	switch in.GetFolder() {
 	case "inbox":
-		messages, pages, err = s.repository.GetInbox(userID, in.GetPage())
+		messages, pages, err = s.repository.GetInbox(ctx, userID, in.GetPage())
 	case "sent":
-		messages, pages, err = s.repository.GetSentbox(userID, in.GetPage())
+		messages, pages, err = s.repository.GetSentbox(ctx, userID, in.GetPage())
 	case "system":
-		messages, pages, err = s.repository.GetSystembox(userID, in.GetPage())
+		messages, pages, err = s.repository.GetSystembox(ctx, userID, in.GetPage())
 	case "dialog":
 		messages, pages, err = s.repository.GetDialogbox(
+			ctx,
 			userID,
 			in.GetUserId(),
 			in.GetPage(),

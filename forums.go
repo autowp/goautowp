@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 
@@ -20,8 +21,8 @@ func NewForums(db *goqu.Database) *Forums {
 	}
 }
 
-func (s *Forums) GetUserSummary(userID int64) (int, error) {
-	rows, err := s.db.Query(`
+func (s *Forums) GetUserSummary(ctx context.Context, userID int64) (int, error) {
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT count(1)
 		FROM forums_topics
 			JOIN comment_topic_subscribe ON forums_topics.id = comment_topic_subscribe.item_id

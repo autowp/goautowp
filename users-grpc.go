@@ -59,7 +59,7 @@ func (s *UsersGRPCServer) Me(ctx context.Context, in *APIMeRequest) (*APIUser, e
 	})
 }
 
-func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*APIUser, error) {
+func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*APIUser, error) {
 	fields := in.Fields
 	m := make(map[string]bool)
 
@@ -79,7 +79,7 @@ func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*AP
 		return nil, status.Error(codes.NotFound, "User not found")
 	}
 
-	apiUser, err := s.userExtractor.Extract(dbUser, m)
+	apiUser, err := s.userExtractor.Extract(ctx, dbUser, m)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -102,7 +102,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 			return nil, status.Errorf(codes.Internal, "Forbidden")
 		}
 
-		match, err := s.userRepository.PasswordMatch(in.UserId, in.Password)
+		match, err := s.userRepository.PasswordMatch(ctx, in.UserId, in.Password)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -115,13 +115,13 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 		}
 	}
 
-	success, err := s.userRepository.DeleteUser(in.UserId)
+	success, err := s.userRepository.DeleteUser(ctx, in.UserId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if success {
-		err = s.contactsRepository.deleteUserEverywhere(in.UserId)
+		err = s.contactsRepository.deleteUserEverywhere(ctx, in.UserId)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

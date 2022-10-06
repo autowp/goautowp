@@ -7786,6 +7786,7 @@ var (
 		(*emptypb.Empty)(nil),                     // 121: google.protobuf.Empty
 	}
 )
+
 var file_spec_proto_depIdxs = []int32{
 	112, // 0: goautowp.ErrorDetails.retryInfo:type_name -> google.rpc.RetryInfo
 	113, // 1: goautowp.ErrorDetails.debugInfo:type_name -> google.rpc.DebugInfo

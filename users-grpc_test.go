@@ -84,7 +84,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
-	imageID, err := imageStorage.AddImageFromFile(TestImageFile, "user", storage.GenerateOptions{})
+	imageID, err := imageStorage.AddImageFromFile(ctx, TestImageFile, "user", storage.GenerateOptions{})
 	require.NoError(t, err)
 	_, err = db.Exec("UPDATE users SET img = ? WHERE id = ?", imageID, me.Id)
 	require.NoError(t, err)

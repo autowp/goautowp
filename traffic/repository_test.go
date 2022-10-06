@@ -1,6 +1,7 @@
 package traffic
 
 import (
+	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -51,12 +52,14 @@ func TestAutoWhitelist(t *testing.T) {
 
 	s := createTrafficService(t)
 
+	ctx := context.Background()
+
 	ip := net.IPv4(66, 249, 73, 139) // google
 
-	err := s.Ban.Add(ip, time.Hour, 9, "test")
+	err := s.Ban.Add(ctx, ip, time.Hour, 9, "test")
 	require.NoError(t, err)
 
-	exists, err := s.Ban.Exists(ip)
+	exists, err := s.Ban.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 
@@ -67,10 +70,10 @@ func TestAutoWhitelist(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	err = s.AutoWhitelist()
+	err = s.AutoWhitelist(ctx)
 	require.NoError(t, err)
 
-	exists, err = s.Ban.Exists(ip)
+	exists, err = s.Ban.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 
@@ -78,7 +81,7 @@ func TestAutoWhitelist(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, exists)
 
-	exists, err = s.Whitelist.Exists(ip)
+	exists, err = s.Whitelist.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 }
@@ -87,6 +90,8 @@ func TestAutoBanByProfile(t *testing.T) {
 	t.Parallel()
 
 	s := createTrafficService(t)
+
+	ctx := context.Background()
 
 	profile := AutobanProfile{
 		Limit:  3,
@@ -98,14 +103,14 @@ func TestAutoBanByProfile(t *testing.T) {
 	ip1 := net.IPv4(127, 0, 0, 11)
 	ip2 := net.IPv4(127, 0, 0, 12)
 
-	err := s.Monitoring.ClearIP(ip1)
+	err := s.Monitoring.ClearIP(ctx, ip1)
 	require.NoError(t, err)
-	err = s.Monitoring.ClearIP(ip2)
+	err = s.Monitoring.ClearIP(ctx, ip2)
 	require.NoError(t, err)
 
-	err = s.Ban.Remove(ip1)
+	err = s.Ban.Remove(ctx, ip1)
 	require.NoError(t, err)
-	err = s.Ban.Remove(ip2)
+	err = s.Ban.Remove(ctx, ip2)
 	require.NoError(t, err)
 
 	err = s.Monitoring.Add(ip1, time.Now())
@@ -116,14 +121,14 @@ func TestAutoBanByProfile(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	err = s.AutoBanByProfile(profile)
+	err = s.AutoBanByProfile(ctx, profile)
 	require.NoError(t, err)
 
-	exists, err := s.Ban.Exists(ip1)
+	exists, err := s.Ban.Exists(ctx, ip1)
 	require.NoError(t, err)
 	require.False(t, exists)
 
-	exists, err = s.Ban.Exists(ip2)
+	exists, err = s.Ban.Exists(ctx, ip2)
 	require.NoError(t, err)
 	require.True(t, exists)
 }
@@ -132,6 +137,8 @@ func TestWhitelistedNotBanned(t *testing.T) {
 	t.Parallel()
 
 	s := createTrafficService(t)
+
+	ctx := context.Background()
 
 	profile := AutobanProfile{
 		Limit:  3,
@@ -142,7 +149,7 @@ func TestWhitelistedNotBanned(t *testing.T) {
 
 	ip := net.IPv4(178, 154, 244, 21)
 
-	err := s.Whitelist.Add(ip, "TestWhitelistedNotBanned")
+	err := s.Whitelist.Add(ctx, ip, "TestWhitelistedNotBanned")
 	require.NoError(t, err)
 
 	for i := 0; i < 4; i++ {
@@ -150,13 +157,13 @@ func TestWhitelistedNotBanned(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	err = s.AutoWhitelistIP(ip)
+	err = s.AutoWhitelistIP(ctx, ip)
 	require.NoError(t, err)
 
-	err = s.AutoBanByProfile(profile)
+	err = s.AutoBanByProfile(ctx, profile)
 	require.NoError(t, err)
 
-	exists, err := s.Ban.Exists(ip)
+	exists, err := s.Ban.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 }
@@ -166,10 +173,12 @@ func TestTop(t *testing.T) {
 
 	s := createTrafficService(t)
 
-	err := s.Ban.Clear()
+	ctx := context.Background()
+
+	err := s.Ban.Clear(ctx)
 	require.NoError(t, err)
 
-	err = s.Monitoring.Clear()
+	err = s.Monitoring.Clear(ctx)
 	require.NoError(t, err)
 
 	err = s.Monitoring.Add(net.IPv4(192, 168, 0, 1), time.Now())
