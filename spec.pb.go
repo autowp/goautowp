@@ -7658,7 +7658,7 @@ func file_spec_proto_rawDescGZIP() []byte {
 }
 
 var file_spec_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_spec_proto_msgTypes = make([]protoimpl.MessageInfo, 103)
+var file_spec_proto_msgTypes = make([]protoimpl.MessageInfo, 105)
 var file_spec_proto_goTypes = []interface{}{
 	(PictureItemType)(0),                      // 0: goautowp.PictureItemType
 	(ItemType)(0),                             // 1: goautowp.ItemType
@@ -7770,16 +7770,18 @@ var file_spec_proto_goTypes = []interface{}{
 	(*VODDataResponse)(nil),                   // 107: goautowp.VODDataResponse
 	(*VODDataDate)(nil),                       // 108: goautowp.VODDataDate
 	(*AboutDataResponse)(nil),                 // 109: goautowp.AboutDataResponse
-	(*errdetails.RetryInfo)(nil),              // 110: google.rpc.RetryInfo
-	(*errdetails.DebugInfo)(nil),              // 111: google.rpc.DebugInfo
-	(*errdetails.QuotaFailure)(nil),           // 112: google.rpc.QuotaFailure
-	(*errdetails.PreconditionFailure)(nil),    // 113: google.rpc.PreconditionFailure
-	(*errdetails.BadRequest)(nil),             // 114: google.rpc.BadRequest
-	(*errdetails.RequestInfo)(nil),            // 115: google.rpc.RequestInfo
-	(*errdetails.Help)(nil),                   // 116: google.rpc.Help
-	(*errdetails.LocalizedMessage)(nil),       // 117: google.rpc.LocalizedMessage
-	(*timestamp.Timestamp)(nil),               // 118: google.protobuf.Timestamp
-	(*empty.Empty)(nil),                       // 119: google.protobuf.Empty
+	(*APIUserPreferencesRequest)(nil),         // 110: goautowp.APIUserPreferencesRequest
+	(*APIUserPreferencesResponse)(nil),        // 111: goautowp.APIUserPreferencesResponse
+	(*errdetails.RetryInfo)(nil),              // 112: google.rpc.RetryInfo
+	(*errdetails.DebugInfo)(nil),              // 113: google.rpc.DebugInfo
+	(*errdetails.QuotaFailure)(nil),           // 114: google.rpc.QuotaFailure
+	(*errdetails.PreconditionFailure)(nil),    // 115: google.rpc.PreconditionFailure
+	(*errdetails.BadRequest)(nil),             // 116: google.rpc.BadRequest
+	(*errdetails.RequestInfo)(nil),            // 117: google.rpc.RequestInfo
+	(*errdetails.Help)(nil),                   // 118: google.rpc.Help
+	(*errdetails.LocalizedMessage)(nil),       // 119: google.rpc.LocalizedMessage
+	(*timestamp.Timestamp)(nil),               // 120: google.protobuf.Timestamp
+	(*empty.Empty)(nil),                       // 121: google.protobuf.Empty
 }
 var file_spec_proto_depIdxs = []int32{
 	112, // 0: goautowp.ErrorDetails.retryInfo:type_name -> google.rpc.RetryInfo
