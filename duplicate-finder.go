@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -126,7 +127,14 @@ func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan boo
 func (s *DuplicateFinder) Index(id int, url string) error {
 	logrus.Infof("Indexing picture %v", id)
 
-	resp, err := http.Get(url)
+	ctx := context.Background()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
 	if err != nil {
 		return err
 	}

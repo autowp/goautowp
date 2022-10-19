@@ -1,7 +1,8 @@
 package users
 
 import (
-	"crypto/md5" // nolint: gosec
+	"context"
+	"crypto/md5" //nolint: gosec
 	"encoding/hex"
 	"fmt"
 	"net/url"
@@ -45,7 +46,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	}
 }
 
-func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, error) {
+func (s *UserExtractor) Extract(ctx context.Context, row *DBUser, fields map[string]bool) (*APIUser, error) {
 	longAway := true
 
 	if row.LastOnline != nil {
@@ -80,7 +81,7 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, 
 		switch field {
 		case "avatar":
 			if row.Img != nil {
-				avatar, err := s.imageStorage.FormattedImage(*row.Img, "avatar")
+				avatar, err := s.imageStorage.FormattedImage(ctx, *row.Img, "avatar")
 				if err != nil {
 					return nil, err
 				}
@@ -90,7 +91,7 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, 
 
 		case "gravatar":
 			if row.EMail != nil {
-				hash := md5.Sum([]byte(*row.EMail)) // nolint: gosec
+				hash := md5.Sum([]byte(*row.EMail)) //nolint: gosec
 				str := fmt.Sprintf(
 					"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
 					hex.EncodeToString(hash[:]),

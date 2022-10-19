@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"context"
 	"errors"
 	"net"
 
@@ -34,7 +35,7 @@ func NewIPExtractor(
 	}
 }
 
-func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*APIIP, error) {
+func (s *IPExtractor) Extract(ctx context.Context, ip net.IP, fields map[string]bool, role string) (*APIIP, error) {
 	result := APIIP{
 		Address: ip.String(),
 	}
@@ -59,8 +60,8 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 		if canView {
 			result.Blacklist = nil
 
-			banItem, err := s.banRepository.Get(ip)
-			if err != nil {
+			banItem, err := s.banRepository.Get(ctx, ip)
+			if err != nil && !errors.Is(err, ban.ErrBanItemNotFound) {
 				return nil, err
 			}
 
@@ -78,7 +79,7 @@ func (s *IPExtractor) Extract(ip net.IP, fields map[string]bool, role string) (*
 				}
 
 				if user != nil {
-					apiUser, err := s.userExtractor.Extract(user, map[string]bool{})
+					apiUser, err := s.userExtractor.Extract(ctx, user, map[string]bool{})
 					if err != nil {
 						return nil, err
 					}

@@ -2,12 +2,14 @@ package traffic
 
 import (
 	"context"
+	"database/sql"
 	"net"
 	"testing"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
+
 	"github.com/autowp/goautowp/config"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,10 +18,12 @@ func createMonitoringService(t *testing.T) *Monitoring {
 
 	cfg := config.LoadConfig("..")
 
-	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
+	db, err := sql.Open("postgres", cfg.PostgresDSN)
 	require.NoError(t, err)
 
-	s, err := NewMonitoring(pool)
+	goquDB := goqu.New("postgres", db)
+
+	s, err := NewMonitoring(goquDB)
 	require.NoError(t, err)
 
 	return s
@@ -42,16 +46,18 @@ func TestMonitoringGC(t *testing.T) {
 
 	s := createMonitoringService(t)
 
-	err := s.Clear()
+	ctx := context.Background()
+
+	err := s.Clear(ctx)
 	require.NoError(t, err)
 
 	err = s.Add(net.IPv4(192, 168, 0, 77), time.Now())
 	require.NoError(t, err)
 
-	affected, err := s.GC()
+	affected, err := s.GC(ctx)
 	require.NoError(t, err)
 	require.Zero(t, affected)
 
-	_, err = s.ListOfTop(10)
+	_, err = s.ListOfTop(ctx, 10)
 	require.NoError(t, err)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -35,7 +36,7 @@ type ImageStorageGetFormattedImage struct {
 }
 
 func (r *ImageStorageGetImageCommand) Execute(_ []string) error {
-	i, err := app.ImageStorageGetImage(r.ImageID)
+	i, err := app.ImageStorageGetImage(context.Background(), r.ImageID)
 	if err != nil {
 		return err
 	}
@@ -46,7 +47,7 @@ func (r *ImageStorageGetImageCommand) Execute(_ []string) error {
 }
 
 func (r *ImageStorageGetFormattedImage) Execute(_ []string) error {
-	i, err := app.ImageStorageGetFormattedImage(r.ImageID, r.Format)
+	i, err := app.ImageStorageGetFormattedImage(context.Background(), r.ImageID, r.Format)
 	if err != nil {
 		return err
 	}
@@ -80,6 +81,24 @@ func (r *ListenMonitoringAMQPCommand) Execute(_ []string) error {
 	return app.ListenMonitoringAMQP(quit)
 }
 
+type ServeGRPCCommand struct{}
+
+func (r *ServeGRPCCommand) Execute(_ []string) error {
+	err := app.MigrateAutowp()
+	if err != nil {
+		return err
+	}
+
+	err = app.MigratePostgres()
+	if err != nil {
+		return err
+	}
+
+	quit := captureOsInterrupt()
+
+	return app.ServeGRPC(quit)
+}
+
 type ServePublicCommand struct{}
 
 func (r *ServePublicCommand) Execute(_ []string) error {
@@ -88,7 +107,7 @@ func (r *ServePublicCommand) Execute(_ []string) error {
 		return err
 	}
 
-	err = app.MigrateTraffic()
+	err = app.MigratePostgres()
 	if err != nil {
 		return err
 	}
@@ -112,16 +131,16 @@ func (r *MigrateAutowpCommand) Execute(_ []string) error {
 	return app.MigrateAutowp()
 }
 
-type MigrateTrafficCommand struct{}
+type MigratePostgresCommand struct{}
 
-func (r *MigrateTrafficCommand) Execute(_ []string) error {
-	return app.MigrateTraffic()
+func (r *MigratePostgresCommand) Execute(_ []string) error {
+	return app.MigratePostgres()
 }
 
 type SchedulerHourlyCommand struct{}
 
 func (r *SchedulerHourlyCommand) Execute(_ []string) error {
-	return app.SchedulerHourly()
+	return app.SchedulerHourly(context.Background())
 }
 
 type SchedulerDailyCommand struct{}
@@ -133,13 +152,15 @@ func (r *SchedulerDailyCommand) Execute(_ []string) error {
 type SchedulerMidnightCommand struct{}
 
 func (r *SchedulerMidnightCommand) Execute(_ []string) error {
-	return app.SchedulerMidnight()
+	return app.SchedulerMidnight(context.Background())
 }
 
 type ExportUsersToKeycloakCommand struct{}
 
 func (r *ExportUsersToKeycloakCommand) Execute(_ []string) error {
-	return app.ExportUsersToKeycloak()
+	ctx := context.Background()
+
+	return app.ExportUsersToKeycloak(ctx)
 }
 
 func captureOsInterrupt() chan bool {
@@ -196,10 +217,11 @@ func mainReturnWithCode() int {
 		Autoban               AutobanCommand               `command:"autoban"`
 		ListenDfAMQP          ListenDfAMQPCommand          `command:"listen-df-amqp"`
 		ListenMonitoringAMQP  ListenMonitoringAMQPCommand  `command:"listen-monitoring-amqp"`
+		ServeGRPC             ServeGRPCCommand             `command:"serve-grpc"`
 		ServePublic           ServePublicCommand           `command:"serve-public"`
 		ServePrivate          ServePrivateCommand          `command:"serve-private"`
 		MigrateAutowp         MigrateAutowpCommand         `command:"migrate-autowp"`
-		MigrateTraffic        MigrateTrafficCommand        `command:"migrate-traffic"`
+		MigratePostgres       MigratePostgresCommand       `command:"migrate-postgres"`
 		SchedulerHourly       SchedulerHourlyCommand       `command:"scheduler-hourly"`
 		SchedulerDaily        SchedulerDailyCommand        `command:"scheduler-daily"`
 		SchedulerMidnight     SchedulerMidnightCommand     `command:"scheduler-midnight"`

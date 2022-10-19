@@ -1,6 +1,7 @@
 package traffic
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
 )
 
@@ -87,7 +87,7 @@ type APITrafficWhitelistPostRequestBody struct {
 
 // NewTraffic constructor.
 func NewTraffic(
-	pool *pgxpool.Pool,
+	pool *goqu.Database,
 	autowpDB *goqu.Database,
 	enforcer *casbin.Enforcer,
 	ban *ban.Repository,
@@ -119,14 +119,14 @@ func NewTraffic(
 	return s, nil
 }
 
-func (s *Traffic) AutoBanByProfile(profile AutobanProfile) error {
-	ips, err := s.Monitoring.ListByBanProfile(profile)
+func (s *Traffic) AutoBanByProfile(ctx context.Context, profile AutobanProfile) error {
+	ips, err := s.Monitoring.ListByBanProfile(ctx, profile)
 	if err != nil {
 		return err
 	}
 
 	for _, ip := range ips {
-		exists, err := s.Whitelist.Exists(ip)
+		exists, err := s.Whitelist.Exists(ctx, ip)
 		if err != nil {
 			return err
 		}
@@ -137,7 +137,7 @@ func (s *Traffic) AutoBanByProfile(profile AutobanProfile) error {
 
 		logrus.Infof("%s %v", profile.Reason, ip)
 
-		if err := s.Ban.Add(ip, profile.Time, banByUserID, profile.Reason); err != nil {
+		if err := s.Ban.Add(ctx, ip, profile.Time, banByUserID, profile.Reason); err != nil {
 			return err
 		}
 	}
@@ -145,9 +145,9 @@ func (s *Traffic) AutoBanByProfile(profile AutobanProfile) error {
 	return nil
 }
 
-func (s *Traffic) AutoBan() error {
+func (s *Traffic) AutoBan(ctx context.Context) error {
 	for _, profile := range AutobanProfiles {
-		if err := s.AutoBanByProfile(profile); err != nil {
+		if err := s.AutoBanByProfile(ctx, profile); err != nil {
 			return err
 		}
 	}
@@ -155,8 +155,8 @@ func (s *Traffic) AutoBan() error {
 	return nil
 }
 
-func (s *Traffic) AutoWhitelist() error {
-	items, err := s.Monitoring.ListOfTop(autowhitelistLimit)
+func (s *Traffic) AutoWhitelist(ctx context.Context) error {
+	items, err := s.Monitoring.ListOfTop(ctx, autowhitelistLimit)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func (s *Traffic) AutoWhitelist() error {
 	for _, item := range items {
 		logrus.Infof("Check IP %v", item.IP)
 
-		if err = s.AutoWhitelistIP(item.IP); err != nil {
+		if err = s.AutoWhitelistIP(ctx, item.IP); err != nil {
 			return err
 		}
 	}
@@ -172,10 +172,10 @@ func (s *Traffic) AutoWhitelist() error {
 	return nil
 }
 
-func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
+func (s *Traffic) AutoWhitelistIP(ctx context.Context, ip net.IP) error {
 	ipText := ip.String()
 
-	inWhitelist, err := s.Whitelist.Exists(ip)
+	inWhitelist, err := s.Whitelist.Exists(ctx, ip)
 	if err != nil {
 		return err
 	}
@@ -189,16 +189,16 @@ func (s *Traffic) AutoWhitelistIP(ip net.IP) error {
 	if inWhitelist {
 		logrus.Info(ipText + ": already in whitelist, skip")
 	} else {
-		if err = s.Whitelist.Add(ip, desc); err != nil {
+		if err = s.Whitelist.Add(ctx, ip, desc); err != nil {
 			return err
 		}
 	}
 
-	if err = s.Ban.Remove(ip); err != nil {
+	if err = s.Ban.Remove(ctx, ip); err != nil {
 		return err
 	}
 
-	if err = s.Monitoring.ClearIP(ip); err != nil {
+	if err = s.Monitoring.ClearIP(ctx, ip); err != nil {
 		return err
 	}
 
@@ -216,7 +216,9 @@ func (s *Traffic) SetupPrivateRouter(r *gin.Engine) {
 			return
 		}
 
-		b, err := s.Ban.Get(ip)
+		ctx := context.Background()
+
+		b, err := s.Ban.Get(ctx, ip)
 		if err != nil {
 			if errors.Is(err, ban.ErrBanItemNotFound) {
 				c.Status(http.StatusNotFound)

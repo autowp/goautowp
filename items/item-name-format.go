@@ -80,6 +80,7 @@ func (s *ItemNameFormatter) Format(item ItemNameFormatterOptions, language strin
 	return result
 }
 
+//nolint:unparam
 func (s *ItemNameFormatter) getModelYearsPrefix(
 	begin int,
 	beginFraction string,
@@ -92,8 +93,8 @@ func (s *ItemNameFormatter) getModelYearsPrefix(
 		return fmt.Sprintf("%d%s", begin, endFraction)
 	}
 
-	bms := begin / hundred // nolint: ifshort
-	ems := end / hundred   // nolint: ifshort
+	bms := begin / hundred //nolint: ifshort
+	ems := end / hundred   //nolint: ifshort
 
 	if bms == ems {
 		return fmt.Sprintf("%d%s–%02d%s", begin, beginFraction, end%hundred, endFraction)
@@ -193,6 +194,7 @@ func (s *ItemNameFormatter) renderYears(
 	return result1 + result2 + result3
 }
 
+//nolint:unparam
 func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int, language string) string {
 	currentYear := time.Now().Year()
 

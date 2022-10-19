@@ -1,10 +1,11 @@
 package goautowp
 
 import (
-	"context"
 	"database/sql"
 	"net/http"
 	"time"
+
+	"google.golang.org/grpc/reflection"
 
 	"github.com/autowp/goautowp/traffic"
 
@@ -32,55 +33,57 @@ import (
 	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
+const readHeaderTimeout = time.Second * 30
+
 // Container Container.
 type Container struct {
-	autowpDB             *sql.DB
-	banRepository        *ban.Repository
-	catalogue            *Catalogue
-	commentsRepository   *comments.Repository
-	config               config.Config
-	commentsGrpcServer   *CommentsGRPCServer
-	contactsGrpcServer   *ContactsGRPCServer
-	contactsRepository   *ContactsRepository
-	duplicateFinder      *DuplicateFinder
-	donationsGrpcServer  *DonationsGRPCServer
-	emailSender          email.Sender
-	enforcer             *casbin.Enforcer
-	events               *Events
-	feedback             *Feedback
-	forums               *Forums
-	goquDB               *goqu.Database
-	grpcServer           *GRPCServer
-	hostsManager         *hosts.Manager
-	imageStorage         *storage.Storage
-	itemOfDayRepository  *itemofday.Repository
-	itemsGrpcServer      *ItemsGRPCServer
-	itemsRepository      *items.Repository
-	keyCloak             gocloak.GoCloak
-	location             *time.Location
-	messagingGrpcServer  *MessagingGRPCServer
-	messagingRepository  *messaging.Repository
-	privateHTTPServer    *http.Server
-	privateRouter        *gin.Engine
-	publicHTTPServer     *http.Server
-	publicRouter         http.HandlerFunc
-	telegramService      *telegram.Service
-	traffic              *traffic.Traffic
-	trafficDB            *pgxpool.Pool
-	trafficGrpcServer    *TrafficGRPCServer
-	usersRepository      *users.Repository
-	usersGrpcServer      *UsersGRPCServer
-	memcached            *memcache.Client
-	auth                 *Auth
-	mapGrpcServer        *MapGRPCServer
-	picturesRepository   *pictures.Repository
-	picturesGrpcServer   *PicturesGRPCServer
-	statisticsGrpcServer *StatisticsGRPCServer
+	autowpDB               *sql.DB
+	banRepository          *ban.Repository
+	catalogue              *Catalogue
+	commentsRepository     *comments.Repository
+	config                 config.Config
+	commentsGrpcServer     *CommentsGRPCServer
+	contactsGrpcServer     *ContactsGRPCServer
+	contactsRepository     *ContactsRepository
+	duplicateFinder        *DuplicateFinder
+	donationsGrpcServer    *DonationsGRPCServer
+	emailSender            email.Sender
+	enforcer               *casbin.Enforcer
+	events                 *Events
+	feedback               *Feedback
+	forums                 *Forums
+	goquDB                 *goqu.Database
+	goquPostgresDB         *goqu.Database
+	grpcServer             *GRPCServer
+	hostsManager           *hosts.Manager
+	imageStorage           *storage.Storage
+	itemOfDayRepository    *itemofday.Repository
+	itemsGrpcServer        *ItemsGRPCServer
+	itemsRepository        *items.Repository
+	keyCloak               gocloak.GoCloak
+	location               *time.Location
+	messagingGrpcServer    *MessagingGRPCServer
+	messagingRepository    *messaging.Repository
+	privateHTTPServer      *http.Server
+	privateRouter          *gin.Engine
+	publicHTTPServer       *http.Server
+	publicRouter           http.HandlerFunc
+	grpcServerWithServices *grpc.Server
+	telegramService        *telegram.Service
+	traffic                *traffic.Traffic
+	trafficGrpcServer      *TrafficGRPCServer
+	usersRepository        *users.Repository
+	usersGrpcServer        *UsersGRPCServer
+	memcached              *memcache.Client
+	auth                   *Auth
+	mapGrpcServer          *MapGRPCServer
+	picturesRepository     *pictures.Repository
+	picturesGrpcServer     *PicturesGRPCServer
+	statisticsGrpcServer   *StatisticsGRPCServer
 }
 
 // NewContainer constructor.
@@ -110,10 +113,10 @@ func (s *Container) Close() error {
 		s.autowpDB = nil
 	}
 
-	if s.trafficDB != nil {
-		s.trafficDB.Close()
-		s.trafficDB = nil
-	}
+	/*if s.goquPostgresDB != nil {
+		s.goquPostgresDB.Close()
+		s.goquPostgresDB = nil
+	}*/
 
 	return nil
 }
@@ -176,9 +179,54 @@ func (s *Container) GoquDB() (*goqu.Database, error) {
 	return s.goquDB, nil
 }
 
+func (s *Container) GoquPostgresDB() (*goqu.Database, error) {
+	if s.goquPostgresDB != nil {
+		return s.goquPostgresDB, nil
+	}
+
+	start := time.Now()
+
+	const (
+		connectionTimeout = 60 * time.Second
+		reconnectDelay    = 100 * time.Millisecond
+	)
+
+	logrus.Info("Waiting for postgres (goqu)")
+
+	var (
+		db  *sql.DB
+		err error
+	)
+
+	for {
+		db, err = sql.Open("postgres", s.config.PostgresDSN)
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.Ping()
+		if err == nil {
+			logrus.Info("Started.")
+
+			break
+		}
+
+		if time.Since(start) > connectionTimeout {
+			return nil, err
+		}
+
+		logrus.Info(".")
+		time.Sleep(reconnectDelay)
+	}
+
+	s.goquPostgresDB = goqu.New("postgres", db)
+
+	return s.goquPostgresDB, nil
+}
+
 func (s *Container) BanRepository() (*ban.Repository, error) {
 	if s.banRepository == nil {
-		db, err := s.TrafficDB()
+		db, err := s.GoquPostgresDB()
 		if err != nil {
 			return nil, err
 		}
@@ -342,7 +390,11 @@ func (s *Container) PrivateHTTPServer() (*http.Server, error) {
 			return nil, err
 		}
 
-		s.privateHTTPServer = &http.Server{Addr: cfg.PrivateRest.Listen, Handler: router}
+		s.privateHTTPServer = &http.Server{
+			Addr:              cfg.PrivateRest.Listen,
+			Handler:           router,
+			ReadHeaderTimeout: readHeaderTimeout,
+		}
 	}
 
 	return s.privateHTTPServer, nil
@@ -353,7 +405,12 @@ func (s *Container) PrivateRouter() (*gin.Engine, error) {
 		return s.privateRouter, nil
 	}
 
-	repo, err := s.Traffic()
+	trafficRepo, err := s.Traffic()
+	if err != nil {
+		return nil, err
+	}
+
+	usersRepo, err := s.UsersRepository()
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +419,8 @@ func (s *Container) PrivateRouter() (*gin.Engine, error) {
 	r.Use(gin.Recovery())
 	r.Use(sentrygin.New(sentrygin.Options{}))
 
-	repo.SetupPrivateRouter(r)
+	trafficRepo.SetupPrivateRouter(r)
+	usersRepo.SetupPrivateRouter(r)
 
 	s.privateRouter = r
 
@@ -378,7 +436,11 @@ func (s *Container) PublicHTTPServer() (*http.Server, error) {
 			return nil, err
 		}
 
-		s.publicHTTPServer = &http.Server{Addr: cfg.PublicRest.Listen, Handler: r}
+		s.publicHTTPServer = &http.Server{
+			Addr:              cfg.PublicRest.Listen,
+			Handler:           r,
+			ReadHeaderTimeout: readHeaderTimeout,
+		}
 	}
 
 	return s.publicHTTPServer, nil
@@ -394,6 +456,28 @@ type TokenForm struct {
 func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	if s.publicRouter != nil {
 		return s.publicRouter, nil
+	}
+
+	grpcServer, err := s.GRPCServerWithServices()
+	if err != nil {
+		return nil, err
+	}
+
+	originFunc := func(origin string) bool {
+		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
+	}
+	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
+
+	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
+		wrappedGrpc.ServeHTTP(resp, req)
+	}
+
+	return s.publicRouter, nil
+}
+
+func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
+	if s.grpcServerWithServices != nil {
+		return s.grpcServerWithServices, nil
 	}
 
 	srv, err := s.GRPCServer()
@@ -478,13 +562,11 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	RegisterTrafficServer(grpcServer, trafficSrv)
 	RegisterUsersServer(grpcServer, usersSrv)
 
-	originFunc := func(origin string) bool {
-		return util.Contains(s.config.PublicRest.Cors.Origin, origin)
-	}
-	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
-	s.publicRouter = wrappedGrpc.ServeHTTP
+	reflection.Register(grpcServer)
 
-	return s.publicRouter, nil
+	s.grpcServerWithServices = grpcServer
+
+	return s.grpcServerWithServices, nil
 }
 
 func (s *Container) TelegramService() (*telegram.Service, error) {
@@ -502,7 +584,7 @@ func (s *Container) TelegramService() (*telegram.Service, error) {
 
 func (s *Container) Traffic() (*traffic.Traffic, error) {
 	if s.traffic == nil {
-		db, err := s.TrafficDB()
+		db, err := s.GoquPostgresDB()
 		if err != nil {
 			return nil, err
 		}
@@ -535,59 +617,6 @@ func (s *Container) Traffic() (*traffic.Traffic, error) {
 	return s.traffic, nil
 }
 
-func (s *Container) TrafficDB() (*pgxpool.Pool, error) {
-	if s.trafficDB != nil {
-		return s.trafficDB, nil
-	}
-
-	const (
-		connectionTimeout = 60 * time.Second
-		reconnectDelay    = 100 * time.Millisecond
-	)
-
-	logrus.Info("Waiting for postgres")
-
-	var (
-		cfg   = s.Config()
-		start = time.Now()
-		pool  *pgxpool.Pool
-		err   error
-	)
-
-	for {
-		pool, err = pgxpool.Connect(context.Background(), cfg.TrafficDSN)
-		if err != nil {
-			return nil, err
-		}
-
-		db, err := pool.Acquire(context.Background())
-		if err != nil {
-			return nil, err
-		}
-
-		err = db.Conn().Ping(context.Background())
-		db.Release()
-
-		if err == nil {
-			logrus.Info("Started.")
-
-			break
-		}
-
-		if time.Since(start) > connectionTimeout {
-			return nil, err
-		}
-
-		logrus.Error(err)
-		logrus.Info(".")
-		time.Sleep(reconnectDelay)
-	}
-
-	s.trafficDB = pool
-
-	return pool, nil
-}
-
 func (s *Container) UserExtractor() (*users.UserExtractor, error) {
 	is, err := s.ImageStorage()
 	if err != nil {
@@ -604,10 +633,16 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 			return nil, err
 		}
 
+		postgresDB, err := s.GoquPostgresDB()
+		if err != nil {
+			return nil, err
+		}
+
 		cfg := s.Config()
 
 		s.usersRepository = users.NewRepository(
 			db,
+			postgresDB,
 			cfg.UsersSalt,
 			cfg.Languages,
 			s.Keycloak(),

@@ -2,11 +2,13 @@ package traffic
 
 import (
 	"context"
+	"database/sql"
 	"net"
 	"testing"
 
+	"github.com/doug-martin/goqu/v9"
+
 	"github.com/autowp/goautowp/config"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,10 +17,12 @@ func createWhitelistService(t *testing.T) *Whitelist {
 
 	cfg := config.LoadConfig("..")
 
-	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
+	db, err := sql.Open("postgres", cfg.PostgresDSN)
 	require.NoError(t, err)
 
-	s, err := NewWhitelist(pool)
+	goquDB := goqu.New("postgres", db)
+
+	s, err := NewWhitelist(goquDB)
 	require.NoError(t, err)
 
 	return s
@@ -51,12 +55,14 @@ func TestContains(t *testing.T) {
 
 	s := createWhitelistService(t)
 
+	ctx := context.Background()
+
 	ip := net.IPv4(66, 249, 73, 139)
 
-	err := s.Add(ip, "test")
+	err := s.Add(ctx, ip, "test")
 	require.NoError(t, err)
 
-	exists, err := s.Exists(ip)
+	exists, err := s.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 }

@@ -56,7 +56,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 		return nil, status.Error(codes.NotFound, "NotFound")
 	}
 
-	err = s.contactsRepository.create(userID, in.UserId)
+	err = s.contactsRepository.create(ctx, userID, in.UserId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -74,7 +74,7 @@ func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContac
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.contactsRepository.delete(userID, in.UserId)
+	err = s.contactsRepository.delete(ctx, userID, in.UserId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -96,7 +96,7 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 		return nil, status.Error(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	exists, err := s.contactsRepository.isExists(userID, in.UserId)
+	exists, err := s.contactsRepository.isExists(ctx, userID, in.UserId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -139,7 +139,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsReq
 	items := make([]*Contact, len(userRows))
 
 	for idx := range userRows {
-		user, err := s.userExtractor.Extract(&userRows[idx], m)
+		user, err := s.userExtractor.Extract(ctx, &userRows[idx], m)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

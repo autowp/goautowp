@@ -76,5 +76,5 @@ USER appuser:appuser
 
 COPY --from=builder /app /app
 COPY migrations /migrations
-COPY traffic-migrations /traffic-migrations
+COPY postgres-migrations /postgres-migrations
 COPY defaults.yaml /defaults.yaml

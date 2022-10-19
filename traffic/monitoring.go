@@ -2,14 +2,15 @@ package traffic
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net"
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/doug-martin/goqu/v9"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/autowp/goautowp/util"
@@ -17,7 +18,7 @@ import (
 
 // Monitoring Main Object.
 type Monitoring struct {
-	db *pgxpool.Pool
+	db *goqu.Database
 }
 
 // MonitoringInputMessage InputMessage.
@@ -33,7 +34,7 @@ type ListOfTopItem struct {
 }
 
 // NewMonitoring constructor.
-func NewMonitoring(db *pgxpool.Pool) (*Monitoring, error) {
+func NewMonitoring(db *goqu.Database) (*Monitoring, error) {
 	s := &Monitoring{
 		db: db,
 	}
@@ -117,7 +118,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 
 // Add item to Monitoring.
 func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
-	_, err := s.db.Exec(context.Background(), `
+	_, err := s.db.ExecContext(context.Background(), `
 		INSERT INTO ip_monitoring (day_date, hour, tenminute, minute, ip, count)
 		VALUES (
 			$1::timestamptz,
@@ -134,35 +135,38 @@ func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
 }
 
 // GC Garbage Collect.
-func (s *Monitoring) GC() (int64, error) {
-	ct, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE day_date < CURRENT_DATE")
+func (s *Monitoring) GC(ctx context.Context) (int64, error) {
+	ct, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring WHERE day_date < CURRENT_DATE")
 	if err != nil {
 		return 0, err
 	}
 
-	affected := ct.RowsAffected()
+	affected, err := ct.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
 
 	return affected, nil
 }
 
 // Clear removes all collected data.
-func (s *Monitoring) Clear() error {
-	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring")
+func (s *Monitoring) Clear(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring")
 
 	return err
 }
 
 // ClearIP removes all data collected for IP.
-func (s *Monitoring) ClearIP(ip net.IP) error {
+func (s *Monitoring) ClearIP(ctx context.Context, ip net.IP) error {
 	logrus.Info(ip.String() + ": clear monitoring")
-	_, err := s.db.Exec(context.Background(), "DELETE FROM ip_monitoring WHERE ip = $1", ip.String())
+	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring WHERE ip = $1", ip.String())
 
 	return err
 }
 
 // ListOfTop ListOfTop.
-func (s *Monitoring) ListOfTop(limit int) ([]ListOfTopItem, error) {
-	rows, err := s.db.Query(context.Background(), `
+func (s *Monitoring) ListOfTop(ctx context.Context, limit int) ([]ListOfTopItem, error) {
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT ip, SUM(count) AS c
 		FROM ip_monitoring
 		WHERE day_date = CURRENT_DATE
@@ -173,7 +177,7 @@ func (s *Monitoring) ListOfTop(limit int) ([]ListOfTopItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer util.Close(rows)
 
 	result := []ListOfTopItem{}
 
@@ -190,10 +194,10 @@ func (s *Monitoring) ListOfTop(limit int) ([]ListOfTopItem, error) {
 }
 
 // ListByBanProfile ListByBanProfile.
-func (s *Monitoring) ListByBanProfile(profile AutobanProfile) ([]net.IP, error) {
+func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfile) ([]net.IP, error) {
 	group := append([]string{"ip"}, profile.Group...)
 
-	rows, err := s.db.Query(context.Background(), `
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT ip, SUM(count) AS c
 		FROM ip_monitoring
 		WHERE day_date = CURRENT_DATE
@@ -204,7 +208,7 @@ func (s *Monitoring) ListByBanProfile(profile AutobanProfile) ([]net.IP, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer util.Close(rows)
 
 	result := []net.IP{}
 
@@ -228,14 +232,14 @@ func (s *Monitoring) ListByBanProfile(profile AutobanProfile) ([]net.IP, error) 
 func (s *Monitoring) ExistsIP(ip net.IP) (bool, error) {
 	var exists bool
 
-	err := s.db.QueryRow(context.Background(), `
+	err := s.db.QueryRowContext(context.Background(), `
 		SELECT true
 		FROM ip_monitoring
 		WHERE ip = $1
 		LIMIT 1
 	`, ip.String()).Scan(&exists)
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			return false, err
 		}
 

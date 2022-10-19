@@ -141,7 +141,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 		return nil, errors.New("no endpoints provided")
 	}
 
-	endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))] // nolint: gosec
+	endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))] //nolint: gosec
 
 	parsedURL, err := url.Parse(endpoint)
 	if err != nil {
@@ -224,7 +224,7 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 		m[e] = true
 	}
 
-	result, err := s.ipExtractor.Extract(ip, m, role)
+	result, err := s.ipExtractor.Extract(ctx, ip, m, role)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -268,7 +268,7 @@ func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty)
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	subscriptionsCount, err := s.forums.GetUserSummary(userID)
+	subscriptionsCount, err := s.forums.GetUserSummary(ctx, userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

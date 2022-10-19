@@ -6,8 +6,12 @@ import (
 	"errors"
 	"math"
 	"net"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/Nerzal/gocloak/v11"
@@ -19,6 +23,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	Decimal   = 10
+	BitSize64 = 64
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -92,15 +101,22 @@ type CreateUserOptions struct {
 // Repository Main Object.
 type Repository struct {
 	autowpDB       *goqu.Database
+	db             *goqu.Database
 	usersSalt      string
 	languages      map[string]config.LanguageConfig
 	keycloak       gocloak.GoCloak
 	keycloakConfig config.KeycloakConfig
 }
 
+// UserPreferences object.
+type UserPreferences struct {
+	DisableCommentsNotifications bool `db:"disable_comments_notifications" json:"disable_comments_notifications"`
+}
+
 // NewRepository constructor.
 func NewRepository(
 	autowpDB *goqu.Database,
+	db *goqu.Database,
 	usersSalt string,
 	languages map[string]config.LanguageConfig,
 	keyCloak gocloak.GoCloak,
@@ -108,6 +124,7 @@ func NewRepository(
 ) *Repository {
 	return &Repository{
 		autowpDB:       autowpDB,
+		db:             db,
 		usersSalt:      usersSalt,
 		languages:      languages,
 		keycloak:       keyCloak,
@@ -210,39 +227,44 @@ func (s *Repository) DecVotes(ctx context.Context, userID int64) error {
 	return err
 }
 
-func (s *Repository) AfterUserCreated(userID int64) error {
-	err := s.RefreshUserConflicts(userID)
+func (s *Repository) AfterUserCreated(ctx context.Context, userID int64) error {
+	err := s.RefreshUserConflicts(ctx, userID)
 	if err != nil {
 		return err
 	}
 
-	err = s.UpdateUserVoteLimit(userID)
+	err = s.UpdateUserVoteLimit(ctx, userID)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.autowpDB.Exec("UPDATE users SET votes_left = votes_per_day WHERE id = ?", userID)
+	_, err = s.autowpDB.ExecContext(ctx, "UPDATE users SET votes_left = votes_per_day WHERE id = ?", userID)
 
 	return err
 }
 
-func (s *Repository) UpdateUserVoteLimit(userID int64) error {
+func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) error {
 	var age int
 
-	err := s.autowpDB.QueryRow("SELECT TIMESTAMPDIFF(YEAR, reg_date, NOW()) FROM users WHERE id = ?", userID).Scan(&age)
+	err := s.autowpDB.QueryRowContext(
+		ctx,
+		"SELECT TIMESTAMPDIFF(YEAR, reg_date, NOW()) FROM users WHERE id = ?",
+		userID,
+	).Scan(&age)
 	if err != nil {
 		return err
 	}
 
 	def := 10
 
-	avgVote, err := s.UserAvgVote(userID)
+	avgVote, err := s.UserAvgVote(ctx, userID)
 	if err != nil {
 		return err
 	}
 
 	var picturesExists int
-	err = s.autowpDB.QueryRow(
+	err = s.autowpDB.QueryRowContext(
+		ctx,
 		"SELECT count(1) FROM pictures WHERE owner_id = ? AND status = ? LIMIT 1",
 		userID,
 		"accepted",
@@ -257,7 +279,7 @@ func (s *Repository) UpdateUserVoteLimit(userID int64) error {
 		value = 0
 	}
 
-	_, err = s.autowpDB.Exec("UPDATE users SET votes_per_day = ? WHERE id = ?", value, userID)
+	_, err = s.autowpDB.ExecContext(ctx, "UPDATE users SET votes_per_day = ? WHERE id = ?", value, userID)
 	if err != nil {
 		return err
 	}
@@ -265,9 +287,10 @@ func (s *Repository) UpdateUserVoteLimit(userID int64) error {
 	return nil
 }
 
-func (s *Repository) UserAvgVote(userID int64) (float64, error) {
+func (s *Repository) UserAvgVote(ctx context.Context, userID int64) (float64, error) {
 	var result float64
-	err := s.autowpDB.QueryRow(
+	err := s.autowpDB.QueryRowContext(
+		ctx,
 		"SELECT IFNULL(avg(vote), 0) FROM comment_message WHERE author_id = ? AND vote <> 0",
 		userID,
 	).Scan(&result)
@@ -275,8 +298,8 @@ func (s *Repository) UserAvgVote(userID int64) (float64, error) {
 	return result, err
 }
 
-func (s *Repository) RefreshUserConflicts(userID int64) error {
-	_, err := s.autowpDB.Exec(`
+func (s *Repository) RefreshUserConflicts(ctx context.Context, userID int64) error {
+	_, err := s.autowpDB.ExecContext(ctx, `
 		UPDATE users 
 		SET users.specs_weight = (1.5 * ((1 + IFNULL((
 		    SELECT sum(weight) FROM attrs_user_values WHERE user_id = users.id AND weight > 0
@@ -368,7 +391,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 			return 0, "", err
 		}
 
-		err = s.AfterUserCreated(userID)
+		err = s.AfterUserCreated(ctx, userID)
 		if err != nil {
 			return 0, "", err
 		}
@@ -394,7 +417,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 	return row.ID, row.Role, nil
 }
 
-func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) {
+func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID int64) (string, error) {
 	logrus.Debugf("Ensure user `%d` exported to Keycloak", userID)
 
 	var (
@@ -407,7 +430,8 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 	)
 
 	err := s.autowpDB.
-		QueryRow(
+		QueryRowContext(
+			ctx,
 			"SELECT deleted, e_mail, email_to_check, login, name, IFNULL(BIN_TO_UUID(uuid), '') FROM users WHERE id = ?",
 			userID,
 		).Scan(&deleted, &userEmail, &emailToCheck, &login, &name, &userGUID)
@@ -418,8 +442,6 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 	if len(userGUID) > 0 {
 		return userGUID, nil
 	}
-
-	ctx := context.Background()
 
 	token, err := s.keycloak.LoginClient(
 		ctx,
@@ -461,7 +483,7 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 		return "", err
 	}
 
-	_, err = s.autowpDB.Exec("UPDATE users SET uuid = UUID_TO_BIN(?) WHERE user_id = ?", userGUID, userID)
+	_, err = s.autowpDB.ExecContext(ctx, "UPDATE users SET uuid = UUID_TO_BIN(?) WHERE user_id = ?", userGUID, userID)
 	if err != nil {
 		return "", err
 	}
@@ -469,9 +491,9 @@ func (s *Repository) ensureUserExportedToKeycloak(userID int64) (string, error) 
 	return userGUID, err
 }
 
-func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) {
+func (s *Repository) PasswordMatch(ctx context.Context, userID int64, password string) (bool, error) {
 	var exists bool
-	err := s.autowpDB.QueryRow(`
+	err := s.autowpDB.QueryRowContext(ctx, `
 		SELECT 1 FROM users 
 		WHERE password = MD5(CONCAT(?, ?)) AND id = ? AND NOT deleted
 	`, s.usersSalt, password, userID).Scan(&exists)
@@ -487,13 +509,11 @@ func (s *Repository) PasswordMatch(userID int64, password string) (bool, error) 
 	return true, nil
 }
 
-func (s *Repository) DeleteUser(userID int64) (bool, error) {
-	userGUID, err := s.ensureUserExportedToKeycloak(userID)
+func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error) {
+	userGUID, err := s.ensureUserExportedToKeycloak(ctx, userID)
 	if err != nil {
 		return false, err
 	}
-
-	ctx := context.Background()
 
 	token, err := s.keycloak.LoginClient(
 		ctx,
@@ -516,7 +536,7 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 	}
 
 	var val int
-	err = s.autowpDB.QueryRow("SELECT 1 FROM users WHERE id = ? AND NOT deleted", userID).Scan(&val)
+	err = s.autowpDB.QueryRowContext(ctx, "SELECT 1 FROM users WHERE id = ? AND NOT deleted", userID).Scan(&val)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
@@ -528,7 +548,7 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 
 	// $oldImageId = $row['img'];
 
-	_, err = s.autowpDB.Exec(`
+	_, err = s.autowpDB.ExecContext(ctx, `
 		UPDATE users SET deleted = 1 WHERE id = ?
 	`, userID)
 	// 'img'     => null,
@@ -540,13 +560,13 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 		$this->imageStorage->removeImage($oldImageId);
 	}*/
 
-	_, err = s.autowpDB.Exec("DELETE FROM telegram_chat WHERE user_id = ?", userID)
+	_, err = s.autowpDB.ExecContext(ctx, "DELETE FROM telegram_chat WHERE user_id = ?", userID)
 	if err != nil {
 		return false, err
 	}
 
 	// delete linked profiles
-	_, err = s.autowpDB.Exec(`
+	_, err = s.autowpDB.ExecContext(ctx, `
 		DELETE FROM user_account WHERE user_id = ? AND service_id != ?
 	`, userID, KeycloakExternalAccountID)
 	if err != nil {
@@ -554,7 +574,7 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 	}
 
 	// unsubscribe from items
-	_, err = s.autowpDB.Exec(`
+	_, err = s.autowpDB.ExecContext(ctx, `
 		DELETE FROM user_item_subscribe WHERE user_id = ?
 	`, userID)
 	if err != nil {
@@ -564,16 +584,18 @@ func (s *Repository) DeleteUser(userID int64) (bool, error) {
 	return true, nil
 }
 
-func (s *Repository) RestoreVotes() error {
-	_, err := s.autowpDB.Exec(
+func (s *Repository) RestoreVotes(ctx context.Context) error {
+	_, err := s.autowpDB.ExecContext(
+		ctx,
 		"UPDATE users SET votes_left = votes_per_day WHERE votes_left < votes_per_day AND not deleted",
 	)
 
 	return err
 }
 
-func (s *Repository) UpdateVotesLimits() (int, error) {
-	rows, err := s.autowpDB.Query(
+func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
+	rows, err := s.autowpDB.QueryContext(
+		ctx,
 		"SELECT id FROM users WHERE NOT deleted AND last_online > DATE_SUB(NOW(), INTERVAL 3 MONTH)",
 	)
 	if err != nil {
@@ -591,7 +613,7 @@ func (s *Repository) UpdateVotesLimits() (int, error) {
 			return 0, err
 		}
 
-		err = s.UpdateUserVoteLimit(userID)
+		err = s.UpdateUserVoteLimit(ctx, userID)
 
 		if err != nil {
 			return 0, err
@@ -640,8 +662,8 @@ func (s *Repository) UpdateSpecsVolumes() error {
 	return nil
 }
 
-func (s *Repository) ExportUsersToKeycloak() error {
-	rows, err := s.autowpDB.Query(`
+func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {
+	rows, err := s.autowpDB.QueryContext(ctx, `
 		SELECT id 
 		FROM users 
 		WHERE LENGTH(login) > 0 OR LENGTH(e_mail) > 0 OR LENGTH(email_to_check) > 0 
@@ -660,7 +682,7 @@ func (s *Repository) ExportUsersToKeycloak() error {
 			return err
 		}
 
-		guid, err := s.ensureUserExportedToKeycloak(userID)
+		guid, err := s.ensureUserExportedToKeycloak(ctx, userID)
 		if err != nil {
 			logrus.Debugf("Error exporting user %d", userID)
 
@@ -671,6 +693,67 @@ func (s *Repository) ExportUsersToKeycloak() error {
 	}
 
 	return nil
+}
+
+func (s *Repository) SetDisableUserCommentsNotifications(
+	ctx context.Context,
+	userID int64,
+	toUserID int64,
+	disabled bool,
+) error {
+	query := s.db.Insert("user_user_preferences").
+		Rows(goqu.Record{
+			"user_id":                        userID,
+			"to_user_id":                     toUserID,
+			"disable_comments_notifications": disabled,
+		}).
+		OnConflict(goqu.DoUpdate("user_id, to_user_id", goqu.Record{
+			"disable_comments_notifications": goqu.L("EXCLUDED.disable_comments_notifications"),
+		}))
+
+	_, err := query.Executor().ExecContext(ctx)
+
+	return err
+}
+
+func (s *Repository) UserPreferences(ctx context.Context, userID int64, toUserID int64) (*UserPreferences, error) {
+	var row UserPreferences
+
+	_, err := s.db.Select("disable_comments_notifications").
+		From("user_user_preferences").
+		Where(
+			goqu.I("user_id").Eq(userID),
+			goqu.I("to_user_id").Eq(toUserID),
+		).ScanStructContext(ctx, &row)
+
+	return &row, err
+}
+
+func (s *Repository) SetupPrivateRouter(r *gin.Engine) {
+	r.GET("/user-user-preferences/:user_id/:to_user_id", func(c *gin.Context) {
+		userID, err := strconv.ParseInt(c.Param("user_id"), Decimal, BitSize64)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid user_id")
+
+			return
+		}
+
+		toUserID, err := strconv.ParseInt(c.Param("to_user_id"), Decimal, BitSize64)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid to_user_id")
+
+			return
+		}
+
+		prefs, err := s.UserPreferences(c, userID, toUserID)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "InternalServerError")
+
+			return
+		}
+
+		c.JSON(http.StatusOK, prefs)
+	})
 }
 
 func fullName(firstName, lastName, username string) string {

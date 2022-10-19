@@ -313,7 +313,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 		format, dateExpr             string
 	)
 
-	switch in.GetPeriod() { // nolint: exhaustive
+	switch in.GetPeriod() { //nolint: exhaustive
 	case PulseRequest_YEAR:
 		from = time.Now().AddDate(-1, 0, 0)
 		from = time.Date(from.Year(), from.Month(), 1, 0, 0, 0, 0, from.Location())

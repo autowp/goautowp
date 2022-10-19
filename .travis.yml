@@ -11,7 +11,7 @@ services:
   - postgresql
 
 go:
-  - "1.17"
+  - "1.19"
 
 addons:
   sonarcloud:
@@ -55,7 +55,7 @@ script:
 
   - source test.env
   - go test -run TestAutowpMigrations || travis_terminate 1;
-  - go test -run TestTrafficMigrations || travis_terminate 1;
+  - go test -run TestPostgresMigrations || travis_terminate 1;
   - docker exec -it goautowp_mysql_test sh -c "mysql -uroot --host=127.0.0.1 --port=3306 -ppassword autowp < /dump.sql" || travis_terminate 1;
   - go test -v -race -coverprofile=cov.out || travis_terminate 1;
   - sonar-scanner -Dsonar.login=$SONARCLOUD_TOKEN || true;

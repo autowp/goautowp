@@ -1,4 +1,6 @@
 gin-mode: "debug"
+grpc:
+  listen: ":8080"
 public-rest:
   listen: ":8080"
 sentry:
@@ -28,12 +30,12 @@ file_storage:
 
 rabbitmq: amqp://guest:guest@127.0.0.1:5672/
 monitoring_queue: input
-traffic-dsn: postgres://traffic:password@127.0.0.1:5432/traffic?sslmode=disable
+postgres-dsn: postgres://traffic:password@127.0.0.1:5432/traffic?sslmode=disable
 private-rest:
   listen: ":8080"
-traffic-migrations:
+postgres-migrations:
   dsn: postgres://traffic:password@127.0.0.1/traffic?sslmode=disable
-  dir: ./traffic-migrations
+  dir: ./postgres-migrations
 recaptcha:
   public-key: public
   private-key: private

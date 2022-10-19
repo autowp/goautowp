@@ -56,60 +56,60 @@ func NewRepository(db *goqu.Database, telegramService *telegram.Service) *Reposi
 	}
 }
 
-func (s *Repository) GetUserNewMessagesCount(userID int64) (int32, error) {
+func (s *Repository) GetUserNewMessagesCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SQLSelect: s.getReceivedSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
 
-	return paginator.GetTotalItemCount()
+	return paginator.GetTotalItemCount(ctx)
 }
 
-func (s *Repository) GetInboxCount(userID int64) (int32, error) {
+func (s *Repository) GetInboxCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SQLSelect: s.getInboxSelect(userID),
 	}
 
-	return paginator.GetTotalItemCount()
+	return paginator.GetTotalItemCount(ctx)
 }
 
-func (s *Repository) GetInboxNewCount(userID int64) (int32, error) {
+func (s *Repository) GetInboxNewCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SQLSelect: s.getInboxSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
 
-	return paginator.GetTotalItemCount()
+	return paginator.GetTotalItemCount(ctx)
 }
 
-func (s *Repository) GetSentCount(userID int64) (int32, error) {
+func (s *Repository) GetSentCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SQLSelect: s.getSentSelect(userID),
 	}
 
-	return paginator.GetTotalItemCount()
+	return paginator.GetTotalItemCount(ctx)
 }
 
-func (s *Repository) GetSystemCount(userID int64) (int32, error) {
+func (s *Repository) GetSystemCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SQLSelect: s.getSystemSelect(userID),
 	}
 
-	return paginator.GetTotalItemCount()
+	return paginator.GetTotalItemCount(ctx)
 }
 
-func (s *Repository) GetSystemNewCount(userID int64) (int32, error) {
+func (s *Repository) GetSystemNewCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
 		SQLSelect: s.getSystemSelect(userID).Where(goqu.I("readen").IsNotTrue()),
 	}
 
-	return paginator.GetTotalItemCount()
+	return paginator.GetTotalItemCount(ctx)
 }
 
-func (s *Repository) GetDialogCount(userID int64, withUserID int64) (int32, error) {
+func (s *Repository) GetDialogCount(ctx context.Context, userID int64, withUserID int64) (int32, error) {
 	paginator := util.Paginator{
 		SQLSelect: s.getDialogSelect(userID, withUserID),
 	}
 
-	return paginator.GetTotalItemCount()
+	return paginator.GetTotalItemCount(ctx)
 }
 
 func (s *Repository) DeleteMessage(ctx context.Context, userID int64, messageID int64) error {
@@ -202,20 +202,20 @@ func (s *Repository) markReadenRows(rows []messageRow, userID int64) error {
 	return s.markReaden(ids)
 }
 
-func (s *Repository) GetInbox(userID int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetInbox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
 		SQLSelect:         s.getInboxSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
 
-	ds, err := paginator.GetCurrentItems()
+	ds, err := paginator.GetCurrentItems(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var msgs []messageRow
-	err = ds.ScanStructs(&msgs)
+	err = ds.ScanStructsContext(ctx, &msgs)
 
 	if err != nil {
 		return nil, nil, err
@@ -226,12 +226,12 @@ func (s *Repository) GetInbox(userID int64, page int32) ([]Message, *util.Pages,
 		return nil, nil, err
 	}
 
-	pages, err := paginator.GetPages()
+	pages, err := paginator.GetPages(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(userID, msgs, Options{AllMessagesLink: true})
+	list, err := s.prepareList(ctx, userID, msgs, Options{AllMessagesLink: true})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -239,31 +239,31 @@ func (s *Repository) GetInbox(userID int64, page int32) ([]Message, *util.Pages,
 	return list, pages, nil
 }
 
-func (s *Repository) GetSentbox(userID int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetSentbox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
 		SQLSelect:         s.getSentSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
 
-	ds, err := paginator.GetCurrentItems()
+	ds, err := paginator.GetCurrentItems(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var msgs []messageRow
-	err = ds.ScanStructs(&msgs)
+	err = ds.ScanStructsContext(ctx, &msgs)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	pages, err := paginator.GetPages()
+	pages, err := paginator.GetPages(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(userID, msgs, Options{AllMessagesLink: true})
+	list, err := s.prepareList(ctx, userID, msgs, Options{AllMessagesLink: true})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -271,20 +271,20 @@ func (s *Repository) GetSentbox(userID int64, page int32) ([]Message, *util.Page
 	return list, pages, nil
 }
 
-func (s *Repository) GetSystembox(userID int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetSystembox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
 		SQLSelect:         s.getSystemSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
 
-	ds, err := paginator.GetCurrentItems()
+	ds, err := paginator.GetCurrentItems(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var msgs []messageRow
-	err = ds.ScanStructs(&msgs)
+	err = ds.ScanStructsContext(ctx, &msgs)
 
 	if err != nil {
 		return nil, nil, err
@@ -295,12 +295,12 @@ func (s *Repository) GetSystembox(userID int64, page int32) ([]Message, *util.Pa
 		return nil, nil, err
 	}
 
-	pages, err := paginator.GetPages()
+	pages, err := paginator.GetPages(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(userID, msgs, Options{AllMessagesLink: true})
+	list, err := s.prepareList(ctx, userID, msgs, Options{AllMessagesLink: true})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -308,20 +308,25 @@ func (s *Repository) GetSystembox(userID int64, page int32) ([]Message, *util.Pa
 	return list, pages, nil
 }
 
-func (s *Repository) GetDialogbox(userID int64, withUserID int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetDialogbox(
+	ctx context.Context,
+	userID int64,
+	withUserID int64,
+	page int32,
+) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
 		SQLSelect:         s.getDialogSelect(userID, withUserID),
 		ItemCountPerPage:  MessagesPerPage,
 		CurrentPageNumber: page,
 	}
 
-	ds, err := paginator.GetCurrentItems()
+	ds, err := paginator.GetCurrentItems(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var msgs []messageRow
-	err = ds.ScanStructs(&msgs)
+	err = ds.ScanStructsContext(ctx, &msgs)
 
 	if err != nil {
 		return nil, nil, err
@@ -332,12 +337,12 @@ func (s *Repository) GetDialogbox(userID int64, withUserID int64, page int32) ([
 		return nil, nil, err
 	}
 
-	pages, err := paginator.GetPages()
+	pages, err := paginator.GetPages(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(userID, msgs, Options{AllMessagesLink: false})
+	list, err := s.prepareList(ctx, userID, msgs, Options{AllMessagesLink: false})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -390,7 +395,12 @@ func (s *Repository) getDialogSelect(userID int64, withUserID int64) *goqu.Selec
 		Order(goqu.I("add_datetime").Desc())
 }
 
-func (s *Repository) prepareList(userID int64, rows []messageRow, options Options) ([]Message, error) {
+func (s *Repository) prepareList(
+	ctx context.Context,
+	userID int64,
+	rows []messageRow,
+	options Options,
+) ([]Message, error) {
 	var err error
 
 	cache := make(map[int64]int32)
@@ -414,7 +424,7 @@ func (s *Repository) prepareList(userID int64, rows []messageRow, options Option
 			}
 
 			if dialogCount, ok = cache[dialogWith]; !ok {
-				dialogCount, err = s.GetDialogCount(userID, dialogWith)
+				dialogCount, err = s.GetDialogCount(ctx, userID, dialogWith)
 				if err != nil {
 					return messages, err
 				}

@@ -35,7 +35,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	rand.Seed(time.Now().UnixNano())
-	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" // nolint: gosec
+	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
 
 	name := "ivan"
 	lastName := "ivanov"
@@ -84,7 +84,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
-	imageID, err := imageStorage.AddImageFromFile(TestImageFile, "user", storage.GenerateOptions{})
+	imageID, err := imageStorage.AddImageFromFile(ctx, TestImageFile, "user", storage.GenerateOptions{})
 	require.NoError(t, err)
 	_, err = db.Exec("UPDATE users SET img = ? WHERE id = ?", imageID, me.Id)
 	require.NoError(t, err)
@@ -123,7 +123,7 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	rand.Seed(time.Now().UnixNano())
-	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" // nolint: gosec
+	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
 
 	name := "ivan"
 	password := "password"
@@ -167,4 +167,69 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
 	require.Equal(t, name, user.Name)
+}
+
+func TestSetDisabledUserCommentsNotifications(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	client := NewUsersClient(conn)
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	// tester
+	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	require.NoError(t, err)
+	require.NotNil(t, testerToken)
+
+	// tester (me)
+	tester, err := client.Me(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+testerToken.AccessToken),
+		&APIMeRequest{},
+	)
+	require.NoError(t, err)
+
+	// disable
+	_, err = client.DisableUserCommentsNotifications(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIUserPreferencesRequest{UserId: tester.Id},
+	)
+	require.NoError(t, err)
+
+	res1, err := client.GetUserPreferences(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIUserPreferencesRequest{UserId: tester.Id},
+	)
+	require.NoError(t, err)
+	require.True(t, res1.DisableCommentsNotifications)
+
+	// enable
+	_, err = client.EnableUserCommentsNotifications(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIUserPreferencesRequest{UserId: tester.Id},
+	)
+	require.NoError(t, err)
+
+	res2, err := client.GetUserPreferences(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIUserPreferencesRequest{UserId: tester.Id},
+	)
+	require.NoError(t, err)
+	require.False(t, res2.DisableCommentsNotifications)
 }

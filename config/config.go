@@ -109,32 +109,35 @@ type AboutConfig struct {
 
 // Config Application config definition.
 type Config struct {
-	GinMode           string                    `yaml:"gin-mode"            mapstructure:"gin-mode"`
-	PublicRest        RestConfig                `yaml:"public-rest"         mapstructure:"public-rest"`
-	DuplicateFinder   DuplicateFinderConfig     `yaml:"duplicate_finder"    mapstructure:"duplicate_finder"`
-	AutowpDSN         string                    `yaml:"autowp-dsn"          mapstructure:"autowp-dsn"`
-	AutowpMigrations  MigrationsConfig          `yaml:"autowp-migrations"   mapstructure:"autowp-migrations"`
-	Sentry            SentryConfig              `yaml:"sentry"              mapstructure:"sentry"`
-	FileStorage       FileStorageConfig         `yaml:"file_storage"        mapstructure:"file_storage"`
-	RabbitMQ          string                    `yaml:"rabbitmq"            mapstructure:"rabbitmq"`
-	MonitoringQueue   string                    `yaml:"monitoring_queue"    mapstructure:"monitoring_queue"`
-	PrivateRest       RestConfig                `yaml:"private-rest"        mapstructure:"private-rest"`
-	Telegram          TelegramConfig            `yaml:"telegram"            mapstructure:"telegram"`
-	TrafficDSN        string                    `yaml:"traffic-dsn"         mapstructure:"traffic-dsn"`
-	TrafficMigrations MigrationsConfig          `yaml:"traffic-migrations"  mapstructure:"traffic-migrations"`
-	Recaptcha         RecaptchaConfig           `yaml:"recaptcha"           mapstructure:"recaptcha"`
-	MockEmailSender   bool                      `yaml:"mock-email-sender"   mapstructure:"mock-email-sender"`
-	SMTP              SMTPConfig                `yaml:"smtp"                mapstructure:"smtp"`
-	Feedback          FeedbackConfig            `yaml:"feedback"            mapstructure:"feedback"`
-	Keycloak          KeycloakConfig            `yaml:"keycloak"            mapstructure:"keycloak"`
-	UsersSalt         string                    `yaml:"users-salt"          mapstructure:"users-salt"`
-	EmailSalt         string                    `yaml:"email-salt"          mapstructure:"email-salt"`
-	Languages         map[string]LanguageConfig `yaml:"languages"           mapstructure:"languages"`
-	Captcha           bool                      `yaml:"captcha"             mapstructure:"captcha"`
-	ImageStorage      ImageStorageConfig        `yaml:"image-storage"       mapstructure:"image-storage"`
-	Memcached         []string                  `yaml:"memcached"           mapstructure:"memcached"`
-	DonationsVodPrice int32                     `yaml:"donations-vod-price" mapstructure:"donations-vod-price"`
-	About             AboutConfig               `yaml:"about"               mapstructure:"about"`
+	GinMode string `yaml:"gin-mode"            mapstructure:"gin-mode"`
+	GRPC    struct {
+		Listen string `mapstructure:"listen"`
+	} `yaml:"grpc"            mapstructure:"grpc"`
+	PublicRest         RestConfig                `yaml:"public-rest"         mapstructure:"public-rest"`
+	DuplicateFinder    DuplicateFinderConfig     `yaml:"duplicate_finder"    mapstructure:"duplicate_finder"`
+	AutowpDSN          string                    `yaml:"autowp-dsn"          mapstructure:"autowp-dsn"`
+	AutowpMigrations   MigrationsConfig          `yaml:"autowp-migrations"   mapstructure:"autowp-migrations"`
+	Sentry             SentryConfig              `yaml:"sentry"              mapstructure:"sentry"`
+	FileStorage        FileStorageConfig         `yaml:"file_storage"        mapstructure:"file_storage"`
+	RabbitMQ           string                    `yaml:"rabbitmq"            mapstructure:"rabbitmq"`
+	MonitoringQueue    string                    `yaml:"monitoring_queue"    mapstructure:"monitoring_queue"`
+	PrivateRest        RestConfig                `yaml:"private-rest"        mapstructure:"private-rest"`
+	Telegram           TelegramConfig            `yaml:"telegram"            mapstructure:"telegram"`
+	PostgresDSN        string                    `yaml:"postgres-dsn"        mapstructure:"postgres-dsn"`
+	PostgresMigrations MigrationsConfig          `yaml:"postgres-migrations" mapstructure:"postgres-migrations"`
+	Recaptcha          RecaptchaConfig           `yaml:"recaptcha"           mapstructure:"recaptcha"`
+	MockEmailSender    bool                      `yaml:"mock-email-sender"   mapstructure:"mock-email-sender"`
+	SMTP               SMTPConfig                `yaml:"smtp"                mapstructure:"smtp"`
+	Feedback           FeedbackConfig            `yaml:"feedback"            mapstructure:"feedback"`
+	Keycloak           KeycloakConfig            `yaml:"keycloak"            mapstructure:"keycloak"`
+	UsersSalt          string                    `yaml:"users-salt"          mapstructure:"users-salt"`
+	EmailSalt          string                    `yaml:"email-salt"          mapstructure:"email-salt"`
+	Languages          map[string]LanguageConfig `yaml:"languages"           mapstructure:"languages"`
+	Captcha            bool                      `yaml:"captcha"             mapstructure:"captcha"`
+	ImageStorage       ImageStorageConfig        `yaml:"image-storage"       mapstructure:"image-storage"`
+	Memcached          []string                  `yaml:"memcached"           mapstructure:"memcached"`
+	DonationsVodPrice  int32                     `yaml:"donations-vod-price" mapstructure:"donations-vod-price"`
+	About              AboutConfig               `yaml:"about"               mapstructure:"about"`
 }
 
 var configMutex = sync.RWMutex{}

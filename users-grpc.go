@@ -59,7 +59,7 @@ func (s *UsersGRPCServer) Me(ctx context.Context, in *APIMeRequest) (*APIUser, e
 	})
 }
 
-func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*APIUser, error) {
+func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*APIUser, error) {
 	fields := in.Fields
 	m := make(map[string]bool)
 
@@ -79,7 +79,7 @@ func (s *UsersGRPCServer) GetUser(_ context.Context, in *APIGetUserRequest) (*AP
 		return nil, status.Error(codes.NotFound, "User not found")
 	}
 
-	apiUser, err := s.userExtractor.Extract(dbUser, m)
+	apiUser, err := s.userExtractor.Extract(ctx, dbUser, m)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -102,7 +102,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 			return nil, status.Errorf(codes.Internal, "Forbidden")
 		}
 
-		match, err := s.userRepository.PasswordMatch(in.UserId, in.Password)
+		match, err := s.userRepository.PasswordMatch(ctx, in.UserId, in.Password)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -115,13 +115,13 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 		}
 	}
 
-	success, err := s.userRepository.DeleteUser(in.UserId)
+	success, err := s.userRepository.DeleteUser(ctx, in.UserId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if success {
-		err = s.contactsRepository.deleteUserEverywhere(in.UserId)
+		err = s.contactsRepository.deleteUserEverywhere(ctx, in.UserId)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -137,4 +137,81 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *UsersGRPCServer) DisableUserCommentsNotifications(
+	ctx context.Context,
+	in *APIUserPreferencesRequest,
+) (*emptypb.Empty, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if in.UserId == userID {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
+	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.UserId, true)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *UsersGRPCServer) EnableUserCommentsNotifications(
+	ctx context.Context,
+	in *APIUserPreferencesRequest,
+) (*emptypb.Empty, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if in.UserId == userID {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
+	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.UserId, false)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *UsersGRPCServer) GetUserPreferences(
+	ctx context.Context,
+	in *APIUserPreferencesRequest,
+) (*APIUserPreferencesResponse, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if in.UserId == userID {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
+	prefs, err := s.userRepository.UserPreferences(ctx, userID, in.UserId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &APIUserPreferencesResponse{
+		DisableCommentsNotifications: prefs.DisableCommentsNotifications,
+	}, nil
 }

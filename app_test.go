@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTrafficMigrations(t *testing.T) {
+func TestPostgresMigrations(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
 
-	err := applyMigrations(cfg.TrafficMigrations)
+	err := applyMigrations(cfg.PostgresMigrations)
 	if !errors.Is(err, migrate.ErrNoChange) {
 		require.NoError(t, err)
 	}

@@ -2,12 +2,14 @@ package ban
 
 import (
 	"context"
+	"database/sql"
 	"net"
 	"testing"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
+
 	"github.com/autowp/goautowp/config"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,10 +18,12 @@ func createBanService(t *testing.T) *Repository {
 
 	cfg := config.LoadConfig("..")
 
-	pool, err := pgxpool.Connect(context.Background(), cfg.TrafficDSN)
+	db, err := sql.Open("postgres", cfg.PostgresDSN)
 	require.NoError(t, err)
 
-	s, err := NewRepository(pool)
+	goquDB := goqu.New("postgres", db)
+
+	s, err := NewRepository(goquDB)
 	require.NoError(t, err)
 
 	return s
@@ -30,19 +34,21 @@ func TestAddRemove(t *testing.T) {
 
 	s := createBanService(t)
 
+	ctx := context.Background()
+
 	ip := net.IPv4(66, 249, 73, 139)
 
-	err := s.Add(ip, time.Hour, 1, "Test")
+	err := s.Add(ctx, ip, time.Hour, 1, "Test")
 	require.NoError(t, err)
 
-	exists, err := s.Exists(ip)
+	exists, err := s.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	err = s.Remove(ip)
+	err = s.Remove(ctx, ip)
 	require.NoError(t, err)
 
-	exists, err = s.Exists(ip)
+	exists, err = s.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 }
