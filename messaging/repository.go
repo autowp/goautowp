@@ -202,13 +202,12 @@ func (s *Repository) markReadenRows(rows []messageRow, userID int64) error {
 	return s.markReaden(ids)
 }
 
-func (s *Repository) GetInbox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
-	paginator := util.Paginator{
-		SQLSelect:         s.getInboxSelect(userID),
-		ItemCountPerPage:  MessagesPerPage,
-		CurrentPageNumber: page,
-	}
-
+func (s *Repository) getBox(
+	ctx context.Context,
+	userID int64,
+	paginator util.Paginator,
+	options Options,
+) ([]Message, *util.Pages, error) {
 	ds, err := paginator.GetCurrentItems(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -221,9 +220,11 @@ func (s *Repository) GetInbox(ctx context.Context, userID int64, page int32) ([]
 		return nil, nil, err
 	}
 
-	err = s.markReadenRows(msgs, userID)
-	if err != nil {
-		return nil, nil, err
+	if userID > 0 {
+		err = s.markReadenRows(msgs, userID)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	pages, err := paginator.GetPages(ctx)
@@ -231,12 +232,22 @@ func (s *Repository) GetInbox(ctx context.Context, userID int64, page int32) ([]
 		return nil, nil, err
 	}
 
-	list, err := s.prepareList(ctx, userID, msgs, Options{AllMessagesLink: true})
+	list, err := s.prepareList(ctx, userID, msgs, options)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return list, pages, nil
+}
+
+func (s *Repository) GetInbox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
+	paginator := util.Paginator{
+		SQLSelect:         s.getInboxSelect(userID),
+		ItemCountPerPage:  MessagesPerPage,
+		CurrentPageNumber: page,
+	}
+
+	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: true})
 }
 
 func (s *Repository) GetSentbox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
@@ -246,29 +257,7 @@ func (s *Repository) GetSentbox(ctx context.Context, userID int64, page int32) (
 		CurrentPageNumber: page,
 	}
 
-	ds, err := paginator.GetCurrentItems(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var msgs []messageRow
-	err = ds.ScanStructsContext(ctx, &msgs)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pages, err := paginator.GetPages(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	list, err := s.prepareList(ctx, userID, msgs, Options{AllMessagesLink: true})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return list, pages, nil
+	return s.getBox(ctx, 0, paginator, Options{AllMessagesLink: true})
 }
 
 func (s *Repository) GetSystembox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
@@ -278,34 +267,7 @@ func (s *Repository) GetSystembox(ctx context.Context, userID int64, page int32)
 		CurrentPageNumber: page,
 	}
 
-	ds, err := paginator.GetCurrentItems(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var msgs []messageRow
-	err = ds.ScanStructsContext(ctx, &msgs)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = s.markReadenRows(msgs, userID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pages, err := paginator.GetPages(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	list, err := s.prepareList(ctx, userID, msgs, Options{AllMessagesLink: true})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return list, pages, nil
+	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: true})
 }
 
 func (s *Repository) GetDialogbox(
@@ -320,34 +282,7 @@ func (s *Repository) GetDialogbox(
 		CurrentPageNumber: page,
 	}
 
-	ds, err := paginator.GetCurrentItems(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var msgs []messageRow
-	err = ds.ScanStructsContext(ctx, &msgs)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = s.markReadenRows(msgs, userID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pages, err := paginator.GetPages(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	list, err := s.prepareList(ctx, userID, msgs, Options{AllMessagesLink: false})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return list, pages, nil
+	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: false})
 }
 
 func (s *Repository) getReceivedSelect(userID int64) *goqu.SelectDataset {
