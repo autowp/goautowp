@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/autowp/goautowp/util"
-	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/autowp/goautowp/util"
+	"github.com/urfave/cli/v2"
 
 	"github.com/autowp/goautowp"
 	"github.com/autowp/goautowp/config"
