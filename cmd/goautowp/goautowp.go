@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/autowp/goautowp/util"
 	"github.com/urfave/cli/v2"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -92,7 +91,8 @@ func mainReturnWithCode() int {
 								return err
 							}
 
-							log.Printf("%v", i)
+							logrus.Printf("%v", i)
+
 							return nil
 						},
 					},
@@ -120,7 +120,7 @@ func mainReturnWithCode() int {
 								return err
 							}
 
-							log.Printf("%v", i)
+							logrus.Printf("%v", i)
 
 							return nil
 						},
