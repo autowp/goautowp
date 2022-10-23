@@ -23,6 +23,11 @@ service Autowp {
   rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
 }
 
+service Articles {
+  rpc GetList(ArticlesRequest) returns (ArticlesResponse) {}
+  rpc GetItemByCatname(ArticleByCatnameRequest) returns (Article) {}
+}
+
 service Traffic {
   rpc AddToBlacklist(AddToTrafficBlacklistRequest) returns (google.protobuf.Empty) {}
   rpc AddToWhitelist(AddToTrafficWhitelistRequest) returns (google.protobuf.Empty) {}
@@ -729,4 +734,28 @@ message APIUserPreferencesRequest {
 
 message APIUserPreferencesResponse {
   bool disable_comments_notifications = 1;
+}
+
+message ArticlesRequest {
+  uint64 limit = 1;
+  uint64 page = 2;
+}
+
+message ArticlesResponse {
+  repeated Article items = 1;
+  Pages paginator = 2;
+}
+
+message Article {
+  int64 id = 1;
+  string name = 2;
+  int64 author_id = 3;
+  string catname = 4;
+  google.protobuf.Timestamp date = 5;
+  string html = 6;
+  string preview_url = 7;
+}
+
+message ArticleByCatnameRequest {
+  string catname = 1;
 }

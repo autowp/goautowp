@@ -465,6 +465,128 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 	Metadata: "spec.proto",
 }
 
+// ArticlesClient is the client API for Articles service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ArticlesClient interface {
+	GetList(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (*ArticlesResponse, error)
+	GetItemByCatname(ctx context.Context, in *ArticleByCatnameRequest, opts ...grpc.CallOption) (*Article, error)
+}
+
+type articlesClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewArticlesClient(cc grpc.ClientConnInterface) ArticlesClient {
+	return &articlesClient{cc}
+}
+
+func (c *articlesClient) GetList(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (*ArticlesResponse, error) {
+	out := new(ArticlesResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Articles/GetList", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *articlesClient) GetItemByCatname(ctx context.Context, in *ArticleByCatnameRequest, opts ...grpc.CallOption) (*Article, error) {
+	out := new(Article)
+	err := c.cc.Invoke(ctx, "/goautowp.Articles/GetItemByCatname", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ArticlesServer is the server API for Articles service.
+// All implementations must embed UnimplementedArticlesServer
+// for forward compatibility
+type ArticlesServer interface {
+	GetList(context.Context, *ArticlesRequest) (*ArticlesResponse, error)
+	GetItemByCatname(context.Context, *ArticleByCatnameRequest) (*Article, error)
+	mustEmbedUnimplementedArticlesServer()
+}
+
+// UnimplementedArticlesServer must be embedded to have forward compatible implementations.
+type UnimplementedArticlesServer struct {
+}
+
+func (UnimplementedArticlesServer) GetList(context.Context, *ArticlesRequest) (*ArticlesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetList not implemented")
+}
+func (UnimplementedArticlesServer) GetItemByCatname(context.Context, *ArticleByCatnameRequest) (*Article, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItemByCatname not implemented")
+}
+func (UnimplementedArticlesServer) mustEmbedUnimplementedArticlesServer() {}
+
+// UnsafeArticlesServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ArticlesServer will
+// result in compilation errors.
+type UnsafeArticlesServer interface {
+	mustEmbedUnimplementedArticlesServer()
+}
+
+func RegisterArticlesServer(s grpc.ServiceRegistrar, srv ArticlesServer) {
+	s.RegisterService(&Articles_ServiceDesc, srv)
+}
+
+func _Articles_GetList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ArticlesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArticlesServer).GetList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Articles/GetList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArticlesServer).GetList(ctx, req.(*ArticlesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Articles_GetItemByCatname_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ArticleByCatnameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ArticlesServer).GetItemByCatname(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Articles/GetItemByCatname",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ArticlesServer).GetItemByCatname(ctx, req.(*ArticleByCatnameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Articles_ServiceDesc is the grpc.ServiceDesc for Articles service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Articles_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Articles",
+	HandlerType: (*ArticlesServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetList",
+			Handler:    _Articles_GetList_Handler,
+		},
+		{
+			MethodName: "GetItemByCatname",
+			Handler:    _Articles_GetItemByCatname_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
 // TrafficClient is the client API for Traffic service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
