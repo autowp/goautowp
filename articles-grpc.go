@@ -3,13 +3,14 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"time"
+
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"time"
 )
 
-const ArticlesPreviewBaseUrl = "/img/articles/preview/"
+const ArticlesPreviewBaseURL = "/img/articles/preview/"
 
 type ArticlesGRPCServer struct {
 	UnimplementedArticlesServer
@@ -23,11 +24,10 @@ func NewArticlesGRPCServer(db *goqu.Database) *ArticlesGRPCServer {
 }
 
 func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (*ArticlesResponse, error) {
-
 	type row struct {
-		Id              int64         `db:"id"`
+		ID              int64         `db:"id"`
 		Name            string        `db:"name"`
-		AuthorId        sql.NullInt64 `db:"author_id"`
+		AuthorID        sql.NullInt64 `db:"author_id"`
 		Catname         string        `db:"catname"`
 		AddDate         time.Time     `db:"add_date"`
 		PreviewFilename string        `db:"preview_filename"`
@@ -37,7 +37,8 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 	rows := make([]row, 0)
 
 	paginator := util.Paginator{
-		SQLSelect: s.db.Select("id", "name", "author_id", "catname", "add_date", "preview_filename", "description").From("articles").
+		SQLSelect: s.db.Select("id", "name", "author_id", "catname", "add_date", "preview_filename", "description").
+			From("articles").
 			Where(goqu.L("enabled")).
 			Order(goqu.I("add_date").Desc()),
 	}
@@ -55,19 +56,18 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 	articles := make([]*Article, 0)
 
 	for _, article := range rows {
-
-		authorId := article.AuthorId.Int64
-		if !article.AuthorId.Valid {
-			authorId = 0
+		authorID := article.AuthorID.Int64
+		if !article.AuthorID.Valid {
+			authorID = 0
 		}
 
 		articles = append(articles, &Article{
-			Id:         article.Id,
+			Id:         article.ID,
 			Name:       article.Name,
-			AuthorId:   authorId,
+			AuthorId:   authorID,
 			Catname:    article.Catname,
 			Date:       timestamppb.New(article.AddDate),
-			PreviewUrl: ArticlesPreviewBaseUrl + article.PreviewFilename,
+			PreviewUrl: ArticlesPreviewBaseURL + article.PreviewFilename,
 		})
 	}
 
@@ -91,15 +91,14 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 }
 
 func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleByCatnameRequest) (*Article, error) {
-
 	type row struct {
-		Id              int64          `db:"id"`
+		ID              int64          `db:"id"`
 		Name            string         `db:"name"`
-		AuthorId        sql.NullInt64  `db:"author_id"`
+		AuthorID        sql.NullInt64  `db:"author_id"`
 		Catname         string         `db:"catname"`
 		AddDate         time.Time      `db:"add_date"`
 		PreviewFilename string         `db:"preview_filename"`
-		Html            sql.NullString `db:"html"`
+		HTML            sql.NullString `db:"html"`
 	}
 
 	article := row{}
@@ -115,7 +114,6 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 		).
 		Where(goqu.L("enabled"), goqu.I("catname").Eq(in.Catname)).
 		ScanStructContext(ctx, &article)
-
 	if err != nil {
 		return nil, err
 	}
@@ -124,23 +122,23 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 		return nil, nil //nolint: nilnil
 	}
 
-	authorId := article.AuthorId.Int64
-	if !article.AuthorId.Valid {
-		authorId = 0
+	authorID := article.AuthorID.Int64
+	if !article.AuthorID.Valid {
+		authorID = 0
 	}
 
-	html := article.Html.String
-	if !article.Html.Valid {
+	html := article.HTML.String
+	if !article.HTML.Valid {
 		html = ""
 	}
 
 	return &Article{
-		Id:         article.Id,
+		Id:         article.ID,
 		Name:       article.Name,
-		AuthorId:   authorId,
+		AuthorId:   authorID,
 		Catname:    article.Catname,
 		Date:       timestamppb.New(article.AddDate),
-		PreviewUrl: ArticlesPreviewBaseUrl + article.PreviewFilename,
+		PreviewUrl: ArticlesPreviewBaseURL + article.PreviewFilename,
 		Html:       html,
 	}, nil
 }
