@@ -25,13 +25,13 @@ func NewArticlesGRPCServer(db *goqu.Database) *ArticlesGRPCServer {
 
 func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (*ArticlesResponse, error) {
 	type row struct {
-		ID              int64         `db:"id"`
-		Name            string        `db:"name"`
-		AuthorID        sql.NullInt64 `db:"author_id"`
-		Catname         string        `db:"catname"`
-		AddDate         time.Time     `db:"add_date"`
-		PreviewFilename string        `db:"preview_filename"`
-		Description     string        `db:"description"`
+		ID              int64          `db:"id"`
+		Name            string         `db:"name"`
+		AuthorID        sql.NullInt64  `db:"author_id"`
+		Catname         string         `db:"catname"`
+		AddDate         time.Time      `db:"add_date"`
+		PreviewFilename sql.NullString `db:"preview_filename"`
+		Description     string         `db:"description"`
 	}
 
 	rows := make([]row, 0)
@@ -61,13 +61,19 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 			authorID = 0
 		}
 
+		previewURL := ""
+		if article.PreviewFilename.Valid {
+			previewURL = ArticlesPreviewBaseURL + article.PreviewFilename.String
+		}
+
 		articles = append(articles, &Article{
-			Id:         article.ID,
-			Name:       article.Name,
-			AuthorId:   authorID,
-			Catname:    article.Catname,
-			Date:       timestamppb.New(article.AddDate),
-			PreviewUrl: ArticlesPreviewBaseURL + article.PreviewFilename,
+			Id:          article.ID,
+			Name:        article.Name,
+			AuthorId:    authorID,
+			Catname:     article.Catname,
+			Date:        timestamppb.New(article.AddDate),
+			PreviewUrl:  previewURL,
+			Description: article.Description,
 		})
 	}
 
@@ -97,7 +103,7 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 		AuthorID        sql.NullInt64  `db:"author_id"`
 		Catname         string         `db:"catname"`
 		AddDate         time.Time      `db:"add_date"`
-		PreviewFilename string         `db:"preview_filename"`
+		PreviewFilename sql.NullString `db:"preview_filename"`
 		HTML            sql.NullString `db:"html"`
 	}
 
@@ -132,13 +138,18 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 		html = ""
 	}
 
+	previewURL := ""
+	if article.PreviewFilename.Valid {
+		previewURL = ArticlesPreviewBaseURL + article.PreviewFilename.String
+	}
+
 	return &Article{
 		Id:         article.ID,
 		Name:       article.Name,
 		AuthorId:   authorID,
 		Catname:    article.Catname,
 		Date:       timestamppb.New(article.AddDate),
-		PreviewUrl: ArticlesPreviewBaseURL + article.PreviewFilename,
+		PreviewUrl: previewURL,
 		Html:       html,
 	}, nil
 }

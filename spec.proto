@@ -754,6 +754,7 @@ message Article {
   google.protobuf.Timestamp date = 5;
   string html = 6;
   string preview_url = 7;
+  string description = 8;
 }
 
 message ArticleByCatnameRequest {
