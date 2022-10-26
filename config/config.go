@@ -138,6 +138,7 @@ type Config struct {
 	Memcached          []string                  `yaml:"memcached"           mapstructure:"memcached"`
 	DonationsVodPrice  int32                     `yaml:"donations-vod-price" mapstructure:"donations-vod-price"`
 	About              AboutConfig               `yaml:"about"               mapstructure:"about"`
+	ContentLanguages   []string                  `yaml:"content-languages"   mapstructure:"content-languages"`
 }
 
 var configMutex = sync.RWMutex{}

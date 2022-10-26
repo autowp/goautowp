@@ -850,7 +850,7 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.itemsGrpcServer = NewItemsGRPCServer(r, s.Memcached(), auth, s.Enforcer())
+		s.itemsGrpcServer = NewItemsGRPCServer(r, s.Memcached(), auth, s.Enforcer(), s.Config().ContentLanguages)
 	}
 
 	return s.itemsGrpcServer, nil

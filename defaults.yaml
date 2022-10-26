@@ -236,3 +236,15 @@ about:
   zh-translator: "1"
   be-translator: "1"
   pt-br-translator: "1"
+content-languages:
+  - en
+  - ru
+  - uk
+  - be
+  - fr
+  - it
+  - zh
+  - pt
+  - de
+  - es
+  - jp

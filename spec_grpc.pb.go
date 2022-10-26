@@ -1324,6 +1324,7 @@ type ItemsClient interface {
 	GetTopTwinsBrandsList(ctx context.Context, in *GetTopTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITopTwinsBrandsList, error)
 	List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*APITreeItem, error)
+	GetContentLanguages(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*APIContentLanguages, error)
 }
 
 type itemsClient struct {
@@ -1397,6 +1398,15 @@ func (c *itemsClient) GetTree(ctx context.Context, in *GetTreeRequest, opts ...g
 	return out, nil
 }
 
+func (c *itemsClient) GetContentLanguages(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*APIContentLanguages, error) {
+	out := new(APIContentLanguages)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/GetContentLanguages", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility
@@ -1408,6 +1418,7 @@ type ItemsServer interface {
 	GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error)
 	List(context.Context, *ListItemsRequest) (*APIItemList, error)
 	GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error)
+	GetContentLanguages(context.Context, *empty.Empty) (*APIContentLanguages, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -1435,6 +1446,9 @@ func (UnimplementedItemsServer) List(context.Context, *ListItemsRequest) (*APIIt
 }
 func (UnimplementedItemsServer) GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTree not implemented")
+}
+func (UnimplementedItemsServer) GetContentLanguages(context.Context, *empty.Empty) (*APIContentLanguages, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetContentLanguages not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 
@@ -1575,6 +1589,24 @@ func _Items_GetTree_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetContentLanguages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetContentLanguages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/GetContentLanguages",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetContentLanguages(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1609,6 +1641,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTree",
 			Handler:    _Items_GetTree_Handler,
+		},
+		{
+			MethodName: "GetContentLanguages",
+			Handler:    _Items_GetContentLanguages_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

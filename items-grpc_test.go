@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/util"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -97,4 +98,24 @@ func TestTopFactoriesList(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
+}
+
+func TestContentLanguages(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	r, err := client.GetContentLanguages(ctx, &empty.Empty{})
+	require.NoError(t, err)
+	require.NotEmpty(t, r)
+	require.Greater(t, len(r.Languages), 1)
 }

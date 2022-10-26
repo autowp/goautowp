@@ -61,6 +61,7 @@ service Items {
   rpc GetTopTwinsBrandsList(GetTopTwinsBrandsListRequest) returns (APITopTwinsBrandsList) {}
   rpc List(ListItemsRequest) returns (APIItemList) {}
   rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
+  rpc GetContentLanguages(google.protobuf.Empty) returns (APIContentLanguages) {}
 }
 
 service Comments {
@@ -759,4 +760,8 @@ message Article {
 
 message ArticleByCatnameRequest {
   string catname = 1;
+}
+
+message APIContentLanguages {
+  repeated string languages = 1;
 }
