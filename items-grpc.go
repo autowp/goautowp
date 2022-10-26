@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/bradfitz/gomemcache/memcache"
