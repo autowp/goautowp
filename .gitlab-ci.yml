@@ -58,7 +58,7 @@ publish:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u="$CI_REGISTRY_USER" --password-stdin
     - echo "$DOCKER_PASSWORD" | docker login -u="$DOCKER_USERNAME" --password-stdin
   script:
-    - sentry-cli releases new "$CI_COMMIT_TAG"
+    - sentry-cli releases new "$CI_COMMIT_TAG" || true
 
     - docker pull "$CI_REGISTRY_IMAGE" || true
     - docker build -f build/package/Dockerfile . -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG" -t autowp/goautowp:$CI_COMMIT_TAG
@@ -70,7 +70,7 @@ publish:
     - ../tools/update-helm-chart.sh
     - git push origin master
 
-    - sentry-cli releases finalize "$CI_COMMIT_TAG"
+    - sentry-cli releases finalize "$CI_COMMIT_TAG" || true
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d.*/
   environment:
