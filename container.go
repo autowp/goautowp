@@ -41,6 +41,7 @@ const readHeaderTimeout = time.Second * 30
 
 // Container Container.
 type Container struct {
+	articlesGRPCServer     *ArticlesGRPCServer
 	autowpDB               *sql.DB
 	banRepository          *ban.Repository
 	catalogue              *Catalogue
@@ -495,6 +496,11 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
+	articlesSrv, err := s.ArticlesGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	commentsSrv, err := s.CommentsGRPCServer()
 	if err != nil {
 		return nil, err
@@ -560,6 +566,7 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 			grpclogrus.StreamServerInterceptor(logrusEntry),
 		),
 	)
+	RegisterArticlesServer(grpcServer, articlesSrv)
 	RegisterAutowpServer(grpcServer, srv)
 	RegisterCommentsServer(grpcServer, commentsSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
@@ -853,7 +860,7 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.itemsGrpcServer = NewItemsGRPCServer(r, s.Memcached(), auth, s.Enforcer())
+		s.itemsGrpcServer = NewItemsGRPCServer(r, s.Memcached(), auth, s.Enforcer(), s.Config().ContentLanguages)
 	}
 
 	return s.itemsGrpcServer, nil
@@ -891,6 +898,19 @@ func (s *Container) CommentsGRPCServer() (*CommentsGRPCServer, error) {
 	}
 
 	return s.commentsGrpcServer, nil
+}
+
+func (s *Container) ArticlesGRPCServer() (*ArticlesGRPCServer, error) {
+	if s.articlesGRPCServer == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.articlesGRPCServer = NewArticlesGRPCServer(db)
+	}
+
+	return s.articlesGRPCServer, nil
 }
 
 func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {

@@ -70,8 +70,8 @@ func NewRepository(
 	}
 }
 
-func (s *Repository) GetVotes(id int64) (*GetVotesResult, error) {
-	rows, err := s.db.Query(`
+func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, error) {
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT users.id, users.name, users.deleted, users.identity, users.last_online, users.role, 
             users.specs_weight, comment_vote.vote
 		FROM comment_vote

@@ -1,6 +1,7 @@
 package traffic
 
 import (
+	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -45,16 +46,18 @@ func TestMonitoringGC(t *testing.T) {
 
 	s := createMonitoringService(t)
 
-	err := s.Clear()
+	ctx := context.Background()
+
+	err := s.Clear(ctx)
 	require.NoError(t, err)
 
 	err = s.Add(net.IPv4(192, 168, 0, 77), time.Now())
 	require.NoError(t, err)
 
-	affected, err := s.GC()
+	affected, err := s.GC(ctx)
 	require.NoError(t, err)
 	require.Zero(t, affected)
 
-	_, err = s.ListOfTop(10)
+	_, err = s.ListOfTop(ctx, 10)
 	require.NoError(t, err)
 }

@@ -78,8 +78,8 @@ func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
 }
 
 // Add IP to whitelist.
-func (s *Whitelist) Add(ip net.IP, desc string) error {
-	_, err := s.db.ExecContext(context.Background(), `
+func (s *Whitelist) Add(ctx context.Context, ip net.IP, desc string) error {
+	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO ip_whitelist (ip, description)
 		VALUES ($1, $2)
 		ON CONFLICT (ip) DO UPDATE SET description=EXCLUDED.description
@@ -89,10 +89,10 @@ func (s *Whitelist) Add(ip net.IP, desc string) error {
 }
 
 // Get whitelist item.
-func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
+func (s *Whitelist) Get(ctx context.Context, ip net.IP) (*WhitelistItem, error) {
 	var item WhitelistItem
 
-	err := s.db.QueryRowContext(context.Background(), `
+	err := s.db.QueryRowContext(ctx, `
 		SELECT ip, description
 		FROM ip_whitelist
 		WHERE ip = $1
@@ -109,10 +109,10 @@ func (s *Whitelist) Get(ip net.IP) (*WhitelistItem, error) {
 }
 
 // List whitelist items.
-func (s *Whitelist) List() ([]*WhitelistItem, error) {
+func (s *Whitelist) List(ctx context.Context) ([]*WhitelistItem, error) {
 	result := make([]*WhitelistItem, 0)
 
-	rows, err := s.db.QueryContext(context.Background(), `
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT ip, description
 		FROM ip_whitelist
 	`)
@@ -134,10 +134,10 @@ func (s *Whitelist) List() ([]*WhitelistItem, error) {
 }
 
 // Exists whitelist already contains IP.
-func (s *Whitelist) Exists(ip net.IP) (bool, error) {
+func (s *Whitelist) Exists(ctx context.Context, ip net.IP) (bool, error) {
 	var exists bool
 
-	err := s.db.QueryRowContext(context.Background(), `
+	err := s.db.QueryRowContext(ctx, `
 		SELECT true
 		FROM ip_whitelist
 		WHERE ip = $1
@@ -154,8 +154,8 @@ func (s *Whitelist) Exists(ip net.IP) (bool, error) {
 }
 
 // Remove IP from whitelist.
-func (s *Whitelist) Remove(ip net.IP) error {
-	_, err := s.db.ExecContext(context.Background(), "DELETE FROM ip_whitelist WHERE ip = $1", ip.String())
+func (s *Whitelist) Remove(ctx context.Context, ip net.IP) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_whitelist WHERE ip = $1", ip.String())
 
 	return err
 }

@@ -1,6 +1,7 @@
 package users
 
 import (
+	"context"
 	"crypto/md5" //nolint: gosec
 	"encoding/hex"
 	"fmt"
@@ -45,7 +46,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	}
 }
 
-func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, error) {
+func (s *UserExtractor) Extract(ctx context.Context, row *DBUser, fields map[string]bool) (*APIUser, error) {
 	longAway := true
 
 	if row.LastOnline != nil {
@@ -80,7 +81,7 @@ func (s *UserExtractor) Extract(row *DBUser, fields map[string]bool) (*APIUser, 
 		switch field {
 		case "avatar":
 			if row.Img != nil {
-				avatar, err := s.imageStorage.FormattedImage(*row.Img, "avatar")
+				avatar, err := s.imageStorage.FormattedImage(ctx, *row.Img, "avatar")
 				if err != nil {
 					return nil, err
 				}

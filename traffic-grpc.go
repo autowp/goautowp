@@ -50,10 +50,10 @@ func NewTrafficGRPCServer(
 	}
 }
 
-func (s *TrafficGRPCServer) GetTop(_ context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
+func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
 	var err error
 
-	items, err := s.traffic.Monitoring.ListOfTop(trafficTopLimit)
+	items, err := s.traffic.Monitoring.ListOfTop(ctx, trafficTopLimit)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -61,7 +61,7 @@ func (s *TrafficGRPCServer) GetTop(_ context.Context, _ *emptypb.Empty) (*APITra
 	result := make([]*APITrafficTopItem, len(items))
 
 	for idx, item := range items {
-		banItem, banErr := s.traffic.Ban.Get(item.IP)
+		banItem, banErr := s.traffic.Ban.Get(ctx, item.IP)
 		if banErr != nil && !errors.Is(banErr, ban.ErrBanItemNotFound) {
 			return nil, status.Error(codes.Internal, banErr.Error())
 		}
@@ -72,7 +72,7 @@ func (s *TrafficGRPCServer) GetTop(_ context.Context, _ *emptypb.Empty) (*APITra
 		)
 
 		if banItem != nil {
-			user, err = s.getUser(banItem.ByUserID)
+			user, err = s.getUser(ctx, banItem.ByUserID)
 			if err != nil && !errors.Is(err, ErrUserNotFound) {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -80,7 +80,7 @@ func (s *TrafficGRPCServer) GetTop(_ context.Context, _ *emptypb.Empty) (*APITra
 			var extractedUser *users.APIUser
 
 			if user != nil {
-				extractedUser, err = s.userExtractor.Extract(user, map[string]bool{})
+				extractedUser, err = s.userExtractor.Extract(ctx, user, map[string]bool{})
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}
@@ -94,7 +94,7 @@ func (s *TrafficGRPCServer) GetTop(_ context.Context, _ *emptypb.Empty) (*APITra
 			}
 		}
 
-		inWhitelist, err := s.traffic.Whitelist.Exists(item.IP)
+		inWhitelist, err := s.traffic.Whitelist.Exists(ctx, item.IP)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -131,7 +131,7 @@ func (s *TrafficGRPCServer) DeleteFromBlacklist(
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.traffic.Ban.Remove(ip)
+	err = s.traffic.Ban.Remove(ctx, ip)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -157,7 +157,7 @@ func (s *TrafficGRPCServer) DeleteFromWhitelist(
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.traffic.Whitelist.Remove(ip)
+	err = s.traffic.Whitelist.Remove(ctx, ip)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -185,7 +185,7 @@ func (s *TrafficGRPCServer) AddToBlacklist(
 
 	duration := time.Hour * time.Duration(in.Period)
 
-	err = s.traffic.Ban.Add(ip, duration, userID, in.Reason)
+	err = s.traffic.Ban.Add(ctx, ip, duration, userID, in.Reason)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -211,12 +211,12 @@ func (s *TrafficGRPCServer) AddToWhitelist(
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.traffic.Whitelist.Add(ip, "manual click")
+	err = s.traffic.Whitelist.Add(ctx, ip, "manual click")
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.traffic.Ban.Remove(ip)
+	err = s.traffic.Ban.Remove(ctx, ip)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -237,7 +237,7 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	list, err := s.traffic.Whitelist.List()
+	list, err := s.traffic.Whitelist.List(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -255,10 +255,10 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 	}, nil
 }
 
-func (s *TrafficGRPCServer) getUser(id int64) (*users.DBUser, error) {
+func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*users.DBUser, error) {
 	var r users.DBUser
 
-	err := s.db.QueryRow(`
+	err := s.db.QueryRowContext(ctx, `
 		SELECT id, name, deleted, identity, last_online, role, specs_weight
 		FROM users
 		WHERE id = ?

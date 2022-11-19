@@ -43,11 +43,11 @@ func NewRepository(db *goqu.Database) (*Repository, error) {
 }
 
 // Add IP to list of banned.
-func (s *Repository) Add(ip net.IP, duration time.Duration, byUserID int64, reason string) error {
+func (s *Repository) Add(ctx context.Context, ip net.IP, duration time.Duration, byUserID int64, reason string) error {
 	reason = strings.TrimSpace(reason)
 	upTo := time.Now().Add(duration)
 
-	ct, err := s.db.ExecContext(context.Background(), `
+	ct, err := s.db.ExecContext(ctx, `
 		INSERT INTO ip_ban (ip, until, by_user_id, reason)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT(ip) DO UPDATE SET until = EXCLUDED.until, by_user_id = EXCLUDED.by_user_id, reason = EXCLUDED.reason
@@ -69,17 +69,17 @@ func (s *Repository) Add(ip net.IP, duration time.Duration, byUserID int64, reas
 }
 
 // Remove IP from list of banned.
-func (s *Repository) Remove(ip net.IP) error {
+func (s *Repository) Remove(ctx context.Context, ip net.IP) error {
 	logrus.Info(ip.String() + ": unban")
-	_, err := s.db.ExecContext(context.Background(), "DELETE FROM ip_ban WHERE ip = $1", ip.String())
+	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_ban WHERE ip = $1", ip.String())
 
 	return err
 }
 
 // Exists ban list already contains IP.
-func (s *Repository) Exists(ip net.IP) (bool, error) {
+func (s *Repository) Exists(ctx context.Context, ip net.IP) (bool, error) {
 	var exists bool
-	err := s.db.QueryRowContext(context.Background(), `
+	err := s.db.QueryRowContext(ctx, `
 		SELECT true
 		FROM ip_ban
 		WHERE ip = $1 AND until >= NOW()
@@ -93,10 +93,10 @@ func (s *Repository) Exists(ip net.IP) (bool, error) {
 }
 
 // Get ban info.
-func (s *Repository) Get(ip net.IP) (*Item, error) {
+func (s *Repository) Get(ctx context.Context, ip net.IP) (*Item, error) {
 	item := Item{}
 
-	err := s.db.QueryRowContext(context.Background(), `
+	err := s.db.QueryRowContext(ctx, `
 		SELECT ip, until, reason, by_user_id
 		FROM ip_ban
 		WHERE ip = $1 AND until >= NOW()
@@ -113,8 +113,8 @@ func (s *Repository) Get(ip net.IP) (*Item, error) {
 }
 
 // GC Garbage Collect.
-func (s *Repository) GC() (int64, error) {
-	ct, err := s.db.ExecContext(context.Background(), "DELETE FROM ip_ban WHERE until < NOW()")
+func (s *Repository) GC(ctx context.Context) (int64, error) {
+	ct, err := s.db.ExecContext(ctx, "DELETE FROM ip_ban WHERE until < NOW()")
 	if err != nil {
 		return 0, err
 	}
@@ -128,8 +128,8 @@ func (s *Repository) GC() (int64, error) {
 }
 
 // Clear removes all collected data.
-func (s *Repository) Clear() error {
-	_, err := s.db.ExecContext(context.Background(), "DELETE FROM ip_ban")
+func (s *Repository) Clear(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_ban")
 
 	return err
 }

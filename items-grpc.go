@@ -11,6 +11,7 @@ import (
 	"github.com/autowp/goautowp/pictures"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
+	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -19,10 +20,11 @@ const defaultCacheExpiration = 180
 
 type ItemsGRPCServer struct {
 	UnimplementedItemsServer
-	repository *items.Repository
-	memcached  *memcache.Client
-	auth       *Auth
-	enforcer   *casbin.Enforcer
+	repository       *items.Repository
+	memcached        *memcache.Client
+	auth             *Auth
+	enforcer         *casbin.Enforcer
+	contentLanguages []string
 }
 
 type BrandsCache struct {
@@ -35,12 +37,14 @@ func NewItemsGRPCServer(
 	memcached *memcache.Client,
 	auth *Auth,
 	enforcer *casbin.Enforcer,
+	contentLanguages []string,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
-		repository: repository,
-		memcached:  memcached,
-		auth:       auth,
-		enforcer:   enforcer,
+		repository:       repository,
+		memcached:        memcached,
+		auth:             auth,
+		enforcer:         enforcer,
+		contentLanguages: contentLanguages,
 	}
 }
 
@@ -543,5 +547,11 @@ func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIIte
 
 	return &APIItemList{
 		Items: is,
+	}, nil
+}
+
+func (s *ItemsGRPCServer) GetContentLanguages(_ context.Context, _ *empty.Empty) (*APIContentLanguages, error) {
+	return &APIContentLanguages{
+		Languages: s.contentLanguages,
 	}, nil
 }

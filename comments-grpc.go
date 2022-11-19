@@ -56,8 +56,11 @@ func NewCommentsGRPCServer(
 	}
 }
 
-func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVotesRequest) (*CommentVoteItems, error) {
-	votes, err := s.repository.GetVotes(in.CommentId)
+func (s *CommentsGRPCServer) GetCommentVotes(
+	ctx context.Context,
+	in *GetCommentVotesRequest,
+) (*CommentVoteItems, error) {
+	votes, err := s.repository.GetVotes(ctx, in.CommentId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -69,7 +72,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVo
 	result := make([]*CommentVote, 0)
 
 	for idx := range votes.PositiveVotes {
-		extracted, err := s.userExtractor.Extract(&votes.PositiveVotes[idx], map[string]bool{})
+		extracted, err := s.userExtractor.Extract(ctx, &votes.PositiveVotes[idx], map[string]bool{})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -81,7 +84,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(_ context.Context, in *GetCommentVo
 	}
 
 	for idx := range votes.NegativeVotes {
-		extracted, err := s.userExtractor.Extract(&votes.NegativeVotes[idx], map[string]bool{})
+		extracted, err := s.userExtractor.Extract(ctx, &votes.NegativeVotes[idx], map[string]bool{})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

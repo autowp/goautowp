@@ -135,8 +135,8 @@ func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
 }
 
 // GC Garbage Collect.
-func (s *Monitoring) GC() (int64, error) {
-	ct, err := s.db.ExecContext(context.Background(), "DELETE FROM ip_monitoring WHERE day_date < CURRENT_DATE")
+func (s *Monitoring) GC(ctx context.Context) (int64, error) {
+	ct, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring WHERE day_date < CURRENT_DATE")
 	if err != nil {
 		return 0, err
 	}
@@ -150,23 +150,23 @@ func (s *Monitoring) GC() (int64, error) {
 }
 
 // Clear removes all collected data.
-func (s *Monitoring) Clear() error {
-	_, err := s.db.ExecContext(context.Background(), "DELETE FROM ip_monitoring")
+func (s *Monitoring) Clear(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring")
 
 	return err
 }
 
 // ClearIP removes all data collected for IP.
-func (s *Monitoring) ClearIP(ip net.IP) error {
+func (s *Monitoring) ClearIP(ctx context.Context, ip net.IP) error {
 	logrus.Info(ip.String() + ": clear monitoring")
-	_, err := s.db.ExecContext(context.Background(), "DELETE FROM ip_monitoring WHERE ip = $1", ip.String())
+	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring WHERE ip = $1", ip.String())
 
 	return err
 }
 
 // ListOfTop ListOfTop.
-func (s *Monitoring) ListOfTop(limit int) ([]ListOfTopItem, error) {
-	rows, err := s.db.QueryContext(context.Background(), `
+func (s *Monitoring) ListOfTop(ctx context.Context, limit int) ([]ListOfTopItem, error) {
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT ip, SUM(count) AS c
 		FROM ip_monitoring
 		WHERE day_date = CURRENT_DATE
@@ -194,10 +194,10 @@ func (s *Monitoring) ListOfTop(limit int) ([]ListOfTopItem, error) {
 }
 
 // ListByBanProfile ListByBanProfile.
-func (s *Monitoring) ListByBanProfile(profile AutobanProfile) ([]net.IP, error) {
+func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfile) ([]net.IP, error) {
 	group := append([]string{"ip"}, profile.Group...)
 
-	rows, err := s.db.QueryContext(context.Background(), `
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT ip, SUM(count) AS c
 		FROM ip_monitoring
 		WHERE day_date = CURRENT_DATE

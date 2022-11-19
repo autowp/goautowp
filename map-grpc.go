@@ -194,7 +194,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			}
 
 			if !errors.Is(err, sql.ErrNoRows) && imageID.Valid {
-				image, err := s.imageStorage.FormattedImage(int(imageID.Int64), "format9")
+				image, err := s.imageStorage.FormattedImage(ctx, int(imageID.Int64), "format9")
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}

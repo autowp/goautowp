@@ -23,6 +23,8 @@ const (
 func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
@@ -32,18 +34,16 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 	imageStorage, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := imageStorage.AddImageFromFile(TestImageFile, "brand", GenerateOptions{
+	imageID, err := imageStorage.AddImageFromFile(ctx, TestImageFile, "brand", GenerateOptions{
 		Pattern: "folder/file",
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID)
 
-	imageInfo, err := imageStorage.Image(imageID)
+	imageInfo, err := imageStorage.Image(ctx, imageID)
 	require.NoError(t, err)
 
 	require.Contains(t, imageInfo.Src(), "folder/file")
-
-	ctx := context.Background()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageInfo.Src(), nil)
 	require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, filesize.Size(), len(body))
 
-	err = imageStorage.ChangeImageName(imageID, GenerateOptions{
+	err = imageStorage.ChangeImageName(ctx, imageID, GenerateOptions{
 		Pattern: "new-name/by-pattern",
 	})
 	require.NoError(t, err)
@@ -67,12 +67,14 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 	err = imageStorage.RemoveImage(imageID)
 	require.NoError(t, err)
 
-	_, err = imageStorage.Image(imageID)
+	_, err = imageStorage.Image(ctx, imageID)
 	require.ErrorIs(t, ErrImageNotFound, err)
 }
 
 func TestAddImageFromBlobAndFormat(t *testing.T) {
 	t.Parallel()
+
+	ctx := context.Background()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -86,12 +88,12 @@ func TestAddImageFromBlobAndFormat(t *testing.T) {
 	blob, err := os.ReadFile(TestImageFile)
 	require.NoError(t, err)
 
-	imageID, err := mw.AddImageFromBlob(blob, "test", GenerateOptions{})
+	imageID, err := mw.AddImageFromBlob(ctx, blob, "test", GenerateOptions{})
 	require.NoError(t, err)
 
 	require.NotEmpty(t, imageID)
 
-	formattedImage, err := mw.FormattedImage(imageID, "test")
+	formattedImage, err := mw.FormattedImage(ctx, imageID, "test")
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())
@@ -103,6 +105,8 @@ func TestAddImageFromBlobAndFormat(t *testing.T) {
 func TestS3AddImageWithPreferredName(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
@@ -112,14 +116,14 @@ func TestS3AddImageWithPreferredName(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := mw.AddImageFromFile(TestImageFile, "test", GenerateOptions{
+	imageID, err := mw.AddImageFromFile(ctx, TestImageFile, "test", GenerateOptions{
 		PreferredName: "zeliboba",
 	})
 	require.NoError(t, err)
 
 	require.NotEmpty(t, imageID)
 
-	image, err := mw.Image(imageID)
+	image, err := mw.Image(ctx, imageID)
 	require.NoError(t, err)
 	require.NotEmpty(t, image.src)
 	require.NotEmpty(t, image.height)
@@ -131,6 +135,8 @@ func TestS3AddImageWithPreferredName(t *testing.T) {
 func TestAddImageAndCrop(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
@@ -140,7 +146,7 @@ func TestAddImageAndCrop(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
+	imageID, err := mw.AddImageFromFile(ctx, TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID)
 
@@ -154,10 +160,8 @@ func TestAddImageAndCrop(t *testing.T) {
 
 	require.EqualValues(t, crop, *c)
 
-	imageInfo, err := mw.Image(imageID)
+	imageInfo, err := mw.Image(ctx, imageID)
 	require.NoError(t, err)
-
-	ctx := context.Background()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, imageInfo.Src(), nil)
 	require.NoError(t, err)
@@ -174,7 +178,7 @@ func TestAddImageAndCrop(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, filesize.Size(), len(body))
 
-	formattedImage, err := mw.FormattedImage(imageID, "picture-gallery")
+	formattedImage, err := mw.FormattedImage(ctx, imageID, "picture-gallery")
 	require.NoError(t, err)
 
 	require.EqualValues(t, 1020, formattedImage.Width())
@@ -188,6 +192,8 @@ func TestAddImageAndCrop(t *testing.T) {
 func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
@@ -197,14 +203,14 @@ func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID1, err := mw.AddImageFromFile(TestImageFile, "brand", GenerateOptions{})
+	imageID1, err := mw.AddImageFromFile(ctx, TestImageFile, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID1)
 
 	err = mw.Flop(imageID1)
 	require.NoError(t, err)
 
-	imageID2, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
+	imageID2, err := mw.AddImageFromFile(ctx, TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID2)
 
@@ -216,18 +222,20 @@ func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 
 	require.EqualValues(t, 2, len(images))
 
-	formattedImages, err := mw.FormattedImages([]int{imageID1, imageID2}, "test")
+	formattedImages, err := mw.FormattedImages(ctx, []int{imageID1, imageID2}, "test")
 	require.NoError(t, err)
 	require.EqualValues(t, 2, len(formattedImages))
 
 	// re-request
-	formattedImages, err = mw.FormattedImages([]int{imageID1, imageID2}, "test")
+	formattedImages, err = mw.FormattedImages(ctx, []int{imageID1, imageID2}, "test")
 	require.NoError(t, err)
 	require.EqualValues(t, 2, len(formattedImages))
 }
 
 func TestRequestFormattedImageAgain(t *testing.T) {
 	t.Parallel()
+
+	ctx := context.Background()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -238,13 +246,13 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
+	imageID, err := mw.AddImageFromFile(ctx, TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID)
 
 	formatName := "test"
 
-	formattedImage, err := mw.FormattedImage(imageID, formatName)
+	formattedImage, err := mw.FormattedImage(ctx, imageID, formatName)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())
@@ -252,7 +260,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 	require.True(t, formattedImage.FileSize() > 0)
 	require.NotEmpty(t, formattedImage.Src())
 
-	formattedImage, err = mw.FormattedImage(imageID, formatName)
+	formattedImage, err = mw.FormattedImage(ctx, imageID, formatName)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 160, formattedImage.Width())
