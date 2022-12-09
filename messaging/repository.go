@@ -352,22 +352,6 @@ func (s *Repository) prepareList(
 
 		var ok bool
 
-		if options.AllMessagesLink && msg.FromUserID.Valid {
-			dialogWith := msg.FromUserID.Int64
-			if msg.FromUserID.Valid && msg.FromUserID.Int64 == userID {
-				dialogWith = msg.ToUserID
-			}
-
-			if dialogCount, ok = cache[dialogWith]; !ok {
-				dialogCount, err = s.GetDialogCount(ctx, userID, dialogWith)
-				if err != nil {
-					return messages, err
-				}
-
-				cache[dialogWith] = dialogCount
-			}
-		}
-
 		var dialogWithUserID *int64
 
 		if msg.ToUserID == userID {
@@ -376,6 +360,18 @@ func (s *Repository) prepareList(
 			}
 		} else {
 			dialogWithUserID = &msg.ToUserID
+		}
+
+		if options.AllMessagesLink && dialogWithUserID != nil {
+			id := *dialogWithUserID
+			if dialogCount, ok = cache[id]; !ok {
+				dialogCount, err = s.GetDialogCount(ctx, userID, id)
+				if err != nil {
+					return messages, err
+				}
+
+				cache[id] = dialogCount
+			}
 		}
 
 		messages[idx] = Message{
