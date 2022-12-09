@@ -375,7 +375,7 @@ func (s *Repository) prepareList(
 				dialogWithUserID = &msg.FromUserID.Int64
 			}
 		} else {
-			dialogWithUserID = &userID
+			dialogWithUserID = &msg.ToUserID
 		}
 
 		messages[idx] = Message{
