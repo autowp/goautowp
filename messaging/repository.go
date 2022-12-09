@@ -267,7 +267,7 @@ func (s *Repository) GetSystembox(ctx context.Context, userID int64, page int32)
 		CurrentPageNumber: page,
 	}
 
-	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: true})
+	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: false})
 }
 
 func (s *Repository) GetDialogbox(
