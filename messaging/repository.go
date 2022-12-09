@@ -348,10 +348,6 @@ func (s *Repository) prepareList(
 		authorIsMe := msg.FromUserID.Valid && msg.FromUserID.Int64 == userID
 		canReply := msg.FromUserID.Valid && !authorIsMe //  && ! $author['deleted']
 
-		var dialogCount int32
-
-		var ok bool
-
 		var dialogWithUserID *int64
 
 		if msg.ToUserID == userID {
@@ -362,8 +358,14 @@ func (s *Repository) prepareList(
 			dialogWithUserID = &msg.ToUserID
 		}
 
+		var dialogCount int32
+
 		if options.AllMessagesLink && dialogWithUserID != nil {
-			id := *dialogWithUserID
+			var (
+				ok bool
+				id = *dialogWithUserID
+			)
+
 			if dialogCount, ok = cache[id]; !ok {
 				dialogCount, err = s.GetDialogCount(ctx, userID, id)
 				if err != nil {
