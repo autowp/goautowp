@@ -257,7 +257,7 @@ func (s *Repository) GetSentbox(ctx context.Context, userID int64, page int32) (
 		CurrentPageNumber: page,
 	}
 
-	return s.getBox(ctx, 0, paginator, Options{AllMessagesLink: true})
+	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: true})
 }
 
 func (s *Repository) GetSystembox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {

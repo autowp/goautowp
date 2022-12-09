@@ -197,4 +197,8 @@ func TestDialogCount(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Greater(t, countAfter, countBefore)
+
+	messages, _, err := s.GetSentbox(context.Background(), user1, 1)
+	require.NoError(t, err)
+	require.Equal(t, countAfter, messages[0].DialogCount)
 }
