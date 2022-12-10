@@ -162,7 +162,7 @@ func (s *Traffic) AutoWhitelist(ctx context.Context) error {
 	}
 
 	for _, item := range items {
-		logrus.Infof("Check IP %v", item.IP)
+		logrus.Infof("Check IP %v", item.IP.String())
 
 		if err = s.AutoWhitelistIP(ctx, item.IP); err != nil {
 			return err
