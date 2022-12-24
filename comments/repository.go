@@ -483,6 +483,7 @@ func (s *Repository) UpdateTopicStat(ctx context.Context, typeID CommentType, it
 		_, err = s.db.ExecContext(
 			ctx, "DELETE FROM comment_topic WHERE item_id = ? AND type_id = ?", itemID, typeID,
 		)
+
 		return err
 	}
 
@@ -595,7 +596,12 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 	}
 
 	ids, err := s.getSubscribersIDs(ctx, typeID, itemID, true)
+	if err != nil {
+		return err
+	}
+
 	filteredIDs := make([]int64, 0)
+
 	for _, id := range ids {
 		prefs, err := s.userRepository.UserPreferences(ctx, id, authorID.Int64)
 		if err != nil {
@@ -607,7 +613,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		}
 	}
 
-	if len(filteredIDs) <= 0 {
+	if len(filteredIDs) == 0 {
 		return nil
 	}
 
@@ -622,6 +628,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 
 	bundle := i18n.NewBundle(language.English)
 	bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
+
 	_, err = bundle.LoadMessageFile("en.json")
 	if err != nil {
 		return err
@@ -631,6 +638,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		subscriberID       int64
 		subscriberLanguage string
 	)
+
 	for subscribers.Next() {
 		err = subscribers.Scan(&subscriberID, &subscriberLanguage)
 		if err != nil {
@@ -648,21 +656,22 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		}
 
 		uri.Path = "/users/" + path
-		userUrl := uri.String()
+		userURL := uri.String()
 
-		messageUrl, err := s.getMessageUrl(ctx, messageID, uri)
+		messageURL, err := s.getMessageURL(ctx, messageID, uri)
 		if err != nil {
 			return err
 		}
 
 		localizer := i18n.NewLocalizer(bundle, subscriberLanguage)
+
 		message, err := localizer.Localize(&i18n.LocalizeConfig{
 			DefaultMessage: &i18n.Message{
 				ID: "pm/user-%s-post-new-message-%s",
 			},
 			TemplateData: map[string]interface{}{
-				"Name":    userUrl,
-				"Message": messageUrl,
+				"Name":    userURL,
+				"Message": messageURL,
 			},
 		})
 		if err != nil {
@@ -683,7 +692,12 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 	return nil
 }
 
-func (s *Repository) getSubscribersIDs(ctx context.Context, typeID int64, itemID int64, onlyAwaiting bool) ([]int64, error) {
+func (s *Repository) getSubscribersIDs(
+	ctx context.Context,
+	typeID int64,
+	itemID int64,
+	onlyAwaiting bool,
+) ([]int64, error) {
 	sel := s.db.Select("user_id").From("comment_topic_subscribe").Where(
 		goqu.I("type_id").Eq(typeID),
 		goqu.I("item_id").Eq(itemID),
@@ -700,7 +714,13 @@ func (s *Repository) getSubscribersIDs(ctx context.Context, typeID int64, itemID
 	return result, err
 }
 
-func (s *Repository) setSubscriptionSent(ctx context.Context, typeID int64, itemID int64, subscriberID int64, sent bool) error {
+func (s *Repository) setSubscriptionSent(
+	ctx context.Context,
+	typeID int64,
+	itemID int64,
+	subscriberID int64,
+	sent bool,
+) error {
 	_, err := s.db.Update("comment_topic_subscribe").
 		Set(goqu.Record{"sent": sent}).
 		Where(
@@ -713,11 +733,12 @@ func (s *Repository) setSubscriptionSent(ctx context.Context, typeID int64, item
 	return err
 }
 
-func (s *Repository) getMessageUrl(ctx context.Context, messageID int64, uri *url.URL) (string, error) {
+func (s *Repository) getMessageURL(ctx context.Context, messageID int64, uri *url.URL) (string, error) {
 	var (
 		itemID int64
 		typeID CommentType
 	)
+
 	err := s.db.QueryRowContext(
 		ctx,
 		"SELECT item_id, type_id FROM comment_message WHERE id = ?",
@@ -748,6 +769,7 @@ func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType,
 	switch typeID {
 	case TypeIDPictures:
 		var identity string
+
 		err := s.db.QueryRowContext(ctx, "SELECT identity FROM pictures WHERE id = ?", itemID).Scan(&identity)
 		if err != nil {
 			return nil, err
@@ -757,6 +779,7 @@ func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType,
 
 	case TypeIDItems:
 		var itemTypeID items.ItemType
+
 		err := s.db.QueryRowContext(ctx, "SELECT item_type_id FROM item WHERE id = ?", itemID).Scan(&itemTypeID)
 		if err != nil {
 			return nil, err
@@ -768,11 +791,11 @@ func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType,
 		case items.MUSEUM:
 			return []string{"/museums", strconv.FormatInt(itemID, 10)}, nil
 		default:
-			return nil, errors.New(fmt.Sprintf(
-				"Failed to build url form message `%v` item_type `%v`",
+			return nil, fmt.Errorf(
+				"failed to build url form message `%v` item_type `%v`",
 				itemID,
 				itemTypeID,
-			))
+			)
 		}
 
 	case TypeIDVotings:
@@ -780,6 +803,7 @@ func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType,
 
 	case TypeIDArticles:
 		var catname string
+
 		err := s.db.QueryRowContext(ctx, "SELECT catname FROM articles WHERE id = ?", itemID).Scan(&catname)
 		if err != nil {
 			return nil, err
@@ -791,5 +815,5 @@ func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType,
 		return []string{"/forums", "message", strconv.FormatInt(itemID, 10)}, nil
 	}
 
-	return nil, errors.New(fmt.Sprintf("unknown type_id `%v`", typeID))
+	return nil, fmt.Errorf("unknown type_id `%v`", typeID)
 }
