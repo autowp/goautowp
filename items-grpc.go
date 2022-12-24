@@ -11,9 +11,9 @@ import (
 	"github.com/autowp/goautowp/pictures"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
-	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const defaultCacheExpiration = 180
@@ -550,7 +550,7 @@ func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIIte
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetContentLanguages(_ context.Context, _ *empty.Empty) (*APIContentLanguages, error) {
+func (s *ItemsGRPCServer) GetContentLanguages(_ context.Context, _ *emptypb.Empty) (*APIContentLanguages, error) {
 	return &APIContentLanguages{
 		Languages: s.contentLanguages,
 	}, nil

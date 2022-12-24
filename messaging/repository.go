@@ -257,7 +257,7 @@ func (s *Repository) GetSentbox(ctx context.Context, userID int64, page int32) (
 		CurrentPageNumber: page,
 	}
 
-	return s.getBox(ctx, 0, paginator, Options{AllMessagesLink: true})
+	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: true})
 }
 
 func (s *Repository) GetSystembox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
@@ -267,7 +267,7 @@ func (s *Repository) GetSystembox(ctx context.Context, userID int64, page int32)
 		CurrentPageNumber: page,
 	}
 
-	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: true})
+	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: false})
 }
 
 func (s *Repository) GetDialogbox(
@@ -348,26 +348,6 @@ func (s *Repository) prepareList(
 		authorIsMe := msg.FromUserID.Valid && msg.FromUserID.Int64 == userID
 		canReply := msg.FromUserID.Valid && !authorIsMe //  && ! $author['deleted']
 
-		var dialogCount int32
-
-		var ok bool
-
-		if options.AllMessagesLink && msg.FromUserID.Valid {
-			dialogWith := msg.FromUserID.Int64
-			if msg.FromUserID.Valid && msg.FromUserID.Int64 == userID {
-				dialogWith = msg.ToUserID
-			}
-
-			if dialogCount, ok = cache[dialogWith]; !ok {
-				dialogCount, err = s.GetDialogCount(ctx, userID, dialogWith)
-				if err != nil {
-					return messages, err
-				}
-
-				cache[dialogWith] = dialogCount
-			}
-		}
-
 		var dialogWithUserID *int64
 
 		if msg.ToUserID == userID {
@@ -375,7 +355,25 @@ func (s *Repository) prepareList(
 				dialogWithUserID = &msg.FromUserID.Int64
 			}
 		} else {
-			dialogWithUserID = &userID
+			dialogWithUserID = &msg.ToUserID
+		}
+
+		var dialogCount int32
+
+		if options.AllMessagesLink && dialogWithUserID != nil {
+			var (
+				ok bool
+				id = *dialogWithUserID
+			)
+
+			if dialogCount, ok = cache[id]; !ok {
+				dialogCount, err = s.GetDialogCount(ctx, userID, id)
+				if err != nil {
+					return messages, err
+				}
+
+				cache[id] = dialogCount
+			}
 		}
 
 		messages[idx] = Message{

@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/util"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestTopBrandsList(t *testing.T) {
@@ -114,7 +114,7 @@ func TestContentLanguages(t *testing.T) {
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
-	r, err := client.GetContentLanguages(ctx, &empty.Empty{})
+	r, err := client.GetContentLanguages(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 	require.Greater(t, len(r.Languages), 1)
