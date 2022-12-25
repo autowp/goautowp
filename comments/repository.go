@@ -443,7 +443,7 @@ func (s *Repository) Add(
 		}
 	}
 
-	err = s.UpdateTopicStat(ctx, typeID, itemID)
+	err = s.updateTopicStat(ctx, typeID, itemID)
 	if err != nil {
 		return 0, err
 	}
@@ -471,41 +471,6 @@ func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID in
 	_, err = s.db.ExecContext(
 		ctx, "UPDATE comment_message SET replies_count = ? WHERE id = ?", count, messageID,
 	)
-
-	return err
-}
-
-func (s *Repository) UpdateTopicStat(ctx context.Context, typeID CommentType, itemID int64) error {
-	messagesCount, err := s.countMessages(ctx, typeID, itemID)
-	if err != nil {
-		return err
-	}
-
-	if messagesCount <= 0 {
-		_, err = s.db.ExecContext(
-			ctx, "DELETE FROM comment_topic WHERE item_id = ? AND type_id = ?", itemID, typeID,
-		)
-
-		return err
-	}
-
-	lastUpdate, err := s.getLastUpdate(ctx, typeID, itemID)
-	if err != nil {
-		return err
-	}
-
-	if lastUpdate.Valid {
-		luTime := lastUpdate.Time
-
-		_, err = s.db.ExecContext(
-			ctx, `
-			INSERT INTO comment_topic (item_id, type_id, last_update, messages)
-			VALUES (?, ?, ?, ?)
-			ON DUPLICATE KEY UPDATE last_update = VALUES(last_update), messages = VALUES(messages)
-		`,
-			itemID, typeID, luTime.Format("2006-01-02 15:04:05"), messagesCount,
-		)
-	}
 
 	return err
 }
