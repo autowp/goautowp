@@ -3,7 +3,11 @@ package comments
 import (
 	"context"
 	"database/sql"
+	"math/rand"
+	"strconv"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
@@ -12,12 +16,44 @@ import (
 	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
 	_ "github.com/lib/pq"                               // enable postgres driver
 	"github.com/stretchr/testify/require"
 )
 
-func createRepository(t *testing.T) *Repository {
+func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
+	t.Helper()
+
+	emailAddr := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
+	name := "ivan"
+	r, err := db.Insert("users").
+		Rows(goqu.Record{
+			"login":            nil,
+			"e_mail":           emailAddr,
+			"password":         nil,
+			"email_to_check":   nil,
+			"hide_e_mail":      1,
+			"email_check_code": nil,
+			"name":             name,
+			"reg_date":         goqu.L("NOW()"),
+			"last_online":      goqu.L("NOW()"),
+			"timezone":         "Europe/Moscow",
+			"last_ip":          goqu.L("INET6_ATON('127.0.0.1')"),
+			"language":         "en",
+			"role":             "user",
+			"uuid":             goqu.L("UUID_TO_BIN(?)", uuid.New().String()),
+		}).
+		Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	id, err := r.LastInsertId()
+	require.NoError(t, err)
+
+	return id
+}
+
+func createRepository(t *testing.T) (*Repository, *goqu.Database) {
 	t.Helper()
 
 	cfg := config.LoadConfig("..")
@@ -27,10 +63,10 @@ func createRepository(t *testing.T) *Repository {
 
 	goquDB := goqu.New("mysql", autowpDB)
 
-	db, err := sql.Open("postgres", cfg.PostgresDSN)
+	postgresDB, err := sql.Open("postgres", cfg.PostgresDSN)
 	require.NoError(t, err)
 
-	goquPostgresDB := goqu.New("postgres", db)
+	goquPostgresDB := goqu.New("postgres", postgresDB)
 
 	client := gocloak.NewClient(cfg.Keycloak.URL)
 
@@ -51,13 +87,13 @@ func createRepository(t *testing.T) *Repository {
 
 	repo := NewRepository(goquDB, usersRepository, messagingRepository, hostsManager)
 
-	return repo
+	return repo, goquDB
 }
 
 func TestCleanupDeleted(t *testing.T) {
 	t.Parallel()
 
-	s := createRepository(t)
+	s, _ := createRepository(t)
 
 	ctx := context.Background()
 
@@ -68,10 +104,26 @@ func TestCleanupDeleted(t *testing.T) {
 func TestRefreshRepliesCount(t *testing.T) {
 	t.Parallel()
 
-	s := createRepository(t)
+	s, _ := createRepository(t)
 
 	ctx := context.Background()
 
 	_, err := s.RefreshRepliesCount(ctx)
+	require.NoError(t, err)
+}
+
+func TestAdd(t *testing.T) {
+	t.Parallel()
+
+	s, db := createRepository(t)
+	ctx := context.Background()
+	userID := createRandomUser(ctx, t, db)
+
+	var (
+		commentType       = TypeIDPictures
+		itemID      int64 = 1
+	)
+
+	_, err := s.Add(ctx, commentType, itemID, 0, userID, "Test message", "127.0.0.1", false)
 	require.NoError(t, err)
 }
