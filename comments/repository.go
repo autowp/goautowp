@@ -867,3 +867,33 @@ func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 
 	return affected, nil
 }
+
+func (s *Repository) RefreshRepliesCount(ctx context.Context) (int64, error) {
+	_, err := s.db.ExecContext(ctx, `
+		create temporary table __cms
+		select type_id, item_id, parent_id as id, count(1) as count
+		from comment_message
+		where parent_id is not null
+		group by type_id, item_id, parent_id
+    `)
+	if err != nil {
+		return 0, err
+	}
+
+	res, err := s.db.ExecContext(ctx, `
+		update comment_message
+		inner join __cms
+		using(type_id, item_id, id)
+		set comment_message.replies_count = __cms.count
+    `)
+	if err != nil {
+		return 0, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return affected, nil
+}

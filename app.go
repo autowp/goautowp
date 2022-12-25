@@ -282,6 +282,15 @@ func (s *Application) SchedulerDaily(ctx context.Context) error {
 
 	logrus.Infof("Comments deleted: %d", affected)
 
+	affected, err = commentsRep.RefreshRepliesCount(ctx)
+	if err != nil {
+		logrus.Error(err.Error())
+
+		return err
+	}
+
+	logrus.Infof("Replies refreshed: %d", affected)
+
 	return nil
 }
 

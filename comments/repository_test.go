@@ -64,3 +64,14 @@ func TestCleanupDeleted(t *testing.T) {
 	_, err := s.CleanupDeleted(ctx)
 	require.NoError(t, err)
 }
+
+func TestRefreshRepliesCount(t *testing.T) {
+	t.Parallel()
+
+	s := createRepository(t)
+
+	ctx := context.Background()
+
+	_, err := s.RefreshRepliesCount(ctx)
+	require.NoError(t, err)
+}
