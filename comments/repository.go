@@ -10,18 +10,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"golang.org/x/text/language"
-
-	"github.com/autowp/goautowp/items"
-
 	"github.com/autowp/goautowp/hosts"
-
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
-
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
 )
 
 type CommentType int32
@@ -265,7 +261,7 @@ func (s *Repository) moveMessageRecursive(
 func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentType, itemID int64) error {
 	var (
 		messagesCount int
-		lastUpdate    *string
+		lastUpdate    *sql.NullTime
 	)
 
 	err := s.db.QueryRowContext(
@@ -287,15 +283,17 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 		return err
 	}
 
-	_, err = s.db.ExecContext(
-		ctx,
-		`
-            INSERT INTO comment_topic (item_id, type_id, last_update, messages)
-			VALUES (?, ?, ?, ?)
-			ON DUPLICATE KEY UPDATE last_update = VALUES(last_update), messages = VALUES(messages)
-        `,
-		itemID, commentType, lastUpdate, messagesCount,
-	)
+	if lastUpdate.Valid {
+		_, err = s.db.ExecContext(
+			ctx,
+			`
+				INSERT INTO comment_topic (item_id, type_id, last_update, messages)
+				VALUES (?, ?, ?, ?)
+				ON DUPLICATE KEY UPDATE last_update = VALUES(last_update), messages = VALUES(messages)
+			`,
+			itemID, commentType, lastUpdate.Time.Format("2006-01-02 15:04:05"), messagesCount,
+		)
+	}
 
 	return err
 }
