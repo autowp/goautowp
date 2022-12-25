@@ -217,7 +217,7 @@ func mainReturnWithCode() int {
 			{
 				Name: "scheduler-daily",
 				Action: func(cCtx *cli.Context) error {
-					return autowpApp.SchedulerDaily()
+					return autowpApp.SchedulerDaily(cCtx.Context)
 				},
 			},
 			{

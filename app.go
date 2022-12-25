@@ -13,7 +13,8 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/sirupsen/logrus"
 
-	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
+	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
@@ -254,18 +255,32 @@ func (s *Application) SchedulerHourly(ctx context.Context) error {
 	return nil
 }
 
-func (s *Application) SchedulerDaily() error {
+func (s *Application) SchedulerDaily(ctx context.Context) error {
 	usersRep, err := s.container.UsersRepository()
 	if err != nil {
 		return err
 	}
 
-	err = usersRep.UpdateSpecsVolumes()
+	err = usersRep.UpdateSpecsVolumes(ctx)
 	if err != nil {
 		logrus.Error(err.Error())
 
 		return err
 	}
+
+	commentsRep, err := s.container.CommentsRepository()
+	if err != nil {
+		return err
+	}
+
+	affected, err := commentsRep.CleanupDeleted(ctx)
+	if err != nil {
+		logrus.Error(err.Error())
+
+		return err
+	}
+
+	logrus.Infof("Comments deleted: %d", affected)
 
 	return nil
 }

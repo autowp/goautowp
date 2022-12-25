@@ -34,6 +34,8 @@ const (
 	TypeIDForums   CommentType = 5
 )
 
+const deleteTTLDays = 300
+
 type ModeratorAttention int32
 
 const (
@@ -816,4 +818,52 @@ func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType,
 	}
 
 	return nil, fmt.Errorf("unknown type_id `%v`", typeID)
+}
+
+func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
+	query := `
+		SELECT id, item_id, type_id
+		FROM comment_message
+		WHERE id NOT IN (SELECT DISTINCT parent_id FROM comment_message WHERE parent_id)
+		  AND delete_date < DATE_SUB(NOW(), INTERVAL ? DAY)
+    `
+
+	rows, err := s.db.QueryContext(ctx, query, deleteTTLDays)
+	if err != nil {
+		return 0, err
+	}
+
+	var affected int64
+
+	for rows.Next() {
+		var (
+			id     int64
+			itemID int64
+			typeID CommentType
+		)
+
+		err = rows.Scan(&id, &itemID, &typeID)
+		if err != nil {
+			return 0, err
+		}
+
+		res, err := s.db.ExecContext(ctx, "DELETE FROM comment_message WHERE id = ?", id)
+		if err != nil {
+			return 0, err
+		}
+
+		a, err := res.RowsAffected()
+		if err != nil {
+			return 0, err
+		}
+
+		affected += a
+
+		err = s.updateTopicStat(ctx, typeID, itemID)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return affected, nil
 }

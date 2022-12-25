@@ -624,8 +624,8 @@ func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
 	return affected, nil
 }
 
-func (s *Repository) UpdateSpecsVolumes() error {
-	rows, err := s.autowpDB.Query(`
+func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
+	rows, err := s.autowpDB.QueryContext(ctx, `
 		SELECT id, count(attrs_user_values.user_id)
 		FROM users
 			LEFT JOIN attrs_user_values ON attrs_user_values.user_id = users.id
@@ -649,7 +649,8 @@ func (s *Repository) UpdateSpecsVolumes() error {
 			return err
 		}
 
-		_, err = s.autowpDB.Exec(
+		_, err = s.autowpDB.ExecContext(
+			ctx,
 			"UPDATE users SET specs_volume = ?, specs_volume_valid = 1 WHERE id = ?",
 			userID, count,
 		)
