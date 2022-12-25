@@ -310,7 +310,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 
 	remoteAddr := p.Addr.String()
 
-	messageId, err := s.repository.Add(
+	messageID, err := s.repository.Add(
 		ctx,
 		commentsType, in.ItemId, in.ParentId, userID, in.Message, remoteAddr, moderatorAttention,
 	)
@@ -318,7 +318,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if messageId == 0 {
+	if messageID == 0 {
 		return nil, status.Errorf(codes.Internal, "Message add failed")
 	}
 
@@ -334,6 +334,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 	} else {
 		err = s.usersRepository.TouchLastMessage(ctx, in.ItemId)
 	}
+
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -365,7 +366,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		}
 	}*/
 
-	err = s.repository.NotifySubscribers(messageId)
+	err = s.repository.NotifySubscribers(ctx, messageID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

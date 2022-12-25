@@ -787,7 +787,7 @@ func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType,
 			return nil, err
 		}
 
-		switch itemTypeID {
+		switch itemTypeID { //nolint:exhaustive
 		case items.TWINS:
 			return []string{"/twins", "group", strconv.FormatInt(itemID, 10)}, nil
 		case items.MUSEUM:
