@@ -475,33 +475,6 @@ func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID in
 	return err
 }
 
-func (s *Repository) countMessages(ctx context.Context, typeID CommentType, itemID int64) (int64, error) {
-	var count int64
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT count(1) FROM comment_message WHERE item_id = ? AND type_id = ?",
-		typeID, itemID,
-	).Scan(&count)
-
-	return count, err
-}
-
-func (s *Repository) getLastUpdate(ctx context.Context, typeID CommentType, itemID int64) (sql.NullTime, error) {
-	var t sql.NullTime
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT datetime FROM comment_message WHERE item_id = ? AND type_id = ? ORDER BY datetime DESC LIMIT 1",
-		itemID, typeID,
-	).Scan(&t)
-
-	if err == sql.ErrNoRows {
-		err = nil
-		t.Valid = false
-	}
-
-	return t, err
-}
-
 func (s *Repository) UpdateTopicView(ctx context.Context, typeID CommentType, itemID int64, userID int64) error {
 	_, err := s.db.ExecContext(
 		ctx, `
