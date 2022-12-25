@@ -822,10 +822,11 @@ func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType,
 
 func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 	query := `
-		SELECT id, item_id, type_id
-		FROM comment_message
-		WHERE id NOT IN (SELECT DISTINCT parent_id FROM comment_message WHERE parent_id)
-		  AND delete_date < DATE_SUB(NOW(), INTERVAL ? DAY)
+		SELECT cm1.id, cm1.item_id, cm1.type_id
+		FROM comment_message AS cm1
+			LEFT JOIN comment_message AS cm2 ON cm1.id = cm2.parent_id
+		WHERE cm2.parent_id IS NULL
+		  AND cm1.delete_date < DATE_SUB(NOW(), INTERVAL ? DAY)
     `
 
 	rows, err := s.db.QueryContext(ctx, query, deleteTTLDays)
