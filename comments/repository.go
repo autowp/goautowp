@@ -494,14 +494,18 @@ func (s *Repository) UpdateTopicStat(ctx context.Context, typeID CommentType, it
 		return err
 	}
 
-	_, err = s.db.ExecContext(
-		ctx, `
+	if lastUpdate.Valid {
+		luTime := lastUpdate.Time
+
+		_, err = s.db.ExecContext(
+			ctx, `
 			INSERT INTO comment_topic (item_id, type_id, last_update, messages)
 			VALUES (?, ?, ?, ?)
 			ON DUPLICATE KEY UPDATE last_update = VALUES(last_update), messages = VALUES(messages)
 		`,
-		itemID, typeID, lastUpdate, messagesCount,
-	)
+			itemID, typeID, luTime.Format("2006-01-02 15:04:05"), messagesCount,
+		)
+	}
 
 	return err
 }
