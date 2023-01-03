@@ -269,24 +269,14 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	/*
-		if ($this->needWait()) {
-			return new ApiProblemResponse(
-				new ApiProblem(
-					400,
-					'Data is invalid. Check `detail`.',
-					null,
-					'Validation error',
-					[
-						'invalid_params' => [
-							'message' => [
-								'invalid' => 'Too often',
-							],
-						],
-					]
-				)
-			);
-		}*/
+	needWait, err := s.repository.NeedWait(ctx, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if needWait {
+		return nil, status.Errorf(codes.PermissionDenied, "Too often")
+	}
 
 	commentsType, err := convertType(in.GetTypeId())
 	if err != nil {
@@ -339,32 +329,12 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	/*if ($data['parent_id']) {
-		$authorId = $this->comments->service()->getMessageAuthorId($data['parent_id']);
-		if ($authorId && ($authorId !== (int) $currentUser['id'])) {
-			$parentMessageAuthor = currentFromResultSetInterface(
-			$this->userModel->getTable()->select(['id' => $authorId])
-			);
-			if ($parentMessageAuthor && ! $parentMessageAuthor['deleted']) {
-				$uri = $this->hostManager->getUriByLanguage($parentMessageAuthor['language']);
-
-				$url      = $this->comments->getMessageUrl($messageId, $uri);
-				$path     = '/users/'
-				. ($currentUser['identity'] ? $currentUser['identity'] : 'user' . $currentUser['id']);
-				$moderUrl = $uri->setPath($path)->toString();
-				$message  = sprintf(
-				$this->translate(
-				'pm/user-%s-replies-to-you-%s',
-				'default',
-				$parentMessageAuthor['language']
-				),
-				$moderUrl,
-				$url
-				);
-				$this->message->send(null, $parentMessageAuthor['id'], $message);
-			}
+	if in.ParentId > 0 {
+		err = s.repository.NotifyAboutReply(ctx, messageID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
-	}*/
+	}
 
 	err = s.repository.NotifySubscribers(ctx, messageID)
 	if err != nil {

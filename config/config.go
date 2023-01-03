@@ -139,6 +139,7 @@ type Config struct {
 	DonationsVodPrice  int32                     `yaml:"donations-vod-price" mapstructure:"donations-vod-price"`
 	About              AboutConfig               `yaml:"about"               mapstructure:"about"`
 	ContentLanguages   []string                  `yaml:"content-languages"   mapstructure:"content-languages"`
+	MessageInterval    int64                     `yaml:"message-interval"    mapstructure:"message-interval"`
 }
 
 var configMutex = sync.RWMutex{}

@@ -100,12 +100,13 @@ type CreateUserOptions struct {
 
 // Repository Main Object.
 type Repository struct {
-	autowpDB       *goqu.Database
-	db             *goqu.Database
-	usersSalt      string
-	languages      map[string]config.LanguageConfig
-	keycloak       gocloak.GoCloak
-	keycloakConfig config.KeycloakConfig
+	autowpDB        *goqu.Database
+	db              *goqu.Database
+	usersSalt       string
+	languages       map[string]config.LanguageConfig
+	keycloak        gocloak.GoCloak
+	keycloakConfig  config.KeycloakConfig
+	messageInterval int64
 }
 
 // UserPreferences object.
@@ -121,14 +122,16 @@ func NewRepository(
 	languages map[string]config.LanguageConfig,
 	keyCloak gocloak.GoCloak,
 	keyCloakConfig config.KeycloakConfig,
+	messageInterval int64,
 ) *Repository {
 	return &Repository{
-		autowpDB:       autowpDB,
-		db:             db,
-		usersSalt:      usersSalt,
-		languages:      languages,
-		keycloak:       keyCloak,
-		keycloakConfig: keyCloakConfig,
+		autowpDB:        autowpDB,
+		db:              db,
+		usersSalt:       usersSalt,
+		languages:       languages,
+		keycloak:        keyCloak,
+		keycloakConfig:  keyCloakConfig,
+		messageInterval: messageInterval,
 	}
 }
 
@@ -784,4 +787,54 @@ func fullName(firstName, lastName, username string) string {
 	}
 
 	return result
+}
+
+func (s *Repository) messagingInterval(regDate time.Time, messagingInterval int64) int64 {
+	if regDate.IsZero() {
+		return s.messageInterval
+	}
+
+	tenDaysBefore := time.Now().AddDate(0, 0, -10)
+	if tenDaysBefore.After(regDate) {
+		return messagingInterval
+	}
+
+	return util.MaxInt64(messagingInterval, s.messageInterval)
+}
+
+func (s *Repository) NextMessageTime(ctx context.Context, userID int64) (time.Time, error) {
+	if s.messageInterval <= 0 {
+		return time.Time{}, nil
+	}
+
+	var (
+		lastMessageTime   sql.NullTime
+		regDate           sql.NullTime
+		messagingInterval int64
+	)
+
+	err := s.autowpDB.QueryRowContext(
+		ctx,
+		"SELECT last_message_time, reg_date, messaging_interval FROM users WHERE id = ?",
+		userID,
+	).Scan(&lastMessageTime, &regDate, &messagingInterval)
+
+	if err == sql.ErrNoRows {
+		return time.Time{}, nil
+	}
+
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	if lastMessageTime.Valid {
+		messagingInterval = s.messagingInterval(regDate.Time, messagingInterval)
+		if messagingInterval > 0 {
+			interval := time.Second * time.Duration(messagingInterval)
+
+			return lastMessageTime.Time.Add(interval), nil
+		}
+	}
+
+	return time.Time{}, nil
 }

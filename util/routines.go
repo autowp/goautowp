@@ -69,3 +69,10 @@ func ConnectRabbitMQ(config string) (*amqp.Connection, error) {
 
 	return rabbitMQ, nil
 }
+
+func MaxInt64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}

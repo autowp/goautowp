@@ -664,6 +664,7 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 			cfg.Languages,
 			s.Keycloak(),
 			cfg.Keycloak,
+			cfg.MessageInterval,
 		)
 	}
 

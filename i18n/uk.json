@@ -1,3 +1,4 @@
 {
-  "pm/user-%s-post-new-message-%s": "{{.Name}} написав повідомлення\n{{.Message}}"
+  "pm/user-%s-post-new-message-%s": "{{.Name}} написав повідомлення\n{{.Message}}",
+  "pm/user-%s-replies-to-you-%s" : "%s відповів на ваше повідомлення\n%s"
 }

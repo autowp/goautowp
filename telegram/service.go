@@ -109,7 +109,7 @@ func (s *Service) getURIByChatID(ctx context.Context, chatID int64) (*url.URL, e
 		}
 
 		if len(language) > 0 {
-			return s.hostsManager.GetURIByLanguage(language)
+			return s.hostsManager.URIByLanguage(language)
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/items"
@@ -512,6 +513,78 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 	return err
 }
 
+func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) error {
+	var (
+		authorID       int64
+		parentAuthorID int64
+		authorIdentity string
+		parentLanguage string
+	)
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT cm1.author_id, parent_message.author_id, u.identity, parent_user.language
+		FROM comment_message AS cm1 
+		    JOIN comment_message AS parent_message ON cm1.parent_id = parent_message.id
+			JOIN users AS u ON cm1.author_id = u.id
+			JOIN users AS parent_user ON parent_message.author_id = parent_user.id
+		WHERE cm1.id = ? AND cm1.author_id != parent_message.author_id AND NOT parent_user.deleted
+    `, messageID).Scan(&authorID, &parentAuthorID, &authorIdentity, &parentLanguage)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	userURL, err := s.userURL(authorID, authorIdentity, parentLanguage)
+	if err != nil {
+		return err
+	}
+
+	uri, err := s.hostManager.URIByLanguage(parentLanguage)
+	if err != nil {
+		return err
+	}
+
+	messageURL, err := s.messageURL(ctx, messageID, uri)
+	if err != nil {
+		return err
+	}
+
+	localizer, err := s.localizer(parentLanguage)
+	if err != nil {
+		return err
+	}
+
+	message, err := localizer.Localize(&i18n.LocalizeConfig{
+		DefaultMessage: &i18n.Message{
+			ID: "pm/user-%s-replies-to-you-%s",
+		},
+		TemplateData: map[string]interface{}{
+			"Name":    userURL,
+			"Message": messageURL,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return s.messageRepository.CreateMessage(ctx, 0, parentAuthorID, message)
+}
+
+func (s *Repository) localizer(lang string) (*i18n.Localizer, error) {
+	bundle := i18n.NewBundle(language.English)
+	bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
+
+	_, err := bundle.LoadMessageFile("en.json")
+	if err != nil {
+		return nil, err
+	}
+
+	return i18n.NewLocalizer(bundle, lang), nil
+}
+
 func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) error {
 	var (
 		itemID, typeID int64
@@ -568,14 +641,6 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		return err
 	}
 
-	bundle := i18n.NewBundle(language.English)
-	bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
-
-	_, err = bundle.LoadMessageFile("en.json")
-	if err != nil {
-		return err
-	}
-
 	var (
 		subscriberID       int64
 		subscriberLanguage string
@@ -587,25 +652,25 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 			return err
 		}
 
-		path := "user" + strconv.FormatInt(authorID.Int64, 10)
-		if len(authorIdentity) > 0 {
-			path = authorIdentity
-		}
-
-		uri, err := s.hostManager.GetURIByLanguage(subscriberLanguage)
+		userURL, err := s.userURL(authorID.Int64, authorIdentity, subscriberLanguage)
 		if err != nil {
 			return err
 		}
 
-		uri.Path = "/users/" + path
-		userURL := uri.String()
-
-		messageURL, err := s.getMessageURL(ctx, messageID, uri)
+		uri, err := s.hostManager.URIByLanguage(subscriberLanguage)
 		if err != nil {
 			return err
 		}
 
-		localizer := i18n.NewLocalizer(bundle, subscriberLanguage)
+		messageURL, err := s.messageURL(ctx, messageID, uri)
+		if err != nil {
+			return err
+		}
+
+		localizer, err := s.localizer(subscriberLanguage)
+		if err != nil {
+			return err
+		}
 
 		message, err := localizer.Localize(&i18n.LocalizeConfig{
 			DefaultMessage: &i18n.Message{
@@ -675,7 +740,7 @@ func (s *Repository) setSubscriptionSent(
 	return err
 }
 
-func (s *Repository) getMessageURL(ctx context.Context, messageID int64, uri *url.URL) (string, error) {
+func (s *Repository) messageURL(ctx context.Context, messageID int64, uri *url.URL) (string, error) {
 	var (
 		itemID int64
 		typeID CommentType
@@ -690,7 +755,7 @@ func (s *Repository) getMessageURL(ctx context.Context, messageID int64, uri *ur
 		return "", err
 	}
 
-	route, err := s.getMessageRowRoute(ctx, typeID, itemID)
+	route, err := s.messageRowRoute(ctx, typeID, itemID)
 	if err != nil {
 		return "", err
 	}
@@ -707,7 +772,7 @@ func (s *Repository) getMessageURL(ctx context.Context, messageID int64, uri *ur
 	return uri.String(), nil
 }
 
-func (s *Repository) getMessageRowRoute(ctx context.Context, typeID CommentType, itemID int64) ([]string, error) {
+func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, itemID int64) ([]string, error) {
 	switch typeID {
 	case TypeIDPictures:
 		var identity string
@@ -837,4 +902,32 @@ func (s *Repository) RefreshRepliesCount(ctx context.Context) (int64, error) {
 	}
 
 	return affected, nil
+}
+
+func (s *Repository) userURL(userID int64, identity string, language string) (string, error) {
+	if len(identity) == 0 {
+		identity = "user" + strconv.FormatInt(userID, 10)
+	}
+
+	uri, err := s.hostManager.URIByLanguage(language)
+	if err != nil {
+		return "", err
+	}
+
+	uri.Path = "/users/" + url.QueryEscape(identity)
+
+	return uri.String(), nil
+}
+
+func (s *Repository) NeedWait(ctx context.Context, userID int64) (bool, error) {
+	nextMessageTime, err := s.userRepository.NextMessageTime(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+
+	if nextMessageTime.IsZero() {
+		return false, nil
+	}
+
+	return time.Now().After(nextMessageTime), nil
 }
