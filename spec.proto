@@ -777,5 +777,5 @@ message AddCommentRequest {
 }
 
 message AddCommentResponse {
-
+  int64 id = 1;
 }

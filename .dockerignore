@@ -9,3 +9,9 @@ goautowp
 cov.out
 coverage.xml
 app
+minio
+.releaserc.yaml
+.golangci.yml
+.gitlab-ci.yml
+.gitignore
+test.env

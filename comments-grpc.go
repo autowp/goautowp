@@ -3,16 +3,16 @@ package goautowp
 import (
 	"context"
 	"fmt"
-
-	"github.com/autowp/goautowp/validation"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-
-	"google.golang.org/grpc/peer"
+	"net"
 
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -335,18 +335,23 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 	}
 
 	moderatorAttention := false
-	if res := s.enforcer.Enforce(role, "comment", "moderator-attention"); !res {
+	if res := s.enforcer.Enforce(role, "comment", "moderator-attention"); res {
 		moderatorAttention = in.ModeratorAttention
 	}
 
+	remoteAddr := "127.0.0.1"
 	p, ok := peer.FromContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "Failed extract peer from context")
-	}
 
-	remoteAddr := p.Addr.String()
-	if remoteAddr == "bufconn" {
-		remoteAddr = "127.0.0.1"
+	if ok {
+		nw := p.Addr.String()
+		if nw != "bufconn" {
+			ip, _, err := net.SplitHostPort(nw)
+			if err != nil {
+				logrus.Errorf("userip: %q is not IP:port", nw)
+			} else {
+				remoteAddr = ip
+			}
+		}
 	}
 
 	messageID, err := s.repository.Add(
@@ -390,5 +395,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &AddCommentResponse{}, nil
+	return &AddCommentResponse{
+		Id: messageID,
+	}, nil
 }
