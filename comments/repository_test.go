@@ -77,6 +77,7 @@ func createRepository(t *testing.T) (*Repository, *goqu.Database) {
 		cfg.Languages,
 		client,
 		cfg.Keycloak,
+		cfg.MessageInterval,
 	)
 
 	hostsManager := hosts.NewManager(cfg.Languages)
