@@ -642,11 +642,10 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		return nil
 	}
 
-	subscribers, err := s.db.QueryContext(
-		ctx,
-		"SELECT id, language FROM users WHERE id IN (?) and id != ?",
-		filteredIDs, authorID,
-	)
+	subscribers, err := s.db.From("users").Select("id", "language").Where(
+		goqu.I("id").NotIn(filteredIDs),
+		goqu.I("id").Neq(authorID),
+	).Executor().QueryContext(ctx)
 	if err != nil {
 		return err
 	}
