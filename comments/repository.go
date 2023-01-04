@@ -488,23 +488,26 @@ func (s *Repository) UpdateTopicView(ctx context.Context, typeID CommentType, it
 }
 
 func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID int64) error {
-	var err error
+	var (
+		err error
+		val int
+	)
 
 	switch typeID {
 	case TypeIDPictures:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM pictures WHERE id = ?", itemID).Scan()
+		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM pictures WHERE id = ?", itemID).Scan(&val)
 
 	case TypeIDItems:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM item WHERE id = ?", itemID).Scan()
+		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM item WHERE id = ?", itemID).Scan(&val)
 
 	case TypeIDVotings:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM voting WHERE id = ?", itemID).Scan()
+		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM voting WHERE id = ?", itemID).Scan(&val)
 
 	case TypeIDArticles:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM articles WHERE id = ?", itemID).Scan()
+		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM articles WHERE id = ?", itemID).Scan(&val)
 
 	case TypeIDForums:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM forums_topics WHERE id = ?", itemID).Scan()
+		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM forums_topics WHERE id = ?", itemID).Scan(&val)
 
 	default:
 		err = errors.New("invalid type")
@@ -589,7 +592,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 	var (
 		itemID, typeID int64
 		authorID       sql.NullInt64
-		authorIdentity string
+		authorIdentity sql.NullString
 	)
 
 	err := s.db.QueryRowContext(
@@ -608,6 +611,11 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 	err = s.db.QueryRowContext(ctx, "SELECT identity FROM users WHERE id = ?", authorID.Int64).Scan(&authorIdentity)
 	if err != nil {
 		return err
+	}
+
+	au := ""
+	if authorIdentity.Valid {
+		au = authorIdentity.String
 	}
 
 	ids, err := s.getSubscribersIDs(ctx, typeID, itemID, true)
@@ -652,7 +660,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 			return err
 		}
 
-		userURL, err := s.userURL(authorID.Int64, authorIdentity, subscriberLanguage)
+		userURL, err := s.userURL(authorID.Int64, au, subscriberLanguage)
 		if err != nil {
 			return err
 		}
@@ -929,5 +937,5 @@ func (s *Repository) NeedWait(ctx context.Context, userID int64) (bool, error) {
 		return false, nil
 	}
 
-	return time.Now().After(nextMessageTime), nil
+	return time.Now().Before(nextMessageTime), nil
 }

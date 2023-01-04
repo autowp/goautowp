@@ -761,7 +761,7 @@ func (s *Repository) SetupPrivateRouter(r *gin.Engine) {
 }
 
 func (s *Repository) IncForumMessages(ctx context.Context, userID int64) error {
-	_, err := s.db.ExecContext(
+	_, err := s.autowpDB.ExecContext(
 		ctx,
 		"UPDATE users SET forums_messages = forums_messages + 1, last_message_time = NOW() WHERE id = ?",
 		userID,
@@ -771,7 +771,7 @@ func (s *Repository) IncForumMessages(ctx context.Context, userID int64) error {
 }
 
 func (s *Repository) TouchLastMessage(ctx context.Context, userID int64) error {
-	_, err := s.db.ExecContext(
+	_, err := s.autowpDB.ExecContext(
 		ctx,
 		"UPDATE users SET last_message_time = NOW() WHERE id = ?",
 		userID,

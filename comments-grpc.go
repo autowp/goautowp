@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/autowp/goautowp/validation"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+
 	"google.golang.org/grpc/peer"
 
 	"github.com/autowp/goautowp/comments"
@@ -259,6 +262,49 @@ func (s *CommentsGRPCServer) VoteComment(
 	}, nil
 }
 
+func (s *AddCommentRequest) Validate(
+	ctx context.Context,
+	repository *comments.Repository,
+	userID int64,
+) ([]*errdetails.BadRequest_FieldViolation, error) {
+	var (
+		result   = make([]*errdetails.BadRequest_FieldViolation, 0)
+		problems []string
+		err      error
+	)
+
+	msgInputFilter := validation.InputFilter{
+		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}},
+	}
+	s.Message, problems, err = msgInputFilter.IsValidString(s.Message)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "message",
+			Description: fv,
+		})
+	}
+
+	needWait, err := repository.NeedWait(ctx, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if needWait {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "message",
+			Description: "Too often",
+		})
+	}
+
+	return result, nil
+}
+
 func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*AddCommentResponse, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
@@ -269,13 +315,13 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	needWait, err := s.repository.NeedWait(ctx, userID)
+	InvalidParams, err := in.Validate(ctx, s.repository, userID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
-	if needWait {
-		return nil, status.Errorf(codes.PermissionDenied, "Too often")
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
 	}
 
 	commentsType, err := convertType(in.GetTypeId())
@@ -299,6 +345,9 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 	}
 
 	remoteAddr := p.Addr.String()
+	if remoteAddr == "bufconn" {
+		remoteAddr = "127.0.0.1"
+	}
 
 	messageID, err := s.repository.Add(
 		ctx,
