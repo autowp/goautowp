@@ -155,9 +155,11 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 		return errors.New("too long message")
 	}
 
+	nullableFromUserID := sql.NullInt64{Int64: fromUserID, Valid: fromUserID != 0}
+
 	_, err := s.db.Insert("personal_messages").Rows(
 		goqu.Record{
-			"from_user_id": fromUserID,
+			"from_user_id": nullableFromUserID,
 			"to_user_id":   toUserID,
 			"contents":     text,
 			"add_datetime": goqu.L("NOW()"),
