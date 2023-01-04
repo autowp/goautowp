@@ -274,8 +274,11 @@ func (s *AddCommentRequest) Validate(
 	)
 
 	msgInputFilter := validation.InputFilter{
-		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}},
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.StringLength{Max: comments.MaxMessageLength},
+		},
 	}
 	s.Message, problems, err = msgInputFilter.IsValidString(s.Message)
 

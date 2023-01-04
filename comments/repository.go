@@ -41,6 +41,8 @@ const (
 	ModeratorAttentionCompleted ModeratorAttention = 2
 )
 
+const MaxMessageLength = 16 * 1024
+
 type GetVotesResult struct {
 	PositiveVotes []users.DBUser
 	NegativeVotes []users.DBUser
