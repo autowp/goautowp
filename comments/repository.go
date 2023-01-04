@@ -643,7 +643,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 	}
 
 	subscribers, err := s.db.From("users").Select("id", "language").Where(
-		goqu.I("id").NotIn(filteredIDs),
+		goqu.I("id").In(filteredIDs),
 		goqu.I("id").Neq(authorID),
 	).Executor().QueryContext(ctx)
 	if err != nil {
