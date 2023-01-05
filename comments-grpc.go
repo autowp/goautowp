@@ -377,9 +377,9 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 	}
 
 	if in.TypeId == CommentsType_FORUMS_TYPE_ID {
-		err = s.usersRepository.IncForumMessages(ctx, in.ItemId)
+		err = s.usersRepository.IncForumMessages(ctx, userID)
 	} else {
-		err = s.usersRepository.TouchLastMessage(ctx, in.ItemId)
+		err = s.usersRepository.TouchLastMessage(ctx, userID)
 	}
 
 	if err != nil {
