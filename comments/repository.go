@@ -522,7 +522,7 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 	var (
 		authorID       int64
 		parentAuthorID int64
-		authorIdentity string
+		authorIdentity sql.NullString
 		parentLanguage string
 	)
 
@@ -542,7 +542,12 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 		return err
 	}
 
-	userURL, err := s.userURL(authorID, authorIdentity, parentLanguage)
+	ai := ""
+	if authorIdentity.Valid {
+		ai = authorIdentity.String
+	}
+
+	userURL, err := s.userURL(authorID, ai, parentLanguage)
 	if err != nil {
 		return err
 	}
