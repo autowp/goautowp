@@ -3,7 +3,6 @@ package comments
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -12,13 +11,13 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"golang.org/x/text/language"
 )
 
 type CommentType int32
@@ -54,6 +53,7 @@ type Repository struct {
 	userRepository    *users.Repository
 	messageRepository *messaging.Repository
 	hostManager       *hosts.Manager
+	i18n              *i18nbundle.I18n
 }
 
 // NewRepository constructor.
@@ -62,12 +62,14 @@ func NewRepository(
 	userRepository *users.Repository,
 	messageRepository *messaging.Repository,
 	hostManager *hosts.Manager,
+	i18n *i18nbundle.I18n,
 ) *Repository {
 	return &Repository{
 		db:                db,
 		userRepository:    userRepository,
 		messageRepository: messageRepository,
 		hostManager:       hostManager,
+		i18n:              i18n,
 	}
 }
 
@@ -562,10 +564,7 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 		return err
 	}
 
-	localizer, err := s.localizer(parentLanguage)
-	if err != nil {
-		return err
-	}
+	localizer := s.i18n.Localizer(parentLanguage)
 
 	message, err := localizer.Localize(&i18n.LocalizeConfig{
 		DefaultMessage: &i18n.Message{
@@ -581,18 +580,6 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 	}
 
 	return s.messageRepository.CreateMessage(ctx, 0, parentAuthorID, message)
-}
-
-func (s *Repository) localizer(lang string) (*i18n.Localizer, error) {
-	bundle := i18n.NewBundle(language.English)
-	bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
-
-	_, err := bundle.LoadMessageFile("en.json")
-	if err != nil {
-		return nil, err
-	}
-
-	return i18n.NewLocalizer(bundle, lang), nil
 }
 
 func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) error {
@@ -681,10 +668,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 			return err
 		}
 
-		localizer, err := s.localizer(subscriberLanguage)
-		if err != nil {
-			return err
-		}
+		localizer := s.i18n.Localizer(subscriberLanguage)
 
 		message, err := localizer.Localize(&i18n.LocalizeConfig{
 			DefaultMessage: &i18n.Message{

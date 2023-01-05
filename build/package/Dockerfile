@@ -78,4 +78,3 @@ COPY --from=builder /app /app
 COPY migrations /migrations
 COPY postgres-migrations /postgres-migrations
 COPY defaults.yaml /defaults.yaml
-COPY i18n/*.json /

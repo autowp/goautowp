@@ -5,22 +5,20 @@ import (
 	"net/http"
 	"time"
 
-	"google.golang.org/grpc/reflection"
-
-	"github.com/autowp/goautowp/traffic"
-
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/email"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/telegram"
+	"github.com/autowp/goautowp/traffic"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -35,6 +33,7 @@ import (
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 const readHeaderTimeout = time.Second * 30
@@ -62,6 +61,7 @@ type Container struct {
 	grpcServer             *GRPCServer
 	hostsManager           *hosts.Manager
 	imageStorage           *storage.Storage
+	i18n                   *i18nbundle.I18n
 	itemOfDayRepository    *itemofday.Repository
 	itemsGrpcServer        *ItemsGRPCServer
 	itemsRepository        *items.Repository
@@ -274,7 +274,12 @@ func (s *Container) CommentsRepository() (*comments.Repository, error) {
 			return nil, err
 		}
 
-		s.commentsRepository = comments.NewRepository(db, usersRepository, messagingRepository, s.HostsManager())
+		i, err := s.I18n()
+		if err != nil {
+			return nil, err
+		}
+
+		s.commentsRepository = comments.NewRepository(db, usersRepository, messagingRepository, s.HostsManager(), i)
 	}
 
 	return s.commentsRepository, nil
@@ -669,6 +674,19 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 	}
 
 	return s.usersRepository, nil
+}
+
+func (s *Container) I18n() (*i18nbundle.I18n, error) {
+	if s.i18n == nil {
+		i, err := i18nbundle.New()
+		if err != nil {
+			return nil, err
+		}
+
+		s.i18n = i
+	}
+
+	return s.i18n, nil
 }
 
 func (s *Container) ItemsRepository() (*items.Repository, error) {

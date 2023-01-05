@@ -1,4 +1,4 @@
 {
   "pm/user-%s-post-new-message-%s": "{{.Name}} colocó un mensaje nuevo\n{{.Message}}",
-  "pm/user-%s-replies-to-you-%s": "%s te responde\n%s"
+  "pm/user-%s-replies-to-you-%s": "{{.Name}} te responde\n{{.Message}}"
 }

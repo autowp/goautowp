@@ -7,18 +7,18 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/google/uuid"
-
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
-	_ "github.com/lib/pq"                               // enable postgres driver
+	"github.com/google/uuid"
+	_ "github.com/lib/pq" // enable postgres driver
 	"github.com/stretchr/testify/require"
 )
 
@@ -86,7 +86,10 @@ func createRepository(t *testing.T) (*Repository, *goqu.Database) {
 
 	messagingRepository := messaging.NewRepository(goquDB, telegramService)
 
-	repo := NewRepository(goquDB, usersRepository, messagingRepository, hostsManager)
+	i, err := i18nbundle.New()
+	require.NoError(t, err)
+
+	repo := NewRepository(goquDB, usersRepository, messagingRepository, hostsManager, i)
 
 	return repo, goquDB
 }
