@@ -19,3 +19,10 @@ do
     sleep 1
     echo "."
 done
+
+echo "waiting for keycloak"
+while ! curl -s http://localhost:8081/auth/realms/autowp/protocol/openid-connect/certs;
+do
+  sleep 1
+  echo "."
+done
