@@ -4,15 +4,14 @@ import (
 	"context"
 	"net"
 
-	"github.com/autowp/goautowp/users"
-	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/peer"
-
 	"github.com/autowp/goautowp/comments"
+	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/validation"
+	"github.com/casbin/casbin"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -25,6 +24,7 @@ type ForumsGRPCServer struct {
 	forums             *Forums
 	commentsRepository *comments.Repository
 	usersRepository    *users.Repository
+	enforcer           *casbin.Enforcer
 }
 
 func NewForumsGRPCServer(
@@ -32,12 +32,14 @@ func NewForumsGRPCServer(
 	forums *Forums,
 	commentsRepository *comments.Repository,
 	usersRepository *users.Repository,
+	enforcer *casbin.Enforcer,
 ) *ForumsGRPCServer {
 	return &ForumsGRPCServer{
 		auth:               auth,
 		forums:             forums,
 		commentsRepository: commentsRepository,
 		usersRepository:    usersRepository,
+		enforcer:           enforcer,
 	}
 }
 
@@ -198,4 +200,73 @@ func (s *APICreateTopicRequest) Validate(
 	}
 
 	return result, nil
+}
+
+func (s *ForumsGRPCServer) CloseTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	forumAdmin := s.enforcer.Enforce(role, "forums", "moderate")
+	if !forumAdmin {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	err = s.forums.Close(ctx, in.Id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ForumsGRPCServer) OpenTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	forumAdmin := s.enforcer.Enforce(role, "forums", "moderate")
+	if !forumAdmin {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	err = s.forums.Open(ctx, in.Id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ForumsGRPCServer) DeleteTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	forumAdmin := s.enforcer.Enforce(role, "forums", "moderate")
+	if !forumAdmin {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	err = s.forums.Delete(ctx, in.Id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
 }

@@ -25,6 +25,9 @@ service Autowp {
 service Forums {
   rpc GetUserSummary(google.protobuf.Empty) returns (APIForumsUserSummary) {}
   rpc CreateTopic(APICreateTopicRequest) returns (APICreateTopicResponse) {}
+  rpc CloseTopic(APISetTopicStatusRequest) returns (google.protobuf.Empty) {}
+  rpc OpenTopic(APISetTopicStatusRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteTopic(APISetTopicStatusRequest) returns (google.protobuf.Empty) {}
 }
 
 service Articles {
@@ -369,6 +372,10 @@ message APICreateTopicRequest {
 }
 
 message APICreateTopicResponse {
+  int64 id = 1;
+}
+
+message APISetTopicStatusRequest {
   int64 id = 1;
 }
 

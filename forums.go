@@ -139,3 +139,67 @@ func (s *Forums) updateThemeStat(ctx context.Context, themeID int64) error {
 
 	return err
 }
+
+func (s *Forums) Close(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(
+		ctx,
+		"UPDATE forums_topics SET status = ? WHERE id = ?",
+		TopicStatusClosed, id,
+	)
+
+	return err
+}
+
+func (s *Forums) Open(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(
+		ctx,
+		"UPDATE forums_topics SET status = ? WHERE id = ?",
+		TopicStatusNormal, id,
+	)
+
+	return err
+}
+
+func (s *Forums) Delete(ctx context.Context, id int64) error {
+	var themeID int64
+
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT theme_id FROM forums_topics WHERE id = ?`,
+		id,
+	).Scan(&themeID)
+	if err != nil {
+		return err
+	}
+
+	var needAttention bool
+
+	err = s.db.QueryRowContext(
+		ctx,
+		`SELECT 1 FROM comment_message WHERE item_id = ? AND type_id = ? AND moderator_attention = ? LIMIT 1`,
+		id, comments.TypeIDForums, comments.ModeratorAttentionRequired,
+	).Scan(&needAttention)
+	if errors.Is(err, sql.ErrNoRows) {
+		err = nil
+		needAttention = false
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if needAttention {
+		return errors.New("cannot delete topic with moderator attention requirement")
+	}
+
+	_, err = s.db.ExecContext(
+		ctx,
+		"UPDATE forums_topics SET status = ? WHERE id = ?",
+		TopicStatusDeleted, id,
+	)
+	if err != nil {
+		return err
+	}
+
+	return s.updateThemeStat(ctx, themeID)
+}

@@ -1037,7 +1037,7 @@ func (s *Container) ForumsGRPCServer() (*ForumsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.forumsGrpcServer = NewForumsGRPCServer(auth, forums, commentsRepo, usersRepo)
+		s.forumsGrpcServer = NewForumsGRPCServer(auth, forums, commentsRepo, usersRepo, s.Enforcer())
 	}
 
 	return s.forumsGrpcServer, nil
