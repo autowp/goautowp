@@ -203,3 +203,32 @@ func (s *Forums) Delete(ctx context.Context, id int64) error {
 
 	return s.updateThemeStat(ctx, themeID)
 }
+
+func (s *Forums) MoveTopic(ctx context.Context, id int64, themeID int64) error {
+	var oldThemeID int64
+
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT theme_id FROM forums_topics WHERE id = ?`,
+		id,
+	).Scan(&oldThemeID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.ExecContext(
+		ctx,
+		"UPDATE forums_topics SET theme_id = ? WHERE id = ?",
+		themeID, id,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = s.updateThemeStat(ctx, themeID)
+	if err != nil {
+		return err
+	}
+
+	return s.updateThemeStat(ctx, oldThemeID)
+}

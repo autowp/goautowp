@@ -443,6 +443,7 @@ type ForumsClient interface {
 	CloseTopic(ctx context.Context, in *APISetTopicStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	OpenTopic(ctx context.Context, in *APISetTopicStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteTopic(ctx context.Context, in *APISetTopicStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	MoveTopic(ctx context.Context, in *APIMoveTopicRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type forumsClient struct {
@@ -498,6 +499,15 @@ func (c *forumsClient) DeleteTopic(ctx context.Context, in *APISetTopicStatusReq
 	return out, nil
 }
 
+func (c *forumsClient) MoveTopic(ctx context.Context, in *APIMoveTopicRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/MoveTopic", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ForumsServer is the server API for Forums service.
 // All implementations must embed UnimplementedForumsServer
 // for forward compatibility
@@ -507,6 +517,7 @@ type ForumsServer interface {
 	CloseTopic(context.Context, *APISetTopicStatusRequest) (*emptypb.Empty, error)
 	OpenTopic(context.Context, *APISetTopicStatusRequest) (*emptypb.Empty, error)
 	DeleteTopic(context.Context, *APISetTopicStatusRequest) (*emptypb.Empty, error)
+	MoveTopic(context.Context, *APIMoveTopicRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedForumsServer()
 }
 
@@ -531,6 +542,10 @@ func (UnimplementedForumsServer) OpenTopic(context.Context, *APISetTopicStatusRe
 
 func (UnimplementedForumsServer) DeleteTopic(context.Context, *APISetTopicStatusRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteTopic not implemented")
+}
+
+func (UnimplementedForumsServer) MoveTopic(context.Context, *APIMoveTopicRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MoveTopic not implemented")
 }
 func (UnimplementedForumsServer) mustEmbedUnimplementedForumsServer() {}
 
@@ -635,6 +650,24 @@ func _Forums_DeleteTopic_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Forums_MoveTopic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIMoveTopicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).MoveTopic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/MoveTopic",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).MoveTopic(ctx, req.(*APIMoveTopicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Forums_ServiceDesc is the grpc.ServiceDesc for Forums service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -661,6 +694,10 @@ var Forums_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteTopic",
 			Handler:    _Forums_DeleteTopic_Handler,
+		},
+		{
+			MethodName: "MoveTopic",
+			Handler:    _Forums_MoveTopic_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

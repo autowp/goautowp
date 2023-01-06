@@ -28,6 +28,7 @@ service Forums {
   rpc CloseTopic(APISetTopicStatusRequest) returns (google.protobuf.Empty) {}
   rpc OpenTopic(APISetTopicStatusRequest) returns (google.protobuf.Empty) {}
   rpc DeleteTopic(APISetTopicStatusRequest) returns (google.protobuf.Empty) {}
+  rpc MoveTopic(APIMoveTopicRequest) returns (google.protobuf.Empty) {}
 }
 
 service Articles {
@@ -377,6 +378,11 @@ message APICreateTopicResponse {
 
 message APISetTopicStatusRequest {
   int64 id = 1;
+}
+
+message APIMoveTopicRequest {
+  int64 id = 1;
+  int64 theme_id = 2;
 }
 
 message APIMessageNewCount {

@@ -270,3 +270,26 @@ func (s *ForumsGRPCServer) DeleteTopic(ctx context.Context, in *APISetTopicStatu
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *ForumsGRPCServer) MoveTopic(ctx context.Context, in *APIMoveTopicRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	forumAdmin := s.enforcer.Enforce(role, "forums", "moderate")
+	if !forumAdmin {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	err = s.forums.MoveTopic(ctx, in.Id, in.ThemeId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
