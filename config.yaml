@@ -46,3 +46,4 @@ image-storage:
 memcached:
   - "127.0.0.1:11211"
 captcha: false
+message-interval: 0
