@@ -85,6 +85,7 @@ type Container struct {
 	picturesRepository     *pictures.Repository
 	picturesGrpcServer     *PicturesGRPCServer
 	statisticsGrpcServer   *StatisticsGRPCServer
+	forumsGrpcServer       *ForumsGRPCServer
 }
 
 // NewContainer constructor.
@@ -521,6 +522,11 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
+	forumsSrv, err := s.ForumsGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	itemsSrv, err := s.ItemsGRPCServer()
 	if err != nil {
 		return nil, err
@@ -576,6 +582,7 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 	RegisterCommentsServer(grpcServer, commentsSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
 	RegisterDonationsServer(grpcServer, donationsSrv)
+	RegisterForumsServer(grpcServer, forumsSrv)
 	RegisterItemsServer(grpcServer, itemsSrv)
 	RegisterMapServer(grpcServer, mapSrv)
 	RegisterMessagingServer(grpcServer, messagingSrv)
@@ -741,11 +748,6 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			return nil, err
 		}
 
-		forums, err := s.Forums()
-		if err != nil {
-			return nil, err
-		}
-
 		auth, err := s.Auth()
 		if err != nil {
 			return nil, err
@@ -765,7 +767,6 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			commentsRepository,
 			ipExtractor,
 			feedback,
-			forums,
 		)
 	}
 
@@ -1012,6 +1013,34 @@ func (s *Container) DonationsGRPCServer() (*DonationsGRPCServer, error) {
 	}
 
 	return s.donationsGrpcServer, nil
+}
+
+func (s *Container) ForumsGRPCServer() (*ForumsGRPCServer, error) {
+	if s.forumsGrpcServer == nil {
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		forums, err := s.Forums()
+		if err != nil {
+			return nil, err
+		}
+
+		commentsRepo, err := s.CommentsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		usersRepo, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.forumsGrpcServer = NewForumsGRPCServer(auth, forums, commentsRepo, usersRepo)
+	}
+
+	return s.forumsGrpcServer, nil
 }
 
 func (s *Container) MessagingGRPCServer() (*MessagingGRPCServer, error) {

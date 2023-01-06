@@ -14,13 +14,17 @@ service Autowp {
   rpc CreateFeedback(APICreateFeedbackRequest) returns (google.protobuf.Empty) {}
   rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
   rpc GetBrandVehicleTypes(GetBrandVehicleTypesRequest) returns (BrandVehicleTypeItems) {}
-  rpc GetForumsUserSummary(google.protobuf.Empty) returns (APIForumsUserSummary) {}
   rpc GetIP(APIGetIPRequest) returns (APIIP) {}
   rpc GetPerspectives(google.protobuf.Empty) returns (PerspectivesItems) {}
   rpc GetPerspectivePages(google.protobuf.Empty) returns (PerspectivePagesItems) {}
   rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
   rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
   rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
+}
+
+service Forums {
+  rpc GetUserSummary(google.protobuf.Empty) returns (APIForumsUserSummary) {}
+  rpc CreateTopic(APICreateTopicRequest) returns (APICreateTopicResponse) {}
 }
 
 service Articles {
@@ -101,6 +105,10 @@ service Statistics {
   rpc GetAboutData(google.protobuf.Empty) returns (AboutDataResponse) {}
 }
 
+service Donations {
+  rpc GetVODData(google.protobuf.Empty) returns (VODDataResponse) {}
+}
+
 message ErrorDetails {
   google.rpc.RetryInfo retryInfo = 1;
   google.rpc.DebugInfo debugInfo = 2;
@@ -110,10 +118,6 @@ message ErrorDetails {
   google.rpc.RequestInfo requestInfo = 6;
   google.rpc.Help help = 7;
   google.rpc.LocalizedMessage localizedMessage = 8;
-}
-
-service Donations {
-  rpc GetVODData(google.protobuf.Empty) returns (VODDataResponse) {}
 }
 
 message PulseRequest {
@@ -354,6 +358,18 @@ message APITrafficWhitelistItems {
 
 message APIForumsUserSummary {
   int32 subscriptionsCount = 1;
+}
+
+message APICreateTopicRequest {
+  int64 theme_id = 1;
+  string name = 2;
+  string message = 3;
+  bool moderator_attention = 4;
+  bool subscription = 5;
+}
+
+message APICreateTopicResponse {
+  int64 id = 1;
 }
 
 message APIMessageNewCount {

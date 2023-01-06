@@ -43,6 +43,13 @@ func TestMain(m *testing.M) {
 
 	RegisterCommentsServer(grpcServer, commentsSrv)
 
+	forumsSrv, err := cnt.ForumsGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterForumsServer(grpcServer, forumsSrv)
+
 	contactsSrv, err := cnt.ContactsGRPCServer()
 	if err != nil {
 		panic(err)

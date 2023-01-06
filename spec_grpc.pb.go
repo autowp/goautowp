@@ -24,7 +24,6 @@ type AutowpClient interface {
 	CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error)
 	GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error)
-	GetForumsUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error)
 	GetIP(ctx context.Context, in *APIGetIPRequest, opts ...grpc.CallOption) (*APIIP, error)
 	GetPerspectives(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivesItems, error)
 	GetPerspectivePages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PerspectivePagesItems, error)
@@ -71,15 +70,6 @@ func (c *autowpClient) GetBrandIcons(ctx context.Context, in *emptypb.Empty, opt
 func (c *autowpClient) GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error) {
 	out := new(BrandVehicleTypeItems)
 	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetBrandVehicleTypes", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *autowpClient) GetForumsUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error) {
-	out := new(APIForumsUserSummary)
-	err := c.cc.Invoke(ctx, "/goautowp.Autowp/GetForumsUserSummary", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +138,6 @@ type AutowpServer interface {
 	CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error)
 	GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error)
 	GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error)
-	GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error)
 	GetIP(context.Context, *APIGetIPRequest) (*APIIP, error)
 	GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error)
 	GetPerspectivePages(context.Context, *emptypb.Empty) (*PerspectivePagesItems, error)
@@ -175,10 +164,6 @@ func (UnimplementedAutowpServer) GetBrandIcons(context.Context, *emptypb.Empty) 
 
 func (UnimplementedAutowpServer) GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrandVehicleTypes not implemented")
-}
-
-func (UnimplementedAutowpServer) GetForumsUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetForumsUserSummary not implemented")
 }
 
 func (UnimplementedAutowpServer) GetIP(context.Context, *APIGetIPRequest) (*APIIP, error) {
@@ -285,24 +270,6 @@ func _Autowp_GetBrandVehicleTypes_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AutowpServer).GetBrandVehicleTypes(ctx, req.(*GetBrandVehicleTypesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Autowp_GetForumsUserSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).GetForumsUserSummary(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Autowp/GetForumsUserSummary",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).GetForumsUserSummary(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -439,10 +406,6 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Autowp_GetBrandVehicleTypes_Handler,
 		},
 		{
-			MethodName: "GetForumsUserSummary",
-			Handler:    _Autowp_GetForumsUserSummary_Handler,
-		},
-		{
 			MethodName: "GetIP",
 			Handler:    _Autowp_GetIP_Handler,
 		},
@@ -465,6 +428,128 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetVehicleTypes",
 			Handler:    _Autowp_GetVehicleTypes_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+// ForumsClient is the client API for Forums service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ForumsClient interface {
+	GetUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error)
+	CreateTopic(ctx context.Context, in *APICreateTopicRequest, opts ...grpc.CallOption) (*APICreateTopicResponse, error)
+}
+
+type forumsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewForumsClient(cc grpc.ClientConnInterface) ForumsClient {
+	return &forumsClient{cc}
+}
+
+func (c *forumsClient) GetUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIForumsUserSummary, error) {
+	out := new(APIForumsUserSummary)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/GetUserSummary", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forumsClient) CreateTopic(ctx context.Context, in *APICreateTopicRequest, opts ...grpc.CallOption) (*APICreateTopicResponse, error) {
+	out := new(APICreateTopicResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/CreateTopic", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ForumsServer is the server API for Forums service.
+// All implementations must embed UnimplementedForumsServer
+// for forward compatibility
+type ForumsServer interface {
+	GetUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error)
+	CreateTopic(context.Context, *APICreateTopicRequest) (*APICreateTopicResponse, error)
+	mustEmbedUnimplementedForumsServer()
+}
+
+// UnimplementedForumsServer must be embedded to have forward compatible implementations.
+type UnimplementedForumsServer struct{}
+
+func (UnimplementedForumsServer) GetUserSummary(context.Context, *emptypb.Empty) (*APIForumsUserSummary, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserSummary not implemented")
+}
+
+func (UnimplementedForumsServer) CreateTopic(context.Context, *APICreateTopicRequest) (*APICreateTopicResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTopic not implemented")
+}
+func (UnimplementedForumsServer) mustEmbedUnimplementedForumsServer() {}
+
+// UnsafeForumsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ForumsServer will
+// result in compilation errors.
+type UnsafeForumsServer interface {
+	mustEmbedUnimplementedForumsServer()
+}
+
+func RegisterForumsServer(s grpc.ServiceRegistrar, srv ForumsServer) {
+	s.RegisterService(&Forums_ServiceDesc, srv)
+}
+
+func _Forums_GetUserSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).GetUserSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/GetUserSummary",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).GetUserSummary(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forums_CreateTopic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APICreateTopicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).CreateTopic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/CreateTopic",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).CreateTopic(ctx, req.(*APICreateTopicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Forums_ServiceDesc is the grpc.ServiceDesc for Forums service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Forums_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Forums",
+	HandlerType: (*ForumsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetUserSummary",
+			Handler:    _Forums_GetUserSummary_Handler,
+		},
+		{
+			MethodName: "CreateTopic",
+			Handler:    _Forums_CreateTopic_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

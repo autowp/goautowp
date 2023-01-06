@@ -70,7 +70,6 @@ type GRPCServer struct {
 	comments          *comments.Repository
 	ipExtractor       *IPExtractor
 	feedback          *Feedback
-	forums            *Forums
 }
 
 func NewGRPCServer(
@@ -82,7 +81,6 @@ func NewGRPCServer(
 	comments *comments.Repository,
 	ipExtractor *IPExtractor,
 	feedback *Feedback,
-	forums *Forums,
 ) *GRPCServer {
 	return &GRPCServer{
 		auth:              auth,
@@ -93,7 +91,6 @@ func NewGRPCServer(
 		comments:          comments,
 		ipExtractor:       ipExtractor,
 		feedback:          feedback,
-		forums:            forums,
 	}
 }
 
@@ -256,26 +253,6 @@ func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRe
 	}
 
 	return &emptypb.Empty{}, nil
-}
-
-func (s *GRPCServer) GetForumsUserSummary(ctx context.Context, _ *emptypb.Empty) (*APIForumsUserSummary, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if userID == 0 {
-		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
-	}
-
-	subscriptionsCount, err := s.forums.GetUserSummary(ctx, userID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	return &APIForumsUserSummary{
-		SubscriptionsCount: int32(subscriptionsCount),
-	}, nil
 }
 
 func wrapFieldViolations(fv []*errdetails.BadRequest_FieldViolation) error {

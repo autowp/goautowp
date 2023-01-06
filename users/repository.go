@@ -760,6 +760,22 @@ func (s *Repository) SetupPrivateRouter(r *gin.Engine) {
 	})
 }
 
+func (s *Repository) IncForumTopics(ctx context.Context, userID int64) error {
+	_, err := s.autowpDB.ExecContext(
+		ctx,
+		`
+			UPDATE users 
+			SET forums_topics = forums_topics + 1, 
+			    forums_messages = forums_messages + 1, 
+			    last_message_time = NOW() 
+			WHERE id = ?
+		`,
+		userID,
+	)
+
+	return err
+}
+
 func (s *Repository) IncForumMessages(ctx context.Context, userID int64) error {
 	_, err := s.autowpDB.ExecContext(
 		ctx,
