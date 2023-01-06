@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"sync"
 	"time"
 
@@ -79,8 +80,8 @@ type scanRow struct {
 }
 
 type picturesStat struct {
-	Count int32         `db:"count"`
-	Size  sql.NullInt32 `db:"size"`
+	Count int32           `db:"count"`
+	Size  sql.NullFloat64 `db:"size"`
 }
 
 func NewStatisticsGRPCServer(
@@ -185,7 +186,7 @@ func (s *StatisticsGRPCServer) picturesStat(ctx context.Context) (int32, int32, 
 		return 0, 0, errFailedToFetchRow
 	}
 
-	return roundTo(picsStat.Count, tensOfThousands), picsStat.Size.Int32, nil
+	return roundTo(picsStat.Count, tensOfThousands), int32(math.Round(picsStat.Size.Float64)), nil
 }
 
 func (s *StatisticsGRPCServer) totalItems(ctx context.Context) (int32, error) {
