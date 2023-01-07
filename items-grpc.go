@@ -3,14 +3,18 @@ package goautowp
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/gob"
 	"errors"
 	"fmt"
 
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/validation"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
+	"github.com/doug-martin/goqu/v9"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -18,9 +22,12 @@ import (
 
 const defaultCacheExpiration = 180
 
+const itemLinkNameMaxLength = 255
+
 type ItemsGRPCServer struct {
 	UnimplementedItemsServer
 	repository       *items.Repository
+	db               *goqu.Database
 	memcached        *memcache.Client
 	auth             *Auth
 	enforcer         *casbin.Enforcer
@@ -34,6 +41,7 @@ type BrandsCache struct {
 
 func NewItemsGRPCServer(
 	repository *items.Repository,
+	db *goqu.Database,
 	memcached *memcache.Client,
 	auth *Auth,
 	enforcer *casbin.Enforcer,
@@ -41,6 +49,7 @@ func NewItemsGRPCServer(
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository:       repository,
+		db:               db,
 		memcached:        memcached,
 		auth:             auth,
 		enforcer:         enforcer,
@@ -554,4 +563,211 @@ func (s *ItemsGRPCServer) GetContentLanguages(_ context.Context, _ *emptypb.Empt
 	return &APIContentLanguages{
 		Languages: s.contentLanguages,
 	}, nil
+}
+
+func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *APIItemLinkRequest) (*APIItemLink, error) {
+	il := APIItemLink{}
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, name, url, type, item_id
+		FROM links
+		WHERE id = ?
+	`, in.Id).Scan(&il.Id, &il.Name, &il.Url, &il.Type, &il.ItemId)
+	if err == sql.ErrNoRows {
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &il, nil
+}
+
+func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest) (*APIItemLinksResponse, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, name, url, type, item_id
+		FROM links
+		WHERE item_id = ?
+	`, in.ItemId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	itemLinks := make([]*APIItemLink, 0)
+
+	for rows.Next() {
+		il := APIItemLink{}
+
+		err = rows.Scan(&il.Id, &il.Name, &il.Url, &il.Type, &il.ItemId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		itemLinks = append(itemLinks, &il)
+	}
+
+	return &APIItemLinksResponse{
+		Items: itemLinks,
+	}, nil
+}
+
+func (s *ItemsGRPCServer) DeleteItemLink(ctx context.Context, in *APIItemLinkRequest) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "edit_meta") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	_, err = s.db.ExecContext(ctx, "DELETE FROM links WHERE id = ?", in.Id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (*APICreateItemLinkResponse, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "edit_meta") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	InvalidParams, err := in.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	res, err := s.db.ExecContext(
+		ctx,
+		"INSERT INTO links (name, url, type, item_id) VALUES (?, ?, ?, ?)",
+		in.Name, in.Url, in.Type, in.ItemId,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &APICreateItemLinkResponse{
+		Id: id,
+	}, nil
+}
+
+func (s *ItemsGRPCServer) UpdateItemLink(ctx context.Context, in *APIItemLink) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "edit_meta") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	InvalidParams, err := in.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	_, err = s.db.ExecContext(
+		ctx,
+		"UPDATE links SET name = ?, url = ?, type = ?, item_id = ? WHERE id = ?",
+		in.Name, in.Url, in.Type, in.ItemId, in.Id,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *APIItemLink) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
+	var (
+		result   = make([]*errdetails.BadRequest_FieldViolation, 0)
+		problems []string
+		err      error
+	)
+
+	nameInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.StringLength{Max: itemLinkNameMaxLength},
+		},
+	}
+	s.Name, problems, err = nameInputFilter.IsValidString(s.Name)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "name",
+			Description: fv,
+		})
+	}
+
+	urlInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.URL{},
+			&validation.StringLength{Max: itemLinkNameMaxLength},
+		},
+	}
+	s.Url, problems, err = urlInputFilter.IsValidString(s.Url)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "url",
+			Description: fv,
+		})
+	}
+
+	typeInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.InArray{Haystack: []string{
+				"default",
+				"official",
+				"club",
+				"helper",
+			}},
+		},
+	}
+	s.Type, problems, err = typeInputFilter.IsValidString(s.Type)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "type",
+			Description: fv,
+		})
+	}
+
+	return result, nil
 }

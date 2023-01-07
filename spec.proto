@@ -70,6 +70,11 @@ service Items {
   rpc List(ListItemsRequest) returns (APIItemList) {}
   rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
   rpc GetContentLanguages(google.protobuf.Empty) returns (APIContentLanguages) {}
+  rpc GetItemLink(APIItemLinkRequest) returns (APIItemLink) {}
+  rpc GetItemLinks(APIGetItemLinksRequest) returns (APIItemLinksResponse) {}
+  rpc DeleteItemLink(APIItemLinkRequest) returns (google.protobuf.Empty) {}
+  rpc CreateItemLink(APIItemLink) returns (APICreateItemLinkResponse) {}
+  rpc UpdateItemLink(APIItemLink) returns (google.protobuf.Empty) {}
 }
 
 service Comments {
@@ -794,6 +799,30 @@ message ArticleByCatnameRequest {
 
 message APIContentLanguages {
   repeated string languages = 1;
+}
+
+message APIItemLinkRequest {
+  int64 id = 1;
+}
+
+message APIGetItemLinksRequest {
+  int64 item_id = 1;
+}
+
+message APIItemLinksResponse {
+  repeated APIItemLink items = 1;
+}
+
+message APIItemLink {
+  int64 id = 1;
+  string name = 2;
+  string url = 3;
+  string type = 4;
+  int64 item_id = 5;
+}
+
+message APICreateItemLinkResponse {
+  int64 id = 1;
 }
 
 message AddCommentRequest {

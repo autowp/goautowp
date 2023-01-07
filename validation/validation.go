@@ -5,19 +5,23 @@ import (
 	"errors"
 	"fmt"
 	"net/mail"
+	"net/url"
 	"regexp"
 	"strings"
 
+	"github.com/autowp/goautowp/util"
 	"github.com/dpapathanasiou/go-recaptcha"
 )
 
 const (
 	NotEmptyIsEmpty           = "Value is required and can't be empty"
 	EmailAddressInvalidFormat = "The input is not a valid email address"
+	URLInvalidFormat          = "The input is not a valid URL"
 	StringLengthTooShort      = "The input is less than %d characters long"
 	StringLengthTooLong       = "The input is more than %d characters long"
 	EmailNotExistsExists      = "E-mail already registered"
 	IdenticalStringsNotSame   = "The two given tokens do not match"
+	NotInArray                = "The input was not found in the haystack"
 )
 
 type FilterInterface interface {
@@ -40,6 +44,9 @@ type StringLength struct {
 // EmailAddress validator.
 type EmailAddress struct{}
 
+// URL validator.
+type URL struct{}
+
 // Recaptcha validator.
 type Recaptcha struct {
 	ClientIP string
@@ -53,6 +60,11 @@ type EmailNotExists struct {
 // IdenticalStrings validator.
 type IdenticalStrings struct {
 	Pattern string
+}
+
+// InArray validator.
+type InArray struct {
+	Haystack []string
 }
 
 // Callback validator.
@@ -100,6 +112,16 @@ func (s *EmailAddress) IsValidString(value string) ([]string, error) {
 }
 
 // IsValidString IsValidString.
+func (s *URL) IsValidString(value string) ([]string, error) {
+	_, err := url.ParseRequestURI(value)
+	if err != nil {
+		return []string{URLInvalidFormat}, nil //nolint:nilerr
+	}
+
+	return []string{}, nil
+}
+
+// IsValidString IsValidString.
 func (s *Recaptcha) IsValidString(value string) ([]string, error) {
 	_, err := recaptcha.Confirm(s.ClientIP, value)
 	if err != nil {
@@ -129,6 +151,15 @@ func (s *EmailNotExists) IsValidString(value string) ([]string, error) {
 func (s *IdenticalStrings) IsValidString(value string) ([]string, error) {
 	if value != s.Pattern {
 		return []string{IdenticalStringsNotSame}, nil
+	}
+
+	return []string{}, nil
+}
+
+// IsValidString IsValidString.
+func (s *InArray) IsValidString(value string) ([]string, error) {
+	if !util.Contains(s.Haystack, value) {
+		return []string{NotInArray}, nil
 	}
 
 	return []string{}, nil

@@ -1574,6 +1574,11 @@ type ItemsClient interface {
 	List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*APITreeItem, error)
 	GetContentLanguages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIContentLanguages, error)
+	GetItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*APIItemLink, error)
+	GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest, opts ...grpc.CallOption) (*APIItemLinksResponse, error)
+	DeleteItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CreateItemLink(ctx context.Context, in *APIItemLink, opts ...grpc.CallOption) (*APICreateItemLinkResponse, error)
+	UpdateItemLink(ctx context.Context, in *APIItemLink, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type itemsClient struct {
@@ -1656,6 +1661,51 @@ func (c *itemsClient) GetContentLanguages(ctx context.Context, in *emptypb.Empty
 	return out, nil
 }
 
+func (c *itemsClient) GetItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*APIItemLink, error) {
+	out := new(APIItemLink)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/GetItemLink", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest, opts ...grpc.CallOption) (*APIItemLinksResponse, error) {
+	out := new(APIItemLinksResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/GetItemLinks", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) DeleteItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/DeleteItemLink", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) CreateItemLink(ctx context.Context, in *APIItemLink, opts ...grpc.CallOption) (*APICreateItemLinkResponse, error) {
+	out := new(APICreateItemLinkResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/CreateItemLink", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) UpdateItemLink(ctx context.Context, in *APIItemLink, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/UpdateItemLink", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility
@@ -1668,6 +1718,11 @@ type ItemsServer interface {
 	List(context.Context, *ListItemsRequest) (*APIItemList, error)
 	GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error)
 	GetContentLanguages(context.Context, *emptypb.Empty) (*APIContentLanguages, error)
+	GetItemLink(context.Context, *APIItemLinkRequest) (*APIItemLink, error)
+	GetItemLinks(context.Context, *APIGetItemLinksRequest) (*APIItemLinksResponse, error)
+	DeleteItemLink(context.Context, *APIItemLinkRequest) (*emptypb.Empty, error)
+	CreateItemLink(context.Context, *APIItemLink) (*APICreateItemLinkResponse, error)
+	UpdateItemLink(context.Context, *APIItemLink) (*emptypb.Empty, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -1704,6 +1759,26 @@ func (UnimplementedItemsServer) GetTree(context.Context, *GetTreeRequest) (*APIT
 
 func (UnimplementedItemsServer) GetContentLanguages(context.Context, *emptypb.Empty) (*APIContentLanguages, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContentLanguages not implemented")
+}
+
+func (UnimplementedItemsServer) GetItemLink(context.Context, *APIItemLinkRequest) (*APIItemLink, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItemLink not implemented")
+}
+
+func (UnimplementedItemsServer) GetItemLinks(context.Context, *APIGetItemLinksRequest) (*APIItemLinksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItemLinks not implemented")
+}
+
+func (UnimplementedItemsServer) DeleteItemLink(context.Context, *APIItemLinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteItemLink not implemented")
+}
+
+func (UnimplementedItemsServer) CreateItemLink(context.Context, *APIItemLink) (*APICreateItemLinkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateItemLink not implemented")
+}
+
+func (UnimplementedItemsServer) UpdateItemLink(context.Context, *APIItemLink) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateItemLink not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 
@@ -1862,6 +1937,96 @@ func _Items_GetContentLanguages_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetItemLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIItemLinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetItemLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/GetItemLink",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetItemLink(ctx, req.(*APIItemLinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_GetItemLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetItemLinksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetItemLinks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/GetItemLinks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetItemLinks(ctx, req.(*APIGetItemLinksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_DeleteItemLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIItemLinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).DeleteItemLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/DeleteItemLink",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).DeleteItemLink(ctx, req.(*APIItemLinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_CreateItemLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIItemLink)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).CreateItemLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/CreateItemLink",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).CreateItemLink(ctx, req.(*APIItemLink))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_UpdateItemLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIItemLink)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).UpdateItemLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/UpdateItemLink",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).UpdateItemLink(ctx, req.(*APIItemLink))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1900,6 +2065,26 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetContentLanguages",
 			Handler:    _Items_GetContentLanguages_Handler,
+		},
+		{
+			MethodName: "GetItemLink",
+			Handler:    _Items_GetItemLink_Handler,
+		},
+		{
+			MethodName: "GetItemLinks",
+			Handler:    _Items_GetItemLinks_Handler,
+		},
+		{
+			MethodName: "DeleteItemLink",
+			Handler:    _Items_DeleteItemLink_Handler,
+		},
+		{
+			MethodName: "CreateItemLink",
+			Handler:    _Items_CreateItemLink_Handler,
+		},
+		{
+			MethodName: "UpdateItemLink",
+			Handler:    _Items_UpdateItemLink_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -880,7 +880,12 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.itemsGrpcServer = NewItemsGRPCServer(r, s.Memcached(), auth, s.Enforcer(), s.Config().ContentLanguages)
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.itemsGrpcServer = NewItemsGRPCServer(r, db, s.Memcached(), auth, s.Enforcer(), s.Config().ContentLanguages)
 	}
 
 	return s.itemsGrpcServer, nil
