@@ -300,6 +300,15 @@ func (s *Application) SchedulerDaily(ctx context.Context) error {
 
 	logrus.Infof("Clean broken: %d", affected)
 
+	affected, err = commentsRep.CleanTopics(ctx)
+	if err != nil {
+		logrus.Error(err.Error())
+
+		return err
+	}
+
+	logrus.Infof("Clean topics: %d", affected)
+
 	return nil
 }
 

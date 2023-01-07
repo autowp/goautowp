@@ -140,3 +140,12 @@ func TestCleanBrokenMessages(t *testing.T) {
 	_, err := s.CleanBrokenMessages(context.Background())
 	require.NoError(t, err)
 }
+
+func TestCleanTopics(t *testing.T) {
+	t.Parallel()
+
+	s, _ := createRepository(t)
+
+	_, err := s.CleanTopics(context.Background())
+	require.NoError(t, err)
+}

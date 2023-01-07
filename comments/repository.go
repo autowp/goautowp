@@ -1096,3 +1096,43 @@ func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error)
 
 	return affected, nil
 }
+
+func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `
+		DELETE comment_topic_view
+		FROM comment_topic_view
+			LEFT JOIN comment_message 
+				ON comment_topic_view.item_id = comment_message.item_id
+				AND comment_topic_view.type_id = comment_message.type_id
+		WHERE comment_message.type_id IS NULL
+    `)
+	if err != nil {
+		return 0, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	res, err = s.db.ExecContext(ctx, `
+		DELETE comment_topic
+		FROM comment_topic
+			LEFT JOIN comment_message 
+				ON comment_topic.item_id = comment_message.item_id
+				AND comment_topic.type_id = comment_message.type_id
+		WHERE comment_message.type_id IS NULL
+    `)
+	if err != nil {
+		return 0, err
+	}
+
+	a, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	affected += a
+
+	return affected, nil
+}
