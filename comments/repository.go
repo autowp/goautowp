@@ -929,3 +929,170 @@ func (s *Repository) NeedWait(ctx context.Context, userID int64) (bool, error) {
 
 	return time.Now().Before(nextMessageTime), nil
 }
+
+func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
+	var (
+		affected int64
+		id       int64
+	)
+
+	// pictures
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT comment_message.id
+		FROM comment_message
+			LEFT JOIN pictures ON comment_message.item_id = pictures.id
+		WHERE pictures.id IS NULL AND comment_message.type_id = ?
+    `, TypeIDPictures)
+	if err != nil {
+		return 0, err
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			return 0, err
+		}
+
+		a, err := s.deleteMessage(ctx, id)
+		if err != nil {
+			return 0, err
+		}
+
+		affected += a
+	}
+
+	// item
+	rows, err = s.db.QueryContext(ctx, `
+		SELECT comment_message.id
+		FROM comment_message
+			LEFT JOIN item ON comment_message.item_id = item.id
+		WHERE item.id IS NULL AND comment_message.type_id = ?
+    `, TypeIDItems)
+	if err != nil {
+		return 0, err
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			return 0, err
+		}
+
+		a, err := s.deleteMessage(ctx, id)
+		if err != nil {
+			return 0, err
+		}
+
+		affected += a
+	}
+
+	// votings
+	rows, err = s.db.QueryContext(ctx, `
+		SELECT comment_message.id
+		FROM comment_message
+			LEFT JOIN voting ON comment_message.item_id = voting.id
+		WHERE voting.id IS NULL AND comment_message.type_id = ?
+    `, TypeIDVotings)
+	if err != nil {
+		return 0, err
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			return 0, err
+		}
+
+		a, err := s.deleteMessage(ctx, id)
+		if err != nil {
+			return 0, err
+		}
+
+		affected += a
+	}
+
+	// articles
+	rows, err = s.db.QueryContext(ctx, `
+		SELECT comment_message.id
+		FROM comment_message
+			LEFT JOIN articles ON comment_message.item_id = articles.id
+		WHERE articles.id IS NULL AND comment_message.type_id = ?
+    `, TypeIDArticles)
+	if err != nil {
+		return 0, err
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			return 0, err
+		}
+
+		a, err := s.deleteMessage(ctx, id)
+		if err != nil {
+			return 0, err
+		}
+
+		affected += a
+	}
+
+	// forums
+	rows, err = s.db.QueryContext(ctx, `
+		SELECT comment_message.id
+		FROM comment_message
+			LEFT JOIN forums_topics ON comment_message.item_id = forums_topics.id
+		WHERE forums_topics.id IS NULL AND comment_message.type_id = ?
+    `, TypeIDForums)
+	if err != nil {
+		return 0, err
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			return 0, err
+		}
+
+		a, err := s.deleteMessage(ctx, id)
+		if err != nil {
+			return 0, err
+		}
+
+		affected += a
+	}
+
+	return affected, nil
+}
+
+func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error) {
+	var typeID CommentType
+
+	err := s.db.QueryRowContext(ctx, "SELECT type_id FROM comment_message WHERE id = ?", id).Scan(&typeID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	res, err := s.db.ExecContext(ctx, `
+		DELETE FROM comment_message
+		WHERE id = ?
+    `, id)
+	if err != nil {
+		return 0, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	err = s.updateTopicStat(ctx, typeID, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return affected, nil
+}

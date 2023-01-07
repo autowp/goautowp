@@ -131,3 +131,12 @@ func TestAdd(t *testing.T) {
 	_, err := s.Add(ctx, commentType, itemID, 0, userID, "Test message", "127.0.0.1", false)
 	require.NoError(t, err)
 }
+
+func TestCleanBrokenMessages(t *testing.T) {
+	t.Parallel()
+
+	s, _ := createRepository(t)
+
+	_, err := s.CleanBrokenMessages(context.Background())
+	require.NoError(t, err)
+}
