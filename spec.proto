@@ -122,6 +122,10 @@ service Donations {
   rpc GetVODData(google.protobuf.Empty) returns (VODDataResponse) {}
 }
 
+service Text {
+  rpc GetText(APIGetTextRequest) returns (APIGetTextResponse) {}
+}
+
 message ErrorDetails {
   google.rpc.RetryInfo retryInfo = 1;
   google.rpc.DebugInfo debugInfo = 2;
@@ -859,4 +863,21 @@ message AddCommentRequest {
 
 message AddCommentResponse {
   int64 id = 1;
+}
+
+message APIGetTextRequest {
+  int64 id = 1;
+  int64 revision = 2;
+}
+
+message TextRevision {
+  string text = 1;
+  int64 revision = 2;
+  int64 user_id = 3;
+}
+
+message APIGetTextResponse {
+  TextRevision current = 1;
+  TextRevision prev = 2;
+  TextRevision next = 3;
 }

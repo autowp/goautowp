@@ -3377,3 +3377,88 @@ var Donations_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "spec.proto",
 }
+
+// TextClient is the client API for Text service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type TextClient interface {
+	GetText(ctx context.Context, in *APIGetTextRequest, opts ...grpc.CallOption) (*APIGetTextResponse, error)
+}
+
+type textClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewTextClient(cc grpc.ClientConnInterface) TextClient {
+	return &textClient{cc}
+}
+
+func (c *textClient) GetText(ctx context.Context, in *APIGetTextRequest, opts ...grpc.CallOption) (*APIGetTextResponse, error) {
+	out := new(APIGetTextResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Text/GetText", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TextServer is the server API for Text service.
+// All implementations must embed UnimplementedTextServer
+// for forward compatibility
+type TextServer interface {
+	GetText(context.Context, *APIGetTextRequest) (*APIGetTextResponse, error)
+	mustEmbedUnimplementedTextServer()
+}
+
+// UnimplementedTextServer must be embedded to have forward compatible implementations.
+type UnimplementedTextServer struct{}
+
+func (UnimplementedTextServer) GetText(context.Context, *APIGetTextRequest) (*APIGetTextResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetText not implemented")
+}
+func (UnimplementedTextServer) mustEmbedUnimplementedTextServer() {}
+
+// UnsafeTextServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to TextServer will
+// result in compilation errors.
+type UnsafeTextServer interface {
+	mustEmbedUnimplementedTextServer()
+}
+
+func RegisterTextServer(s grpc.ServiceRegistrar, srv TextServer) {
+	s.RegisterService(&Text_ServiceDesc, srv)
+}
+
+func _Text_GetText_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetTextRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TextServer).GetText(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Text/GetText",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TextServer).GetText(ctx, req.(*APIGetTextRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Text_ServiceDesc is the grpc.ServiceDesc for Text service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Text_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Text",
+	HandlerType: (*TextServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetText",
+			Handler:    _Text_GetText_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}

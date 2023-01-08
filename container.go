@@ -75,6 +75,7 @@ type Container struct {
 	publicRouter           http.HandlerFunc
 	grpcServerWithServices *grpc.Server
 	telegramService        *telegram.Service
+	textGrpcServer         *TextGRPCServer
 	traffic                *traffic.Traffic
 	trafficGrpcServer      *TrafficGRPCServer
 	usersRepository        *users.Repository
@@ -537,6 +538,11 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
+	textSrv, err := s.TextGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	trafficSrv, err := s.TrafficGRPCServer()
 	if err != nil {
 		return nil, err
@@ -588,6 +594,7 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 	RegisterMessagingServer(grpcServer, messagingSrv)
 	RegisterPicturesServer(grpcServer, picturesSrv)
 	RegisterStatisticsServer(grpcServer, statSrv)
+	RegisterTextServer(grpcServer, textSrv)
 	RegisterTrafficServer(grpcServer, trafficSrv)
 	RegisterUsersServer(grpcServer, usersSrv)
 
@@ -788,6 +795,19 @@ func (s *Container) StatisticsGRPCServer() (*StatisticsGRPCServer, error) {
 	}
 
 	return s.statisticsGrpcServer, nil
+}
+
+func (s *Container) TextGRPCServer() (*TextGRPCServer, error) {
+	if s.textGrpcServer == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.textGrpcServer = NewTextGRPCServer(db)
+	}
+
+	return s.textGrpcServer, nil
 }
 
 func (s *Container) TrafficGRPCServer() (*TrafficGRPCServer, error) {

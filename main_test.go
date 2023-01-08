@@ -64,6 +64,13 @@ func TestMain(m *testing.M) {
 
 	RegisterDonationsServer(grpcServer, donationsSrv)
 
+	textSrv, err := cnt.TextGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterTextServer(grpcServer, textSrv)
+
 	usersSrv, err := cnt.UsersGRPCServer()
 	if err != nil {
 		panic(err)
