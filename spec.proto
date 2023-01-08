@@ -75,6 +75,10 @@ service Items {
   rpc DeleteItemLink(APIItemLinkRequest) returns (google.protobuf.Empty) {}
   rpc CreateItemLink(APIItemLink) returns (APICreateItemLinkResponse) {}
   rpc UpdateItemLink(APIItemLink) returns (google.protobuf.Empty) {}
+  rpc GetItemVehicleTypes(APIGetItemVehicleTypesRequest) returns (APIGetItemVehicleTypesResponse) {}
+  rpc GetItemVehicleType(APIItemVehicleTypeRequest) returns (APIItemVehicleType) {}
+  rpc CreateItemVehicleType(APIItemVehicleType) returns (google.protobuf.Empty) {}
+  rpc DeleteItemVehicleType(APIItemVehicleTypeRequest) returns (google.protobuf.Empty) {}
 }
 
 service Comments {
@@ -823,6 +827,25 @@ message APIItemLink {
 
 message APICreateItemLinkResponse {
   int64 id = 1;
+}
+
+message APIGetItemVehicleTypesRequest {
+  int64 item_id = 1;
+  int64 vehicle_type_id = 2;
+}
+
+message APIItemVehicleType {
+  int64 item_id = 1;
+  int64 vehicle_type_id = 2;
+}
+
+message APIGetItemVehicleTypesResponse {
+  repeated APIItemVehicleType items = 1;
+}
+
+message APIItemVehicleTypeRequest {
+  int64 item_id = 1;
+  int64 vehicle_type_id = 2;
 }
 
 message AddCommentRequest {

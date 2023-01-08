@@ -1579,6 +1579,10 @@ type ItemsClient interface {
 	DeleteItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateItemLink(ctx context.Context, in *APIItemLink, opts ...grpc.CallOption) (*APICreateItemLinkResponse, error)
 	UpdateItemLink(ctx context.Context, in *APIItemLink, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetItemVehicleTypes(ctx context.Context, in *APIGetItemVehicleTypesRequest, opts ...grpc.CallOption) (*APIGetItemVehicleTypesResponse, error)
+	GetItemVehicleType(ctx context.Context, in *APIItemVehicleTypeRequest, opts ...grpc.CallOption) (*APIItemVehicleType, error)
+	CreateItemVehicleType(ctx context.Context, in *APIItemVehicleType, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteItemVehicleType(ctx context.Context, in *APIItemVehicleTypeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type itemsClient struct {
@@ -1706,6 +1710,42 @@ func (c *itemsClient) UpdateItemLink(ctx context.Context, in *APIItemLink, opts 
 	return out, nil
 }
 
+func (c *itemsClient) GetItemVehicleTypes(ctx context.Context, in *APIGetItemVehicleTypesRequest, opts ...grpc.CallOption) (*APIGetItemVehicleTypesResponse, error) {
+	out := new(APIGetItemVehicleTypesResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/GetItemVehicleTypes", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) GetItemVehicleType(ctx context.Context, in *APIItemVehicleTypeRequest, opts ...grpc.CallOption) (*APIItemVehicleType, error) {
+	out := new(APIItemVehicleType)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/GetItemVehicleType", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) CreateItemVehicleType(ctx context.Context, in *APIItemVehicleType, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/CreateItemVehicleType", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) DeleteItemVehicleType(ctx context.Context, in *APIItemVehicleTypeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/DeleteItemVehicleType", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility
@@ -1723,6 +1763,10 @@ type ItemsServer interface {
 	DeleteItemLink(context.Context, *APIItemLinkRequest) (*emptypb.Empty, error)
 	CreateItemLink(context.Context, *APIItemLink) (*APICreateItemLinkResponse, error)
 	UpdateItemLink(context.Context, *APIItemLink) (*emptypb.Empty, error)
+	GetItemVehicleTypes(context.Context, *APIGetItemVehicleTypesRequest) (*APIGetItemVehicleTypesResponse, error)
+	GetItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*APIItemVehicleType, error)
+	CreateItemVehicleType(context.Context, *APIItemVehicleType) (*emptypb.Empty, error)
+	DeleteItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -1779,6 +1823,22 @@ func (UnimplementedItemsServer) CreateItemLink(context.Context, *APIItemLink) (*
 
 func (UnimplementedItemsServer) UpdateItemLink(context.Context, *APIItemLink) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateItemLink not implemented")
+}
+
+func (UnimplementedItemsServer) GetItemVehicleTypes(context.Context, *APIGetItemVehicleTypesRequest) (*APIGetItemVehicleTypesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItemVehicleTypes not implemented")
+}
+
+func (UnimplementedItemsServer) GetItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*APIItemVehicleType, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItemVehicleType not implemented")
+}
+
+func (UnimplementedItemsServer) CreateItemVehicleType(context.Context, *APIItemVehicleType) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateItemVehicleType not implemented")
+}
+
+func (UnimplementedItemsServer) DeleteItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteItemVehicleType not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 
@@ -2027,6 +2087,78 @@ func _Items_UpdateItemLink_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetItemVehicleTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetItemVehicleTypesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetItemVehicleTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/GetItemVehicleTypes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetItemVehicleTypes(ctx, req.(*APIGetItemVehicleTypesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_GetItemVehicleType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIItemVehicleTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetItemVehicleType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/GetItemVehicleType",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetItemVehicleType(ctx, req.(*APIItemVehicleTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_CreateItemVehicleType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIItemVehicleType)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).CreateItemVehicleType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/CreateItemVehicleType",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).CreateItemVehicleType(ctx, req.(*APIItemVehicleType))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_DeleteItemVehicleType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIItemVehicleTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).DeleteItemVehicleType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/DeleteItemVehicleType",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).DeleteItemVehicleType(ctx, req.(*APIItemVehicleTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2085,6 +2217,22 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateItemLink",
 			Handler:    _Items_UpdateItemLink_Handler,
+		},
+		{
+			MethodName: "GetItemVehicleTypes",
+			Handler:    _Items_GetItemVehicleTypes_Handler,
+		},
+		{
+			MethodName: "GetItemVehicleType",
+			Handler:    _Items_GetItemVehicleType_Handler,
+		},
+		{
+			MethodName: "CreateItemVehicleType",
+			Handler:    _Items_CreateItemVehicleType_Handler,
+		},
+		{
+			MethodName: "DeleteItemVehicleType",
+			Handler:    _Items_DeleteItemVehicleType_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -200,3 +200,103 @@ func TestItemLinks(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, r4.Items)
 }
+
+func TestItemVehicleTypes(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	cfg := config.LoadConfig(".")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	_, err = client.CreateItemVehicleType(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIItemVehicleType{
+			ItemId:        1,
+			VehicleTypeId: 1,
+		},
+	)
+	require.NoError(t, err)
+
+	r2, err := client.GetItemVehicleType(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIItemVehicleTypeRequest{
+			ItemId:        1,
+			VehicleTypeId: 1,
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), r2.ItemId)
+	require.Equal(t, int64(1), r2.VehicleTypeId)
+
+	_, err = client.CreateItemVehicleType(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIItemVehicleType{
+			ItemId:        1,
+			VehicleTypeId: 2,
+		},
+	)
+	require.NoError(t, err)
+
+	r4, err := client.GetItemVehicleTypes(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIGetItemVehicleTypesRequest{
+			ItemId: 1,
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, r4.Items, 2)
+
+	_, err = client.DeleteItemVehicleType(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIItemVehicleTypeRequest{
+			ItemId:        1,
+			VehicleTypeId: 1,
+		},
+	)
+	require.NoError(t, err)
+
+	r6, err := client.GetItemVehicleType(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIItemVehicleTypeRequest{
+			ItemId:        1,
+			VehicleTypeId: 2,
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), r6.ItemId)
+	require.Equal(t, int64(2), r6.VehicleTypeId)
+
+	_, err = client.GetItemVehicleType(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIItemVehicleTypeRequest{
+			ItemId:        1,
+			VehicleTypeId: 1,
+		},
+	)
+	require.Error(t, err)
+
+	r8, err := client.GetItemVehicleTypes(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIGetItemVehicleTypesRequest{
+			ItemId: 1,
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, r8.Items, 1)
+}

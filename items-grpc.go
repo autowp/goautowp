@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/autowp/goautowp/util"
+
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/validation"
@@ -594,6 +596,8 @@ func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *APIGetItemLinksR
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	defer util.Close(rows)
+
 	itemLinks := make([]*APIItemLink, 0)
 
 	for rows.Next() {
@@ -770,4 +774,150 @@ func (s *APIItemLink) Validate() ([]*errdetails.BadRequest_FieldViolation, error
 	}
 
 	return result, nil
+}
+
+func (s *ItemsGRPCServer) GetItemVehicleTypes(
+	ctx context.Context,
+	in *APIGetItemVehicleTypesRequest,
+) (*APIGetItemVehicleTypesResponse, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	if in.ItemId == 0 && in.VehicleTypeId == 0 {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From("vehicle_vehicle_type").Where(
+		goqu.L("NOT inherited"),
+	)
+
+	if in.ItemId != 0 {
+		sqlSelect = sqlSelect.Where(goqu.I("vehicle_id").Eq(in.ItemId))
+	}
+
+	if in.VehicleTypeId != 0 {
+		sqlSelect = sqlSelect.Where(goqu.I("vehicle_type_id").Eq(in.VehicleTypeId))
+	}
+
+	rows, err := sqlSelect.Executor().QueryContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	defer util.Close(rows)
+
+	res := make([]*APIItemVehicleType, 0)
+
+	for rows.Next() {
+		var i APIItemVehicleType
+
+		err = rows.Scan(&i.ItemId, &i.VehicleTypeId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		res = append(res, &i)
+	}
+
+	return &APIGetItemVehicleTypesResponse{
+		Items: res,
+	}, nil
+}
+
+func (s *ItemsGRPCServer) GetItemVehicleType(
+	ctx context.Context,
+	in *APIItemVehicleTypeRequest,
+) (*APIItemVehicleType, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	if in.ItemId == 0 && in.VehicleTypeId == 0 {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From("vehicle_vehicle_type").Where(
+		goqu.L("NOT inherited"),
+		goqu.I("vehicle_id").Eq(in.ItemId),
+		goqu.I("vehicle_type_id").Eq(in.VehicleTypeId),
+	)
+
+	var i APIItemVehicleType
+
+	rows, err := sqlSelect.Executor().QueryContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	defer util.Close(rows)
+
+	rows.Next()
+
+	err = rows.Scan(&i.ItemId, &i.VehicleTypeId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &i, nil
+}
+
+func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItemVehicleType) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "move") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	var found bool
+
+	err = s.db.QueryRowContext(
+		ctx,
+		"SELECT 1 FROM item WHERE id = ? AND item_type_id IN (?, ?)",
+		in.ItemId, items.VEHICLE, items.TWINS,
+	).Scan(&found)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.repository.AddItemVehicleType(ctx, in.ItemId, in.VehicleTypeId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) DeleteItemVehicleType(
+	ctx context.Context,
+	in *APIItemVehicleTypeRequest,
+) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "move") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	err = s.repository.RemoveItemVehicleType(ctx, in.ItemId, in.VehicleTypeId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
 }

@@ -513,7 +513,7 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 
 	var item row
 
-	success, err := s.db.Select("id", "name", "").From("item").
+	success, err := s.db.Select("id", "name", "item_type_id").From("item").
 		Where(goqu.I("id").Eq(id)).ScanStructContext(ctx, item)
 	if err != nil {
 		return nil, err
@@ -528,4 +528,235 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 		Name:     item.Name,
 		ItemType: item.ItemType,
 	}, nil
+}
+
+func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
+	changed, err := s.setItemVehicleTypeRow(ctx, itemID, vehicleTypeID, false)
+	if err != nil {
+		return err
+	}
+
+	if changed {
+		err = s.refreshItemVehicleTypeInheritanceFromParents(ctx, itemID)
+		if err != nil {
+			return err
+		}
+
+		err = s.refreshItemVehicleTypeInheritance(ctx, itemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
+	res, err := s.db.From("vehicle_vehicle_type").Delete().
+		Where(
+			goqu.I("vehicle_id").Eq(itemID),
+			goqu.I("vehicle_type_id").Eq(vehicleTypeID),
+			goqu.L("NOT inherited"),
+		).Executor().Exec()
+	if err != nil {
+		return err
+	}
+
+	deleted, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if deleted > 0 {
+		err = s.refreshItemVehicleTypeInheritanceFromParents(ctx, itemID)
+		if err != nil {
+			return err
+		}
+
+		err = s.refreshItemVehicleTypeInheritance(ctx, itemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) setItemVehicleTypeRow(
+	ctx context.Context,
+	itemID int64,
+	vehicleTypeID int64,
+	inherited bool,
+) (bool, error) {
+	res, err := s.db.ExecContext(
+		ctx,
+		`
+			INSERT INTO vehicle_vehicle_type (vehicle_id, vehicle_type_id, inherited)
+			VALUES (?, ?, ?)
+			ON DUPLICATE KEY UPDATE inherited = VALUES(inherited)
+        `,
+		itemID, vehicleTypeID, inherited,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return affected > 0, nil
+}
+
+func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Context, itemID int64) error {
+	typeIds, err := s.getItemVehicleTypeIDs(ctx, itemID, false)
+	if err != nil {
+		return err
+	}
+
+	if len(typeIds) > 0 {
+		// do not inherit when own value
+		res, err := s.db.ExecContext(
+			ctx,
+			"DELETE FROM vehicle_vehicle_type WHERE vehicle_id = ? AND inherited",
+			itemID,
+		)
+		if err != nil {
+			return err
+		}
+
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if affected > 0 {
+			err = s.refreshItemVehicleTypeInheritance(ctx, itemID)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	types, err := s.getItemVehicleTypeInheritedIDs(ctx, itemID)
+	if err != nil {
+		return err
+	}
+
+	changed, err := s.setItemVehicleTypeRows(ctx, itemID, types, true)
+	if err != nil {
+		return err
+	}
+
+	if changed {
+		err := s.refreshItemVehicleTypeInheritance(ctx, itemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, itemID int64) error {
+	rows, err := s.db.QueryContext(
+		ctx,
+		"SELECT item_id FROM item_parent WHERE parent_id = ?",
+		itemID,
+	)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		var childID int64
+
+		err = rows.Scan(&childID)
+		if err != nil {
+			return err
+		}
+
+		err = s.refreshItemVehicleTypeInheritanceFromParents(ctx, childID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
+	sqlSelect := s.db.From("vehicle_vehicle_type").Select("vehicle_type_id").Where(
+		goqu.I("vehicle_id").Eq(itemID),
+	)
+	if inherited {
+		sqlSelect = sqlSelect.Where(goqu.L("inherited"))
+	} else {
+		sqlSelect = sqlSelect.Where(goqu.L("NOT inherited"))
+	}
+
+	res := make([]int64, 0)
+
+	err := sqlSelect.ScanValsContext(ctx, &res)
+
+	return res, err
+}
+
+func (s *Repository) getItemVehicleTypeInheritedIDs(ctx context.Context, itemID int64) ([]int64, error) {
+	sqlSelect := s.db.From("vehicle_vehicle_type").
+		Select("vehicle_type_id").Distinct().
+		Join(goqu.T("item_parent"), goqu.On(goqu.Ex{"vehicle_vehicle_type.vehicle_id": goqu.I("item_parent.parent_id")})).
+		Where(goqu.I("item_parent.item_id").Eq(itemID))
+
+	res := make([]int64, 0)
+
+	err := sqlSelect.ScanValsContext(ctx, &res)
+
+	return res, err
+}
+
+func (s *Repository) setItemVehicleTypeRows(
+	ctx context.Context,
+	itemID int64,
+	types []int64,
+	inherited bool,
+) (bool, error) {
+	changed := false
+
+	for _, t := range types {
+		rowChanged, err := s.setItemVehicleTypeRow(ctx, itemID, t, inherited)
+		if err != nil {
+			return false, err
+		}
+
+		if rowChanged {
+			changed = true
+		}
+	}
+
+	sqlDelete := s.db.From("vehicle_vehicle_type").Delete().
+		Where(goqu.I("vehicle_id").Eq(itemID))
+
+	if len(types) > 0 {
+		sqlDelete = sqlDelete.Where(goqu.I("vehicle_type_id").NotIn(types))
+	}
+
+	res, err := sqlDelete.Executor().Exec()
+	if err != nil {
+		return false, err
+	}
+
+	deleted, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	if deleted > 0 {
+		changed = true
+	}
+
+	return changed, nil
 }
