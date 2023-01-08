@@ -6,16 +6,12 @@ import (
 	"testing"
 
 	"github.com/Nerzal/gocloak/v11"
-
-	"google.golang.org/grpc/metadata"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
 	"github.com/autowp/goautowp/config"
-
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestGetText(t *testing.T) {
