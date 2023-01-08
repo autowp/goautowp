@@ -37,12 +37,12 @@ func (s *Forums) GetUserSummary(ctx context.Context, userID int64) (int, error) 
 		  	AND comment_topic.type_id = ?
 			AND comment_topic_subscribe.type_id = ?
 	`, userID, comments.TypeIDForums, comments.TypeIDForums)
-	if err != nil {
-		return 0, err
-	}
-
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
+	}
+
+	if err != nil {
+		return 0, err
 	}
 
 	defer util.Close(rows)
