@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/doug-martin/goqu/v9"
-
 	"github.com/autowp/goautowp/config"
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" // enable postgres migrations
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,4 +60,29 @@ func TestMonitoringGC(t *testing.T) {
 
 	_, err = s.ListOfTop(ctx, 10)
 	require.NoError(t, err)
+}
+
+func TestListByBanProfile(t *testing.T) { //nolint:paralleltest
+	s := createMonitoringService(t)
+
+	ctx := context.Background()
+
+	err := s.Clear(ctx)
+	require.NoError(t, err)
+
+	for i := 0; i < 2; i++ {
+		err = s.Add(net.IPv4(192, 168, 0, 77), time.Now())
+		require.NoError(t, err)
+	}
+
+	ips, err := s.ListByBanProfile(ctx, AutobanProfile{
+		Limit:  1,
+		Reason: "test",
+		Group:  []string{},
+		Time:   dailyLimitDuration,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, ips)
+
+	require.Equal(t, ips[0].String(), "192.168.0.77")
 }

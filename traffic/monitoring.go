@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/doug-martin/goqu/v9"
-
-	"github.com/sirupsen/logrus"
-
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgtype"
+	"github.com/sirupsen/logrus"
 )
 
 // Monitoring Main Object.
@@ -182,9 +181,17 @@ func (s *Monitoring) ListOfTop(ctx context.Context, limit int) ([]ListOfTopItem,
 	result := []ListOfTopItem{}
 
 	for rows.Next() {
-		var item ListOfTopItem
-		if err := rows.Scan(&item.IP, &item.Count); err != nil {
+		var (
+			ip   pgtype.Inet
+			item ListOfTopItem
+		)
+
+		if err := rows.Scan(&ip, &item.Count); err != nil {
 			return nil, err
+		}
+
+		if ip.IPNet != nil {
+			item.IP = ip.IPNet.IP
 		}
 
 		result = append(result, item)
@@ -214,7 +221,7 @@ func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfil
 
 	for rows.Next() {
 		var (
-			ip net.IP
+			ip pgtype.Inet
 			c  int
 		)
 
@@ -222,7 +229,9 @@ func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfil
 			return nil, err
 		}
 
-		result = append(result, ip)
+		if ip.IPNet != nil {
+			result = append(result, ip.IPNet.IP)
+		}
 	}
 
 	return result, nil
