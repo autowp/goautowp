@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
-
+	"github.com/jackc/pgtype"
 	"github.com/sirupsen/logrus"
 )
 
@@ -94,19 +94,26 @@ func (s *Repository) Exists(ctx context.Context, ip net.IP) (bool, error) {
 
 // Get ban info.
 func (s *Repository) Get(ctx context.Context, ip net.IP) (*Item, error) {
-	item := Item{}
+	var (
+		item   Item
+		pgInet pgtype.Inet
+	)
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT ip, until, reason, by_user_id
 		FROM ip_ban
 		WHERE ip = $1 AND until >= NOW()
-	`, ip.String()).Scan(&item.IP, &item.Until, &item.Reason, &item.ByUserID)
+	`, ip.String()).Scan(&pgInet, &item.Until, &item.Reason, &item.ByUserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrBanItemNotFound
 		}
 
 		return nil, err
+	}
+
+	if pgInet.IPNet != nil {
+		item.IP = pgInet.IPNet.IP
 	}
 
 	return &item, nil
