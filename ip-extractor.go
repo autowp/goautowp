@@ -73,7 +73,7 @@ func (s *IPExtractor) Extract(ctx context.Context, ip net.IP, fields map[string]
 					Reason:   banItem.Reason,
 				}
 
-				user, err := s.userRepository.User(users.GetUsersOptions{ID: banItem.ByUserID})
+				user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: banItem.ByUserID})
 				if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 					return nil, err
 				}

@@ -1302,6 +1302,7 @@ type UsersClient interface {
 	GetUserPreferences(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*APIUserPreferencesResponse, error)
 	DisableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	EnableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetUsers(ctx context.Context, in *APIUsersRequest, opts ...grpc.CallOption) (*APIUsersResponse, error)
 }
 
 type usersClient struct {
@@ -1366,6 +1367,15 @@ func (c *usersClient) EnableUserCommentsNotifications(ctx context.Context, in *A
 	return out, nil
 }
 
+func (c *usersClient) GetUsers(ctx context.Context, in *APIUsersRequest, opts ...grpc.CallOption) (*APIUsersResponse, error) {
+	out := new(APIUsersResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Users/GetUsers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UsersServer is the server API for Users service.
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
@@ -1376,6 +1386,7 @@ type UsersServer interface {
 	GetUserPreferences(context.Context, *APIUserPreferencesRequest) (*APIUserPreferencesResponse, error)
 	DisableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
 	EnableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
+	GetUsers(context.Context, *APIUsersRequest) (*APIUsersResponse, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -1404,6 +1415,10 @@ func (UnimplementedUsersServer) DisableUserCommentsNotifications(context.Context
 
 func (UnimplementedUsersServer) EnableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EnableUserCommentsNotifications not implemented")
+}
+
+func (UnimplementedUsersServer) GetUsers(context.Context, *APIUsersRequest) (*APIUsersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUsers not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -1526,6 +1541,24 @@ func _Users_EnableUserCommentsNotifications_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Users_GetUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).GetUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Users/GetUsers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).GetUsers(ctx, req.(*APIUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Users_ServiceDesc is the grpc.ServiceDesc for Users service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1556,6 +1589,10 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EnableUserCommentsNotifications",
 			Handler:    _Users_EnableUserCommentsNotifications_Handler,
+		},
+		{
+			MethodName: "GetUsers",
+			Handler:    _Users_GetUsers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

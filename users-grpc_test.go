@@ -233,3 +233,39 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, res2.DisableCommentsNotifications)
 }
+
+func TestGetOnlineUsers(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	client := NewUsersClient(conn)
+
+	// tester
+	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	require.NoError(t, err)
+	require.NotNil(t, testerToken)
+
+	// touch last_online for tester
+	_, err = client.Me(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+testerToken.AccessToken),
+		&APIMeRequest{},
+	)
+	require.NoError(t, err)
+
+	r, err := client.GetUsers(ctx, &APIUsersRequest{IsOnline: true})
+	require.NoError(t, err)
+	require.NotEmpty(t, r.Items)
+}

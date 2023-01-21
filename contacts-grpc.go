@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/autowp/goautowp/users"
+	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -47,7 +49,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 
 	deleted := false
 
-	user, err := s.userRepository.User(users.GetUsersOptions{ID: in.UserId, Deleted: &deleted})
+	user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: in.UserId, Deleted: &deleted})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -127,9 +129,9 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsReq
 		m[e] = true
 	}
 
-	userRows, err := s.userRepository.Users(users.GetUsersOptions{
+	userRows, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{
 		InContacts: userID,
-		Order:      []string{"users.deleted", "users.name"},
+		Order:      []exp.OrderedExpression{goqu.I("users.deleted").Asc(), goqu.I("users.name").Asc()},
 		Fields:     m,
 	})
 	if err != nil {

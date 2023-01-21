@@ -59,6 +59,7 @@ service Users {
   rpc GetUserPreferences(APIUserPreferencesRequest) returns (APIUserPreferencesResponse) {}
   rpc DisableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
   rpc EnableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
+  rpc GetUsers(APIUsersRequest) returns (APIUsersResponse) {}
 }
 
 service Items {
@@ -778,6 +779,18 @@ message APIUserPreferencesRequest {
 
 message APIUserPreferencesResponse {
   bool disable_comments_notifications = 1;
+}
+
+message APIUsersRequest {
+  repeated string fields = 1;
+  bool is_online = 2;
+  uint64 limit = 3;
+  uint64 page = 4;
+}
+
+message APIUsersResponse {
+  repeated APIUser items = 1;
+  Pages paginator = 2;
 }
 
 message ArticlesRequest {

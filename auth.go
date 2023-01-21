@@ -75,5 +75,10 @@ func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, st
 		return 0, "", fmt.Errorf("failed role detection for `%v`", claims.Subject)
 	}
 
+	err = s.repository.RegisterVisit(ctx, id)
+	if role == "" {
+		return 0, "", err
+	}
+
 	return id, role, nil
 }

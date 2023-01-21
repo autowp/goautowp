@@ -67,7 +67,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 		m[e] = true
 	}
 
-	dbUser, err := s.userRepository.User(users.GetUsersOptions{
+	dbUser, err := s.userRepository.User(ctx, users.GetUsersOptions{
 		ID:     in.UserId,
 		Fields: m,
 	})
@@ -213,5 +213,52 @@ func (s *UsersGRPCServer) GetUserPreferences(
 
 	return &APIUserPreferencesResponse{
 		DisableCommentsNotifications: prefs.DisableCommentsNotifications,
+	}, nil
+}
+
+func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*APIUsersResponse, error) {
+	fields := in.Fields
+	m := make(map[string]bool)
+
+	for _, e := range fields {
+		m[e] = true
+	}
+
+	rows, pages, err := s.userRepository.Users(ctx, users.GetUsersOptions{
+		IsOnline: true,
+		Limit:    in.Limit,
+		Page:     in.Page,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	items := make([]*APIUser, 0)
+
+	for idx := range rows {
+		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx], m)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		items = append(items, APIUserToGRPC(apiUser))
+	}
+
+	var paginator *Pages
+	if pages != nil {
+		paginator = &Pages{
+			PageCount:        pages.PageCount,
+			First:            pages.First,
+			Current:          pages.Current,
+			FirstPageInRange: pages.FirstPageInRange,
+			LastPageInRange:  pages.LastPageInRange,
+			PagesInRange:     pages.PagesInRange,
+			TotalItemCount:   pages.TotalItemCount,
+		}
+	}
+
+	return &APIUsersResponse{
+		Items:     items,
+		Paginator: paginator,
 	}, nil
 }

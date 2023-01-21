@@ -11,19 +11,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
-	sq "github.com/Masterminds/squirrel"
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/Nerzal/gocloak/v11/pkg/jwx"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
+
+const lastOnlineUpdateThreshold = 5 * time.Second
 
 const (
 	Decimal   = 10
@@ -52,9 +53,12 @@ const KeycloakExternalAccountID = "keycloak"
 type GetUsersOptions struct {
 	ID         int64
 	InContacts int64
-	Order      []string
+	Order      []exp.OrderedExpression
 	Fields     map[string]bool
 	Deleted    *bool
+	IsOnline   bool
+	Limit      uint64
+	Page       uint64
 }
 
 // APIUser APIUser.
@@ -135,8 +139,8 @@ func NewRepository(
 	}
 }
 
-func (s *Repository) User(options GetUsersOptions) (*DBUser, error) {
-	users, err := s.Users(options)
+func (s *Repository) User(ctx context.Context, options GetUsersOptions) (*DBUser, error) {
+	users, _, err := s.Users(ctx, options)
 	if err != nil {
 		return nil, err
 	}
@@ -148,59 +152,87 @@ func (s *Repository) User(options GetUsersOptions) (*DBUser, error) {
 	return &users[0], nil
 }
 
-func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
+func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUser, *util.Pages, error) {
+	var err error
+
 	result := make([]DBUser, 0)
 
 	var r DBUser
 	valuePtrs := []interface{}{&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight}
 
-	sqSelect := sq.Select(
-		"users.id, users.name, users.deleted, users.identity, users.last_online, users.role, users.specs_weight",
-	).From("users")
+	columns := []interface{}{
+		"users.id", "users.name", "users.deleted", "users.identity", "users.last_online", "users.role",
+		"users.specs_weight",
+	}
+
+	sqSelect := s.autowpDB.From("users")
 
 	if options.ID != 0 {
-		sqSelect = sqSelect.Where(sq.Eq{"users.id": options.ID})
+		sqSelect = sqSelect.Where(goqu.I("users.id").Eq(options.ID))
 	}
 
 	if options.InContacts != 0 {
-		sqSelect = sqSelect.Join("contact ON users.id = contact.contact_user_id").
-			Where(sq.Eq{"contact.user_id": options.InContacts})
+		sqSelect = sqSelect.Join(goqu.T("contact"), goqu.On(goqu.Ex{"users.id": goqu.I("contact.contact_user_id")})).
+			Where(goqu.Ex{"contact.user_id": options.InContacts})
 	}
 
 	if options.Deleted != nil {
 		if *options.Deleted {
-			sqSelect = sqSelect.Where("users.deleted")
+			sqSelect = sqSelect.Where(goqu.L("users.deleted"))
 		} else {
-			sqSelect = sqSelect.Where("not users.deleted")
+			sqSelect = sqSelect.Where(goqu.L("not users.deleted"))
 		}
 	}
 
+	if options.IsOnline {
+		sqSelect = sqSelect.Where(goqu.I("users.last_online").Gte(goqu.L("DATE_SUB(NOW(), INTERVAL 5 MINUTE)")))
+	}
+
 	if len(options.Order) > 0 {
-		sqSelect = sqSelect.OrderBy(options.Order...)
+		sqSelect = sqSelect.Order(options.Order...)
 	}
 
 	if len(options.Fields) > 0 {
 		for field := range options.Fields {
 			switch field {
 			case "avatar":
-				sqSelect = sqSelect.Columns("users.img")
-
+				columns = append(columns, "users.img")
 				valuePtrs = append(valuePtrs, &r.Img)
 			case "gravatar":
-				sqSelect = sqSelect.Columns("users.e_mail")
-
+				columns = append(columns, "users.e_mail")
 				valuePtrs = append(valuePtrs, &r.EMail)
 			}
 		}
 	}
 
-	rows, err := sqSelect.RunWith(s.autowpDB).Query()
+	sqSelect = sqSelect.Select(columns...)
+
+	var pages *util.Pages
+
+	if options.Page > 0 {
+		paginator := util.Paginator{
+			SQLSelect:        sqSelect,
+			ItemCountPerPage: int32(options.Limit),
+		}
+
+		pages, err = paginator.GetPages(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		sqSelect, err = paginator.GetItemsByPage(ctx, int32(options.Page))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if errors.Is(err, sql.ErrNoRows) {
-		return result, nil
+		return result, pages, nil
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	defer util.Close(rows)
@@ -208,13 +240,13 @@ func (s *Repository) Users(options GetUsersOptions) ([]DBUser, error) {
 	for rows.Next() {
 		err = rows.Scan(valuePtrs...)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		result = append(result, r)
 	}
 
-	return result, nil
+	return result, pages, nil
 }
 
 func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error) {
@@ -853,4 +885,58 @@ func (s *Repository) NextMessageTime(ctx context.Context, userID int64) (time.Ti
 	}
 
 	return time.Time{}, nil
+}
+
+func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
+	var (
+		lastOnline sql.NullTime
+		lastIP     *net.IP
+	)
+
+	err := s.autowpDB.QueryRowContext(ctx, "SELECT last_online, last_ip FROM users WHERE id = ?", userID).
+		Scan(&lastOnline, &lastIP)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	set := goqu.Record{}
+
+	if !lastOnline.Valid || lastOnline.Time.Add(lastOnlineUpdateThreshold).Before(time.Now()) {
+		set["last_online"] = goqu.L("NOW()")
+	}
+
+	remoteAddr := "127.0.0.1"
+	p, ok := peer.FromContext(ctx)
+
+	if ok {
+		nw := p.Addr.String()
+		if nw != "bufconn" {
+			ip, _, err := net.SplitHostPort(nw)
+			if err != nil {
+				logrus.Errorf("userip: %q is not IP:port", nw)
+			} else {
+				remoteAddr = ip
+			}
+		}
+	}
+
+	ip := net.ParseIP(remoteAddr)
+
+	if ip != nil && (lastIP == nil || !lastIP.Equal(ip)) {
+		set["last_ip"] = goqu.L("INET6_ATON(?)", remoteAddr)
+	}
+
+	if len(set) > 0 {
+		_, err = s.autowpDB.Update(goqu.T("users")).Set(set).Where(goqu.Ex{"id": userID}).Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
