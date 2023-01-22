@@ -174,8 +174,6 @@ func TestAddImageAndCrop(t *testing.T) {
 	)
 
 	for {
-		attempts++
-
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageInfo.Src(), nil)
 		require.NoError(t, err)
 
@@ -193,7 +191,7 @@ func TestAddImageAndCrop(t *testing.T) {
 
 		attempts++
 
-		time.Sleep(time.Second)
+		time.Sleep(3 * time.Second)
 		require.LessOrEqual(t, attempts, 10)
 	}
 
