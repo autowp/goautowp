@@ -194,7 +194,7 @@ func TestAddImageAndCrop(t *testing.T) {
 		attempts++
 
 		time.Sleep(time.Second)
-		require.LessOrEqual(t, 10, attempts)
+		require.LessOrEqual(t, attempts, 10)
 	}
 
 	filesize, err := os.Stat(TestImageFile2)
