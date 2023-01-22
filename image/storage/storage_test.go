@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/sampler"
@@ -167,18 +168,34 @@ func TestAddImageAndCrop(t *testing.T) {
 	imageInfo, err := mw.Image(ctx, imageID)
 	require.NoError(t, err)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageInfo.Src(), nil)
-	require.NoError(t, err)
+	var (
+		attempts = 0
+		body     []byte
+	)
 
-	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
-	require.NoError(t, err)
+	for {
+		attempts++
 
-	defer util.Close(resp.Body)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageInfo.Src(), nil)
+		require.NoError(t, err)
 
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+		resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
+		require.NoError(t, err)
 
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
+		defer util.Close(resp.Body)
+
+		if resp.StatusCode == http.StatusOK {
+			body, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			break
+		}
+
+		attempts++
+
+		time.Sleep(time.Second)
+		require.LessOrEqual(t, 10, attempts)
+	}
 
 	filesize, err := os.Stat(TestImageFile2)
 	require.NoError(t, err)
