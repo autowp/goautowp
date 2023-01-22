@@ -84,9 +84,7 @@ func TestAutoWhitelist(t *testing.T) { //nolint:paralleltest
 	require.True(t, exists)
 }
 
-func TestAutoBanByProfile(t *testing.T) {
-	t.Parallel()
-
+func TestAutoBanByProfile(t *testing.T) { //nolint:paralleltest
 	s := createTrafficService(t)
 
 	ctx := context.Background()
