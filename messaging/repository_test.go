@@ -178,9 +178,7 @@ func createRandomUser(t *testing.T, s *Repository) int64 {
 	return id
 }
 
-func TestDialogCount(t *testing.T) {
-	t.Parallel()
-
+func TestDialogCount(t *testing.T) { //nolint:paralleltest
 	s := createRepository(t)
 	ctx := context.Background()
 
@@ -198,7 +196,7 @@ func TestDialogCount(t *testing.T) {
 
 	require.Greater(t, countAfter, countBefore)
 
-	messages, _, err := s.GetSentbox(context.Background(), user1, 1)
+	messages, _, err := s.GetSentbox(ctx, user1, 1)
 	require.NoError(t, err)
 	require.Equal(t, countAfter, messages[0].DialogCount)
 }

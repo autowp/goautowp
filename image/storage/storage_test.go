@@ -55,6 +55,8 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 
 	defer util.Close(resp.Body)
 
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	filesize, err := os.Stat(TestImageFile)
