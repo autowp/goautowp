@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/util"
@@ -71,12 +69,14 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 			break
 		}
 
-		logrus.Infof("Failed to download image. Content: %s", string(body))
-
 		attempts++
 
 		time.Sleep(3 * time.Second)
-		require.LessOrEqual(t, attempts, 10)
+		require.Lessf(
+			t,
+			attempts, 10,
+			"Failed to download image `%s`. Content: %s", imageInfo.Src(), string(body),
+		)
 	}
 
 	filesize, err := os.Stat(TestImageFile)
@@ -208,12 +208,14 @@ func TestAddImageAndCrop(t *testing.T) {
 			break
 		}
 
-		logrus.Infof("Failed to download image. Content: %s", string(body))
-
 		attempts++
 
 		time.Sleep(3 * time.Second)
-		require.LessOrEqual(t, attempts, 10)
+		require.Lessf(
+			t,
+			attempts, 10,
+			"Failed to download image `%s`. Content: %s", imageInfo.Src(), string(body),
+		)
 	}
 
 	filesize, err := os.Stat(TestImageFile2)
