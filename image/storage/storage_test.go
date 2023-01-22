@@ -64,7 +64,7 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = imageStorage.RemoveImage(imageID)
+	err = imageStorage.RemoveImage(ctx, imageID)
 	require.NoError(t, err)
 
 	_, err = imageStorage.Image(ctx, imageID)
@@ -152,10 +152,10 @@ func TestAddImageAndCrop(t *testing.T) {
 
 	crop := sampler.Crop{Left: 1024, Top: 768, Width: 1020, Height: 500}
 
-	err = mw.SetImageCrop(imageID, crop)
+	err = mw.SetImageCrop(ctx, imageID, crop)
 	require.NoError(t, err)
 
-	c, err := mw.imageCrop(imageID)
+	c, err := mw.imageCrop(ctx, imageID)
 	require.NoError(t, err)
 
 	require.EqualValues(t, crop, *c)
@@ -207,17 +207,17 @@ func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID1)
 
-	err = mw.Flop(imageID1)
+	err = mw.Flop(ctx, imageID1)
 	require.NoError(t, err)
 
 	imageID2, err := mw.AddImageFromFile(ctx, TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID2)
 
-	err = mw.Normalize(imageID2)
+	err = mw.Normalize(ctx, imageID2)
 	require.NoError(t, err)
 
-	images, err := mw.images([]int{imageID1, imageID2})
+	images, err := mw.images(ctx, []int{imageID1, imageID2})
 	require.NoError(t, err)
 
 	require.EqualValues(t, 2, len(images))

@@ -16,18 +16,16 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/aws/aws-sdk-go/private/protocol/rest"
-	"github.com/doug-martin/goqu/v9"
-	"github.com/sirupsen/logrus"
-
-	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/util"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/private/protocol/rest"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/go-sql-driver/mysql"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v2/imagick"
 
 	_ "image/gif"  // GIF support
@@ -683,10 +681,10 @@ func imageFormatContentType(format string) (string, error) {
 	return result, nil
 }
 
-func (s *Storage) RemoveImage(imageID int) error {
+func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 	var r Image
 
-	err := s.db.QueryRow(`
+	err := s.db.QueryRowContext(ctx, `
 		SELECT id, dir, filepath
 		FROM image
 		WHERE id = ?
@@ -695,7 +693,7 @@ func (s *Storage) RemoveImage(imageID int) error {
 		return err
 	}
 
-	err = s.Flush(FlushOptions{
+	err = s.Flush(ctx, FlushOptions{
 		Image: r.ID(),
 	})
 	if err != nil {
@@ -735,18 +733,18 @@ func (s *Storage) RemoveImage(imageID int) error {
 	return nil
 }
 
-func (s *Storage) Flush(options FlushOptions) error {
-	sqSelect := sq.Select("image_id, format, formated_image_id").From("formated_image")
+func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
+	sqSelect := s.db.Select("image_id, format, formated_image_id").From("formated_image")
 
 	if len(options.Format) > 0 {
-		sqSelect = sqSelect.Where(sq.Eq{"formated_image.format": options.Format})
+		sqSelect = sqSelect.Where(goqu.Ex{"formated_image.format": options.Format})
 	}
 
 	if options.Image > 0 {
-		sqSelect = sqSelect.Where(sq.Eq{"formated_image.image_id": options.Image})
+		sqSelect = sqSelect.Where(goqu.Ex{"formated_image.image_id": options.Image})
 	}
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
@@ -771,7 +769,7 @@ func (s *Storage) Flush(options FlushOptions) error {
 		}
 
 		if fiID.Valid && fiID.Int32 > 0 {
-			err = s.RemoveImage(int(fiID.Int32))
+			err = s.RemoveImage(ctx, int(fiID.Int32))
 			if err != nil {
 				return err
 			}
@@ -986,10 +984,10 @@ func (s *Storage) AddImageFromBlob(
 	return id, nil
 }
 
-func (s *Storage) doImagickOperation(imageID int, callback func(*imagick.MagickWand) error) error {
+func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback func(*imagick.MagickWand) error) error {
 	var r Image
 
-	err := s.db.QueryRow(`
+	err := s.db.QueryRowContext(ctx, `
 		SELECT dir, filepath
 		FROM image
 		WHERE id = ?
@@ -1052,24 +1050,24 @@ func (s *Storage) doImagickOperation(imageID int, callback func(*imagick.MagickW
 		return err
 	}
 
-	return s.Flush(FlushOptions{
+	return s.Flush(ctx, FlushOptions{
 		Image: imageID,
 	})
 }
 
-func (s *Storage) Flop(imageID int) error {
-	return s.doImagickOperation(imageID, func(mw *imagick.MagickWand) error {
+func (s *Storage) Flop(ctx context.Context, imageID int) error {
+	return s.doImagickOperation(ctx, imageID, func(mw *imagick.MagickWand) error {
 		return mw.FlopImage()
 	})
 }
 
-func (s *Storage) Normalize(imageID int) error {
-	return s.doImagickOperation(imageID, func(mw *imagick.MagickWand) error {
+func (s *Storage) Normalize(ctx context.Context, imageID int) error {
+	return s.doImagickOperation(ctx, imageID, func(mw *imagick.MagickWand) error {
 		return mw.NormalizeImage()
 	})
 }
 
-func (s *Storage) SetImageCrop(imageID int, crop sampler.Crop) error {
+func (s *Storage) SetImageCrop(ctx context.Context, imageID int, crop sampler.Crop) error {
 	if imageID <= 0 {
 		return fmt.Errorf("invalid image id provided `%v`", imageID)
 	}
@@ -1091,7 +1089,7 @@ func (s *Storage) SetImageCrop(imageID int, crop sampler.Crop) error {
 
 	for formatName, format := range s.formats {
 		if !format.IsIgnoreCrop() {
-			err = s.Flush(FlushOptions{
+			err = s.Flush(ctx, FlushOptions{
 				Format: formatName,
 				Image:  imageID,
 			})
@@ -1104,10 +1102,10 @@ func (s *Storage) SetImageCrop(imageID int, crop sampler.Crop) error {
 	return nil
 }
 
-func (s *Storage) imageCrop(imageID int) (*sampler.Crop, error) {
+func (s *Storage) imageCrop(ctx context.Context, imageID int) (*sampler.Crop, error) {
 	var crop sampler.Crop
 
-	err := s.db.QueryRow(`
+	err := s.db.QueryRowContext(ctx, `
 		SELECT crop_left, crop_top, crop_width, crop_height
 		FROM image
 		WHERE id = ? AND crop_width > 0 and crop_height > 0
@@ -1119,12 +1117,12 @@ func (s *Storage) imageCrop(imageID int) (*sampler.Crop, error) {
 	return &crop, nil
 }
 
-func (s *Storage) images(imageIds []int) (map[int]Image, error) {
-	sqSelect := sq.Select("id, width, height, filesize, filepath, dir").
+func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, error) {
+	sqSelect := s.db.Select("id, width, height, filesize, filepath, dir").
 		From("image").
-		Where(sq.Eq{"id": imageIds})
+		Where(goqu.Ex{"id": imageIds})
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if errors.Is(err, sql.ErrNoRows) {
 		return make(map[int]Image), nil
 	}
@@ -1157,15 +1155,17 @@ func (s *Storage) images(imageIds []int) (map[int]Image, error) {
 }
 
 func (s *Storage) FormattedImages(ctx context.Context, imageIds []int, formatName string) (map[int]Image, error) {
-	sqSelect := sq.Select(
+	sqSelect := s.db.Select(
 		"image.id, image.width, image.height, image.filesize, image.filepath, image.dir, formated_image.image_id",
 	).
 		From("image").
-		Join("formated_image ON image.id = formated_image.formated_image_id").
-		Where(sq.Eq{"formated_image.image_id": imageIds}).
-		Where(sq.Eq{"formated_image.format": formatName})
+		Join(goqu.T("formated_image"), goqu.On(goqu.Ex{"image.id": "formated_image.formated_image_id"})).
+		Where(goqu.Ex{
+			"formated_image.image_id": imageIds,
+			"formated_image.format":   formatName,
+		})
 
-	rows, err := sqSelect.RunWith(s.db).QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if errors.Is(err, sql.ErrNoRows) {
 		return make(map[int]Image), nil
 	}
