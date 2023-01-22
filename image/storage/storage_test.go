@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/util"
@@ -182,12 +184,14 @@ func TestAddImageAndCrop(t *testing.T) {
 
 		defer util.Close(resp.Body)
 
-		if resp.StatusCode == http.StatusOK {
-			body, err = io.ReadAll(resp.Body)
-			require.NoError(t, err)
+		body, err = io.ReadAll(resp.Body)
+		require.NoError(t, err)
 
+		if resp.StatusCode == http.StatusOK {
 			break
 		}
+
+		logrus.Infof("Failed to download image. Content: %s", string(body))
 
 		attempts++
 
