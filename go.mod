@@ -3,7 +3,6 @@ module github.com/autowp/goautowp
 go 1.19
 
 require (
-	github.com/Masterminds/squirrel v1.5.3
 	github.com/Nerzal/gocloak/v11 v11.2.0
 	github.com/aws/aws-sdk-go v1.44.184
 	github.com/bradfitz/gomemcache v0.0.0-20221031212613-62deef7fc822
@@ -76,8 +75,6 @@ require (
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
-	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

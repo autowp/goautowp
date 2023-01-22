@@ -8,14 +8,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/autowp/goautowp/util"
-
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -59,7 +59,7 @@ func NewItemsGRPCServer(
 	}
 }
 
-func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsListRequest) (*APITopBrandsList, error) {
+func (s *ItemsGRPCServer) GetTopBrandsList(ctx context.Context, in *GetTopBrandsListRequest) (*APITopBrandsList, error) {
 	if s == nil {
 		return nil, status.Error(codes.Internal, "self not initialized")
 	}
@@ -87,16 +87,16 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 			},
 			TypeID:     []items.ItemType{items.BRAND},
 			Limit:      items.TopBrandsCount,
-			OrderBy:    "descendants_count DESC",
+			OrderBy:    []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
 			SortByName: true,
 		}
 
-		list, err := s.repository.List(options)
+		list, err := s.repository.List(ctx, options)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		count, err := s.repository.Count(options)
+		count, err := s.repository.Count(ctx, options)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -145,7 +145,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(_ context.Context, in *GetTopBrandsLi
 }
 
 func (s *ItemsGRPCServer) GetTopPersonsList(
-	_ context.Context,
+	ctx context.Context,
 	in *GetTopPersonsListRequest,
 ) (*APITopPersonsList, error) {
 	var pictureItemType pictures.ItemPictureType
@@ -169,7 +169,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 	var res []items.Item
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		res, err = s.repository.List(items.ListOptions{
+		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name: true,
@@ -182,7 +182,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 				},
 			},
 			Limit:   items.TopPersonsCount,
-			OrderBy: "COUNT(1) DESC",
+			OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -225,7 +225,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 }
 
 func (s *ItemsGRPCServer) GetTopFactoriesList(
-	_ context.Context,
+	ctx context.Context,
 	in *GetTopFactoriesListRequest,
 ) (*APITopFactoriesList, error) {
 	key := fmt.Sprintf("GO_FACTORIES_2_%s", in.Language)
@@ -238,7 +238,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 	var res []items.Item
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		res, err = s.repository.List(items.ListOptions{
+		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name:               true,
@@ -250,7 +250,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 				TypeID: []items.ItemType{items.VEHICLE, items.ENGINE},
 			},
 			Limit:   items.TopFactoriesCount,
-			OrderBy: "COUNT(1) DESC",
+			OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -295,7 +295,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 }
 
 func (s *ItemsGRPCServer) GetTopCategoriesList(
-	_ context.Context,
+	ctx context.Context,
 	in *GetTopCategoriesListRequest,
 ) (*APITopCategoriesList, error) {
 	key := fmt.Sprintf("GO_CATEGORIES_4_%s", in.Language)
@@ -308,7 +308,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 	var res []items.Item
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		res, err = s.repository.List(items.ListOptions{
+		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name:                true,
@@ -318,7 +318,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 			NoParents: true,
 			TypeID:    []items.ItemType{items.CATEGORY},
 			Limit:     items.TopCategoriesCount,
-			OrderBy:   "descendants_count DESC",
+			OrderBy:   []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -363,7 +363,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 }
 
 func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
-	_ context.Context,
+	ctx context.Context,
 	in *GetTopTwinsBrandsListRequest,
 ) (*APITopTwinsBrandsList, error) {
 	key := fmt.Sprintf("GO_TWINS_1_%s", in.Language)
@@ -382,7 +382,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 	}
 
 	if errors.Is(err, memcache.ErrCacheMiss) {
-		twinsData.Res, err = s.repository.List(items.ListOptions{
+		twinsData.Res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				Name: true,
@@ -398,13 +398,13 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 			},
 			TypeID:  []items.ItemType{items.BRAND},
 			Limit:   items.TopTwinsBrandsCount,
-			OrderBy: "items_count DESC",
+			OrderBy: []exp.OrderedExpression{goqu.I("items_count").Desc()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		twinsData.Count, err = s.repository.CountDistinct(items.ListOptions{
+		twinsData.Count, err = s.repository.CountDistinct(ctx, items.ListOptions{
 			DescendantItems: &items.ListOptions{
 				ParentItems: &items.ListOptions{
 					TypeID: []items.ItemType{items.TWINS},
@@ -492,7 +492,7 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 	dest.PerspectiveID = request.PerspectiveId
 }
 
-func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIItemList, error) {
+func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
 	options := items.ListOptions{
 		Limit: in.Limit,
 		Fields: items.ListFields{
@@ -542,7 +542,7 @@ func (s *ItemsGRPCServer) List(_ context.Context, in *ListItemsRequest) (*APIIte
 		mapItemPicturesRequest(in.PreviewPictures, options.PreviewPictures)
 	}
 
-	res, err := s.repository.List(options)
+	res, err := s.repository.List(ctx, options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

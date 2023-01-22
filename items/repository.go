@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
@@ -126,7 +127,7 @@ type ListOptions struct {
 	DescendantPictures *ItemPicturesOptions
 	PreviewPictures    *ItemPicturesOptions
 	Limit              uint64
-	OrderBy            string
+	OrderBy            []exp.OrderedExpression
 	SortByName         bool
 	ChildItems         *ListOptions
 	DescendantItems    *ListOptions
@@ -135,14 +136,14 @@ type ListOptions struct {
 	NoParents          bool
 }
 
-func applyPicture(alias string, sqSelect sq.SelectBuilder, options *PicturesOptions) sq.SelectBuilder {
+func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesOptions) *goqu.SelectDataset {
 	joinPicture := false
 
 	pAlias := alias + "_p"
 
 	if options.Status != "" {
 		joinPicture = true
-		sqSelect = sqSelect.Where(sq.Eq{pAlias + ".status": options.Status})
+		sqSelect = sqSelect.Where(goqu.Ex{pAlias + ".status": options.Status})
 	}
 
 	if options.ItemPicture != nil {
@@ -151,23 +152,23 @@ func applyPicture(alias string, sqSelect sq.SelectBuilder, options *PicturesOpti
 	}
 
 	if joinPicture {
-		sqSelect = sqSelect.Join("pictures AS " + pAlias + " ON " + alias + ".picture_id = " + pAlias + ".id")
+		sqSelect = sqSelect.Join(goqu.I("pictures").As(pAlias), goqu.On(goqu.I(alias+".picture_id").Eq(pAlias+".id")))
 	}
 
 	return sqSelect
 }
 
-func applyItemPicture(alias string, sqSelect sq.SelectBuilder, options *ItemPicturesOptions) sq.SelectBuilder {
+func applyItemPicture(alias string, sqSelect *goqu.SelectDataset, options *ItemPicturesOptions) *goqu.SelectDataset {
 	piAlias := alias + "_pi"
 
-	sqSelect = sqSelect.Join("picture_item AS " + piAlias + " ON " + alias + ".id = " + piAlias + ".item_id")
+	sqSelect = sqSelect.Join(goqu.I("picture_item").As(piAlias), goqu.On(goqu.I(alias+".id").Eq(piAlias+".item_id")))
 
 	if options.TypeID != 0 {
-		sqSelect = sqSelect.Where(sq.Eq{piAlias + ".type": options.TypeID})
+		sqSelect = sqSelect.Where(goqu.Ex{piAlias + ".type": options.TypeID})
 	}
 
 	if options.PerspectiveID != 0 {
-		sqSelect = sqSelect.Where(sq.Eq{piAlias + ".perspective_id": options.PerspectiveID})
+		sqSelect = sqSelect.Where(goqu.Ex{piAlias + ".perspective_id": options.PerspectiveID})
 	}
 
 	if options.Pictures != nil {
@@ -177,11 +178,16 @@ func applyItemPicture(alias string, sqSelect sq.SelectBuilder, options *ItemPict
 	return sqSelect
 }
 
-func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *ListOptions) (sq.SelectBuilder, error) {
+func applyItem(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+	fields bool,
+	options *ListOptions,
+) (*goqu.SelectDataset, error) {
 	var err error
 
 	if options.TypeID != nil && len(options.TypeID) > 0 {
-		sqSelect = sqSelect.Where(sq.Eq{alias + ".item_type_id": options.TypeID})
+		sqSelect = sqSelect.Where(goqu.Ex{alias + ".item_type_id": options.TypeID})
 	}
 
 	if options.DescendantPictures != nil {
@@ -193,8 +199,8 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 	if options.ChildItems != nil {
 		iAlias := alias + "_ic"
 		sqSelect = sqSelect.
-			Join("item_parent AS " + ipcAlias + " ON " + alias + ".id = " + ipcAlias + ".parent_id").
-			Join("item AS " + iAlias + " ON " + ipcAlias + ".item_id = " + iAlias + ".id")
+			Join(goqu.T("item_parent").As(ipcAlias), goqu.On(goqu.I(alias+".id").Eq(ipcAlias+".parent_id"))).
+			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcAlias+".item_id").Eq(iAlias+".id")))
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ChildItems)
 
 		if err != nil {
@@ -206,8 +212,8 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 		iAlias := alias + "_ip"
 		ippAlias := alias + "_ipc"
 		sqSelect = sqSelect.
-			Join("item_parent AS " + ippAlias + " ON " + alias + ".id = " + ippAlias + ".item_id").
-			Join("item AS " + iAlias + " ON " + ippAlias + ".parent_id = " + iAlias + ".id")
+			Join(goqu.T("item_parent").As(ippAlias), goqu.On(goqu.I(alias+".id").Eq(ippAlias+".item_id"))).
+			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ippAlias+".parent_id").Eq(iAlias+".id")))
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ParentItems)
 
 		if err != nil {
@@ -219,8 +225,8 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 		ipcdAlias := alias + "_ipcd"
 		iAlias := alias + "_id"
 		sqSelect = sqSelect.
-			Join("item_parent_cache AS " + ipcdAlias + " ON " + alias + ".id = " + ipcdAlias + ".parent_id").
-			Join("item AS " + iAlias + " ON " + ipcdAlias + ".item_id = " + iAlias + ".id")
+			Join(goqu.T("item_parent_cache").As(ipcdAlias), goqu.On(goqu.I(alias+".id").Eq(ipcdAlias+".parent_id"))).
+			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcdAlias+".item_id").Eq(iAlias+".id")))
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.DescendantItems)
 
 		if err != nil {
@@ -232,8 +238,8 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 		ipcaAlias := alias + "_ipca"
 		iAlias := alias + "_ia"
 		sqSelect = sqSelect.
-			Join("item_parent_cache AS " + ipcaAlias + " ON " + alias + ".id = " + ipcaAlias + ".item_id").
-			Join("item AS " + iAlias + " ON " + ipcaAlias + ".parent_id = " + iAlias + ".id")
+			Join(goqu.T("item_parent_cache").As(ipcaAlias), goqu.On(goqu.I(alias+".id").Eq(ipcaAlias+".item_id"))).
+			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcaAlias+".parent_id").Eq(iAlias+".id")))
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.AncestorItems)
 
 		if err != nil {
@@ -244,21 +250,23 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 	if options.NoParents {
 		ipnpAlias := alias + "_ipnp"
 		sqSelect = sqSelect.
-			LeftJoin("item_parent AS " + ipnpAlias + " ON " + alias + ".id = " + ipnpAlias + ".item_id").
-			Where(ipnpAlias + ".parent_id IS NULL")
+			LeftJoin(goqu.T("item_parent").As(ipnpAlias), goqu.On(goqu.I(alias+".id").Eq(ipnpAlias+".item_id"))).
+			Where(goqu.I(ipnpAlias + ".parent_id").IsNull())
 	}
+
+	columns := make([]interface{}, 0)
 
 	if fields {
 		if options.Fields.ChildItemsCount {
-			sqSelect = sqSelect.Column("count(distinct " + ipcAlias + ".item_id) AS child_items_count")
+			columns = append(columns, goqu.L("count(distinct "+ipcAlias+".item_id)").As("child_items_count"))
 		}
 
 		if options.Fields.NewChildItemsCount {
-			sqSelect = sqSelect.Column(
-				"count(distinct IF("+ipcAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+
-					ipcAlias+".item_id, NULL)) AS new_child_items_count",
-				NewDays,
-			)
+			columns = append(
+				columns,
+				goqu.L("count(distinct IF("+ipcAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+
+					ipcAlias+".item_id, NULL))", NewDays).
+					As("new_child_items_count"))
 		}
 
 		if options.Fields.Name {
@@ -272,43 +280,43 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 				s[i] = v
 			}
 
-			sqSelect = sqSelect.Column(`
+			columns = append(columns, goqu.L(`
 				IFNULL(
 					(SELECT name
 					FROM item_language
 					WHERE item_id = `+alias+`.id AND length(name) > 0
-					ORDER BY FIELD(language, `+sq.Placeholders(len(s))+`)
+					ORDER BY FIELD(language, `+strings.Repeat(",?", len(s))[1:]+`)
 					LIMIT 1),
 					`+alias+`.name
-				) AS name
-			`, s...)
+				)
+			`, s...).As("name"))
 		}
 
 		if options.Fields.ItemsCount {
-			sqSelect = sqSelect.Column("count(distinct " + alias + ".id) AS items_count")
+			columns = append(columns, goqu.L("count(distinct "+alias+".id)").As("items_count"))
 		}
 
 		if options.Fields.NewItemsCount {
-			sqSelect = sqSelect.Column(`
-				count(distinct if(`+alias+`.add_datetime > date_sub(NOW(), INTERVAL ? DAY), `+alias+`.id, null)) AS new_items_count
-			`, NewDays)
+			columns = append(columns, goqu.L(`
+				count(distinct if(`+alias+`.add_datetime > date_sub(NOW(), INTERVAL ? DAY), `+alias+`.id, null))
+			`, NewDays).As("new_items_count"))
 		}
 
 		if options.Fields.DescendantsCount {
-			sqSelect = sqSelect.Column(`
+			columns = append(columns, goqu.L(`
 				(
 					SELECT count(distinct product1.id)
 					FROM item AS product1
 						JOIN item_parent_cache ON product1.id = item_parent_cache.item_id
-					WHERE item_parent_cache.parent_id = ` + alias + `.id
+					WHERE item_parent_cache.parent_id = `+alias+`.id
 						AND item_parent_cache.item_id <> item_parent_cache.parent_id
 					LIMIT 1
-				) AS descendants_count
-			`)
+				) 
+			`).As("descendants_count"))
 		}
 
 		if options.Fields.NewDescendantsCount {
-			sqSelect = sqSelect.Column(`
+			columns = append(columns, goqu.L(`
 				(
 					SELECT count(distinct product2.id)
 					FROM item AS product2
@@ -316,18 +324,20 @@ func applyItem(alias string, sqSelect sq.SelectBuilder, fields bool, options *Li
 					WHERE item_parent_cache.parent_id = `+alias+`.id
 						AND item_parent_cache.item_id <> item_parent_cache.parent_id
 						AND product2.add_datetime > DATE_SUB(NOW(), INTERVAL ? DAY)
-				) AS new_descendants_count
-			`, NewDays)
+				) 
+			`, NewDays).As("new_descendants_count"))
 		}
+
+		sqSelect = sqSelect.SelectAppend(columns...)
 	}
 
 	return sqSelect, nil
 }
 
-func (s *Repository) Count(options ListOptions) (int, error) {
+func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error) {
 	var err error
 
-	sqSelect := sq.Select("COUNT(1)").From("item AS i")
+	sqSelect := s.db.Select(goqu.L("COUNT(1)")).From(goqu.T("item").As("i"))
 
 	sqSelect, err = applyItem("i", sqSelect, false, &options)
 	if err != nil {
@@ -335,8 +345,8 @@ func (s *Repository) Count(options ListOptions) (int, error) {
 	}
 
 	var count int
-	err = sqSelect.RunWith(s.db).QueryRow().Scan(&count)
 
+	_, err = sqSelect.Executor().ScanValContext(ctx, &count)
 	if err != nil {
 		return 0, err
 	}
@@ -344,10 +354,10 @@ func (s *Repository) Count(options ListOptions) (int, error) {
 	return count, nil
 }
 
-func (s *Repository) CountDistinct(options ListOptions) (int, error) {
+func (s *Repository) CountDistinct(ctx context.Context, options ListOptions) (int, error) {
 	var err error
 
-	sqSelect := sq.Select("COUNT(distinct i.id)").From("item AS i")
+	sqSelect := s.db.Select(goqu.L("COUNT(DISTINCT i.id)")).From(goqu.T("item").As("i"))
 
 	sqSelect, err = applyItem("i", sqSelect, false, &options)
 	if err != nil {
@@ -355,8 +365,8 @@ func (s *Repository) CountDistinct(options ListOptions) (int, error) {
 	}
 
 	var count int
-	err = sqSelect.RunWith(s.db).QueryRow().Scan(&count)
 
+	_, err = sqSelect.Executor().ScanValContext(ctx, &count)
 	if err != nil {
 		return 0, err
 	}
@@ -364,14 +374,14 @@ func (s *Repository) CountDistinct(options ListOptions) (int, error) {
 	return count, nil
 }
 
-func (s *Repository) List(options ListOptions) ([]Item, error) {
+func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, error) {
 	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
 		return nil, fmt.Errorf("language `%s` not found", options.Language)
 	}*/
 	var err error
 
-	sqSelect := sq.Select("i.id", "i.catname").From("item AS i").GroupBy("i.id")
+	sqSelect := s.db.Select("i.id", "i.catname").From(goqu.T("item").As("i")).GroupBy("i.id")
 
 	sqSelect, err = applyItem("i", sqSelect, true, &options)
 	if err != nil {
@@ -379,14 +389,14 @@ func (s *Repository) List(options ListOptions) ([]Item, error) {
 	}
 
 	if len(options.OrderBy) > 0 {
-		sqSelect = sqSelect.OrderBy(options.OrderBy)
+		sqSelect = sqSelect.Order(options.OrderBy...)
 	}
 
 	if options.Limit > 0 {
-		sqSelect = sqSelect.Limit(options.Limit)
+		sqSelect = sqSelect.Limit(uint(options.Limit))
 	}
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
