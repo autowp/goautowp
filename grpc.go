@@ -94,8 +94,8 @@ func NewGRPCServer(
 	}
 }
 
-func (s *GRPCServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error) {
-	items, err := s.catalogue.getSpecs(0)
+func (s *GRPCServer) GetSpecs(ctx context.Context, _ *emptypb.Empty) (*SpecsItems, error) {
+	items, err := s.catalogue.getSpecs(ctx, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -105,8 +105,8 @@ func (s *GRPCServer) GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, err
 	}, nil
 }
 
-func (s *GRPCServer) GetPerspectives(context.Context, *emptypb.Empty) (*PerspectivesItems, error) {
-	items, err := s.catalogue.getPerspectives(nil)
+func (s *GRPCServer) GetPerspectives(ctx context.Context, _ *emptypb.Empty) (*PerspectivesItems, error) {
+	items, err := s.catalogue.getPerspectives(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +116,8 @@ func (s *GRPCServer) GetPerspectives(context.Context, *emptypb.Empty) (*Perspect
 	}, nil
 }
 
-func (s *GRPCServer) GetPerspectivePages(context.Context, *emptypb.Empty) (*PerspectivePagesItems, error) {
-	items, err := s.catalogue.getPerspectivePages()
+func (s *GRPCServer) GetPerspectivePages(ctx context.Context, _ *emptypb.Empty) (*PerspectivePagesItems, error) {
+	items, err := s.catalogue.getPerspectivePages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*Ve
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	items, err := s.catalogue.getVehicleTypesTree(0)
+	items, err := s.catalogue.getVehicleTypesTree(ctx, 0)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -192,10 +192,10 @@ func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*Ve
 }
 
 func (s *GRPCServer) GetBrandVehicleTypes(
-	_ context.Context,
+	ctx context.Context,
 	in *GetBrandVehicleTypesRequest,
 ) (*BrandVehicleTypeItems, error) {
-	items, err := s.catalogue.getBrandVehicleTypes(in.BrandId)
+	items, err := s.catalogue.getBrandVehicleTypes(ctx, in.BrandId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

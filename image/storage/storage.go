@@ -734,7 +734,7 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 }
 
 func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
-	sqSelect := s.db.Select("image_id, format, formated_image_id").From("formated_image")
+	sqSelect := s.db.Select("image_id", "format", "formated_image_id").From("formated_image")
 
 	if len(options.Format) > 0 {
 		sqSelect = sqSelect.Where(goqu.Ex{"formated_image.format": options.Format})
@@ -1118,7 +1118,7 @@ func (s *Storage) imageCrop(ctx context.Context, imageID int) (*sampler.Crop, er
 }
 
 func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, error) {
-	sqSelect := s.db.Select("id, width, height, filesize, filepath, dir").
+	sqSelect := s.db.Select("id", "width", "height", "filesize", "filepath", "dir").
 		From("image").
 		Where(goqu.Ex{"id": imageIds})
 
@@ -1156,7 +1156,8 @@ func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, er
 
 func (s *Storage) FormattedImages(ctx context.Context, imageIds []int, formatName string) (map[int]Image, error) {
 	sqSelect := s.db.Select(
-		"image.id, image.width, image.height, image.filesize, image.filepath, image.dir, formated_image.image_id",
+		"image.id", "image.width", "image.height", "image.filesize", "image.filepath", "image.dir",
+		"formated_image.image_id",
 	).
 		From("image").
 		Join(goqu.T("formated_image"), goqu.On(goqu.Ex{"image.id": "formated_image.formated_image_id"})).

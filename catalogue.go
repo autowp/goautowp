@@ -1,15 +1,14 @@
 package goautowp
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/doug-martin/goqu/v9"
-
-	sq "github.com/Masterminds/squirrel"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 )
 
 // Catalogue service.
@@ -30,16 +29,16 @@ func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 	}, nil
 }
 
-func (s *Catalogue) getVehicleTypesTree(parentID int32) ([]*VehicleType, error) {
-	sqSelect := sq.Select("id, name").From("car_types").OrderBy("position")
+func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]*VehicleType, error) {
+	sqSelect := s.db.Select("id", "name").From("car_types").Order(goqu.I("position").Asc())
 
 	if parentID != 0 {
-		sqSelect = sqSelect.Where(sq.Eq{"parent_id": parentID})
+		sqSelect = sqSelect.Where(goqu.I("parent_id").Eq(parentID))
 	} else {
-		sqSelect = sqSelect.Where("parent_id is null")
+		sqSelect = sqSelect.Where(goqu.I("parent_id").IsNull())
 	}
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	defer util.Close(rows)
 
 	if err != nil {
@@ -56,7 +55,7 @@ func (s *Catalogue) getVehicleTypesTree(parentID int32) ([]*VehicleType, error) 
 			return nil, err
 		}
 
-		r.Childs, err = s.getVehicleTypesTree(r.Id)
+		r.Childs, err = s.getVehicleTypesTree(ctx, r.Id)
 		if err != nil {
 			return nil, err
 		}
@@ -67,16 +66,16 @@ func (s *Catalogue) getVehicleTypesTree(parentID int32) ([]*VehicleType, error) 
 	return result, nil
 }
 
-func (s *Catalogue) getSpecs(parentID int32) ([]*Spec, error) {
-	sqSelect := sq.Select("id, name, short_name").From("spec").OrderBy("name")
+func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, error) {
+	sqSelect := s.db.Select("id", "name", "short_name").From("spec").Order(goqu.I("name").Asc())
 
 	if parentID != 0 {
-		sqSelect = sqSelect.Where(sq.Eq{"parent_id": parentID})
+		sqSelect = sqSelect.Where(goqu.I("parent_id").Eq(parentID))
 	} else {
-		sqSelect = sqSelect.Where(sq.Eq{"parent_id": nil})
+		sqSelect = sqSelect.Where(goqu.I("parent_id").IsNull())
 	}
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +91,7 @@ func (s *Catalogue) getSpecs(parentID int32) ([]*Spec, error) {
 			return nil, err
 		}
 
-		childs, err := s.getSpecs(r.Id)
+		childs, err := s.getSpecs(ctx, r.Id)
 		if err != nil {
 			return nil, err
 		}
@@ -104,10 +103,12 @@ func (s *Catalogue) getSpecs(parentID int32) ([]*Spec, error) {
 	return specs, nil
 }
 
-func (s *Catalogue) getPerspectiveGroups(pageID int32) ([]*PerspectiveGroup, error) {
-	sqSelect := sq.Select("id, name").From("perspectives_groups").Where(sq.Eq{"page_id": pageID}).OrderBy("position")
+func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*PerspectiveGroup, error) {
+	sqSelect := s.db.Select("id", "name").
+		From("perspectives_groups").
+		Where(goqu.Ex{"page_id": pageID}).Order(goqu.I("position").Asc())
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +129,7 @@ func (s *Catalogue) getPerspectiveGroups(pageID int32) ([]*PerspectiveGroup, err
 		wg.Add(1)
 
 		go func() {
-			perspectives, err := s.getPerspectives(&r.Id)
+			perspectives, err := s.getPerspectives(ctx, &r.Id)
 			if err != nil {
 				return
 			}
@@ -146,10 +147,10 @@ func (s *Catalogue) getPerspectiveGroups(pageID int32) ([]*PerspectiveGroup, err
 	return perspectiveGroups, nil
 }
 
-func (s *Catalogue) getPerspectivePages() ([]*PerspectivePage, error) {
-	sqSelect := sq.Select("id, name").From("perspectives_pages").OrderBy("id")
+func (s *Catalogue) getPerspectivePages(ctx context.Context) ([]*PerspectivePage, error) {
+	sqSelect := s.db.Select("id", "name").From("perspectives_pages").Order(goqu.I("id").Asc())
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +171,7 @@ func (s *Catalogue) getPerspectivePages() ([]*PerspectivePage, error) {
 		wg.Add(1)
 
 		go func() {
-			groups, err := s.getPerspectiveGroups(r.Id)
+			groups, err := s.getPerspectiveGroups(ctx, r.Id)
 			if err != nil {
 				return
 			}
@@ -188,19 +189,22 @@ func (s *Catalogue) getPerspectivePages() ([]*PerspectivePage, error) {
 	return perspectivePages, nil
 }
 
-func (s *Catalogue) getPerspectives(groupID *int32) ([]*Perspective, error) {
-	sqSelect := sq.Select("perspectives.id, perspectives.name").From("perspectives")
+func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Perspective, error) {
+	sqSelect := s.db.Select("perspectives.id", "perspectives.name").From("perspectives")
 
 	if groupID != nil {
 		sqSelect = sqSelect.
-			Join("perspectives_groups_perspectives ON perspectives.id = perspectives_groups_perspectives.perspective_id").
-			Where(sq.Eq{"perspectives_groups_perspectives.group_id": *groupID}).
-			OrderBy("perspectives_groups_perspectives.position")
+			Join(
+				goqu.T("perspectives_groups_perspectives"),
+				goqu.On(goqu.I("perspectives.id").Eq("perspectives_groups_perspectives.perspective_id")),
+			).
+			Where(goqu.Ex{"perspectives_groups_perspectives.group_id": *groupID}).
+			Order(goqu.I("perspectives_groups_perspectives.position").Asc())
 	} else {
-		sqSelect = sqSelect.OrderBy("perspectives.position")
+		sqSelect = sqSelect.Order(goqu.I("perspectives.position").Asc())
 	}
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -222,20 +226,22 @@ func (s *Catalogue) getPerspectives(groupID *int32) ([]*Perspective, error) {
 	return perspectives, nil
 }
 
-func (s *Catalogue) getBrandVehicleTypes(brandID int32) ([]*BrandVehicleType, error) {
-	sqSelect := sq.
-		Select("car_types.id, car_types.name, car_types.catname, COUNT(DISTINCT item.id)").
+func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]*BrandVehicleType, error) {
+	sqSelect := s.db.
+		Select("car_types.id", "car_types.name", "car_types.catname", goqu.L("COUNT(DISTINCT item.id)")).
 		From("car_types").
-		Join("vehicle_vehicle_type ON car_types.id = vehicle_vehicle_type.vehicle_type_id").
-		Join("item ON vehicle_vehicle_type.vehicle_id = item.id").
-		Join("item_parent_cache ON item.id = item_parent_cache.item_id").
-		Where(sq.Eq{"item_parent_cache.parent_id": brandID}).
-		Where("(item.begin_year or item.begin_model_year)").
-		Where("not item.is_group").
+		Join(goqu.T("vehicle_vehicle_type"), goqu.On(goqu.I("car_types.id").Eq("vehicle_vehicle_type.vehicle_type_id"))).
+		Join(goqu.T("item"), goqu.On(goqu.I("vehicle_vehicle_type.vehicle_id").Eq("item.id"))).
+		Join(goqu.T("item_parent_cache"), goqu.On(goqu.I("item.id").Eq("item_parent_cache.item_id"))).
+		Where(
+			goqu.I("item_parent_cache.parent_id").Eq(brandID),
+			goqu.L("(item.begin_year or item.begin_model_year)"),
+			goqu.L("not item.is_group"),
+		).
 		GroupBy("car_types.id").
-		OrderBy("car_types.position")
+		Order(goqu.I("car_types.position").Asc())
 
-	rows, err := sqSelect.RunWith(s.db).Query()
+	rows, err := sqSelect.Executor().QueryContext(ctx)
 	defer util.Close(rows)
 
 	if err != nil {
