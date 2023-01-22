@@ -59,7 +59,10 @@ func NewItemsGRPCServer(
 	}
 }
 
-func (s *ItemsGRPCServer) GetTopBrandsList(ctx context.Context, in *GetTopBrandsListRequest) (*APITopBrandsList, error) {
+func (s *ItemsGRPCServer) GetTopBrandsList(
+	ctx context.Context,
+	in *GetTopBrandsListRequest,
+) (*APITopBrandsList, error) {
 	if s == nil {
 		return nil, status.Error(codes.Internal, "self not initialized")
 	}
