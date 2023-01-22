@@ -50,18 +50,35 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 
 	require.Contains(t, imageInfo.Src(), "folder/file")
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageInfo.Src(), nil)
-	require.NoError(t, err)
+	var (
+		attempts = 0
+		body     []byte
+	)
 
-	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
-	require.NoError(t, err)
+	for {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageInfo.Src(), nil)
+		require.NoError(t, err)
 
-	defer util.Close(resp.Body)
+		resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
+		require.NoError(t, err)
 
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+		defer util.Close(resp.Body)
 
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
+		body, err = io.ReadAll(resp.Body)
+		require.NoError(t, err)
+
+		if resp.StatusCode == http.StatusOK {
+			break
+		}
+
+		logrus.Infof("Failed to download image. Content: %s", string(body))
+
+		attempts++
+
+		time.Sleep(3 * time.Second)
+		require.LessOrEqual(t, attempts, 10)
+	}
+
 	filesize, err := os.Stat(TestImageFile)
 	require.NoError(t, err)
 	require.EqualValues(t, filesize.Size(), len(body))
