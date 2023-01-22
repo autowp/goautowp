@@ -47,9 +47,7 @@ func createTrafficService(t *testing.T) *Traffic {
 	return traf
 }
 
-func TestAutoWhitelist(t *testing.T) {
-	t.Parallel()
-
+func TestAutoWhitelist(t *testing.T) { //nolint:paralleltest
 	s := createTrafficService(t)
 
 	ctx := context.Background()
