@@ -8,11 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/autowp/goautowp/users"
-
 	"github.com/autowp/goautowp/config"
-	"github.com/sirupsen/logrus"
-
+	"github.com/autowp/goautowp/users"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
 	"github.com/getsentry/sentry-go"
@@ -22,6 +19,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"    // enable mysql migrations
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // enable postgres migrations
 	_ "github.com/golang-migrate/migrate/v4/source/file"       // enable file migration source
+	_ "github.com/lib/pq"                                      // enable postgres driver
+	"github.com/sirupsen/logrus"
 )
 
 // Application is Service Main Object.

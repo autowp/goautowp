@@ -24,7 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/rest"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/go-sql-driver/mysql"
+	my "github.com/go-mysql/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v2/imagick"
 
@@ -315,10 +315,8 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 	)
 
 	if err != nil {
-		var mysqlError *mysql.MySQLError
-		ok := errors.Is(err, mysqlError)
-
-		if !ok || mysqlError.Number != 1062 {
+		ok, myerr := my.Error(err) // MySQL error
+		if !ok || !errors.Is(myerr, my.ErrDupeKey) {
 			return 0, err
 		}
 

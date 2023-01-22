@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/doug-martin/goqu/v9"
-
 	"github.com/autowp/goautowp/config"
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
+	_ "github.com/lib/pq"                               // enable postgres driver
 	"github.com/stretchr/testify/require"
 )
 

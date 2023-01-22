@@ -12,6 +12,8 @@ import (
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
+	_ "github.com/go-sql-driver/mysql"               // enable mysql driver
 	"github.com/stretchr/testify/require"
 )
 
@@ -163,13 +165,15 @@ func TestAddImageAndCrop(t *testing.T) {
 	imageInfo, err := mw.Image(ctx, imageID)
 	require.NoError(t, err)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, imageInfo.Src(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageInfo.Src(), nil)
 	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
 	require.NoError(t, err)
 
 	defer util.Close(resp.Body)
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
