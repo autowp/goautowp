@@ -28,6 +28,7 @@ test:
     - docker-compose up -d
 
     - ./tools/wait.sh
+    - docker logs autowp_test_createbuckets
 
     - source test.env
     - go test -run TestAutowpMigrations
