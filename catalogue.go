@@ -3,9 +3,7 @@ package goautowp
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -21,8 +19,6 @@ func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
 	}
-
-	rand.Seed(time.Now().Unix())
 
 	return &Catalogue{
 		db: db,

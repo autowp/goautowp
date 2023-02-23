@@ -637,13 +637,13 @@ func (s *Storage) dirCounter(ctx context.Context, dirName string) (int, error) {
 func indexByAttempt(attempt int) int {
 	const powBase = 10
 
-	rand.Seed(time.Now().UnixNano())
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	float := float64(attempt)
 	min := int(math.Pow(powBase, float-1))
 	max := int(math.Pow(powBase, float) - 1)
 
-	return rand.Intn(max-min+1) + min //nolint: gosec
+	return random.Intn(max-min+1) + min
 }
 
 func (s *Storage) createImagePath(ctx context.Context, dirName string, options GenerateOptions) (string, error) {

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net"
 	"net/url"
+	"time"
 
 	"github.com/autowp/goautowp/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -138,7 +139,9 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 		return nil, errors.New("no endpoints provided")
 	}
 
-	endpoint := s.fileStorageConfig.S3.Endpoints[rand.Intn(len(s.fileStorageConfig.S3.Endpoints))] //nolint: gosec
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	endpoint := s.fileStorageConfig.S3.Endpoints[random.Intn(len(s.fileStorageConfig.S3.Endpoints))]
 
 	parsedURL, err := url.Parse(endpoint)
 	if err != nil {

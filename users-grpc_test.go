@@ -34,8 +34,9 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	defer util.Close(conn)
 	client := NewUsersClient(conn)
 
-	rand.Seed(time.Now().UnixNano())
-	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	userEmail := "test" + strconv.Itoa(random.Int()) + "@example.com"
 
 	name := "ivan"
 	lastName := "ivanov"
@@ -110,6 +111,8 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 func TestCreateUserWithEmptyLastName(t *testing.T) {
 	t.Parallel()
 
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
 	ctx := context.Background()
 	conn, err := grpc.DialContext(
 		ctx, "bufnet",
@@ -122,8 +125,7 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	defer util.Close(conn)
 	client := NewUsersClient(conn)
 
-	rand.Seed(time.Now().UnixNano())
-	userEmail := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
+	userEmail := "test" + strconv.Itoa(random.Int()) + "@example.com"
 
 	name := "ivan"
 	password := "password"

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
@@ -25,7 +26,9 @@ import (
 func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
 	t.Helper()
 
-	emailAddr := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	emailAddr := "test" + strconv.Itoa(random.Int()) + "@example.com"
 	name := "ivan"
 	r, err := db.Insert("users").
 		Rows(goqu.Record{

@@ -53,13 +53,13 @@ func TestGetTopTwinsBrandsList(t *testing.T) {
 
 	ctx := context.Background()
 
-	rand.Seed(time.Now().UnixNano())
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	r1, err := db.ExecContext(
 		ctx, `
 			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
 			VALUES (?, 0, 5, ?, '', 0)
-		`, fmt.Sprintf("brand1-%d", rand.Int()), fmt.Sprintf("brand1-%d", rand.Int()), //nolint:gosec
+		`, fmt.Sprintf("brand1-%d", random.Int()), fmt.Sprintf("brand1-%d", random.Int()),
 	)
 	require.NoError(t, err)
 
@@ -70,7 +70,7 @@ func TestGetTopTwinsBrandsList(t *testing.T) {
 		ctx, `
 			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
 			VALUES (?, 0, 5, ?, '', 0)
-		`, fmt.Sprintf("brand2-%d", rand.Int()), fmt.Sprintf("brand2-%d", rand.Int()), //nolint:gosec
+		`, fmt.Sprintf("brand2-%d", random.Int()), fmt.Sprintf("brand2-%d", random.Int()),
 	)
 	require.NoError(t, err)
 
@@ -81,7 +81,7 @@ func TestGetTopTwinsBrandsList(t *testing.T) {
 		ctx, `
 			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
 			VALUES (?, 0, 1, ?, '', 0)
-		`, fmt.Sprintf("vehicle1-%d", rand.Int()), fmt.Sprintf("vehicle1-%d", rand.Int()), //nolint:gosec
+		`, fmt.Sprintf("vehicle1-%d", random.Int()), fmt.Sprintf("vehicle1-%d", random.Int()),
 	)
 	require.NoError(t, err)
 
@@ -92,7 +92,7 @@ func TestGetTopTwinsBrandsList(t *testing.T) {
 		ctx, `
 			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
 			VALUES (?, 0, 1, ?, '', 0)
-		`, fmt.Sprintf("vehicle2-%d", rand.Int()), fmt.Sprintf("vehicle2-%d", rand.Int()), //nolint:gosec
+		`, fmt.Sprintf("vehicle2-%d", random.Int()), fmt.Sprintf("vehicle2-%d", random.Int()),
 	)
 	require.NoError(t, err)
 
@@ -103,7 +103,7 @@ func TestGetTopTwinsBrandsList(t *testing.T) {
 		ctx, `
 			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
 			VALUES (?, 0, 4, ?, '', 0)
-		`, fmt.Sprintf("twins-%d", rand.Int()), fmt.Sprintf("twins-%d", rand.Int()), //nolint:gosec
+		`, fmt.Sprintf("twins-%d", random.Int()), fmt.Sprintf("twins-%d", random.Int()),
 	)
 	require.NoError(t, err)
 
