@@ -58,6 +58,13 @@ const (
 	COPYRIGHT ItemType = 9
 )
 
+const (
+	ItemParentTypeDefault = 0
+	ItemParentTypeTuning  = 1
+	ItemParentTypeSport   = 2
+	ItemParentTypeDesign  = 3
+)
+
 // Repository Main Object.
 type Repository struct {
 	db *goqu.Database
@@ -152,7 +159,7 @@ func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesO
 	}
 
 	if joinPicture {
-		sqSelect = sqSelect.Join(goqu.I("pictures").As(pAlias), goqu.On(goqu.I(alias+".picture_id").Eq(pAlias+".id")))
+		sqSelect = sqSelect.Join(goqu.I("pictures").As(pAlias), goqu.On(goqu.I(alias+".picture_id").Eq(goqu.I(pAlias+".id"))))
 	}
 
 	return sqSelect
@@ -161,7 +168,10 @@ func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesO
 func applyItemPicture(alias string, sqSelect *goqu.SelectDataset, options *ItemPicturesOptions) *goqu.SelectDataset {
 	piAlias := alias + "_pi"
 
-	sqSelect = sqSelect.Join(goqu.I("picture_item").As(piAlias), goqu.On(goqu.I(alias+".id").Eq(piAlias+".item_id")))
+	sqSelect = sqSelect.Join(
+		goqu.I("picture_item").As(piAlias),
+		goqu.On(goqu.I(alias+".id").Eq(goqu.I(piAlias+".item_id"))),
+	)
 
 	if options.TypeID != 0 {
 		sqSelect = sqSelect.Where(goqu.Ex{piAlias + ".type": options.TypeID})
@@ -199,8 +209,8 @@ func applyItem(
 	if options.ChildItems != nil {
 		iAlias := alias + "_ic"
 		sqSelect = sqSelect.
-			Join(goqu.T("item_parent").As(ipcAlias), goqu.On(goqu.I(alias+".id").Eq(ipcAlias+".parent_id"))).
-			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcAlias+".item_id").Eq(iAlias+".id")))
+			Join(goqu.T("item_parent").As(ipcAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ipcAlias+".parent_id")))).
+			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcAlias+".item_id").Eq(goqu.I(iAlias+".id"))))
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ChildItems)
 
 		if err != nil {
@@ -212,8 +222,8 @@ func applyItem(
 		iAlias := alias + "_ip"
 		ippAlias := alias + "_ipc"
 		sqSelect = sqSelect.
-			Join(goqu.T("item_parent").As(ippAlias), goqu.On(goqu.I(alias+".id").Eq(ippAlias+".item_id"))).
-			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ippAlias+".parent_id").Eq(iAlias+".id")))
+			Join(goqu.T("item_parent").As(ippAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ippAlias+".item_id")))).
+			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ippAlias+".parent_id").Eq(goqu.I(iAlias+".id"))))
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ParentItems)
 
 		if err != nil {
@@ -225,8 +235,8 @@ func applyItem(
 		ipcdAlias := alias + "_ipcd"
 		iAlias := alias + "_id"
 		sqSelect = sqSelect.
-			Join(goqu.T("item_parent_cache").As(ipcdAlias), goqu.On(goqu.I(alias+".id").Eq(ipcdAlias+".parent_id"))).
-			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcdAlias+".item_id").Eq(iAlias+".id")))
+			Join(goqu.T("item_parent_cache").As(ipcdAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ipcdAlias+".parent_id")))).
+			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcdAlias+".item_id").Eq(goqu.I(iAlias+".id"))))
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.DescendantItems)
 
 		if err != nil {
@@ -238,8 +248,8 @@ func applyItem(
 		ipcaAlias := alias + "_ipca"
 		iAlias := alias + "_ia"
 		sqSelect = sqSelect.
-			Join(goqu.T("item_parent_cache").As(ipcaAlias), goqu.On(goqu.I(alias+".id").Eq(ipcaAlias+".item_id"))).
-			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcaAlias+".parent_id").Eq(iAlias+".id")))
+			Join(goqu.T("item_parent_cache").As(ipcaAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ipcaAlias+".item_id")))).
+			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcaAlias+".parent_id").Eq(goqu.I(iAlias+".id"))))
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.AncestorItems)
 
 		if err != nil {
@@ -250,7 +260,7 @@ func applyItem(
 	if options.NoParents {
 		ipnpAlias := alias + "_ipnp"
 		sqSelect = sqSelect.
-			LeftJoin(goqu.T("item_parent").As(ipnpAlias), goqu.On(goqu.I(alias+".id").Eq(ipnpAlias+".item_id"))).
+			LeftJoin(goqu.T("item_parent").As(ipnpAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ipnpAlias+".item_id")))).
 			Where(goqu.I(ipnpAlias + ".parent_id").IsNull())
 	}
 
@@ -396,7 +406,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 		sqSelect = sqSelect.Limit(uint(options.Limit))
 	}
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}
@@ -681,6 +691,8 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 		return err
 	}
 
+	defer util.Close(rows)
+
 	for rows.Next() {
 		var childID int64
 
@@ -769,4 +781,155 @@ func (s *Repository) setItemVehicleTypeRows(
 	}
 
 	return changed, nil
+}
+
+type parentInfo struct {
+	Diff   int64
+	Tuning bool
+	Sport  bool
+	Design bool
+}
+
+func (s *Repository) collectParentInfo(ctx context.Context, id int64, diff int64) (map[int64]parentInfo, error) {
+	//nolint: sqlclosecheck
+	rows, err := s.db.Select("parent_id", "type").
+		From("item_parent").
+		Where(goqu.Ex{"item_id": id}).
+		Executor().QueryContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer util.Close(rows)
+
+	result := make(map[int64]parentInfo, 0)
+
+	for rows.Next() {
+		var parentID, typeID int64
+
+		err = rows.Scan(&parentID, &typeID)
+		if err != nil {
+			return nil, err
+		}
+
+		isTuning := typeID == ItemParentTypeTuning
+		isSport := typeID == ItemParentTypeSport
+		isDesign := typeID == ItemParentTypeDesign
+		result[parentID] = parentInfo{
+			Diff:   diff,
+			Tuning: isTuning,
+			Sport:  isSport,
+			Design: isDesign,
+		}
+
+		parentInfos, err := s.collectParentInfo(ctx, parentID, diff+1)
+		if err != nil {
+			return nil, err
+		}
+
+		for pid, info := range parentInfos {
+			val, ok := result[pid]
+
+			if !ok || info.Diff < val.Diff {
+				val = info
+				val.Tuning = result[pid].Tuning || isTuning
+				val.Sport = result[pid].Sport || isSport
+				val.Design = result[pid].Design || isDesign
+				result[pid] = val
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func (s *Repository) getChildItemsIDs(ctx context.Context, parentID int64) ([]int64, error) {
+	vals := make([]int64, 0)
+
+	err := s.db.Select("item_id").
+		From("item_parent").
+		Where(goqu.Ex{"parent_id": parentID}).
+		Executor().ScanValsContext(ctx, &vals)
+	if err != nil {
+		return nil, err
+	}
+
+	return vals, nil
+}
+
+func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, error) {
+	parentInfos, err := s.collectParentInfo(ctx, itemID, 1)
+	if err != nil {
+		return 0, err
+	}
+
+	parentInfos[itemID] = parentInfo{
+		Diff:   0,
+		Tuning: false,
+		Sport:  false,
+		Design: false,
+	}
+
+	var updates int64
+
+	//nolint: sqlclosecheck
+	stmt, err := s.db.PrepareContext(ctx, `
+   		INSERT INTO item_parent_cache (item_id, parent_id, diff, tuning, sport, design)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON DUPLICATE KEY UPDATE
+			diff = VALUES(diff),
+			tuning = VALUES(tuning),
+			sport = VALUES(sport),
+			design = VALUES(design)
+	`)
+	if err != nil {
+		return 0, err
+	}
+	defer util.Close(stmt)
+
+	for parentID, info := range parentInfos {
+		result, err := stmt.ExecContext(ctx, itemID, parentID, info.Diff, info.Tuning, info.Sport, info.Design)
+		if err != nil {
+			return 0, err
+		}
+
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return 0, err
+		}
+
+		updates += affected
+	}
+
+	keys := make([]int64, len(parentInfos))
+
+	i := 0
+
+	for k := range parentInfos {
+		keys[i] = k
+		i++
+	}
+
+	_, err = s.db.Delete("item_parent_cache").Where(goqu.Ex{
+		"item_id":   itemID,
+		"parent_id": goqu.Op{"notIn": keys},
+	}).Executor().ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	childs, err := s.getChildItemsIDs(ctx, itemID)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, child := range childs {
+		affected, err := s.RebuildCache(ctx, child)
+		if err != nil {
+			return 0, err
+		}
+
+		updates += affected
+	}
+
+	return updates, nil
 }

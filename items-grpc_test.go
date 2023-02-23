@@ -2,7 +2,11 @@ package goautowp
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/config"
@@ -13,6 +17,142 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+/*func TestTopCategoriesList(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	r, err := client.GetTopCategoriesList(ctx, &GetTopCategoriesListRequest{
+		Language: "ru",
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, r)
+	require.NotEmpty(t, r.Items)
+}*/
+
+func TestGetTopTwinsBrandsList(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	cnt := NewContainer(cfg)
+	defer util.Close(cnt)
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	rand.Seed(time.Now().UnixNano())
+
+	r1, err := db.ExecContext(
+		ctx, `
+			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
+			VALUES (?, 0, 5, ?, '', 0)
+		`, fmt.Sprintf("brand1-%d", rand.Int()), fmt.Sprintf("brand1-%d", rand.Int()), //nolint:gosec
+	)
+	require.NoError(t, err)
+
+	brand1, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	r2, err := db.ExecContext(
+		ctx, `
+			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
+			VALUES (?, 0, 5, ?, '', 0)
+		`, fmt.Sprintf("brand2-%d", rand.Int()), fmt.Sprintf("brand2-%d", rand.Int()), //nolint:gosec
+	)
+	require.NoError(t, err)
+
+	brand2, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	r3, err := db.ExecContext(
+		ctx, `
+			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
+			VALUES (?, 0, 1, ?, '', 0)
+		`, fmt.Sprintf("vehicle1-%d", rand.Int()), fmt.Sprintf("vehicle1-%d", rand.Int()), //nolint:gosec
+	)
+	require.NoError(t, err)
+
+	vehicle1, err := r3.LastInsertId()
+	require.NoError(t, err)
+
+	r4, err := db.ExecContext(
+		ctx, `
+			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
+			VALUES (?, 0, 1, ?, '', 0)
+		`, fmt.Sprintf("vehicle2-%d", rand.Int()), fmt.Sprintf("vehicle2-%d", rand.Int()), //nolint:gosec
+	)
+	require.NoError(t, err)
+
+	vehicle2, err := r4.LastInsertId()
+	require.NoError(t, err)
+
+	r5, err := db.ExecContext(
+		ctx, `
+			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
+			VALUES (?, 0, 4, ?, '', 0)
+		`, fmt.Sprintf("twins-%d", rand.Int()), fmt.Sprintf("twins-%d", rand.Int()), //nolint:gosec
+	)
+	require.NoError(t, err)
+
+	twins, err := r5.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = db.ExecContext(
+		ctx, `
+			INSERT INTO item_parent (item_id, parent_id, catname, type) 
+			VALUES
+			(?, ?, ?, 0),
+			(?, ?, ?, 0),
+			(?, ?, ?, 0),
+			(?, ?, ?, 0)
+		`,
+		vehicle1, brand1, "vehicle1",
+		vehicle2, brand2, "vehicle2",
+		vehicle1, twins, "vehicle1",
+		vehicle2, twins, "vehicle2",
+	)
+	require.NoError(t, err)
+
+	rep, err := cnt.ItemsRepository()
+	require.NoError(t, err)
+
+	toRebuild := []int64{brand1, brand2, vehicle1, vehicle2, twins}
+	for _, id := range toRebuild {
+		_, err := rep.RebuildCache(ctx, id)
+		require.NoError(t, err)
+	}
+
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	r, err := client.GetTopTwinsBrandsList(ctx, &GetTopTwinsBrandsListRequest{
+		Language: "ru",
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, r)
+	require.NotEmpty(t, r.Items)
+	require.Greater(t, r.Count, int32(0))
+}
 
 func TestTopBrandsList(t *testing.T) {
 	t.Parallel()

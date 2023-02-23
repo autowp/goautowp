@@ -162,7 +162,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 		return nil, status.Error(codes.InvalidArgument, "Unexpected picture_item_type")
 	}
 
-	key := fmt.Sprintf("GO_PERSONS_2_%d_%s", pictureItemType, in.Language)
+	key := fmt.Sprintf("GO_PERSONS_3_%d_%s", pictureItemType, in.Language)
 
 	item, err := s.memcached.Get(key)
 	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
@@ -231,7 +231,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 	ctx context.Context,
 	in *GetTopFactoriesListRequest,
 ) (*APITopFactoriesList, error) {
-	key := fmt.Sprintf("GO_FACTORIES_2_%s", in.Language)
+	key := fmt.Sprintf("GO_FACTORIES_3_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
 	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
@@ -301,7 +301,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 	ctx context.Context,
 	in *GetTopCategoriesListRequest,
 ) (*APITopCategoriesList, error) {
-	key := fmt.Sprintf("GO_CATEGORIES_4_%s", in.Language)
+	key := fmt.Sprintf("GO_CATEGORIES_5_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
 	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
@@ -369,7 +369,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 	ctx context.Context,
 	in *GetTopTwinsBrandsListRequest,
 ) (*APITopTwinsBrandsList, error) {
-	key := fmt.Sprintf("GO_TWINS_1_%s", in.Language)
+	key := fmt.Sprintf("GO_TWINS_5_%s", in.Language)
 
 	item, err := s.memcached.Get(key)
 	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {

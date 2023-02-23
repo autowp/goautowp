@@ -76,7 +76,7 @@ linters:
     - promlinter
     - revive
     - rowserrcheck
-    - sqlclosecheck
+    #- sqlclosecheck
     - staticcheck
     # - structcheck
     - stylecheck

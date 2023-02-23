@@ -10,6 +10,7 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -52,10 +53,13 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 		}
 	}
 
+	//nolint: sqlclosecheck
 	chatRows, err := s.db.QueryContext(ctx, "SELECT chat_id FROM telegram_chat WHERE user_id = ? AND messages", userID)
 	if err != nil {
 		return err
 	}
+
+	defer util.Close(chatRows)
 
 	for chatRows.Next() {
 		var chatID int64
