@@ -242,8 +242,8 @@ func (s *MessagingGRPCServer) GetMessages(
 			item.AuthorId = *msg.AuthorID
 		}
 
-		if msg.DialogWithUserID != nil {
-			item.DialogWithUserId = *msg.DialogWithUserID
+		if msg.DialogWithUserID != 0 {
+			item.DialogWithUserId = msg.DialogWithUserID
 		}
 
 		items[idx] = &item

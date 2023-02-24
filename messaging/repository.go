@@ -46,7 +46,7 @@ type Message struct {
 	DialogCount      int32
 	AllMessagesLink  bool
 	ToUserID         int64
-	DialogWithUserID *int64
+	DialogWithUserID int64
 }
 
 func NewRepository(db *goqu.Database, telegramService *telegram.Service) *Repository {
@@ -350,22 +350,22 @@ func (s *Repository) prepareList(
 		authorIsMe := msg.FromUserID.Valid && msg.FromUserID.Int64 == userID
 		canReply := msg.FromUserID.Valid && !authorIsMe //  && ! $author['deleted']
 
-		var dialogWithUserID *int64
+		var dialogWithUserID int64
 
 		if msg.ToUserID == userID {
 			if msg.FromUserID.Valid {
-				dialogWithUserID = &msg.FromUserID.Int64
+				dialogWithUserID = msg.FromUserID.Int64
 			}
 		} else {
-			dialogWithUserID = &msg.ToUserID
+			dialogWithUserID = msg.ToUserID
 		}
 
 		var dialogCount int32
 
-		if options.AllMessagesLink && dialogWithUserID != nil {
+		if options.AllMessagesLink && dialogWithUserID != 0 {
 			var (
 				ok bool
-				id = *dialogWithUserID
+				id = dialogWithUserID
 			)
 
 			if dialogCount, ok = cache[id]; !ok {
