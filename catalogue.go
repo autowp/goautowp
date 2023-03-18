@@ -226,9 +226,12 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 	sqSelect := s.db.
 		Select("car_types.id", "car_types.name", "car_types.catname", goqu.L("COUNT(DISTINCT item.id)")).
 		From("car_types").
-		Join(goqu.T("vehicle_vehicle_type"), goqu.On(goqu.I("car_types.id").Eq("vehicle_vehicle_type.vehicle_type_id"))).
-		Join(goqu.T("item"), goqu.On(goqu.I("vehicle_vehicle_type.vehicle_id").Eq("item.id"))).
-		Join(goqu.T("item_parent_cache"), goqu.On(goqu.I("item.id").Eq("item_parent_cache.item_id"))).
+		Join(
+			goqu.T("vehicle_vehicle_type"),
+			goqu.On(goqu.I("car_types.id").Eq(goqu.I("vehicle_vehicle_type.vehicle_type_id"))),
+		).
+		Join(goqu.T("item"), goqu.On(goqu.I("vehicle_vehicle_type.vehicle_id").Eq(goqu.I("item.id")))).
+		Join(goqu.T("item_parent_cache"), goqu.On(goqu.I("item.id").Eq(goqu.I("item_parent_cache.item_id")))).
 		Where(
 			goqu.I("item_parent_cache.parent_id").Eq(brandID),
 			goqu.L("(item.begin_year or item.begin_model_year)"),
