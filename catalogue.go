@@ -192,7 +192,7 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 		sqSelect = sqSelect.
 			Join(
 				goqu.T("perspectives_groups_perspectives"),
-				goqu.On(goqu.I("perspectives.id").Eq("perspectives_groups_perspectives.perspective_id")),
+				goqu.On(goqu.I("perspectives.id").Eq(goqu.I("perspectives_groups_perspectives.perspective_id"))),
 			).
 			Where(goqu.Ex{"perspectives_groups_perspectives.group_id": *groupID}).
 			Order(goqu.I("perspectives_groups_perspectives.position").Asc())

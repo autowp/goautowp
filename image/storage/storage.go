@@ -1158,7 +1158,7 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIds []int, formatNam
 		"formated_image.image_id",
 	).
 		From("image").
-		Join(goqu.T("formated_image"), goqu.On(goqu.Ex{"image.id": "formated_image.formated_image_id"})).
+		Join(goqu.T("formated_image"), goqu.On(goqu.Ex{"image.id": goqu.I("formated_image.formated_image_id")})).
 		Where(goqu.Ex{
 			"formated_image.image_id": imageIds,
 			"formated_image.format":   formatName,
