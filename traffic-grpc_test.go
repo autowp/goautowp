@@ -4,14 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
-
-	"github.com/Nerzal/gocloak/v11"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestHttpBanPost(t *testing.T) {

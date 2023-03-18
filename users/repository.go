@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nerzal/gocloak/v11"
-	"github.com/Nerzal/gocloak/v11/pkg/jwx"
+	"github.com/Nerzal/gocloak/v13"
+	"github.com/Nerzal/gocloak/v13/pkg/jwx"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -108,7 +108,7 @@ type Repository struct {
 	db              *goqu.Database
 	usersSalt       string
 	languages       map[string]config.LanguageConfig
-	keycloak        gocloak.GoCloak
+	keycloak        *gocloak.GoCloak
 	keycloakConfig  config.KeycloakConfig
 	messageInterval int64
 }
@@ -124,7 +124,7 @@ func NewRepository(
 	db *goqu.Database,
 	usersSalt string,
 	languages map[string]config.LanguageConfig,
-	keyCloak gocloak.GoCloak,
+	keyCloak *gocloak.GoCloak,
 	keyCloakConfig config.KeycloakConfig,
 	messageInterval int64,
 ) *Repository {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Nerzal/gocloak/v11"
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
@@ -65,7 +65,7 @@ type Container struct {
 	itemOfDayRepository    *itemofday.Repository
 	itemsGrpcServer        *ItemsGRPCServer
 	itemsRepository        *items.Repository
-	keyCloak               gocloak.GoCloak
+	keyCloak               *gocloak.GoCloak
 	location               *time.Location
 	messagingGrpcServer    *MessagingGRPCServer
 	messagingRepository    *messaging.Repository
@@ -1130,7 +1130,7 @@ func (s *Container) MessagingRepository() (*messaging.Repository, error) {
 	return s.messagingRepository, nil
 }
 
-func (s *Container) Keycloak() gocloak.GoCloak {
+func (s *Container) Keycloak() *gocloak.GoCloak {
 	if s.keyCloak == nil {
 		client := gocloak.NewClient(s.Config().Keycloak.URL)
 

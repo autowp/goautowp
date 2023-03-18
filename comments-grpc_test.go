@@ -5,15 +5,13 @@ import (
 	"database/sql"
 	"testing"
 
-	"google.golang.org/grpc/metadata"
-
-	"github.com/Nerzal/gocloak/v11"
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
-
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 //nolint:unparam

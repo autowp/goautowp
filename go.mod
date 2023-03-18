@@ -3,7 +3,7 @@ module github.com/autowp/goautowp
 go 1.20
 
 require (
-	github.com/Nerzal/gocloak/v11 v11.2.0
+	github.com/Nerzal/gocloak/v13 v13.1.0
 	github.com/aws/aws-sdk-go v1.44.224
 	github.com/bradfitz/gomemcache v0.0.0-20230124162541-5f7a7d875746
 	github.com/casbin/casbin v1.9.1

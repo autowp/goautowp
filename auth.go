@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Nerzal/gocloak/v11"
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9"
@@ -16,14 +16,14 @@ import (
 
 type Auth struct {
 	db          *goqu.Database
-	keycloak    gocloak.GoCloak
+	keycloak    *gocloak.GoCloak
 	keycloakCfg config.KeycloakConfig
 	repository  *users.Repository
 }
 
 func NewAuth(
 	db *goqu.Database,
-	keycloak gocloak.GoCloak,
+	keycloak *gocloak.GoCloak,
 	keycloakCfg config.KeycloakConfig,
 	repository *users.Repository,
 ) *Auth {
