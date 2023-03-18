@@ -27,7 +27,6 @@ import (
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
-	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
@@ -574,11 +573,11 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 	grpclogrus.ReplaceGrpcLogger(logrusEntry)
 
 	grpcServer := grpc.NewServer(
-		grpcmiddleware.WithUnaryServerChain(
+		grpc.ChainUnaryInterceptor(
 			grpcctxtags.UnaryServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
 			grpclogrus.UnaryServerInterceptor(logrusEntry),
 		),
-		grpcmiddleware.WithStreamServerChain(
+		grpc.ChainStreamInterceptor(
 			grpcctxtags.StreamServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
 			grpclogrus.StreamServerInterceptor(logrusEntry),
 		),
