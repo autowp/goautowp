@@ -152,7 +152,7 @@ func (s Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mode
 		return nil, err
 	}
 
-	util.Close(rows)
+	defer util.Close(rows)
 
 	var items []ModerVoteTemplate
 
