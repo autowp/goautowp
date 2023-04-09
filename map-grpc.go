@@ -112,6 +112,10 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				},
 			})
 		}
+
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
 	} else {
 		rows, err := s.db.QueryContext(
 			ctx,
@@ -203,6 +207,10 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			}
 
 			mapPoints = append(mapPoints, mapPoint)
+		}
+
+		if err = rows.Err(); err != nil {
+			return nil, err
 		}
 	}
 

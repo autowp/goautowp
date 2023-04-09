@@ -239,5 +239,5 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 		}
 	}
 
-	return nil
+	return rows.Err()
 }

@@ -197,6 +197,10 @@ func (s *Monitoring) ListOfTop(ctx context.Context, limit int) ([]ListOfTopItem,
 		result = append(result, item)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
@@ -232,6 +236,10 @@ func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfil
 		if ip.IPNet != nil {
 			result = append(result, ip.IPNet.IP)
 		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return result, nil

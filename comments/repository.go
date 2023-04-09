@@ -107,6 +107,10 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 		}
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return &GetVotesResult{
 		PositiveVotes: positiveVotes,
 		NegativeVotes: negativeVotes,
@@ -260,7 +264,7 @@ func (s *Repository) moveMessageRecursive(
 		}
 	}
 
-	return nil
+	return rows.Err()
 }
 
 func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentType, itemID int64) error {
@@ -694,7 +698,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		}
 	}
 
-	return nil
+	return subscribers.Err()
 }
 
 func (s *Repository) getSubscribersIDs(
@@ -869,6 +873,10 @@ func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 		}
 	}
 
+	if err = rows.Err(); err != nil {
+		return 0, err
+	}
+
 	return affected, nil
 }
 
@@ -961,6 +969,10 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		affected += a
 	}
 
+	if err = rows.Err(); err != nil {
+		return 0, err
+	}
+
 	// item
 	rows, err = s.db.QueryContext(ctx, `
 		SELECT comment_message.id
@@ -984,6 +996,10 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		}
 
 		affected += a
+	}
+
+	if err = rows.Err(); err != nil {
+		return 0, err
 	}
 
 	// votings
@@ -1011,6 +1027,10 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		affected += a
 	}
 
+	if err = rows.Err(); err != nil {
+		return 0, err
+	}
+
 	// articles
 	rows, err = s.db.QueryContext(ctx, `
 		SELECT comment_message.id
@@ -1036,6 +1056,10 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		affected += a
 	}
 
+	if err = rows.Err(); err != nil {
+		return 0, err
+	}
+
 	// forums
 	rows, err = s.db.QueryContext(ctx, `
 		SELECT comment_message.id
@@ -1059,6 +1083,10 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		}
 
 		affected += a
+	}
+
+	if err = rows.Err(); err != nil {
+		return 0, err
 	}
 
 	return affected, nil

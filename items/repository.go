@@ -463,6 +463,10 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 		result = append(result, r)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	if options.SortByName {
 		tag := language.English
 
@@ -707,7 +711,7 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 		}
 	}
 
-	return nil
+	return rows.Err()
 }
 
 func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
@@ -837,6 +841,10 @@ func (s *Repository) collectParentInfo(ctx context.Context, id int64, diff int64
 				result[pid] = val
 			}
 		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return result, nil

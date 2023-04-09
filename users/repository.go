@@ -246,6 +246,10 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 		result = append(result, r)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
 	return result, pages, nil
 }
 
@@ -636,6 +640,7 @@ func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	defer util.Close(rows)
 
 	affected := 0
@@ -656,6 +661,10 @@ func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
 		affected++
 	}
 
+	if err = rows.Err(); err != nil {
+		return 0, err
+	}
+
 	return affected, nil
 }
 
@@ -670,6 +679,7 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	defer util.Close(rows)
 
 	for rows.Next() {
@@ -695,7 +705,7 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return rows.Err()
 }
 
 func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {
@@ -728,7 +738,7 @@ func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {
 		logrus.Debugf("User %d exported to keycloak as %s", userID, guid)
 	}
 
-	return nil
+	return rows.Err()
 }
 
 func (s *Repository) SetDisableUserCommentsNotifications(

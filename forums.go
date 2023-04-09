@@ -55,6 +55,10 @@ func (s *Forums) GetUserSummary(ctx context.Context, userID int64) (int, error) 
 		}
 	}
 
+	if err = rows.Err(); err != nil {
+		return 0, err
+	}
+
 	return result, nil
 }
 

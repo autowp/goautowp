@@ -130,6 +130,10 @@ func (s *Whitelist) List(ctx context.Context) ([]*WhitelistItem, error) {
 		result = append(result, &item)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 

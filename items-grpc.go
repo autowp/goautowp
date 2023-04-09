@@ -615,6 +615,10 @@ func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *APIGetItemLinksR
 		itemLinks = append(itemLinks, &il)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return &APIItemLinksResponse{
 		Items: itemLinks,
 	}, nil
@@ -829,6 +833,10 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 		res = append(res, &i)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return &APIGetItemVehicleTypesResponse{
 		Items: res,
 	}, nil
@@ -871,6 +879,10 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 	err = rows.Scan(&i.ItemId, &i.VehicleTypeId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return &i, nil

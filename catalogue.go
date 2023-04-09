@@ -59,6 +59,10 @@ func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]
 		result = append(result, &r)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
@@ -94,6 +98,10 @@ func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, erro
 
 		r.Childs = childs
 		specs = append(specs, &r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return specs, nil
@@ -140,6 +148,10 @@ func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*
 
 	wg.Wait()
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return perspectiveGroups, nil
 }
 
@@ -182,6 +194,10 @@ func (s *Catalogue) getPerspectivePages(ctx context.Context) ([]*PerspectivePage
 
 	wg.Wait()
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return perspectivePages, nil
 }
 
@@ -217,6 +233,10 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 		}
 
 		perspectives = append(perspectives, &r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return perspectives, nil
@@ -258,6 +278,10 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 		}
 
 		result = append(result, &r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return result, nil

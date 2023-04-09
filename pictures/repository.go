@@ -3,6 +3,8 @@ package pictures
 import (
 	"context"
 
+	"github.com/autowp/goautowp/util"
+
 	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -150,6 +152,8 @@ func (s Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mode
 		return nil, err
 	}
 
+	util.Close(rows)
+
 	var items []ModerVoteTemplate
 
 	for rows.Next() {
@@ -161,6 +165,10 @@ func (s Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mode
 		}
 
 		items = append(items, r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return items, nil

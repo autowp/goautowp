@@ -779,7 +779,7 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 		}
 	}
 
-	return nil
+	return rows.Err()
 }
 
 func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options GenerateOptions) error {
@@ -1149,6 +1149,10 @@ func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, er
 		result[r.id] = r
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
@@ -1194,6 +1198,10 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIds []int, formatNam
 		}
 
 		result[srcImageID] = r
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	for _, imageID := range imageIds {

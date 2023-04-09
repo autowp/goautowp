@@ -80,14 +80,13 @@ func (s *ItemNameFormatter) Format(item ItemNameFormatterOptions, language strin
 	return result
 }
 
-//nolint:unparam
 func (s *ItemNameFormatter) getModelYearsPrefix(
 	begin int,
 	beginFraction string,
 	end int,
 	endFraction string,
 	today *bool,
-	language string,
+	_ string,
 ) string {
 	if end == begin && beginFraction == endFraction {
 		return fmt.Sprintf("%d%s", begin, endFraction)
@@ -158,7 +157,7 @@ func (s *ItemNameFormatter) renderYears(
 			result2 = fmt.Sprintf(textMonthFormat, em)
 		}
 
-		result3 := ""
+		var result3 string
 		if em > 0 {
 			result3 = strconv.Itoa(ey)
 		} else {
@@ -194,8 +193,7 @@ func (s *ItemNameFormatter) renderYears(
 	return result1 + result2 + result3
 }
 
-//nolint:unparam
-func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int, language string) string {
+func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int, _ string) string {
 	currentYear := time.Now().Year()
 
 	if by >= currentYear {

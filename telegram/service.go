@@ -93,7 +93,7 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 		}
 	}
 
-	return nil
+	return chatRows.Err()
 }
 
 func (s *Service) getURIByChatID(ctx context.Context, chatID int64) (*url.URL, error) {
