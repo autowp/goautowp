@@ -6,19 +6,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/autowp/goautowp/util"
-	"github.com/urfave/cli/v2"
-
 	"github.com/autowp/goautowp"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/util"
 	"github.com/getsentry/sentry-go"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
 const sentryFlushTime = time.Second * 5
-
-var autowpApp *goautowp.Application
 
 func captureOsInterrupt() chan bool {
 	quit := make(chan bool)
@@ -38,6 +35,192 @@ func captureOsInterrupt() chan bool {
 	}()
 
 	return quit
+}
+
+func createCmd(autowpApp *goautowp.Application) (*cobra.Command, error) {
+	imageStorageCmd := &cobra.Command{
+		Use: "image-storage",
+	}
+
+	imageStorageGetImageCmd := &cobra.Command{
+		Use: "get-image",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			imageID, err := cmd.Flags().GetInt("image_id")
+			if err != nil {
+				return err
+			}
+			i, err := autowpApp.ImageStorageGetImage(cmd.Context(), imageID)
+			if err != nil {
+				return err
+			}
+
+			logrus.Infof("%v", i)
+
+			return nil
+		},
+	}
+	imageStorageGetImageCmd.Flags().Int("image_id", 0, "Image ID")
+
+	err := imageStorageGetImageCmd.MarkFlagRequired("image_id")
+	if err != nil {
+		return nil, err
+	}
+
+	getFormattedImageCmd := &cobra.Command{
+		Use: "get-formatted-image",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			imageID, err := cmd.Flags().GetInt("image_id")
+			if err != nil {
+				return err
+			}
+
+			format, err := cmd.Flags().GetString("format")
+			if err != nil {
+				return err
+			}
+
+			i, err := autowpApp.ImageStorageGetFormattedImage(cmd.Context(), imageID, format)
+			if err != nil {
+				return err
+			}
+
+			logrus.Infof("%v", i)
+
+			return nil
+		},
+	}
+	getFormattedImageCmd.Flags().Int("image_id", 0, "Image ID")
+	getFormattedImageCmd.Flags().String("format", "", "Format")
+
+	err = getFormattedImageCmd.MarkFlagRequired("image_id")
+	if err != nil {
+		return nil, err
+	}
+
+	err = getFormattedImageCmd.MarkFlagRequired("format")
+	if err != nil {
+		return nil, err
+	}
+
+	imageStorageCmd.AddCommand(
+		imageStorageGetImageCmd,
+		getFormattedImageCmd,
+	)
+
+	rootCmd := &cobra.Command{
+		Use:   "goautowp",
+		Short: "autowp cli interface",
+	}
+
+	rootCmd.AddCommand(
+		imageStorageCmd,
+		&cobra.Command{
+			Use: "autoban",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				quit := captureOsInterrupt()
+
+				return autowpApp.Autoban(quit)
+			},
+		},
+		&cobra.Command{
+			Use: "listen-df-amqp",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				quit := captureOsInterrupt()
+
+				return autowpApp.ListenDuplicateFinderAMQP(quit)
+			},
+		},
+		&cobra.Command{
+			Use: "listen-monitoring-amqp",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				quit := captureOsInterrupt()
+
+				return autowpApp.ListenMonitoringAMQP(quit)
+			},
+		},
+		&cobra.Command{
+			Use: "serve-grpc",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				err := autowpApp.MigrateAutowp()
+				if err != nil {
+					return err
+				}
+
+				err = autowpApp.MigratePostgres()
+				if err != nil {
+					return err
+				}
+
+				quit := captureOsInterrupt()
+
+				return autowpApp.ServeGRPC(quit)
+			},
+		},
+		&cobra.Command{
+			Use: "serve-public",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				err := autowpApp.MigrateAutowp()
+				if err != nil {
+					return err
+				}
+
+				err = autowpApp.MigratePostgres()
+				if err != nil {
+					return err
+				}
+
+				quit := captureOsInterrupt()
+
+				return autowpApp.ServePublic(quit)
+			},
+		},
+		&cobra.Command{
+			Use: "serve-private",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				quit := captureOsInterrupt()
+
+				return autowpApp.ServePrivate(quit)
+			},
+		},
+		&cobra.Command{
+			Use: "migrate-autowp",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return autowpApp.MigrateAutowp()
+			},
+		},
+		&cobra.Command{
+			Use: "migrate-postgres",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return autowpApp.MigratePostgres()
+			},
+		},
+		&cobra.Command{
+			Use: "scheduler-hourly",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return autowpApp.SchedulerHourly(cmd.Context())
+			},
+		},
+		&cobra.Command{
+			Use: "scheduler-daily",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return autowpApp.SchedulerDaily(cmd.Context())
+			},
+		},
+		&cobra.Command{
+			Use: "scheduler-midnight",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return autowpApp.SchedulerMidnight(cmd.Context())
+			},
+		},
+		&cobra.Command{
+			Use: "export-users-to-keycloak",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return autowpApp.ExportUsersToKeycloak(cmd.Context())
+			},
+		},
+	)
+
+	return rootCmd, nil
 }
 
 func main() { os.Exit(mainReturnWithCode()) }
@@ -66,176 +249,18 @@ func mainReturnWithCode() int {
 		sentry.Flush(sentryFlushTime)
 	}()
 
-	autowpApp = goautowp.NewApplication(cfg)
+	autowpApp := goautowp.NewApplication(cfg)
 	defer util.Close(autowpApp)
 
-	app := &cli.App{
-		Name:        "goautowp",
-		Description: "autowp cli interface",
-		Commands: []*cli.Command{
-			{
-				Name: "image-storage",
-				Subcommands: []*cli.Command{
-					{
-						Name: "get-image",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "image_id",
-								Value:    "english",
-								Usage:    "Image ID",
-								Required: true,
-							},
-						},
-						Action: func(cCtx *cli.Context) error {
-							i, err := autowpApp.ImageStorageGetImage(cCtx.Context, cCtx.Int("image_id"))
-							if err != nil {
-								return err
-							}
+	rootCmd, err := createCmd(autowpApp)
+	if err != nil {
+		logrus.Fatal(err)
 
-							logrus.Printf("%v", i)
-
-							return nil
-						},
-					},
-					{
-						Name: "get-formatted-image",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "image_id",
-								Usage:    "Image ID",
-								Required: true,
-							},
-							&cli.StringFlag{
-								Name:     "format",
-								Usage:    "Format",
-								Required: true,
-							},
-						},
-						Action: func(cCtx *cli.Context) error {
-							i, err := autowpApp.ImageStorageGetFormattedImage(
-								cCtx.Context,
-								cCtx.Int("image_id"),
-								cCtx.String("format"),
-							)
-							if err != nil {
-								return err
-							}
-
-							logrus.Printf("%v", i)
-
-							return nil
-						},
-					},
-				},
-			},
-			{
-				Name: "autoban",
-				Action: func(cCtx *cli.Context) error {
-					quit := captureOsInterrupt()
-
-					return autowpApp.Autoban(quit)
-				},
-			},
-			{
-				Name: "listen-df-amqp",
-				Action: func(cCtx *cli.Context) error {
-					quit := captureOsInterrupt()
-
-					return autowpApp.ListenDuplicateFinderAMQP(quit)
-				},
-			},
-			{
-				Name: "listen-monitoring-amqp",
-				Action: func(cCtx *cli.Context) error {
-					quit := captureOsInterrupt()
-
-					return autowpApp.ListenMonitoringAMQP(quit)
-				},
-			},
-			{
-				Name: "serve-grpc",
-				Action: func(cCtx *cli.Context) error {
-					err := autowpApp.MigrateAutowp()
-					if err != nil {
-						return err
-					}
-
-					err = autowpApp.MigratePostgres()
-					if err != nil {
-						return err
-					}
-
-					quit := captureOsInterrupt()
-
-					return autowpApp.ServeGRPC(quit)
-				},
-			},
-			{
-				Name: "serve-public",
-				Action: func(cCtx *cli.Context) error {
-					err := autowpApp.MigrateAutowp()
-					if err != nil {
-						return err
-					}
-
-					err = autowpApp.MigratePostgres()
-					if err != nil {
-						return err
-					}
-
-					quit := captureOsInterrupt()
-
-					return autowpApp.ServePublic(quit)
-				},
-			},
-			{
-				Name: "serve-private",
-				Action: func(cCtx *cli.Context) error {
-					quit := captureOsInterrupt()
-
-					return autowpApp.ServePrivate(quit)
-				},
-			},
-			{
-				Name: "migrate-autowp",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.MigrateAutowp()
-				},
-			},
-			{
-				Name: "migrate-postgres",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.MigratePostgres()
-				},
-			},
-			{
-				Name: "scheduler-hourly",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.SchedulerHourly(cCtx.Context)
-				},
-			},
-			{
-				Name: "scheduler-daily",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.SchedulerDaily(cCtx.Context)
-				},
-			},
-			{
-				Name: "scheduler-midnight",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.SchedulerMidnight(cCtx.Context)
-				},
-			},
-			{
-				Name: "export-users-to-keycloak",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.ExportUsersToKeycloak(cCtx.Context)
-				},
-			},
-		},
+		return 1
 	}
 
-	if err = app.Run(os.Args); err != nil {
+	err = rootCmd.Execute()
+	if err != nil {
 		logrus.Fatal(err)
 		sentry.CaptureException(err)
 

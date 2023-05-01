@@ -72,15 +72,15 @@ func (s *Application) ServeGRPC(quit chan bool) error {
 		grpcServer.GracefulStop()
 	}()
 
-	logrus.Println("gRPC listener started")
+	logrus.Info("gRPC listener started")
 
 	err = grpcServer.Serve(lis)
 	if err != nil {
 		// cannot panic, because this probably is an intentional close
-		logrus.Printf("gRPC: Serve() error: %s", err)
+		logrus.Infof("gRPC: Serve() error: %s", err)
 	}
 
-	logrus.Println("gRPC listener stopped")
+	logrus.Info("gRPC listener stopped")
 
 	return nil
 }
@@ -99,15 +99,15 @@ func (s *Application) ServePublic(quit chan bool) error {
 		}
 	}()
 
-	logrus.Println("public HTTP listener started")
+	logrus.Info("public HTTP listener started")
 
 	err = httpServer.ListenAndServe()
 	if err != nil {
 		// cannot panic, because this probably is an intentional close
-		logrus.Printf("Httpserver: ListenAndServe() error: %s", err)
+		logrus.Infof("Httpserver: ListenAndServe() error: %s", err)
 	}
 
-	logrus.Println("public HTTP listener stopped")
+	logrus.Info("public HTTP listener stopped")
 
 	return nil
 }
@@ -120,7 +120,7 @@ func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 
 	cfg := s.container.Config()
 
-	logrus.Println("DuplicateFinder listener started")
+	logrus.Info("DuplicateFinder listener started")
 
 	err = df.ListenAMQP(cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
 
@@ -131,26 +131,26 @@ func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 		return err
 	}
 
-	logrus.Println("DuplicateFinder listener stopped")
+	logrus.Info("DuplicateFinder listener stopped")
 
 	return nil
 }
 
 // Close Destructor.
 func (s *Application) Close() error {
-	logrus.Println("Closing service")
+	logrus.Trace("Closing service")
 
 	if err := s.container.Close(); err != nil {
 		return err
 	}
 
-	logrus.Println("Service closed")
+	logrus.Debug("Service closed")
 
 	return nil
 }
 
 func applyMigrations(config config.MigrationsConfig) error {
-	logrus.Info("Apply migrations")
+	logrus.Debug("Apply migrations")
 
 	dir := config.Dir
 	if dir == "" {
