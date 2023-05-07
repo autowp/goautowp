@@ -67,6 +67,7 @@ service Items {
   rpc GetTopPersonsList(GetTopPersonsListRequest) returns (APITopPersonsList) {}
   rpc GetTopFactoriesList(GetTopFactoriesListRequest) returns (APITopFactoriesList) {}
   rpc GetTopCategoriesList(GetTopCategoriesListRequest) returns (APITopCategoriesList) {}
+  rpc GetTwinsBrandsList(GetTwinsBrandsListRequest) returns (APITwinsBrandsList) {}
   rpc GetTopTwinsBrandsList(GetTopTwinsBrandsListRequest) returns (APITopTwinsBrandsList) {}
   rpc List(ListItemsRequest) returns (APIItemList) {}
   rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
@@ -482,6 +483,10 @@ message GetTopPersonsListRequest {
   PictureItemType picture_item_type = 2;
 }
 
+message GetTwinsBrandsListRequest {
+  string language = 1;
+}
+
 message GetTopTwinsBrandsListRequest {
   string language = 1;
 }
@@ -503,7 +508,7 @@ message APITopPersonsListItem {
   string name = 3;
 }
 
-message APITopTwinsBrandsListItem {
+message APITwinsBrandsListItem {
   int64 id = 1;
   string name = 2;
   string catname = 3;
@@ -511,8 +516,12 @@ message APITopTwinsBrandsListItem {
   int32 new_count = 5;
 }
 
+message APITwinsBrandsList {
+  repeated APITwinsBrandsListItem items = 1;
+}
+
 message APITopTwinsBrandsList {
-  repeated APITopTwinsBrandsListItem items = 1;
+  repeated APITwinsBrandsListItem items = 1;
   int32 count = 2;
 }
 

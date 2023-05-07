@@ -1607,6 +1607,7 @@ type ItemsClient interface {
 	GetTopPersonsList(ctx context.Context, in *GetTopPersonsListRequest, opts ...grpc.CallOption) (*APITopPersonsList, error)
 	GetTopFactoriesList(ctx context.Context, in *GetTopFactoriesListRequest, opts ...grpc.CallOption) (*APITopFactoriesList, error)
 	GetTopCategoriesList(ctx context.Context, in *GetTopCategoriesListRequest, opts ...grpc.CallOption) (*APITopCategoriesList, error)
+	GetTwinsBrandsList(ctx context.Context, in *GetTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITwinsBrandsList, error)
 	GetTopTwinsBrandsList(ctx context.Context, in *GetTopTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITopTwinsBrandsList, error)
 	List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*APITreeItem, error)
@@ -1660,6 +1661,15 @@ func (c *itemsClient) GetTopFactoriesList(ctx context.Context, in *GetTopFactori
 func (c *itemsClient) GetTopCategoriesList(ctx context.Context, in *GetTopCategoriesListRequest, opts ...grpc.CallOption) (*APITopCategoriesList, error) {
 	out := new(APITopCategoriesList)
 	err := c.cc.Invoke(ctx, "/goautowp.Items/GetTopCategoriesList", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) GetTwinsBrandsList(ctx context.Context, in *GetTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITwinsBrandsList, error) {
+	out := new(APITwinsBrandsList)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/GetTwinsBrandsList", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1791,6 +1801,7 @@ type ItemsServer interface {
 	GetTopPersonsList(context.Context, *GetTopPersonsListRequest) (*APITopPersonsList, error)
 	GetTopFactoriesList(context.Context, *GetTopFactoriesListRequest) (*APITopFactoriesList, error)
 	GetTopCategoriesList(context.Context, *GetTopCategoriesListRequest) (*APITopCategoriesList, error)
+	GetTwinsBrandsList(context.Context, *GetTwinsBrandsListRequest) (*APITwinsBrandsList, error)
 	GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error)
 	List(context.Context, *ListItemsRequest) (*APIItemList, error)
 	GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error)
@@ -1824,6 +1835,10 @@ func (UnimplementedItemsServer) GetTopFactoriesList(context.Context, *GetTopFact
 
 func (UnimplementedItemsServer) GetTopCategoriesList(context.Context, *GetTopCategoriesListRequest) (*APITopCategoriesList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopCategoriesList not implemented")
+}
+
+func (UnimplementedItemsServer) GetTwinsBrandsList(context.Context, *GetTwinsBrandsListRequest) (*APITwinsBrandsList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTwinsBrandsList not implemented")
 }
 
 func (UnimplementedItemsServer) GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error) {
@@ -1958,6 +1973,24 @@ func _Items_GetTopCategoriesList_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ItemsServer).GetTopCategoriesList(ctx, req.(*GetTopCategoriesListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_GetTwinsBrandsList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTwinsBrandsListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetTwinsBrandsList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/GetTwinsBrandsList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetTwinsBrandsList(ctx, req.(*GetTwinsBrandsListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2218,6 +2251,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTopCategoriesList",
 			Handler:    _Items_GetTopCategoriesList_Handler,
+		},
+		{
+			MethodName: "GetTwinsBrandsList",
+			Handler:    _Items_GetTwinsBrandsList_Handler,
 		},
 		{
 			MethodName: "GetTopTwinsBrandsList",

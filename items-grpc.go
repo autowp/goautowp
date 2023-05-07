@@ -443,9 +443,9 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 		}
 	}
 
-	is := make([]*APITopTwinsBrandsListItem, len(twinsData.Res))
+	is := make([]*APITwinsBrandsListItem, len(twinsData.Res))
 	for idx, b := range twinsData.Res {
-		is[idx] = &APITopTwinsBrandsListItem{
+		is[idx] = &APITwinsBrandsListItem{
 			Id:       b.ID,
 			Catname:  b.Catname,
 			Name:     b.Name,
@@ -457,6 +457,47 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 	return &APITopTwinsBrandsList{
 		Items: is,
 		Count: int32(twinsData.Count),
+	}, nil
+}
+
+func (s *ItemsGRPCServer) GetTwinsBrandsList(
+	ctx context.Context,
+	in *GetTwinsBrandsListRequest,
+) (*APITwinsBrandsList, error) {
+	twinsData, err := s.repository.List(ctx, items.ListOptions{
+		Language: in.Language,
+		Fields: items.ListFields{
+			Name: true,
+		},
+		DescendantItems: &items.ListOptions{
+			ParentItems: &items.ListOptions{
+				TypeID: []items.ItemType{items.TWINS},
+				Fields: items.ListFields{
+					ItemsCount:    true,
+					NewItemsCount: true,
+				},
+			},
+		},
+		TypeID:     []items.ItemType{items.BRAND},
+		SortByName: true,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	is := make([]*APITwinsBrandsListItem, len(twinsData))
+	for idx, b := range twinsData {
+		is[idx] = &APITwinsBrandsListItem{
+			Id:       b.ID,
+			Catname:  b.Catname,
+			Name:     b.Name,
+			Count:    b.ItemsCount,
+			NewCount: b.NewItemsCount,
+		}
+	}
+
+	return &APITwinsBrandsList{
+		Items: is,
 	}, nil
 }
 
