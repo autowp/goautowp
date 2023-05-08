@@ -6,13 +6,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/autowp/goautowp/util"
-	"github.com/urfave/cli/v2"
-
 	"github.com/autowp/goautowp"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/util"
 	"github.com/getsentry/sentry-go"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v3"
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
@@ -75,7 +74,7 @@ func mainReturnWithCode() int {
 		Commands: []*cli.Command{
 			{
 				Name: "image-storage",
-				Subcommands: []*cli.Command{
+				Commands: []*cli.Command{
 					{
 						Name: "get-image",
 						Flags: []cli.Flag{

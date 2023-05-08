@@ -40,7 +40,7 @@ import (
 	require.NotEmpty(t, r.Items)
 }*/
 
-func TestGetTopTwinsBrandsList(t *testing.T) {
+func TestGetTwinsBrandsList(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
@@ -152,6 +152,13 @@ func TestGetTopTwinsBrandsList(t *testing.T) {
 	require.NotEmpty(t, r)
 	require.NotEmpty(t, r.Items)
 	require.Greater(t, r.Count, int32(0))
+
+	r6, err := client.GetTwinsBrandsList(ctx, &GetTwinsBrandsListRequest{
+		Language: "ru",
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, r6)
+	require.NotEmpty(t, r6.Items)
 }
 
 func TestTopBrandsList(t *testing.T) {
