@@ -43,6 +43,23 @@ func convertType(commentsType CommentsType) (comments.CommentType, error) {
 	return 0, fmt.Errorf("`%v` is unknown comments type identifier", commentsType)
 }
 
+func reverseConvertType(commentsType comments.CommentType) (CommentsType, error) {
+	switch commentsType {
+	case comments.TypeIDPictures:
+		return CommentsType_PICTURES_TYPE_ID, nil
+	case comments.TypeIDItems:
+		return CommentsType_ITEM_TYPE_ID, nil
+	case comments.TypeIDVotings:
+		return CommentsType_VOTINGS_TYPE_ID, nil
+	case comments.TypeIDArticles:
+		return CommentsType_ARTICLES_TYPE_ID, nil
+	case comments.TypeIDForums:
+		return CommentsType_FORUMS_TYPE_ID, nil
+	}
+
+	return 0, fmt.Errorf("`%v` is unknown comments type identifier", commentsType)
+}
+
 func NewCommentsGRPCServer(
 	auth *Auth,
 	commentsRepository *comments.Repository,
@@ -400,5 +417,25 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 
 	return &AddCommentResponse{
 		Id: messageID,
+	}, nil
+}
+
+func (s *CommentsGRPCServer) GetMessagePage(
+	ctx context.Context, in *GetMessagePageRequest,
+) (*APICommentsMessagePage, error) {
+	itemID, typeID, page, err := s.repository.MessagePage(ctx, in.MessageId, in.PerPage)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	convertedTypeID, err := reverseConvertType(typeID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &APICommentsMessagePage{
+		TypeId: convertedTypeID,
+		ItemId: itemID,
+		Page:   page,
 	}, nil
 }

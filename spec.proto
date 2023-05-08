@@ -98,6 +98,7 @@ service Comments {
   rpc MoveComment(CommentsMoveCommentRequest) returns (google.protobuf.Empty) {}
   rpc VoteComment(CommentsVoteCommentRequest) returns (CommentsVoteCommentResponse) {}
   rpc Add(AddCommentRequest) returns (AddCommentResponse) {}
+  rpc GetMessagePage(GetMessagePageRequest) returns (APICommentsMessagePage) {}
 }
 
 service Map {
@@ -941,6 +942,17 @@ message AddCommentRequest {
   bool moderator_attention = 4;
   int64 parent_id = 5;
   bool resolve = 6;
+}
+
+message GetMessagePageRequest {
+  int64 message_id = 1;
+  int32 per_page = 2;
+}
+
+message APICommentsMessagePage {
+  CommentsType type_id = 1;
+  int64 item_id = 2;
+  int32 page = 3;
 }
 
 message AddCommentResponse {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -1258,4 +1259,64 @@ func (s *Repository) TopicStatForUser(
 	}
 
 	return messages.Messages, newMessages, nil
+}
+
+func (s *Repository) MessagePage(
+	ctx context.Context, messageID int64, perPage int32,
+) (int64, CommentType, int32, error) {
+	var (
+		err     error
+		success bool
+	)
+
+	row := struct {
+		TypeID   CommentType   `db:"type_id"`
+		ItemID   int64         `db:"item_id"`
+		ParentID sql.NullInt64 `db:"parent_id"`
+		Datetime time.Time     `db:"datetime"`
+	}{}
+
+	success, err = s.db.Select("type_id", "item_id", "parent_id", "datetime").
+		From("comment_message").
+		Where(goqu.I("id").Eq(messageID)).
+		ScanStructContext(ctx, &row)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	if !success {
+		return 0, 0, 0, errors.New("message not found")
+	}
+
+	parentRow := struct {
+		ParentID sql.NullInt64 `db:"parent_id"`
+		Datetime time.Time     `db:"datetime"`
+	}{}
+	parentRow.ParentID = row.ParentID
+	parentRow.Datetime = row.Datetime
+
+	for success && parentRow.ParentID.Valid {
+		success, err = s.db.Select("parent_id", "datetime").From("comment_message").Where(
+			goqu.I("item_id").Eq(row.ItemID),
+			goqu.I("type_id").Eq(row.TypeID),
+			goqu.I("id").Eq(parentRow.ParentID.Int64),
+		).ScanStructContext(ctx, &parentRow)
+		if err != nil {
+			return 0, 0, 0, err
+		}
+	}
+
+	var count int32
+
+	success, err = s.db.Select(goqu.COUNT(goqu.L("1"))).From("comment_message").Where(
+		goqu.I("item_id").Eq(row.ItemID),
+		goqu.I("type_id").Eq(row.TypeID),
+		goqu.I("datetime").Lt(parentRow.Datetime),
+		goqu.I("parent_id").IsNull(),
+	).ScanValContext(ctx, &count)
+	if err != nil || !success {
+		return 0, 0, 0, err
+	}
+
+	return row.ItemID, row.TypeID, int32(math.Ceil(float64(count+1) / float64(perPage))), nil
 }

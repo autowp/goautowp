@@ -2547,6 +2547,7 @@ type CommentsClient interface {
 	MoveComment(ctx context.Context, in *CommentsMoveCommentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	VoteComment(ctx context.Context, in *CommentsVoteCommentRequest, opts ...grpc.CallOption) (*CommentsVoteCommentResponse, error)
 	Add(ctx context.Context, in *AddCommentRequest, opts ...grpc.CallOption) (*AddCommentResponse, error)
+	GetMessagePage(ctx context.Context, in *GetMessagePageRequest, opts ...grpc.CallOption) (*APICommentsMessagePage, error)
 }
 
 type commentsClient struct {
@@ -2629,6 +2630,15 @@ func (c *commentsClient) Add(ctx context.Context, in *AddCommentRequest, opts ..
 	return out, nil
 }
 
+func (c *commentsClient) GetMessagePage(ctx context.Context, in *GetMessagePageRequest, opts ...grpc.CallOption) (*APICommentsMessagePage, error) {
+	out := new(APICommentsMessagePage)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/GetMessagePage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CommentsServer is the server API for Comments service.
 // All implementations must embed UnimplementedCommentsServer
 // for forward compatibility
@@ -2641,6 +2651,7 @@ type CommentsServer interface {
 	MoveComment(context.Context, *CommentsMoveCommentRequest) (*emptypb.Empty, error)
 	VoteComment(context.Context, *CommentsVoteCommentRequest) (*CommentsVoteCommentResponse, error)
 	Add(context.Context, *AddCommentRequest) (*AddCommentResponse, error)
+	GetMessagePage(context.Context, *GetMessagePageRequest) (*APICommentsMessagePage, error)
 	mustEmbedUnimplementedCommentsServer()
 }
 
@@ -2677,6 +2688,10 @@ func (UnimplementedCommentsServer) VoteComment(context.Context, *CommentsVoteCom
 
 func (UnimplementedCommentsServer) Add(context.Context, *AddCommentRequest) (*AddCommentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
+}
+
+func (UnimplementedCommentsServer) GetMessagePage(context.Context, *GetMessagePageRequest) (*APICommentsMessagePage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessagePage not implemented")
 }
 func (UnimplementedCommentsServer) mustEmbedUnimplementedCommentsServer() {}
 
@@ -2835,6 +2850,24 @@ func _Comments_Add_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Comments_GetMessagePage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMessagePageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).GetMessagePage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/GetMessagePage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).GetMessagePage(ctx, req.(*GetMessagePageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Comments_ServiceDesc is the grpc.ServiceDesc for Comments service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2873,6 +2906,10 @@ var Comments_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Add",
 			Handler:    _Comments_Add_Handler,
+		},
+		{
+			MethodName: "GetMessagePage",
+			Handler:    _Comments_GetMessagePage_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
