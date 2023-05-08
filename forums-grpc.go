@@ -439,6 +439,8 @@ func (s *ForumsGRPCServer) GetTopics(ctx context.Context, in *APIGetForumsTopics
 		Paginator: &Pages{
 			PageCount:        pages.PageCount,
 			First:            pages.First,
+			Previous:         pages.Previous,
+			Next:             pages.Next,
 			Current:          pages.Current,
 			FirstPageInRange: pages.FirstPageInRange,
 			LastPageInRange:  pages.LastPageInRange,

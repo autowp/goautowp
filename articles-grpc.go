@@ -41,9 +41,10 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 			From("articles").
 			Where(goqu.L("enabled")).
 			Order(goqu.I("add_date").Desc()),
+		CurrentPageNumber: int32(in.Page),
 	}
 
-	sqlSelect, err := paginator.GetItemsByPage(ctx, int32(in.Page))
+	sqlSelect, err := paginator.GetCurrentItems(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +88,8 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 		Paginator: &Pages{
 			PageCount:        pages.PageCount,
 			First:            pages.First,
+			Previous:         pages.Previous,
+			Next:             pages.Next,
 			Current:          pages.Current,
 			FirstPageInRange: pages.FirstPageInRange,
 			LastPageInRange:  pages.LastPageInRange,

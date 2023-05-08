@@ -479,10 +479,11 @@ func (s *Forums) Topics(
 	rows := make([]*ForumsTopic, 0)
 
 	paginator := util.Paginator{
-		SQLSelect: sqSelect,
+		SQLSelect:         sqSelect,
+		CurrentPageNumber: page,
 	}
 
-	sqSelect, err := paginator.GetItemsByPage(ctx, page)
+	sqSelect, err := paginator.GetCurrentItems(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -249,26 +249,18 @@ func (s *MessagingGRPCServer) GetMessages(
 		items[idx] = &item
 	}
 
-	paginator := Pages{
-		PageCount:        pages.PageCount,
-		First:            pages.First,
-		Current:          pages.Current,
-		FirstPageInRange: pages.FirstPageInRange,
-		LastPageInRange:  pages.LastPageInRange,
-		PagesInRange:     pages.PagesInRange,
-		TotalItemCount:   pages.TotalItemCount,
-	}
-
-	if pages.Next != nil {
-		paginator.Next = *pages.Next
-	}
-
-	if pages.Previous != nil {
-		paginator.Previous = *pages.Previous
-	}
-
 	return &MessagingGetMessagesResponse{
-		Items:     items,
-		Paginator: &paginator,
+		Items: items,
+		Paginator: &Pages{
+			PageCount:        pages.PageCount,
+			First:            pages.First,
+			Previous:         pages.Previous,
+			Next:             pages.Next,
+			Current:          pages.Current,
+			FirstPageInRange: pages.FirstPageInRange,
+			LastPageInRange:  pages.LastPageInRange,
+			PagesInRange:     pages.PagesInRange,
+			TotalItemCount:   pages.TotalItemCount,
+		},
 	}, nil
 }

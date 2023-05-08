@@ -25,8 +25,8 @@ type Pages struct {
 	First            int32
 	Current          int32
 	Last             int32
-	Previous         *int32
-	Next             *int32
+	Previous         int32
+	Next             int32
 	FirstPageInRange int32
 	LastPageInRange  int32
 	TotalItemCount   int32
@@ -116,20 +116,20 @@ func (s *Paginator) GetPages(ctx context.Context) (*Pages, error) {
 		First:            1,
 		Current:          currentPageNumber,
 		Last:             pageCount,
-		Previous:         nil,
-		Next:             nil,
+		Previous:         0,
+		Next:             0,
 		TotalItemCount:   totalItemCount,
 	}
 
 	// Previous and next
 	if currentPageNumber-1 > 0 {
 		previous := currentPageNumber - 1
-		pages.Previous = &previous
+		pages.Previous = previous
 	}
 
 	if currentPageNumber+1 <= pageCount {
 		next := currentPageNumber + 1
-		pages.Next = &next
+		pages.Next = next
 	}
 
 	// Pages in range
