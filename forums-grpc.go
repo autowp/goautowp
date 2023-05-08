@@ -4,6 +4,8 @@ import (
 	"context"
 	"net"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/validation"
@@ -292,4 +294,176 @@ func (s *ForumsGRPCServer) MoveTopic(ctx context.Context, in *APIMoveTopicReques
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func convertTheme(theme *ForumsTheme) *APIForumsTheme {
+	return &APIForumsTheme{
+		Id:            theme.ID,
+		Name:          theme.Name,
+		TopicsCount:   theme.TopicsCount,
+		MessagesCount: theme.MessagesCount,
+		DisableTopics: theme.DisableTopics,
+		Description:   theme.Description,
+	}
+}
+
+func convertTopic(topic *ForumsTopic) *APIForumsTopic {
+	return &APIForumsTopic{
+		Id:           topic.ID,
+		Name:         topic.Name,
+		Status:       topic.Status,
+		OldMessages:  topic.Messages - topic.NewMessages,
+		NewMessages:  topic.NewMessages,
+		CreatedAt:    timestamppb.New(topic.CreatedAt),
+		UserId:       topic.UserID,
+		ThemeId:      topic.ThemeID,
+		Subscription: topic.Subscription,
+	}
+}
+
+func (s *ForumsGRPCServer) GetTheme(ctx context.Context, in *APIGetForumsThemeRequest) (*APIForumsTheme, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+
+	theme, err := s.forums.Theme(ctx, in.Id, isModerator)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if theme == nil {
+		return nil, status.Error(codes.NotFound, "Theme not found")
+	}
+
+	return convertTheme(theme), nil
+}
+
+func (s *ForumsGRPCServer) GetThemes(ctx context.Context, in *APIGetForumsThemesRequest) (*APIForumsThemes, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+
+	themes, err := s.forums.Themes(ctx, in.ThemeId, isModerator)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result := make([]*APIForumsTheme, len(themes))
+	for idx, theme := range themes {
+		result[idx] = convertTheme(theme)
+	}
+
+	return &APIForumsThemes{
+		Items: result,
+	}, nil
+}
+
+func (s *ForumsGRPCServer) GetLastTopic(ctx context.Context, in *APIGetForumsThemeRequest) (*APIForumsTopic, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+
+	topic, err := s.forums.LastTopic(ctx, in.Id, userID, isModerator)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if topic == nil {
+		return nil, status.Error(codes.NotFound, "Topic not found")
+	}
+
+	return convertTopic(topic), nil
+}
+
+func (s *ForumsGRPCServer) GetLastMessage(
+	ctx context.Context,
+	in *APIGetForumsTopicRequest,
+) (*APICommentMessage, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+
+	msg, err := s.forums.LastMessage(ctx, in.Id, isModerator)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if msg == nil {
+		return nil, status.Error(codes.NotFound, "Message not found")
+	}
+
+	var userID int64
+	if msg.UserID.Valid {
+		userID = msg.UserID.Int64
+	}
+
+	return &APICommentMessage{
+		Id:        msg.ID,
+		CreatedAt: timestamppb.New(msg.Datetime),
+		UserId:    userID,
+	}, nil
+}
+
+func (s *ForumsGRPCServer) GetTopics(ctx context.Context, in *APIGetForumsTopicsRequest) (*APIForumsTopics, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+
+	topics, pages, err := s.forums.Topics(ctx, in.ThemeId, userID, isModerator, in.Subscription, in.Page)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result := make([]*APIForumsTopic, len(topics))
+	for idx, topic := range topics {
+		result[idx] = convertTopic(topic)
+	}
+
+	return &APIForumsTopics{
+		Items: result,
+		Paginator: &Pages{
+			PageCount:        pages.PageCount,
+			First:            pages.First,
+			Current:          pages.Current,
+			FirstPageInRange: pages.FirstPageInRange,
+			LastPageInRange:  pages.LastPageInRange,
+			PagesInRange:     pages.PagesInRange,
+			TotalItemCount:   pages.TotalItemCount,
+		},
+	}, nil
+}
+
+func (s *ForumsGRPCServer) GetTopic(ctx context.Context, in *APIGetForumsTopicRequest) (*APIForumsTopic, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+
+	topic, err := s.forums.Topic(ctx, in.Id, userID, isModerator)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if topic == nil {
+		return nil, status.Error(codes.NotFound, "Topic not found")
+	}
+
+	return convertTopic(topic), nil
 }

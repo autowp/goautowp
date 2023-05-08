@@ -100,7 +100,7 @@ func (s *PicturesGRPCServer) CreateModerVoteTemplate(
 
 	return &ModerVoteTemplate{
 		Id:      tpl.ID,
-		UserID:  tpl.UserID,
+		UserId:  tpl.UserID,
 		Message: tpl.Message,
 		Vote:    tpl.Vote,
 	}, nil
@@ -156,7 +156,7 @@ func (s *PicturesGRPCServer) GetModerVoteTemplates(ctx context.Context, _ *empty
 			Id:      item.ID,
 			Message: item.Message,
 			Vote:    item.Vote,
-			UserID:  item.UserID,
+			UserId:  item.UserID,
 		}
 	}
 

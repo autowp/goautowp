@@ -1092,7 +1092,12 @@ func (s *Container) Forums() (*Forums, error) {
 			return nil, err
 		}
 
-		s.forums = NewForums(db)
+		commentsRepository, err := s.CommentsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.forums = NewForums(db, commentsRepository)
 	}
 
 	return s.forums, nil

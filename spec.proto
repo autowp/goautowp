@@ -29,6 +29,12 @@ service Forums {
   rpc OpenTopic(APISetTopicStatusRequest) returns (google.protobuf.Empty) {}
   rpc DeleteTopic(APISetTopicStatusRequest) returns (google.protobuf.Empty) {}
   rpc MoveTopic(APIMoveTopicRequest) returns (google.protobuf.Empty) {}
+  rpc GetTheme(APIGetForumsThemeRequest) returns (APIForumsTheme) {}
+  rpc GetThemes(APIGetForumsThemesRequest) returns (APIForumsThemes) {}
+  rpc GetTopic(APIGetForumsTopicRequest) returns (APIForumsTopic) {}
+  rpc GetLastTopic(APIGetForumsThemeRequest) returns (APIForumsTopic) {}
+  rpc GetLastMessage(APIGetForumsTopicRequest) returns (APICommentMessage) {}
+  rpc GetTopics(APIGetForumsTopicsRequest) returns (APIForumsTopics) {}
 }
 
 service Articles {
@@ -378,6 +384,60 @@ message APIForumsUserSummary {
   int32 subscriptionsCount = 1;
 }
 
+message APIGetForumsThemeRequest {
+  int64 id = 1;
+}
+
+message APIGetForumsTopicsRequest {
+  int64 theme_id = 1;
+  int32 page = 2;
+  bool subscription = 3;
+}
+
+message APIGetForumsTopicRequest {
+  int64 id = 1;
+}
+
+message APIGetForumsThemesRequest {
+  int64 theme_id = 1;
+}
+
+message APIForumsTheme {
+  int64 id = 1;
+  string name = 2;
+  int32 topics_count = 3;
+  int32 messages_count = 4;
+  bool disable_topics = 5;
+  string description = 6;
+}
+
+message APIForumsThemes {
+  repeated APIForumsTheme items = 1;
+}
+
+message APIForumsTopic {
+  int64 id = 1;
+  string name = 2;
+  string status = 3;
+  int32 old_messages = 4;
+  int32 new_messages = 5;
+  google.protobuf.Timestamp created_at = 6;
+  int64 user_id = 7;
+  int64 theme_id = 8;
+  bool subscription = 9;
+}
+
+message APIForumsTopics {
+  repeated APIForumsTopic items = 1;
+  Pages paginator = 2;
+}
+
+message APICommentMessage {
+  int64 id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  int64 user_id = 3;
+}
+
 message APICreateTopicRequest {
   int64 theme_id = 1;
   string name = 2;
@@ -686,7 +746,7 @@ message PicturesVoteSummary {
 
 message ModerVoteTemplate {
   int64 id = 1;
-  int64 userID = 2;
+  int64 user_id = 2;
   string message = 3;
   int32 vote = 4;
 }

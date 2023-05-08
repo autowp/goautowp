@@ -117,6 +117,17 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 	}, nil
 }
 
+func (s *Repository) IsSubscribed(
+	ctx context.Context, userID int64, commentsType CommentType, itemID int64,
+) (bool, error) {
+	var result bool
+	success, err := s.db.ScanValContext(ctx, &result, `
+		SELECT 1 FROM comment_topic_subscribe WHERE type_id = ? AND item_id = ? AND user_id = ?
+    `, commentsType, itemID, userID)
+
+	return success && result, err
+}
+
 func (s *Repository) Subscribe(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT IGNORE INTO comment_topic_subscribe (type_id, item_id, user_id, sent)
@@ -1163,4 +1174,88 @@ func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 	affected += a
 
 	return affected, nil
+}
+
+func (s *Repository) TopicStat(ctx context.Context, typeID CommentType, itemID int64) (int32, error) {
+	sqSelect := s.db.Select("messages").From("comment_topic").
+		Where(
+			goqu.I("comment_topic.type_id").Eq(typeID),
+			goqu.I("comment_topic.item_id").Eq(itemID),
+		)
+
+	var messages int32
+
+	success, err := sqSelect.ScanValContext(ctx, &messages)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, nil
+	}
+
+	return messages, nil
+}
+
+func (s *Repository) MessagesCountFromTimestamp(
+	ctx context.Context, typeID CommentType, itemID int64, timestamp time.Time,
+) (int32, error) {
+	sqSelect := s.db.Select(goqu.COUNT(goqu.L("1"))).From("comment_message").
+		Where(
+			goqu.I("item_id").Eq(itemID),
+			goqu.I("type_id").Eq(typeID),
+			goqu.I("datetime").Gt(timestamp),
+		)
+
+	var cnt int32
+
+	success, err := sqSelect.ScanValContext(ctx, &cnt)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, nil
+	}
+
+	return cnt, nil
+}
+
+func (s *Repository) TopicStatForUser(
+	ctx context.Context, typeID CommentType, itemID int64, userID int64,
+) (int32, int32, error) {
+	sqSelect := s.db.Select("comment_topic.messages", "comment_topic_view.timestamp").From("comment_topic").
+		LeftJoin(goqu.I("comment_topic_view"), goqu.On(
+			goqu.I("comment_topic.type_id").Eq(goqu.I("comment_topic_view.type_id")),
+			goqu.I("comment_topic.item_id").Eq(goqu.I("comment_topic_view.item_id")),
+			goqu.I("comment_topic_view.user_id").Eq(userID),
+		)).
+		Where(
+			goqu.I("comment_topic.type_id").Eq(typeID),
+			goqu.I("comment_topic.item_id").Eq(itemID),
+		)
+
+	var messages struct {
+		Messages  int32
+		Timestamp sql.NullTime
+	}
+
+	success, err := sqSelect.ScanStructContext(ctx, &messages)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if !success {
+		return 0, 0, nil
+	}
+
+	newMessages := messages.Messages
+	if messages.Timestamp.Valid {
+		newMessages, err = s.MessagesCountFromTimestamp(ctx, typeID, itemID, messages.Timestamp.Time)
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	return messages.Messages, newMessages, nil
 }

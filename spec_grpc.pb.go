@@ -444,6 +444,12 @@ type ForumsClient interface {
 	OpenTopic(ctx context.Context, in *APISetTopicStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteTopic(ctx context.Context, in *APISetTopicStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	MoveTopic(ctx context.Context, in *APIMoveTopicRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetTheme(ctx context.Context, in *APIGetForumsThemeRequest, opts ...grpc.CallOption) (*APIForumsTheme, error)
+	GetThemes(ctx context.Context, in *APIGetForumsThemesRequest, opts ...grpc.CallOption) (*APIForumsThemes, error)
+	GetTopic(ctx context.Context, in *APIGetForumsTopicRequest, opts ...grpc.CallOption) (*APIForumsTopic, error)
+	GetLastTopic(ctx context.Context, in *APIGetForumsThemeRequest, opts ...grpc.CallOption) (*APIForumsTopic, error)
+	GetLastMessage(ctx context.Context, in *APIGetForumsTopicRequest, opts ...grpc.CallOption) (*APICommentMessage, error)
+	GetTopics(ctx context.Context, in *APIGetForumsTopicsRequest, opts ...grpc.CallOption) (*APIForumsTopics, error)
 }
 
 type forumsClient struct {
@@ -508,6 +514,60 @@ func (c *forumsClient) MoveTopic(ctx context.Context, in *APIMoveTopicRequest, o
 	return out, nil
 }
 
+func (c *forumsClient) GetTheme(ctx context.Context, in *APIGetForumsThemeRequest, opts ...grpc.CallOption) (*APIForumsTheme, error) {
+	out := new(APIForumsTheme)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/GetTheme", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forumsClient) GetThemes(ctx context.Context, in *APIGetForumsThemesRequest, opts ...grpc.CallOption) (*APIForumsThemes, error) {
+	out := new(APIForumsThemes)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/GetThemes", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forumsClient) GetTopic(ctx context.Context, in *APIGetForumsTopicRequest, opts ...grpc.CallOption) (*APIForumsTopic, error) {
+	out := new(APIForumsTopic)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/GetTopic", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forumsClient) GetLastTopic(ctx context.Context, in *APIGetForumsThemeRequest, opts ...grpc.CallOption) (*APIForumsTopic, error) {
+	out := new(APIForumsTopic)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/GetLastTopic", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forumsClient) GetLastMessage(ctx context.Context, in *APIGetForumsTopicRequest, opts ...grpc.CallOption) (*APICommentMessage, error) {
+	out := new(APICommentMessage)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/GetLastMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *forumsClient) GetTopics(ctx context.Context, in *APIGetForumsTopicsRequest, opts ...grpc.CallOption) (*APIForumsTopics, error) {
+	out := new(APIForumsTopics)
+	err := c.cc.Invoke(ctx, "/goautowp.Forums/GetTopics", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ForumsServer is the server API for Forums service.
 // All implementations must embed UnimplementedForumsServer
 // for forward compatibility
@@ -518,6 +578,12 @@ type ForumsServer interface {
 	OpenTopic(context.Context, *APISetTopicStatusRequest) (*emptypb.Empty, error)
 	DeleteTopic(context.Context, *APISetTopicStatusRequest) (*emptypb.Empty, error)
 	MoveTopic(context.Context, *APIMoveTopicRequest) (*emptypb.Empty, error)
+	GetTheme(context.Context, *APIGetForumsThemeRequest) (*APIForumsTheme, error)
+	GetThemes(context.Context, *APIGetForumsThemesRequest) (*APIForumsThemes, error)
+	GetTopic(context.Context, *APIGetForumsTopicRequest) (*APIForumsTopic, error)
+	GetLastTopic(context.Context, *APIGetForumsThemeRequest) (*APIForumsTopic, error)
+	GetLastMessage(context.Context, *APIGetForumsTopicRequest) (*APICommentMessage, error)
+	GetTopics(context.Context, *APIGetForumsTopicsRequest) (*APIForumsTopics, error)
 	mustEmbedUnimplementedForumsServer()
 }
 
@@ -546,6 +612,30 @@ func (UnimplementedForumsServer) DeleteTopic(context.Context, *APISetTopicStatus
 
 func (UnimplementedForumsServer) MoveTopic(context.Context, *APIMoveTopicRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MoveTopic not implemented")
+}
+
+func (UnimplementedForumsServer) GetTheme(context.Context, *APIGetForumsThemeRequest) (*APIForumsTheme, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTheme not implemented")
+}
+
+func (UnimplementedForumsServer) GetThemes(context.Context, *APIGetForumsThemesRequest) (*APIForumsThemes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetThemes not implemented")
+}
+
+func (UnimplementedForumsServer) GetTopic(context.Context, *APIGetForumsTopicRequest) (*APIForumsTopic, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTopic not implemented")
+}
+
+func (UnimplementedForumsServer) GetLastTopic(context.Context, *APIGetForumsThemeRequest) (*APIForumsTopic, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLastTopic not implemented")
+}
+
+func (UnimplementedForumsServer) GetLastMessage(context.Context, *APIGetForumsTopicRequest) (*APICommentMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLastMessage not implemented")
+}
+
+func (UnimplementedForumsServer) GetTopics(context.Context, *APIGetForumsTopicsRequest) (*APIForumsTopics, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTopics not implemented")
 }
 func (UnimplementedForumsServer) mustEmbedUnimplementedForumsServer() {}
 
@@ -668,6 +758,114 @@ func _Forums_MoveTopic_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Forums_GetTheme_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetForumsThemeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).GetTheme(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/GetTheme",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).GetTheme(ctx, req.(*APIGetForumsThemeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forums_GetThemes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetForumsThemesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).GetThemes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/GetThemes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).GetThemes(ctx, req.(*APIGetForumsThemesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forums_GetTopic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetForumsTopicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).GetTopic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/GetTopic",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).GetTopic(ctx, req.(*APIGetForumsTopicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forums_GetLastTopic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetForumsThemeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).GetLastTopic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/GetLastTopic",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).GetLastTopic(ctx, req.(*APIGetForumsThemeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forums_GetLastMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetForumsTopicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).GetLastMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/GetLastMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).GetLastMessage(ctx, req.(*APIGetForumsTopicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Forums_GetTopics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetForumsTopicsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ForumsServer).GetTopics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Forums/GetTopics",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ForumsServer).GetTopics(ctx, req.(*APIGetForumsTopicsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Forums_ServiceDesc is the grpc.ServiceDesc for Forums service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -698,6 +896,30 @@ var Forums_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MoveTopic",
 			Handler:    _Forums_MoveTopic_Handler,
+		},
+		{
+			MethodName: "GetTheme",
+			Handler:    _Forums_GetTheme_Handler,
+		},
+		{
+			MethodName: "GetThemes",
+			Handler:    _Forums_GetThemes_Handler,
+		},
+		{
+			MethodName: "GetTopic",
+			Handler:    _Forums_GetTopic_Handler,
+		},
+		{
+			MethodName: "GetLastTopic",
+			Handler:    _Forums_GetLastTopic_Handler,
+		},
+		{
+			MethodName: "GetLastMessage",
+			Handler:    _Forums_GetLastMessage_Handler,
+		},
+		{
+			MethodName: "GetTopics",
+			Handler:    _Forums_GetTopics_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
