@@ -99,7 +99,7 @@ func substr(input string, start int, length int) string {
 
 func GetTextPreview(text string, options TextPreviewOptions) string {
 	text = strings.TrimSpace(text)
-	text = strings.ReplaceAll("\r", "", text)
+	text = strings.ReplaceAll(text, "\r", "")
 
 	if options.Maxlines > 0 {
 		lines := strings.Split(text, "\n")
