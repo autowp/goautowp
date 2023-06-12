@@ -71,9 +71,7 @@ func TestCreateDeleteContact(t *testing.T) {
 	// get contacts
 	items, err := client.GetContacts(
 		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
-		&GetContactsRequest{
-			Fields: []string{"avatar", "gravatar"},
-		},
+		&GetContactsRequest{},
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, items)

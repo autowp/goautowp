@@ -90,7 +90,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	_, err = db.Exec("UPDATE users SET img = ? WHERE id = ?", imageID, me.Id)
 	require.NoError(t, err)
 
-	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id, Fields: []string{"avatar", "gravatar"}})
+	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id})
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
 	// require.NotEmpty(t, user.Gravatar)
@@ -165,7 +165,7 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, me)
 
-	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id, Fields: []string{}})
+	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id})
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
 	require.Equal(t, name, user.Name)

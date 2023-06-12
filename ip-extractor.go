@@ -79,7 +79,7 @@ func (s *IPExtractor) Extract(ctx context.Context, ip net.IP, fields map[string]
 				}
 
 				if user != nil {
-					apiUser, err := s.userExtractor.Extract(ctx, user, map[string]bool{})
+					apiUser, err := s.userExtractor.Extract(ctx, user)
 					if err != nil {
 						return nil, err
 					}

@@ -80,7 +80,7 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 			var extractedUser *users.APIUser
 
 			if user != nil {
-				extractedUser, err = s.userExtractor.Extract(ctx, user, map[string]bool{})
+				extractedUser, err = s.userExtractor.Extract(ctx, user)
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}
