@@ -297,7 +297,6 @@ message ContactItems {
 }
 
 message GetContactsRequest {
-  repeated string fields = 1;
 }
 
 message CommentVoteItems {
@@ -481,12 +480,10 @@ message APIDeleteUserRequest {
 }
 
 message APIMeRequest {
-  repeated string fields = 1;
 }
 
 message APIGetUserRequest {
   int64 user_id = 1;
-  repeated string fields = 2;
 }
 
 message GetTopBrandsListRequest {
@@ -854,7 +851,6 @@ message APIUserPreferencesResponse {
 }
 
 message APIUsersRequest {
-  repeated string fields = 1;
   bool is_online = 2;
   uint64 limit = 3;
   uint64 page = 4;

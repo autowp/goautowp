@@ -2,7 +2,7 @@ package users
 
 import (
 	"context"
-	"crypto/md5" //nolint: gosec
+	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"fmt"
 	"net/url"
@@ -46,7 +46,7 @@ func ImageToAPIImage(i *storage.Image) *APIImage {
 	}
 }
 
-func (s *UserExtractor) Extract(ctx context.Context, row *DBUser, fields map[string]bool) (*APIUser, error) {
+func (s *UserExtractor) Extract(ctx context.Context, row *DBUser) (*APIUser, error) {
 	longAway := true
 
 	if row.LastOnline != nil {
@@ -75,33 +75,26 @@ func (s *UserExtractor) Extract(ctx context.Context, row *DBUser, fields map[str
 		Route:       route,
 		Identity:    identity,
 		SpecsWeight: row.SpecsWeight,
+		LastOnline:  row.LastOnline,
 	}
 
-	for field := range fields {
-		switch field {
-		case "avatar":
-			if row.Img != nil {
-				avatar, err := s.imageStorage.FormattedImage(ctx, *row.Img, "avatar")
-				if err != nil {
-					return nil, err
-				}
+	if row.EMail != nil {
+		hash := md5.Sum([]byte(*row.EMail)) //nolint: gosec
+		str := fmt.Sprintf(
+			"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
+			hex.EncodeToString(hash[:]),
+			url.PathEscape("https://www.autowp.ru/_.gif"),
+		)
+		user.Gravatar = str
+	}
 
-				user.Avatar = ImageToAPIImage(avatar)
-			}
-
-		case "gravatar":
-			if row.EMail != nil {
-				hash := md5.Sum([]byte(*row.EMail)) //nolint: gosec
-				str := fmt.Sprintf(
-					"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
-					hex.EncodeToString(hash[:]),
-					url.PathEscape("https://www.autowp.ru/_.gif"),
-				)
-				user.Gravatar = str
-			}
-		case "last_online":
-			user.LastOnline = row.LastOnline
+	if row.Img != nil {
+		avatar, err := s.imageStorage.FormattedImage(ctx, *row.Img, "avatar")
+		if err != nil {
+			return nil, err
 		}
+
+		user.Avatar = ImageToAPIImage(avatar)
 	}
 
 	return &user, nil

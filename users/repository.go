@@ -54,7 +54,6 @@ type GetUsersOptions struct {
 	ID         int64
 	InContacts int64
 	Order      []exp.OrderedExpression
-	Fields     map[string]bool
 	Deleted    *bool
 	IsOnline   bool
 	Limit      uint64
@@ -173,11 +172,14 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 	result := make([]DBUser, 0)
 
 	var r DBUser
-	valuePtrs := []interface{}{&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight}
+	valuePtrs := []interface{}{
+		&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role,
+		&r.SpecsWeight, &r.Img, &r.EMail,
+	}
 
 	columns := []interface{}{
 		"users.id", "users.name", "users.deleted", "users.identity", "users.last_online", "users.role",
-		"users.specs_weight",
+		"users.specs_weight", "users.img", "users.e_mail",
 	}
 
 	sqSelect := s.autowpDB.From("users")
@@ -205,19 +207,6 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 
 	if len(options.Order) > 0 {
 		sqSelect = sqSelect.Order(options.Order...)
-	}
-
-	if len(options.Fields) > 0 {
-		for field := range options.Fields {
-			switch field {
-			case "avatar":
-				columns = append(columns, "users.img")
-				valuePtrs = append(valuePtrs, &r.Img)
-			case "gravatar":
-				columns = append(columns, "users.e_mail")
-				valuePtrs = append(valuePtrs, &r.EMail)
-			}
-		}
 	}
 
 	sqSelect = sqSelect.Select(columns...)

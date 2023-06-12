@@ -47,7 +47,7 @@ func NewUsersGRPCServer(
 	}
 }
 
-func (s *UsersGRPCServer) Me(ctx context.Context, in *APIMeRequest) (*APIUser, error) {
+func (s *UsersGRPCServer) Me(ctx context.Context, _ *APIMeRequest) (*APIUser, error) {
 	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -55,21 +55,12 @@ func (s *UsersGRPCServer) Me(ctx context.Context, in *APIMeRequest) (*APIUser, e
 
 	return s.GetUser(ctx, &APIGetUserRequest{
 		UserId: userID,
-		Fields: in.Fields,
 	})
 }
 
 func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*APIUser, error) {
-	fields := in.Fields
-	m := make(map[string]bool)
-
-	for _, e := range fields {
-		m[e] = true
-	}
-
 	dbUser, err := s.userRepository.User(ctx, users.GetUsersOptions{
-		ID:     in.UserId,
-		Fields: m,
+		ID: in.UserId,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -79,7 +70,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 		return nil, status.Error(codes.NotFound, "User not found")
 	}
 
-	apiUser, err := s.userExtractor.Extract(ctx, dbUser, m)
+	apiUser, err := s.userExtractor.Extract(ctx, dbUser)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -217,13 +208,6 @@ func (s *UsersGRPCServer) GetUserPreferences(
 }
 
 func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*APIUsersResponse, error) {
-	fields := in.Fields
-	m := make(map[string]bool)
-
-	for _, e := range fields {
-		m[e] = true
-	}
-
 	rows, pages, err := s.userRepository.Users(ctx, users.GetUsersOptions{
 		IsOnline: true,
 		Limit:    in.Limit,
@@ -236,7 +220,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 	items := make([]*APIUser, 0)
 
 	for idx := range rows {
-		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx], m)
+		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx])
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
