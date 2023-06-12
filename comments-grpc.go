@@ -298,7 +298,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	result := make([]*CommentVote, 0)
 
 	for idx := range votes.PositiveVotes {
-		extracted, err := s.userExtractor.Extract(ctx, &votes.PositiveVotes[idx], map[string]bool{})
+		extracted, err := s.userExtractor.Extract(ctx, &votes.PositiveVotes[idx])
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -310,7 +310,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	}
 
 	for idx := range votes.NegativeVotes {
-		extracted, err := s.userExtractor.Extract(ctx, &votes.NegativeVotes[idx], map[string]bool{})
+		extracted, err := s.userExtractor.Extract(ctx, &votes.NegativeVotes[idx])
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

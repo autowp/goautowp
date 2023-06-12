@@ -112,7 +112,7 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 	}, nil
 }
 
-func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsRequest) (*ContactItems, error) {
+func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequest) (*ContactItems, error) {
 	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -122,17 +122,9 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsReq
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	fields := in.Fields
-	m := make(map[string]bool)
-
-	for _, e := range fields {
-		m[e] = true
-	}
-
 	userRows, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{
 		InContacts: userID,
 		Order:      []exp.OrderedExpression{goqu.I("users.deleted").Asc(), goqu.I("users.name").Asc()},
-		Fields:     m,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -141,7 +133,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, in *GetContactsReq
 	items := make([]*Contact, len(userRows))
 
 	for idx := range userRows {
-		user, err := s.userExtractor.Extract(ctx, &userRows[idx], m)
+		user, err := s.userExtractor.Extract(ctx, &userRows[idx])
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
