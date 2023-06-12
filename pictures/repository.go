@@ -62,6 +62,17 @@ func (s Repository) IncView(ctx context.Context, id int64) error {
 	return err
 }
 
+func (s Repository) Status(ctx context.Context, id int64) (Status, error) {
+	var status Status
+
+	err := s.db.QueryRowContext(ctx, "SELECT status FROM pictures WHERE id = ?", id).Scan(&status)
+	if err != nil {
+		return "", err
+	}
+
+	return status, nil
+}
+
 func (s Repository) GetVote(ctx context.Context, id int64, userID int64) (*VoteSummary, error) {
 	var value, positive, negative int32
 	if userID > 0 {

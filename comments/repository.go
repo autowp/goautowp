@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -18,8 +19,11 @@ import (
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
+
+const CommentMessagePreviewLength = 60
 
 type CommentType int32
 
@@ -46,6 +50,36 @@ const MaxMessageLength = 16 * 1024
 type GetVotesResult struct {
 	PositiveVotes []users.DBUser
 	NegativeVotes []users.DBUser
+}
+
+type CommentMessage struct {
+	ID                 int64              `db:"id"`
+	TypeID             CommentType        `db:"type_id"`
+	ItemID             int64              `db:"item_id"`
+	ParentID           sql.NullInt64      `db:"parent_id"`
+	CreatedAt          time.Time          `db:"datetime"`
+	Deleted            bool               `db:"deleted"`
+	ModeratorAttention ModeratorAttention `db:"moderator_attention"`
+	AuthorID           sql.NullInt64      `db:"author_id"`
+	IP                 net.IP             `db:"ip"`
+	Message            string             `db:"message"`
+	Vote               int32              `db:"vote"`
+}
+
+type Request struct {
+	ItemID             int64
+	TypeID             CommentType
+	ParentID           int64
+	NoParents          bool
+	UserID             int64
+	Order              []exp.OrderedExpression
+	ModeratorAttention ModeratorAttention
+	PicturesOfItemID   int64
+	FetchMessage       bool
+	FetchVote          bool
+	FetchIP            bool
+	PerPage            int32
+	Page               int32
 }
 
 // Repository Main Object.
@@ -317,6 +351,19 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 	}
 
 	return err
+}
+
+func (s *Repository) UserVote(ctx context.Context, userID int64, commentID int64) (int32, error) {
+	var vote int32
+	err := s.db.QueryRowContext(
+		ctx, "SELECT vote FROM comment_vote WHERE comment_id = ? AND user_id = ?", commentID, userID,
+	).Scan(&vote)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+
+	return vote, err
 }
 
 func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID int64, vote int32) (int32, error) {
@@ -600,7 +647,8 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 
 func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) error {
 	var (
-		itemID, typeID int64
+		itemID         int64
+		typeID         CommentType
 		authorID       sql.NullInt64
 		authorIdentity sql.NullString
 	)
@@ -704,7 +752,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 			return err
 		}
 
-		err = s.setSubscriptionSent(ctx, typeID, itemID, subscriberID, true)
+		err = s.SetSubscriptionSent(ctx, typeID, itemID, subscriberID, true)
 		if err != nil {
 			return err
 		}
@@ -715,7 +763,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 
 func (s *Repository) getSubscribersIDs(
 	ctx context.Context,
-	typeID int64,
+	typeID CommentType,
 	itemID int64,
 	onlyAwaiting bool,
 ) ([]int64, error) {
@@ -735,9 +783,9 @@ func (s *Repository) getSubscribersIDs(
 	return result, err
 }
 
-func (s *Repository) setSubscriptionSent(
+func (s *Repository) SetSubscriptionSent(
 	ctx context.Context,
-	typeID int64,
+	typeID CommentType,
 	itemID int64,
 	subscriberID int64,
 	sent bool,
@@ -1319,4 +1367,188 @@ func (s *Repository) MessagePage(
 	}
 
 	return row.ItemID, row.TypeID, int32(math.Ceil(float64(count+1) / float64(perPage))), nil
+}
+
+func (s *Repository) columns(fetchMessage bool, fetchVote bool, fetchIP bool) []interface{} {
+	columns := []interface{}{
+		"comment_message.id", "comment_message.type_id", "comment_message.item_id", "comment_message.parent_id",
+		"comment_message.datetime", "comment_message.deleted", "comment_message.moderator_attention",
+		"comment_message.author_id",
+	}
+
+	if fetchIP {
+		columns = append(columns, "comment_message.ip")
+	}
+
+	if fetchMessage {
+		columns = append(columns, "comment_message.message")
+	}
+
+	if fetchVote {
+		columns = append(columns, "comment_message.vote")
+	}
+
+	return columns
+}
+
+func (s *Repository) Message(
+	ctx context.Context, messageID int64, fetchMessage bool, fetchVote bool, canViewIP bool,
+) (*CommentMessage, error) {
+	row := CommentMessage{}
+
+	columns := s.columns(fetchMessage, fetchVote, canViewIP)
+
+	success, err := s.db.Select(columns...).
+		From("comment_message").
+		Where(goqu.I("comment_message.id").Eq(messageID)).
+		ScanStructContext(ctx, &row)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, nil //nolint:nilnil
+	}
+
+	return &row, nil
+}
+
+func (s *Repository) IsNewMessage(
+	ctx context.Context, typeID CommentType, itemID int64, msgTime time.Time, userID int64,
+) (bool, error) {
+	var success bool
+
+	success, err := s.db.Select(goqu.L("1")).
+		From("comment_topic_view").
+		Where(
+			goqu.I("type_id").Eq(typeID),
+			goqu.I("item_id").Eq(itemID),
+			goqu.I("user_id").Eq(userID),
+			goqu.I("timestamp").Gte(msgTime),
+		).
+		ScanValContext(ctx, &success)
+	if err != nil {
+		return false, err
+	}
+
+	return !success, nil
+}
+
+func (s *Repository) MessageRowRoute(
+	ctx context.Context, typeID CommentType, itemID int64, messageID int64,
+) ([]string, error) {
+	var result []string
+
+	switch typeID {
+	case TypeIDPictures:
+		var identity string
+
+		success, err := s.db.Select("identity").From("pictures").Where(goqu.I("id").Eq(itemID)).
+			ScanValContext(ctx, &identity)
+		if err != nil {
+			return nil, err
+		}
+
+		if !success {
+			return nil, fmt.Errorf("picture `%v` not found", itemID)
+		}
+
+		result = []string{"/picture", identity}
+
+	case TypeIDItems:
+		var itemTypeID items.ItemType
+
+		success, err := s.db.Select("item_type_id").From("item").Where(goqu.I("id").Eq(itemID)).
+			ScanValContext(ctx, &itemTypeID)
+		if err != nil {
+			return nil, err
+		}
+
+		if !success {
+			return nil, fmt.Errorf("item `%v` not found", itemID)
+		}
+
+		switch itemTypeID { //nolint:exhaustive
+		case items.TWINS:
+			result = []string{"/twins", "group", strconv.FormatInt(itemID, 10)}
+		case items.MUSEUM:
+			result = []string{"/museums", strconv.FormatInt(itemID, 10)}
+		default:
+			return nil, fmt.Errorf("failed to build url form message `%v` item_type `%v`", itemID, itemTypeID)
+		}
+
+	case TypeIDVotings:
+		result = []string{"/voting", strconv.FormatInt(itemID, 10)}
+
+	case TypeIDArticles:
+		var catname string
+
+		success, err := s.db.Select("catname").From("articles").Where(goqu.I("id").Eq(itemID)).
+			ScanValContext(ctx, &catname)
+		if err != nil {
+			return nil, err
+		}
+
+		if !success {
+			return nil, fmt.Errorf("article `%v` not found", itemID)
+		}
+
+		result = []string{"/articles", catname}
+
+	case TypeIDForums:
+		result = []string{"/forums", "message", strconv.FormatInt(messageID, 10)}
+
+	default:
+		return nil, fmt.Errorf("unknown type_id `%v`", typeID)
+	}
+
+	return result, nil
+}
+
+func (s *Repository) Paginator(request Request) *util.Paginator {
+	columns := s.columns(request.FetchMessage, request.FetchVote, request.FetchIP)
+
+	sqSelect := s.db.Select(columns...).
+		From("comment_message")
+
+	if request.ItemID > 0 {
+		sqSelect = sqSelect.Where(goqu.I("comment_message.item_id").Eq(request.ItemID))
+	}
+
+	if request.TypeID > 0 {
+		sqSelect = sqSelect.Where(goqu.I("comment_message.type_id").Eq(request.TypeID))
+	}
+
+	if request.ParentID > 0 {
+		sqSelect = sqSelect.Where(goqu.I("comment_message.parent_id").Eq(request.ParentID))
+	}
+
+	if request.PicturesOfItemID > 0 {
+		sqSelect = sqSelect.
+			Join(goqu.T("pictures"), goqu.On(goqu.I("comment_message.item_id").Eq(goqu.I("pictures.id")))).
+			Join(goqu.T("picture_item"), goqu.On(goqu.I("pictures.id").Eq(goqu.I("picture_item.picture_id")))).
+			Join(goqu.T("item_parent_cache"), goqu.On(goqu.I("picture_item.item_id").Eq(goqu.I("item_parent_cache.item_id")))).
+			Where(goqu.I("item_parent_cache.parent_id").Eq(request.PicturesOfItemID)).
+			Where(goqu.I("comment_message.type_id").Eq(TypeIDPictures))
+	}
+
+	if request.NoParents {
+		sqSelect = sqSelect.Where(goqu.I("comment_message.parent_id").IsNull())
+	}
+
+	if request.UserID > 0 {
+		sqSelect = sqSelect.Where(goqu.I("comment_message.author_id").Eq(request.UserID))
+	}
+
+	if request.ModeratorAttention > 0 {
+		sqSelect = sqSelect.Where(goqu.I("comment_message.moderator_attention").Eq(request.ModeratorAttention))
+	}
+
+	sqSelect.Order(request.Order...)
+
+	return &util.Paginator{
+		SQLSelect:         sqSelect,
+		ItemCountPerPage:  request.PerPage,
+		CurrentPageNumber: request.Page,
+	}
 }

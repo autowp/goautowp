@@ -2548,6 +2548,8 @@ type CommentsClient interface {
 	VoteComment(ctx context.Context, in *CommentsVoteCommentRequest, opts ...grpc.CallOption) (*CommentsVoteCommentResponse, error)
 	Add(ctx context.Context, in *AddCommentRequest, opts ...grpc.CallOption) (*AddCommentResponse, error)
 	GetMessagePage(ctx context.Context, in *GetMessagePageRequest, opts ...grpc.CallOption) (*APICommentsMessagePage, error)
+	GetMessage(ctx context.Context, in *GetMessageRequest, opts ...grpc.CallOption) (*APICommentsMessage, error)
+	GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (*APICommentsMessages, error)
 }
 
 type commentsClient struct {
@@ -2639,6 +2641,24 @@ func (c *commentsClient) GetMessagePage(ctx context.Context, in *GetMessagePageR
 	return out, nil
 }
 
+func (c *commentsClient) GetMessage(ctx context.Context, in *GetMessageRequest, opts ...grpc.CallOption) (*APICommentsMessage, error) {
+	out := new(APICommentsMessage)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/GetMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentsClient) GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (*APICommentsMessages, error) {
+	out := new(APICommentsMessages)
+	err := c.cc.Invoke(ctx, "/goautowp.Comments/GetMessages", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CommentsServer is the server API for Comments service.
 // All implementations must embed UnimplementedCommentsServer
 // for forward compatibility
@@ -2652,6 +2672,8 @@ type CommentsServer interface {
 	VoteComment(context.Context, *CommentsVoteCommentRequest) (*CommentsVoteCommentResponse, error)
 	Add(context.Context, *AddCommentRequest) (*AddCommentResponse, error)
 	GetMessagePage(context.Context, *GetMessagePageRequest) (*APICommentsMessagePage, error)
+	GetMessage(context.Context, *GetMessageRequest) (*APICommentsMessage, error)
+	GetMessages(context.Context, *GetMessagesRequest) (*APICommentsMessages, error)
 	mustEmbedUnimplementedCommentsServer()
 }
 
@@ -2692,6 +2714,14 @@ func (UnimplementedCommentsServer) Add(context.Context, *AddCommentRequest) (*Ad
 
 func (UnimplementedCommentsServer) GetMessagePage(context.Context, *GetMessagePageRequest) (*APICommentsMessagePage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMessagePage not implemented")
+}
+
+func (UnimplementedCommentsServer) GetMessage(context.Context, *GetMessageRequest) (*APICommentsMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessage not implemented")
+}
+
+func (UnimplementedCommentsServer) GetMessages(context.Context, *GetMessagesRequest) (*APICommentsMessages, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessages not implemented")
 }
 func (UnimplementedCommentsServer) mustEmbedUnimplementedCommentsServer() {}
 
@@ -2868,6 +2898,42 @@ func _Comments_GetMessagePage_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Comments_GetMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).GetMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/GetMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).GetMessage(ctx, req.(*GetMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Comments_GetMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentsServer).GetMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Comments/GetMessages",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentsServer).GetMessages(ctx, req.(*GetMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Comments_ServiceDesc is the grpc.ServiceDesc for Comments service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2910,6 +2976,14 @@ var Comments_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMessagePage",
 			Handler:    _Comments_GetMessagePage_Handler,
+		},
+		{
+			MethodName: "GetMessage",
+			Handler:    _Comments_GetMessage_Handler,
+		},
+		{
+			MethodName: "GetMessages",
+			Handler:    _Comments_GetMessages_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

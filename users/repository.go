@@ -152,6 +152,21 @@ func (s *Repository) User(ctx context.Context, options GetUsersOptions) (*DBUser
 	return &users[0], nil
 }
 
+func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int64, error) {
+	var userID int64
+
+	success, err := s.autowpDB.From("users").Where(goqu.I("identity").Eq(identity)).ScanValContext(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, nil
+	}
+
+	return userID, nil
+}
+
 func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUser, *util.Pages, error) {
 	var err error
 

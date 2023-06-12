@@ -922,6 +922,11 @@ func (s *Container) CommentsGRPCServer() (*CommentsGRPCServer, error) {
 			return nil, err
 		}
 
+		picturesRepository, err := s.PicturesRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		auth, err := s.Auth()
 		if err != nil {
 			return nil, err
@@ -936,6 +941,7 @@ func (s *Container) CommentsGRPCServer() (*CommentsGRPCServer, error) {
 			auth,
 			commentsRepository,
 			usersRepository,
+			picturesRepository,
 			userExtractor,
 			s.Enforcer(),
 		)

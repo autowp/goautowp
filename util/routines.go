@@ -3,11 +3,11 @@ package util
 import (
 	"database/sql"
 	"io"
+	"strings"
 	"time"
 
-	"github.com/streadway/amqp"
-
 	"github.com/sirupsen/logrus"
+	"github.com/streadway/amqp"
 )
 
 // Close resource and prints error.
@@ -76,4 +76,43 @@ func MaxInt64(a, b int64) int64 {
 	}
 
 	return b
+}
+
+type TextPreviewOptions struct {
+	Maxlength int
+	Maxlines  int
+}
+
+func substr(input string, start int, length int) string {
+	asRunes := []rune(input)
+
+	if start >= len(asRunes) {
+		return ""
+	}
+
+	if start+length > len(asRunes) {
+		length = len(asRunes) - start
+	}
+
+	return string(asRunes[start : start+length])
+}
+
+func GetTextPreview(text string, options TextPreviewOptions) string {
+	text = strings.TrimSpace(text)
+	text = strings.ReplaceAll("\r", "", text)
+
+	if options.Maxlines > 0 {
+		lines := strings.Split(text, "\n")
+		lines = lines[:options.Maxlines]
+		text = strings.Join(lines, "\n")
+	}
+
+	if options.Maxlength > 0 {
+		asRunes := []rune(text)
+		if len(asRunes) > options.Maxlength {
+			text = substr(text, 0, options.Maxlength) + "..."
+		}
+	}
+
+	return text
 }

@@ -99,6 +99,8 @@ service Comments {
   rpc VoteComment(CommentsVoteCommentRequest) returns (CommentsVoteCommentResponse) {}
   rpc Add(AddCommentRequest) returns (AddCommentResponse) {}
   rpc GetMessagePage(GetMessagePageRequest) returns (APICommentsMessagePage) {}
+  rpc GetMessage(GetMessageRequest) returns (APICommentsMessage) {}
+  rpc GetMessages(GetMessagesRequest) returns (APICommentsMessages) {}
 }
 
 service Map {
@@ -949,10 +951,80 @@ message GetMessagePageRequest {
   int32 per_page = 2;
 }
 
+message CommentMessageFields {
+  bool preview = 1;
+  bool route = 2;
+  bool text = 3;
+  bool vote = 4;
+  bool user_vote = 5;
+  bool replies = 6;
+  bool status = 7;
+  bool is_new = 8;
+}
+
+message GetMessageRequest {
+  int64 id = 1;
+  CommentMessageFields fields = 2;
+}
+
+message GetMessagesRequest {
+  enum Order {
+    DEFAULT = 0;
+    VOTE_DESC = 1;
+    VOTE_ASC = 2;
+    DATE_DESC = 3;
+    DATE_ASC = 4;
+  }
+
+  CommentMessageFields fields = 1;
+  int64 item_id = 2;
+  CommentsType type_id = 3;
+  int64 parent_id = 4;
+  bool no_parents = 5;
+  int64 user_id = 6;
+  Order order = 7;
+  string user_identity = 8;
+  ModeratorAttention moderator_attention = 9;
+  int64 pictures_of_item_id = 10;
+  int32 limit = 11;
+  int32 page = 12;
+}
+
 message APICommentsMessagePage {
   CommentsType type_id = 1;
   int64 item_id = 2;
   int32 page = 3;
+}
+
+message APICommentsMessages {
+  repeated APICommentsMessage items = 1;
+  Pages paginator = 2;
+}
+
+enum ModeratorAttention {
+  NONE = 0;
+  REQUIRED = 1;
+  COMPLETE = 2;
+}
+
+message APICommentsMessage {
+  int64 id = 1;
+  CommentsType type_id = 2;
+  int64 item_id = 3;
+  int64 parent_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  bool deleted = 6;
+  ModeratorAttention moderator_attention = 7;
+  bool is_new = 8;
+  int64 author_id = 9;
+  string ip = 10;
+  string text = 11;
+  int32 vote = 12;
+  string preview = 13;
+  repeated string route = 14;
+  int32 userVote = 15;
+  repeated APICommentsMessage replies = 16;
+  PictureStatus picture_status = 17;
 }
 
 message AddCommentResponse {

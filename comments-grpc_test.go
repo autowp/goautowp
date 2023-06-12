@@ -102,7 +102,7 @@ func TestAddComment(t *testing.T) {
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
 
-	_, err = client.Add(
+	r, err := client.Add(
 		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
 		&AddCommentRequest{
 			ItemId:             1,
@@ -114,6 +114,49 @@ func TestAddComment(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	r2, err := client.GetMessage(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		&GetMessageRequest{
+			Id: r.Id,
+			Fields: &CommentMessageFields{
+				Preview:  true,
+				Route:    true,
+				Text:     true,
+				Vote:     true,
+				UserVote: true,
+				Replies:  true,
+				Status:   true,
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "Test", r2.Text)
+
+	r3, err := client.GetMessages(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		&GetMessagesRequest{
+			ItemId:    r2.ItemId,
+			TypeId:    r2.TypeId,
+			ParentId:  0,
+			NoParents: true,
+			UserId:    r2.AuthorId,
+			Order:     1,
+			Limit:     1,
+			Page:      1,
+			Fields: &CommentMessageFields{
+				Preview:  true,
+				Route:    true,
+				Text:     true,
+				Vote:     true,
+				UserVote: true,
+				Replies:  true,
+				Status:   true,
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, r3.Items)
 }
 
 func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
