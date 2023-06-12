@@ -1544,7 +1544,7 @@ func (s *Repository) Paginator(request Request) *util.Paginator {
 		sqSelect = sqSelect.Where(goqu.I("comment_message.moderator_attention").Eq(request.ModeratorAttention))
 	}
 
-	sqSelect.Order(request.Order...)
+	sqSelect = sqSelect.Order(request.Order...)
 
 	return &util.Paginator{
 		SQLSelect:         sqSelect,
