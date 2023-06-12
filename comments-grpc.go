@@ -707,12 +707,12 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 	case GetMessagesRequest_VOTE_DESC:
 		options.Order = []exp.OrderedExpression{
 			goqu.I("comment_message.vote").Desc(),
-			goqu.I("comment_message.datetime DESC").Desc(),
+			goqu.I("comment_message.datetime").Desc(),
 		}
 	case GetMessagesRequest_VOTE_ASC:
 		options.Order = []exp.OrderedExpression{
 			goqu.I("comment_message.vote").Asc(),
-			goqu.I("comment_message.datetime DESC").Desc(),
+			goqu.I("comment_message.datetime").Desc(),
 		}
 	case GetMessagesRequest_DATE_DESC:
 		options.Order = []exp.OrderedExpression{goqu.I("comment_message.datetime").Desc()}
