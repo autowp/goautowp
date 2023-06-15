@@ -696,7 +696,7 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 		ParentID:     in.ParentId,
 		NoParents:    in.NoParents,
 		UserID:       in.UserId,
-		Order:        []exp.OrderedExpression{goqu.I("comment_message.datetime").Desc()},
+		Order:        []exp.OrderedExpression{goqu.I("comment_message.datetime").Asc()},
 		FetchMessage: fields.Preview || fields.Text,
 		FetchVote:    fields.Vote,
 		FetchIP:      canViewIP,
