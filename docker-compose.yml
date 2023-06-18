@@ -89,7 +89,7 @@ services:
           memory: 128M
 
   memcached:
-    image: memcached
+    image: memcached:alpine
     container_name: goautowp_test_memcached
     restart: always
     expose:
