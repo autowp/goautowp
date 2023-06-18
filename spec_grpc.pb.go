@@ -3869,3 +3869,310 @@ var Text_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "spec.proto",
 }
+
+// AttrsClient is the client API for Attrs service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AttrsClient interface {
+	GetAttribute(ctx context.Context, in *AttrAttributeID, opts ...grpc.CallOption) (*AttrAttribute, error)
+	GetAttributes(ctx context.Context, in *AttrAttributesRequest, opts ...grpc.CallOption) (*AttrAttributesResponse, error)
+	GetAttributeTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrAttributeTypesResponse, error)
+	GetListOptions(ctx context.Context, in *AttrListOptionsRequest, opts ...grpc.CallOption) (*AttrListOptionsResponse, error)
+	GetUnits(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrUnitsResponse, error)
+	GetZoneAttributes(ctx context.Context, in *AttrZoneAttributesRequest, opts ...grpc.CallOption) (*AttrZoneAttributesResponse, error)
+	GetZones(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrZonesResponse, error)
+}
+
+type attrsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAttrsClient(cc grpc.ClientConnInterface) AttrsClient {
+	return &attrsClient{cc}
+}
+
+func (c *attrsClient) GetAttribute(ctx context.Context, in *AttrAttributeID, opts ...grpc.CallOption) (*AttrAttribute, error) {
+	out := new(AttrAttribute)
+	err := c.cc.Invoke(ctx, "/goautowp.Attrs/GetAttribute", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) GetAttributes(ctx context.Context, in *AttrAttributesRequest, opts ...grpc.CallOption) (*AttrAttributesResponse, error) {
+	out := new(AttrAttributesResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Attrs/GetAttributes", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) GetAttributeTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrAttributeTypesResponse, error) {
+	out := new(AttrAttributeTypesResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Attrs/GetAttributeTypes", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) GetListOptions(ctx context.Context, in *AttrListOptionsRequest, opts ...grpc.CallOption) (*AttrListOptionsResponse, error) {
+	out := new(AttrListOptionsResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Attrs/GetListOptions", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) GetUnits(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrUnitsResponse, error) {
+	out := new(AttrUnitsResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Attrs/GetUnits", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) GetZoneAttributes(ctx context.Context, in *AttrZoneAttributesRequest, opts ...grpc.CallOption) (*AttrZoneAttributesResponse, error) {
+	out := new(AttrZoneAttributesResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Attrs/GetZoneAttributes", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) GetZones(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrZonesResponse, error) {
+	out := new(AttrZonesResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Attrs/GetZones", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AttrsServer is the server API for Attrs service.
+// All implementations must embed UnimplementedAttrsServer
+// for forward compatibility
+type AttrsServer interface {
+	GetAttribute(context.Context, *AttrAttributeID) (*AttrAttribute, error)
+	GetAttributes(context.Context, *AttrAttributesRequest) (*AttrAttributesResponse, error)
+	GetAttributeTypes(context.Context, *emptypb.Empty) (*AttrAttributeTypesResponse, error)
+	GetListOptions(context.Context, *AttrListOptionsRequest) (*AttrListOptionsResponse, error)
+	GetUnits(context.Context, *emptypb.Empty) (*AttrUnitsResponse, error)
+	GetZoneAttributes(context.Context, *AttrZoneAttributesRequest) (*AttrZoneAttributesResponse, error)
+	GetZones(context.Context, *emptypb.Empty) (*AttrZonesResponse, error)
+	mustEmbedUnimplementedAttrsServer()
+}
+
+// UnimplementedAttrsServer must be embedded to have forward compatible implementations.
+type UnimplementedAttrsServer struct{}
+
+func (UnimplementedAttrsServer) GetAttribute(context.Context, *AttrAttributeID) (*AttrAttribute, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAttribute not implemented")
+}
+
+func (UnimplementedAttrsServer) GetAttributes(context.Context, *AttrAttributesRequest) (*AttrAttributesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAttributes not implemented")
+}
+
+func (UnimplementedAttrsServer) GetAttributeTypes(context.Context, *emptypb.Empty) (*AttrAttributeTypesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAttributeTypes not implemented")
+}
+
+func (UnimplementedAttrsServer) GetListOptions(context.Context, *AttrListOptionsRequest) (*AttrListOptionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetListOptions not implemented")
+}
+
+func (UnimplementedAttrsServer) GetUnits(context.Context, *emptypb.Empty) (*AttrUnitsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUnits not implemented")
+}
+
+func (UnimplementedAttrsServer) GetZoneAttributes(context.Context, *AttrZoneAttributesRequest) (*AttrZoneAttributesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetZoneAttributes not implemented")
+}
+
+func (UnimplementedAttrsServer) GetZones(context.Context, *emptypb.Empty) (*AttrZonesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetZones not implemented")
+}
+func (UnimplementedAttrsServer) mustEmbedUnimplementedAttrsServer() {}
+
+// UnsafeAttrsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AttrsServer will
+// result in compilation errors.
+type UnsafeAttrsServer interface {
+	mustEmbedUnimplementedAttrsServer()
+}
+
+func RegisterAttrsServer(s grpc.ServiceRegistrar, srv AttrsServer) {
+	s.RegisterService(&Attrs_ServiceDesc, srv)
+}
+
+func _Attrs_GetAttribute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttrAttributeID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetAttribute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Attrs/GetAttribute",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetAttribute(ctx, req.(*AttrAttributeID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_GetAttributes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttrAttributesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetAttributes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Attrs/GetAttributes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetAttributes(ctx, req.(*AttrAttributesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_GetAttributeTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetAttributeTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Attrs/GetAttributeTypes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetAttributeTypes(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_GetListOptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttrListOptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetListOptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Attrs/GetListOptions",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetListOptions(ctx, req.(*AttrListOptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_GetUnits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetUnits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Attrs/GetUnits",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetUnits(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_GetZoneAttributes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttrZoneAttributesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetZoneAttributes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Attrs/GetZoneAttributes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetZoneAttributes(ctx, req.(*AttrZoneAttributesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_GetZones_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetZones(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Attrs/GetZones",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetZones(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Attrs_ServiceDesc is the grpc.ServiceDesc for Attrs service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Attrs_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Attrs",
+	HandlerType: (*AttrsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetAttribute",
+			Handler:    _Attrs_GetAttribute_Handler,
+		},
+		{
+			MethodName: "GetAttributes",
+			Handler:    _Attrs_GetAttributes_Handler,
+		},
+		{
+			MethodName: "GetAttributeTypes",
+			Handler:    _Attrs_GetAttributeTypes_Handler,
+		},
+		{
+			MethodName: "GetListOptions",
+			Handler:    _Attrs_GetListOptions_Handler,
+		},
+		{
+			MethodName: "GetUnits",
+			Handler:    _Attrs_GetUnits_Handler,
+		},
+		{
+			MethodName: "GetZoneAttributes",
+			Handler:    _Attrs_GetZoneAttributes_Handler,
+		},
+		{
+			MethodName: "GetZones",
+			Handler:    _Attrs_GetZones_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}

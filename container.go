@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Nerzal/gocloak/v13"
+	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
@@ -40,6 +41,7 @@ const readHeaderTimeout = time.Second * 30
 // Container Container.
 type Container struct {
 	articlesGRPCServer     *ArticlesGRPCServer
+	attrsRepository        *attrs.Repository
 	autowpDB               *sql.DB
 	banRepository          *ban.Repository
 	catalogue              *Catalogue
@@ -86,6 +88,7 @@ type Container struct {
 	picturesGrpcServer     *PicturesGRPCServer
 	statisticsGrpcServer   *StatisticsGRPCServer
 	forumsGrpcServer       *ForumsGRPCServer
+	attrsGRPCServer        *AttrsGRPCServer
 }
 
 // NewContainer constructor.
@@ -288,6 +291,19 @@ func (s *Container) CommentsRepository() (*comments.Repository, error) {
 
 func (s *Container) Config() config.Config {
 	return s.config
+}
+
+func (s *Container) AttrsRepository() (*attrs.Repository, error) {
+	if s.attrsRepository == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.attrsRepository = attrs.NewRepository(db)
+	}
+
+	return s.attrsRepository, nil
 }
 
 func (s *Container) ContactsRepository() (*ContactsRepository, error) {
@@ -507,6 +523,11 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
+	attrsSrv, err := s.AttrsGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	commentsSrv, err := s.CommentsGRPCServer()
 	if err != nil {
 		return nil, err
@@ -583,6 +604,7 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		),
 	)
 	RegisterArticlesServer(grpcServer, articlesSrv)
+	RegisterAttrsServer(grpcServer, attrsSrv)
 	RegisterAutowpServer(grpcServer, srv)
 	RegisterCommentsServer(grpcServer, commentsSrv)
 	RegisterContactsServer(grpcServer, contactsSrv)
@@ -961,6 +983,24 @@ func (s *Container) ArticlesGRPCServer() (*ArticlesGRPCServer, error) {
 	}
 
 	return s.articlesGRPCServer, nil
+}
+
+func (s *Container) AttrsGRPCServer() (*AttrsGRPCServer, error) {
+	if s.attrsGRPCServer == nil {
+		repository, err := s.AttrsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		s.attrsGRPCServer = NewAttrsGRPCServer(repository, s.Enforcer(), auth)
+	}
+
+	return s.attrsGRPCServer, nil
 }
 
 func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {

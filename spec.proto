@@ -137,6 +137,16 @@ service Text {
   rpc GetText(APIGetTextRequest) returns (APIGetTextResponse) {}
 }
 
+service Attrs {
+  rpc GetAttribute(AttrAttributeID) returns (AttrAttribute) {}
+  rpc GetAttributes(AttrAttributesRequest) returns (AttrAttributesResponse) {}
+  rpc GetAttributeTypes(google.protobuf.Empty) returns (AttrAttributeTypesResponse) {}
+  rpc GetListOptions(AttrListOptionsRequest) returns (AttrListOptionsResponse) {}
+  rpc GetUnits(google.protobuf.Empty) returns (AttrUnitsResponse) {}
+  rpc GetZoneAttributes(AttrZoneAttributesRequest) returns (AttrZoneAttributesResponse) {}
+  rpc GetZones(google.protobuf.Empty) returns (AttrZonesResponse) {}
+}
+
 message ErrorDetails {
   google.rpc.RetryInfo retryInfo = 1;
   google.rpc.DebugInfo debugInfo = 2;
@@ -146,6 +156,97 @@ message ErrorDetails {
   google.rpc.RequestInfo requestInfo = 6;
   google.rpc.Help help = 7;
   google.rpc.LocalizedMessage localizedMessage = 8;
+}
+
+message AttrAttributeID {
+  int64 id = 1;
+}
+
+message AttrAttributesRequest {
+  int64 zone_id = 1;
+  int64 parent_id = 2;
+}
+
+message AttrAttributesResponse {
+  repeated AttrAttribute items = 1;
+}
+
+message AttrAttribute {
+  int64 id = 1;
+  int64 parent_id = 2;
+  string name = 3;
+  string description = 4;
+  AttrAttributeType.ID type_id = 5;
+  int64 unit_id = 6;
+  bool is_multiple = 7;
+  int32 precision = 8;
+}
+
+message AttrListOptionsRequest {
+  int64 attribute_id = 1;
+}
+
+message AttrListOptionsResponse {
+  repeated AttrListOption items = 1;
+}
+
+message AttrListOption {
+  int64 id = 1;
+  string name = 2;
+  int64 attribute_id = 3;
+  int64 parent_id = 4;
+}
+
+message AttrZoneAttributesRequest {
+  int64 zone_id = 1;
+}
+
+message AttrZoneAttributesResponse {
+  repeated AttrZoneAttribute items = 1;
+}
+
+message AttrZoneAttribute {
+  int64 zone_id = 1;
+  int64 attribute_id = 2;
+}
+
+message AttrAttributeTypesResponse {
+  repeated AttrAttributeType items = 1;
+}
+
+message AttrAttributeType {
+  enum ID {
+    UNKNOWN = 0;
+    STRING = 1;
+    INTEGER = 2;
+    FLOAT = 3;
+    TEXT = 4;
+    BOOLEAN = 5;
+    LIST = 6;
+    TREE = 7;
+  }
+
+  ID id = 1;
+  string name = 2;
+}
+
+message AttrUnitsResponse {
+  repeated AttrUnit items = 1;
+}
+
+message AttrUnit {
+  int64 id = 1;
+  string name = 2;
+  string abbr = 3;
+}
+
+message AttrZonesResponse {
+  repeated AttrZone items = 1;
+}
+
+message AttrZone {
+  int64 id = 1;
+  string name = 2;
 }
 
 message PulseRequest {
