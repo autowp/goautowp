@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 
 services:
   rabbitmq:
@@ -40,6 +40,14 @@ services:
       - POSTGRES_PASSWORD=password
     ports:
       - "5432:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 8G
+        reservations:
+          cpus: "0.25"
+          memory: 128M
 
   keycloak:
     image: bitnami/keycloak:20
@@ -71,6 +79,14 @@ services:
       - POSTGRES_PASSWORD=password
     ports:
       - "5433:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 8G
+        reservations:
+          cpus: "0.25"
+          memory: 128M
 
   memcached:
     image: memcached
@@ -80,6 +96,14 @@ services:
       - "11211"
     ports:
       - "11211:11211"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 8G
+        reservations:
+          cpus: "0.25"
+          memory: 128M
 
   minio:
     image: quay.io/minio/minio
