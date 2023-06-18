@@ -25,7 +25,7 @@ test:
 
     - waitforit -address=tcp://docker:2375 -timeout=30
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u="$CI_REGISTRY_USER" --password-stdin
-    - docker-compose up -d
+    - docker-compose up -d --quiet-pull
 
     - ./tools/wait.sh
 
