@@ -31,7 +31,7 @@ services:
     - "./test:/usr/share/nginx/html:ro"
 
   postgres:
-    image: postgres:13
+    image: postgres:13-alpine
     container_name: goautowp_postgres_test
     restart: always
     environment:
@@ -70,7 +70,7 @@ services:
       - "8081:8080"
 
   postgres-keycloak:
-    image: postgres:15
+    image: postgres:13-alpine
     container_name: goautowp_postgres_keycloak_test
     restart: always
     environment:
