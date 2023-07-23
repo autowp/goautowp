@@ -111,6 +111,12 @@ languages:
     name    : Italiano
     flag    : flag-icon flag-icon-it
     aliases : []
+  he:
+    hostname: he.localhost
+    timezone: Asia/Jerusalem
+    name    : עִברִית
+    flag    : flag-icon flag-icon-he
+    aliases : []
 captcha: true
 mock-email-sender: true
 image-storage:

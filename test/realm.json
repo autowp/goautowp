@@ -192,18 +192,11 @@
                 "http://uk.localhost/*",
                 "http://zh.localhost/*",
                 "http://fr.localhost/*",
-                "http://it.localhost/*"
+                "http://it.localhost/*",
+                "http://he.localhost/*"
             ],
             "webOrigins": [
-                "http://br.localhost",
-                "http://be.localhost",
-                "http://ru.localhost",
-                "http://es.localhost",
-                "http://en.localhost",
-                "http://uk.localhost",
-                "http://zh.localhost",
-                "http://fr.localhost",
-                "http://it.localhost"
+                "+"
             ],
             "notBefore": 0,
             "bearerOnly": false,
@@ -226,7 +219,8 @@
         "es",
         "be",
         "uk",
-        "it"
+        "it",
+        "he"
     ],
     "roles": {
         "client": {
