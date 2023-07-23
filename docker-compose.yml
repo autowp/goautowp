@@ -2,7 +2,7 @@ version: '3'
 
 services:
   rabbitmq:
-    image: rabbitmq:management
+    image: rabbitmq:management-alpine
     container_name: goautowp_rabbitmq_test
     restart: always
     ports:

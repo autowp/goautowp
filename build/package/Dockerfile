@@ -1,4 +1,4 @@
-FROM ubuntu:focal as builder
+FROM ubuntu:lunar as builder
 
 ENV DEBIAN_FRONTEND=non-interactive \
     PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
@@ -35,7 +35,7 @@ COPY . $GOPATH/src/github.com/autowp/goautowp/
 RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
 
 ############################
-FROM ubuntu:focal
+FROM ubuntu:lunar
 
 LABEL app_name="autowp.goautowp" \
       maintainer="dmitry@pereslegin.ru"
@@ -55,13 +55,8 @@ RUN apt-get update -qqy && \
     apt-get install -qqy \
         ca-certificates \
         imagemagick \
-        xmlstarlet \
     && \
     update-ca-certificates && \
-    cat /etc/ImageMagick-6/policy.xml | \
-            xmlstarlet ed -u "/policymap/policy[@domain='resource'][@name='memory']/@value" -v "2GiB" | \
-            xmlstarlet ed -u "/policymap/policy[@domain='resource'][@name='disk']/@value" -v "10GiB" > /etc/ImageMagick-6/policy2.xml \
-    && \
     # See https://stackoverflow.com/a/55757473/12429735RUN
     adduser \
         --disabled-password \
@@ -71,6 +66,8 @@ RUN apt-get update -qqy && \
         --no-create-home \
         --uid "${UID}" \
         "${USER}"
+
+COPY etc/ImageMagick-6/policy.xml /etc/ImageMagick-6/policy.xml
 
 USER appuser:appuser
 
