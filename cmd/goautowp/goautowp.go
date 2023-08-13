@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -68,7 +69,7 @@ func mainReturnWithCode() int {
 	autowpApp = goautowp.NewApplication(cfg)
 	defer util.Close(autowpApp)
 
-	app := &cli.App{
+	app := &cli.Command{
 		Name:        "goautowp",
 		Description: "autowp cli interface",
 		Commands: []*cli.Command{
@@ -86,7 +87,7 @@ func mainReturnWithCode() int {
 							},
 						},
 						Action: func(cCtx *cli.Context) error {
-							i, err := autowpApp.ImageStorageGetImage(cCtx.Context, cCtx.Int("image_id"))
+							i, err := autowpApp.ImageStorageGetImage(cCtx.Context, int(cCtx.Int("image_id")))
 							if err != nil {
 								return err
 							}
@@ -113,7 +114,7 @@ func mainReturnWithCode() int {
 						Action: func(cCtx *cli.Context) error {
 							i, err := autowpApp.ImageStorageGetFormattedImage(
 								cCtx.Context,
-								cCtx.Int("image_id"),
+								int(cCtx.Int("image_id")),
 								cCtx.String("format"),
 							)
 							if err != nil {
@@ -234,7 +235,7 @@ func mainReturnWithCode() int {
 		},
 	}
 
-	if err = app.Run(os.Args); err != nil {
+	if err = app.Run(context.Background(), os.Args); err != nil {
 		logrus.Fatal(err)
 		sentry.CaptureException(err)
 
