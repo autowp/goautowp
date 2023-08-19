@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/ban"
@@ -22,7 +24,6 @@ import (
 	"github.com/autowp/goautowp/traffic"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
-	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/getsentry/sentry-go"
@@ -81,7 +82,7 @@ type Container struct {
 	trafficGrpcServer      *TrafficGRPCServer
 	usersRepository        *users.Repository
 	usersGrpcServer        *UsersGRPCServer
-	memcached              *memcache.Client
+	redis                  *redis.Client
 	auth                   *Auth
 	mapGrpcServer          *MapGRPCServer
 	picturesRepository     *pictures.Repository
@@ -926,7 +927,12 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.itemsGrpcServer = NewItemsGRPCServer(r, db, s.Memcached(), auth, s.Enforcer(), s.Config().ContentLanguages)
+		rds, err := s.Redis()
+		if err != nil {
+			return nil, err
+		}
+
+		s.itemsGrpcServer = NewItemsGRPCServer(r, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages)
 	}
 
 	return s.itemsGrpcServer, nil
@@ -1239,10 +1245,15 @@ func (s *Container) ImageStorage() (*storage.Storage, error) {
 	return s.imageStorage, nil
 }
 
-func (s *Container) Memcached() *memcache.Client {
-	if s.memcached == nil {
-		s.memcached = memcache.New(s.Config().Memcached...)
+func (s *Container) Redis() (*redis.Client, error) {
+	if s.redis == nil {
+		opts, err := redis.ParseURL(s.Config().Redis)
+		if err != nil {
+			return nil, err
+		}
+
+		s.redis = redis.NewClient(opts)
 	}
 
-	return s.memcached
+	return s.redis, nil
 }

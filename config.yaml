@@ -43,7 +43,6 @@ image-storage:
 #      height: 120
 #      background: '#fff'
 #      strip: true
-memcached:
-  - "127.0.0.1:11211"
+redis: redis://127.0.0.1:6379
 captcha: false
 message-interval: 0
