@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/redis/go-redis/v9"
 
 	"github.com/autowp/goautowp/items"
@@ -120,7 +118,6 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		logrus.Println(item)
 		err = json.Unmarshal([]byte(item), &cache)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
