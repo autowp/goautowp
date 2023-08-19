@@ -1,18 +1,21 @@
 package goautowp
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
-	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
@@ -22,7 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-const defaultCacheExpiration = 180
+const defaultCacheExpiration = 180 * time.Second
 
 const itemLinkNameMaxLength = 255
 
@@ -30,7 +33,7 @@ type ItemsGRPCServer struct {
 	UnimplementedItemsServer
 	repository       *items.Repository
 	db               *goqu.Database
-	memcached        *memcache.Client
+	redis            *redis.Client
 	auth             *Auth
 	enforcer         *casbin.Enforcer
 	contentLanguages []string
@@ -44,7 +47,7 @@ type BrandsCache struct {
 func NewItemsGRPCServer(
 	repository *items.Repository,
 	db *goqu.Database,
-	memcached *memcache.Client,
+	redis *redis.Client,
 	auth *Auth,
 	enforcer *casbin.Enforcer,
 	contentLanguages []string,
@@ -52,7 +55,7 @@ func NewItemsGRPCServer(
 	return &ItemsGRPCServer{
 		repository:       repository,
 		db:               db,
-		memcached:        memcached,
+		redis:            redis,
 		auth:             auth,
 		enforcer:         enforcer,
 		contentLanguages: contentLanguages,
@@ -67,20 +70,20 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 		return nil, status.Error(codes.Internal, "self not initialized")
 	}
 
-	if s.memcached == nil {
-		return nil, status.Error(codes.Internal, "memcached not initialized")
+	if s.redis == nil {
+		return nil, status.Error(codes.Internal, "redis not initialized")
 	}
 
 	key := "GO_TOPBRANDSLIST_3_" + in.Language
 
-	item, err := s.memcached.Get(key)
-	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
+	item, err := s.redis.Get(ctx, key).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var cache BrandsCache
 
-	if errors.Is(err, memcache.ErrCacheMiss) {
+	if errors.Is(err, redis.Nil) {
 		options := items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -107,24 +110,18 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 		cache.Items = list
 		cache.Total = count
 
-		b := new(bytes.Buffer)
-
-		err = gob.NewEncoder(b).Encode(cache)
+		b, err := json.Marshal(cache)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		err = s.memcached.Set(&memcache.Item{
-			Key:        key,
-			Value:      b.Bytes(),
-			Expiration: defaultCacheExpiration,
-		})
+		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
-		err = decoder.Decode(&cache)
+		logrus.Println(item)
+		err = json.Unmarshal([]byte(item), &cache)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -164,14 +161,14 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 
 	key := fmt.Sprintf("GO_PERSONS_3_%d_%s", pictureItemType, in.Language)
 
-	item, err := s.memcached.Get(key)
-	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
+	item, err := s.redis.Get(ctx, key).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var res []items.Item
 
-	if errors.Is(err, memcache.ErrCacheMiss) {
+	if errors.Is(err, redis.Nil) {
 		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -191,24 +188,17 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		b := new(bytes.Buffer)
-
-		err = gob.NewEncoder(b).Encode(res)
+		b, err := json.Marshal(res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		err = s.memcached.Set(&memcache.Item{
-			Key:        key,
-			Value:      b.Bytes(),
-			Expiration: defaultCacheExpiration,
-		})
+		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
-		err = decoder.Decode(&res)
+		err = json.Unmarshal([]byte(item), &res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -233,14 +223,14 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 ) (*APITopFactoriesList, error) {
 	key := fmt.Sprintf("GO_FACTORIES_3_%s", in.Language)
 
-	item, err := s.memcached.Get(key)
-	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
+	item, err := s.redis.Get(ctx, key).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var res []items.Item
 
-	if errors.Is(err, memcache.ErrCacheMiss) {
+	if errors.Is(err, redis.Nil) {
 		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -259,24 +249,17 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		b := new(bytes.Buffer)
-
-		err = gob.NewEncoder(b).Encode(res)
+		b, err := json.Marshal(res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		err = s.memcached.Set(&memcache.Item{
-			Key:        key,
-			Value:      b.Bytes(),
-			Expiration: defaultCacheExpiration,
-		})
+		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
-		err = decoder.Decode(&res)
+		err = json.Unmarshal([]byte(item), &res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -303,14 +286,14 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 ) (*APITopCategoriesList, error) {
 	key := fmt.Sprintf("GO_CATEGORIES_6_%s", in.Language)
 
-	item, err := s.memcached.Get(key)
-	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
+	item, err := s.redis.Get(ctx, key).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var res []items.Item
 
-	if errors.Is(err, memcache.ErrCacheMiss) {
+	if errors.Is(err, redis.Nil) {
 		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -327,24 +310,17 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		b := new(bytes.Buffer)
-
-		err = gob.NewEncoder(b).Encode(res)
+		b, err := json.Marshal(res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		err = s.memcached.Set(&memcache.Item{
-			Key:        key,
-			Value:      b.Bytes(),
-			Expiration: defaultCacheExpiration,
-		})
+		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
-		err = decoder.Decode(&res)
+		err = json.Unmarshal([]byte(item), &res)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -372,8 +348,8 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 ) (*APITopTwinsBrandsList, error) {
 	key := fmt.Sprintf("GO_TWINS_5_%s", in.Language)
 
-	item, err := s.memcached.Get(key)
-	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
+	item, err := s.redis.Get(ctx, key).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -385,7 +361,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 		nil,
 	}
 
-	if errors.Is(err, memcache.ErrCacheMiss) {
+	if errors.Is(err, redis.Nil) {
 		twinsData.Res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
@@ -420,24 +396,17 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		b := new(bytes.Buffer)
-
-		err = gob.NewEncoder(b).Encode(twinsData)
+		b, err := json.Marshal(twinsData)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		err = s.memcached.Set(&memcache.Item{
-			Key:        key,
-			Value:      b.Bytes(),
-			Expiration: defaultCacheExpiration,
-		})
+		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		decoder := gob.NewDecoder(bytes.NewBuffer(item.Value))
-		err = decoder.Decode(&twinsData)
+		err = json.Unmarshal([]byte(item), &twinsData)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

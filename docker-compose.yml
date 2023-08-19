@@ -88,14 +88,14 @@ services:
           cpus: "0.25"
           memory: 128M
 
-  memcached:
-    image: memcached:alpine
-    container_name: goautowp_test_memcached
+  redis:
+    image: redis:alpine
+    container_name: goautowp_test_redis
     restart: always
     expose:
-      - "11211"
+      - "6379"
     ports:
-      - "11211:11211"
+      - "6379:6379"
     deploy:
       resources:
         limits:

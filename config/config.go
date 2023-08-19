@@ -135,7 +135,7 @@ type Config struct {
 	Languages          map[string]LanguageConfig `yaml:"languages"           mapstructure:"languages"`
 	Captcha            bool                      `yaml:"captcha"             mapstructure:"captcha"`
 	ImageStorage       ImageStorageConfig        `yaml:"image-storage"       mapstructure:"image-storage"`
-	Memcached          []string                  `yaml:"memcached"           mapstructure:"memcached"`
+	Redis              string                    `yaml:"redis"               mapstructure:"redis"`
 	DonationsVodPrice  int32                     `yaml:"donations-vod-price" mapstructure:"donations-vod-price"`
 	About              AboutConfig               `yaml:"about"               mapstructure:"about"`
 	ContentLanguages   []string                  `yaml:"content-languages"   mapstructure:"content-languages"`
