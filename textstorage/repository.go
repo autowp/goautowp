@@ -27,6 +27,7 @@ func (s *Repository) Text(ctx context.Context, id int64) (string, error) {
 		Where(goqu.I("id").Eq(id))
 
 	result := ""
+
 	success, err := sqlSelect.Executor().ScanValContext(ctx, &result)
 	if err != nil {
 		return "", err

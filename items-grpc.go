@@ -968,8 +968,8 @@ func (s *ItemsGRPCServer) GetItemLanguages(
 	}
 
 	result := make([]*ItemLanguage, len(rows))
-	for idx, row := range rows {
 
+	for idx, row := range rows {
 		text := ""
 		if row.TextID > 0 {
 			text, err = s.textstorageRepository.Text(ctx, row.TextID)
