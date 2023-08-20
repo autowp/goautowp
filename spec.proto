@@ -87,6 +87,7 @@ service Items {
   rpc GetItemVehicleType(APIItemVehicleTypeRequest) returns (APIItemVehicleType) {}
   rpc CreateItemVehicleType(APIItemVehicleType) returns (google.protobuf.Empty) {}
   rpc DeleteItemVehicleType(APIItemVehicleTypeRequest) returns (google.protobuf.Empty) {}
+  rpc GetItemParentLanguages(APIGetItemParentLanguagesRequest) returns (ItemParentLanguages) {}
 }
 
 service Comments {
@@ -1032,6 +1033,22 @@ message APIGetItemVehicleTypesResponse {
 message APIItemVehicleTypeRequest {
   int64 item_id = 1;
   int64 vehicle_type_id = 2;
+}
+
+message APIGetItemParentLanguagesRequest {
+  int64 item_id = 1;
+  int64 parent_id = 2;
+}
+
+message ItemParentLanguages {
+  repeated ItemParentLanguage items = 1;
+}
+
+message ItemParentLanguage {
+  int64 item_id = 1;
+  int64 parent_id = 2;
+  string name = 3;
+  string language = 4;
 }
 
 message AddCommentRequest {

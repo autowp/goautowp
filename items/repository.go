@@ -84,6 +84,13 @@ type Item struct {
 	NewDescendantsCount int32
 }
 
+type ItemParentLanguage struct {
+	ItemID   int64
+	ParentID int64
+	Name     string
+	Language string
+}
+
 // NewRepository constructor.
 func NewRepository(
 	db *goqu.Database,
@@ -944,4 +951,35 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 	}
 
 	return updates, nil
+}
+
+func (s *Repository) ParentLanguageList(
+	ctx context.Context, itemID int64, parentID int64,
+) ([]ItemParentLanguage, error) {
+	sqSelect := s.db.Select("item_id", "parent_id", "language", "name").
+		From(goqu.T("item_parent_language")).Where(
+		goqu.I("item_id").Eq(itemID),
+		goqu.I("parent_id").Eq(parentID),
+	)
+
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
+	if err != nil {
+		return nil, err
+	}
+	defer util.Close(rows)
+
+	var result []ItemParentLanguage
+
+	for rows.Next() {
+		var r ItemParentLanguage
+
+		err = rows.Scan(r.ItemID, r.ParentID, r.Language, r.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, r)
+	}
+
+	return result, nil
 }
