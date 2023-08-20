@@ -87,6 +87,7 @@ service Items {
   rpc GetItemVehicleType(APIItemVehicleTypeRequest) returns (APIItemVehicleType) {}
   rpc CreateItemVehicleType(APIItemVehicleType) returns (google.protobuf.Empty) {}
   rpc DeleteItemVehicleType(APIItemVehicleTypeRequest) returns (google.protobuf.Empty) {}
+  rpc GetItemLanguages(APIGetItemLanguagesRequest) returns (ItemLanguages) {}
   rpc GetItemParentLanguages(APIGetItemParentLanguagesRequest) returns (ItemParentLanguages) {}
 }
 
@@ -1033,6 +1034,24 @@ message APIGetItemVehicleTypesResponse {
 message APIItemVehicleTypeRequest {
   int64 item_id = 1;
   int64 vehicle_type_id = 2;
+}
+
+message APIGetItemLanguagesRequest {
+  int64 item_id = 1;
+}
+
+message ItemLanguages {
+  repeated ItemLanguage items = 1;
+}
+
+message ItemLanguage {
+  int64 item_id = 1;
+  string language = 2;
+  string name = 3;
+  int64 text_id = 4;
+  string text = 5;
+  int64 full_text_id = 6;
+  string full_text = 7;
 }
 
 message APIGetItemParentLanguagesRequest {

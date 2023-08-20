@@ -84,6 +84,14 @@ type Item struct {
 	NewDescendantsCount int32
 }
 
+type ItemLanguage struct {
+	ItemID     int64
+	Language   string
+	Name       string
+	TextID     int64
+	FullTextID int64
+}
+
 type ItemParentLanguage struct {
 	ItemID   int64
 	ParentID int64
@@ -951,6 +959,59 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 	}
 
 	return updates, nil
+}
+
+func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLanguage, error) {
+	sqSelect := s.db.Select("item_id", "language", "name", "text_id", "full_text_id").
+		From(goqu.T("item_language")).Where(
+		goqu.I("item_id").Eq(itemID),
+		goqu.I("language").Neq("xx"),
+	)
+
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
+	if err != nil {
+		return nil, err
+	}
+	defer util.Close(rows)
+
+	var result []ItemLanguage
+
+	for rows.Next() {
+		var (
+			r              ItemLanguage
+			nullName       sql.NullString
+			nullTextID     sql.NullInt64
+			nullFullTextID sql.NullInt64
+		)
+
+		err = rows.Scan(&r.ItemID, &r.Language, &nullName, &nullTextID, &nullFullTextID)
+		if err != nil {
+			return nil, err
+		}
+
+		r.Name = ""
+		if nullName.Valid {
+			r.Name = nullName.String
+		}
+
+		r.TextID = 0
+		if nullTextID.Valid {
+			r.TextID = nullTextID.Int64
+		}
+
+		r.FullTextID = 0
+		if nullFullTextID.Valid {
+			r.FullTextID = nullFullTextID.Int64
+		}
+
+		result = append(result, r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (s *Repository) ParentLanguageList(
