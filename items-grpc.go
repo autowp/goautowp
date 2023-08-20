@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/autowp/goautowp/textstorage"
+
 	"github.com/redis/go-redis/v9"
 
 	"github.com/autowp/goautowp/items"
@@ -29,12 +31,13 @@ const itemLinkNameMaxLength = 255
 
 type ItemsGRPCServer struct {
 	UnimplementedItemsServer
-	repository       *items.Repository
-	db               *goqu.Database
-	redis            *redis.Client
-	auth             *Auth
-	enforcer         *casbin.Enforcer
-	contentLanguages []string
+	repository            *items.Repository
+	db                    *goqu.Database
+	redis                 *redis.Client
+	auth                  *Auth
+	enforcer              *casbin.Enforcer
+	contentLanguages      []string
+	textstorageRepository *textstorage.Repository
 }
 
 type BrandsCache struct {
@@ -49,14 +52,16 @@ func NewItemsGRPCServer(
 	auth *Auth,
 	enforcer *casbin.Enforcer,
 	contentLanguages []string,
+	textstorageRepository *textstorage.Repository,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
-		repository:       repository,
-		db:               db,
-		redis:            redis,
-		auth:             auth,
-		enforcer:         enforcer,
-		contentLanguages: contentLanguages,
+		repository:            repository,
+		db:                    db,
+		redis:                 redis,
+		auth:                  auth,
+		enforcer:              enforcer,
+		contentLanguages:      contentLanguages,
+		textstorageRepository: textstorageRepository,
 	}
 }
 
@@ -943,6 +948,58 @@ func (s *ItemsGRPCServer) DeleteItemVehicleType(
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) GetItemLanguages(
+	ctx context.Context, in *APIGetItemLanguagesRequest,
+) (*ItemLanguages, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	rows, err := s.repository.LanguageList(ctx, in.ItemId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result := make([]*ItemLanguage, len(rows))
+	for idx, row := range rows {
+
+		text := ""
+		if row.TextID > 0 {
+			text, err = s.textstorageRepository.Text(ctx, row.TextID)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
+		fullText := ""
+		if row.TextID > 0 {
+			fullText, err = s.textstorageRepository.Text(ctx, row.FullTextID)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
+		result[idx] = &ItemLanguage{
+			ItemId:     row.ItemID,
+			Name:       row.Name,
+			Language:   row.Language,
+			TextId:     row.TextID,
+			Text:       text,
+			FullTextId: row.FullTextID,
+			FullText:   fullText,
+		}
+	}
+
+	return &ItemLanguages{
+		Items: result,
+	}, nil
 }
 
 func (s *ItemsGRPCServer) GetItemParentLanguages(

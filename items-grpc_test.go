@@ -480,3 +480,35 @@ func TestItemParentLanguages(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestItemLanguages(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	cfg := config.LoadConfig(".")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	_, err = client.GetItemLanguages(
+		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		&APIGetItemLanguagesRequest{
+			ItemId: 1,
+		},
+	)
+	require.NoError(t, err)
+}

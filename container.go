@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/autowp/goautowp/textstorage"
+
 	"github.com/redis/go-redis/v9"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -90,6 +92,7 @@ type Container struct {
 	statisticsGrpcServer   *StatisticsGRPCServer
 	forumsGrpcServer       *ForumsGRPCServer
 	attrsGRPCServer        *AttrsGRPCServer
+	textStorageRepository  *textstorage.Repository
 }
 
 // NewContainer constructor.
@@ -932,7 +935,14 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.itemsGrpcServer = NewItemsGRPCServer(r, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages)
+		textStorageRepository, err := s.TextStorageRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.itemsGrpcServer = NewItemsGRPCServer(
+			r, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository,
+		)
 	}
 
 	return s.itemsGrpcServer, nil
@@ -1256,4 +1266,17 @@ func (s *Container) Redis() (*redis.Client, error) {
 	}
 
 	return s.redis, nil
+}
+
+func (s *Container) TextStorageRepository() (*textstorage.Repository, error) {
+	if s.textStorageRepository == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.textStorageRepository = textstorage.New(db)
+	}
+
+	return s.textStorageRepository, nil
 }
