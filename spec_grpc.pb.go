@@ -1843,6 +1843,7 @@ type ItemsClient interface {
 	GetItemVehicleType(ctx context.Context, in *APIItemVehicleTypeRequest, opts ...grpc.CallOption) (*APIItemVehicleType, error)
 	CreateItemVehicleType(ctx context.Context, in *APIItemVehicleType, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteItemVehicleType(ctx context.Context, in *APIItemVehicleTypeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetItemParentLanguages(ctx context.Context, in *APIGetItemParentLanguagesRequest, opts ...grpc.CallOption) (*ItemParentLanguages, error)
 }
 
 type itemsClient struct {
@@ -2015,6 +2016,15 @@ func (c *itemsClient) DeleteItemVehicleType(ctx context.Context, in *APIItemVehi
 	return out, nil
 }
 
+func (c *itemsClient) GetItemParentLanguages(ctx context.Context, in *APIGetItemParentLanguagesRequest, opts ...grpc.CallOption) (*ItemParentLanguages, error) {
+	out := new(ItemParentLanguages)
+	err := c.cc.Invoke(ctx, "/goautowp.Items/GetItemParentLanguages", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility
@@ -2037,6 +2047,7 @@ type ItemsServer interface {
 	GetItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*APIItemVehicleType, error)
 	CreateItemVehicleType(context.Context, *APIItemVehicleType) (*emptypb.Empty, error)
 	DeleteItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*emptypb.Empty, error)
+	GetItemParentLanguages(context.Context, *APIGetItemParentLanguagesRequest) (*ItemParentLanguages, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -2113,6 +2124,10 @@ func (UnimplementedItemsServer) CreateItemVehicleType(context.Context, *APIItemV
 
 func (UnimplementedItemsServer) DeleteItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteItemVehicleType not implemented")
+}
+
+func (UnimplementedItemsServer) GetItemParentLanguages(context.Context, *APIGetItemParentLanguagesRequest) (*ItemParentLanguages, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItemParentLanguages not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 
@@ -2451,6 +2466,24 @@ func _Items_DeleteItemVehicleType_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetItemParentLanguages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIGetItemParentLanguagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetItemParentLanguages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Items/GetItemParentLanguages",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetItemParentLanguages(ctx, req.(*APIGetItemParentLanguagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2529,6 +2562,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteItemVehicleType",
 			Handler:    _Items_DeleteItemVehicleType_Handler,
+		},
+		{
+			MethodName: "GetItemParentLanguages",
+			Handler:    _Items_GetItemParentLanguages_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

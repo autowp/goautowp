@@ -944,3 +944,35 @@ func (s *ItemsGRPCServer) DeleteItemVehicleType(
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *ItemsGRPCServer) GetItemParentLanguages(
+	ctx context.Context, in *APIGetItemParentLanguagesRequest,
+) (*ItemParentLanguages, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	rows, err := s.repository.ParentLanguageList(ctx, in.ItemId, in.ParentId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result := make([]*ItemParentLanguage, len(rows))
+	for idx, row := range rows {
+		result[idx] = &ItemParentLanguage{
+			ItemId:   row.ItemID,
+			ParentId: row.ParentID,
+			Name:     row.Name,
+			Language: row.Language,
+		}
+	}
+
+	return &ItemParentLanguages{
+		Items: result,
+	}, nil
+}
