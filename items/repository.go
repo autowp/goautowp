@@ -981,5 +981,9 @@ func (s *Repository) ParentLanguageList(
 		result = append(result, r)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
