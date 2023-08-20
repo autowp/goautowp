@@ -979,7 +979,7 @@ func (s *ItemsGRPCServer) GetItemLanguages(
 		}
 
 		fullText := ""
-		if row.TextID > 0 {
+		if row.FullTextID > 0 {
 			fullText, err = s.textstorageRepository.Text(ctx, row.FullTextID)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
