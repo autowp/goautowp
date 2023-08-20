@@ -87,8 +87,8 @@ type Item struct {
 type ItemParentLanguage struct {
 	ItemID   int64
 	ParentID int64
-	Name     string
 	Language string
+	Name     string
 }
 
 // NewRepository constructor.
@@ -973,7 +973,7 @@ func (s *Repository) ParentLanguageList(
 	for rows.Next() {
 		var r ItemParentLanguage
 
-		err = rows.Scan(r.ItemID, r.ParentID, r.Language, r.Name)
+		err = rows.Scan(&r.ItemID, &r.ParentID, &r.Language, &r.Name)
 		if err != nil {
 			return nil, err
 		}
