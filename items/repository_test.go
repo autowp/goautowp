@@ -31,7 +31,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 		options := ListOptions{
 			Language: lang,
 			Fields: ListFields{
-				Name:                true,
+				NameOnly:            true,
 				DescendantsCount:    true,
 				NewDescendantsCount: true,
 			},
@@ -64,7 +64,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	options := ListOptions{
 		Language: "en",
 		Fields: ListFields{
-			Name:             true,
+			NameOnly:         true,
 			DescendantsCount: true,
 		},
 		TypeID: []ItemType{BRAND},
@@ -75,7 +75,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	require.NotEmpty(t, r)
 
 	for _, i := range r {
-		require.NotEmpty(t, i.Name)
+		require.NotEmpty(t, i.NameOnly)
 		require.NotEmpty(t, i.Catname)
 	}
 }
