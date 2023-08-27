@@ -25,6 +25,14 @@ const (
 	TopTwinsBrandsCount = 20
 )
 
+const (
+	tableItem            = "item"
+	tableItemParent      = "item_parent"
+	tableItemParentCache = "item_parent_cache"
+	colCatname           = "catname"
+	colID                = "id"
+)
+
 type TreeItem struct {
 	ID       int64
 	Name     string
@@ -75,7 +83,7 @@ type Repository struct {
 type Item struct {
 	ID                     int64
 	Catname                string
-	Name                   string
+	NameOnly               string
 	Body                   string
 	ItemsCount             int32
 	NewItemsCount          int32
@@ -141,7 +149,7 @@ type ListPreviewPicturesFields struct {
 }
 
 type ListFields struct {
-	Name                bool
+	NameOnly            bool
 	NameHTML            bool
 	NameDefault         bool
 	Description         bool
@@ -171,6 +179,7 @@ type ListOptions struct {
 	ParentItems        *ListOptions
 	AncestorItems      *ListOptions
 	NoParents          bool
+	Catname            string
 }
 
 func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesOptions) *goqu.SelectDataset {
@@ -240,11 +249,11 @@ func applyItem( //nolint:maintidx
 		iAlias := alias + "_ic"
 		sqSelect = sqSelect.
 			Join(
-				goqu.T("item_parent").As(ipcAlias),
-				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ipcAlias).Col("parent_id"))),
+				goqu.T(tableItemParent).As(ipcAlias),
+				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipcAlias).Col("parent_id"))),
 			).
 			Join(
-				goqu.T("item").As(iAlias),
+				goqu.T(tableItem).As(iAlias),
 				goqu.On(goqu.T(ipcAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ChildItems)
@@ -259,11 +268,11 @@ func applyItem( //nolint:maintidx
 		ippAlias := alias + "_ipc"
 		sqSelect = sqSelect.
 			Join(
-				goqu.T("item_parent").As(ippAlias),
-				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ippAlias).Col("item_id"))),
+				goqu.T(tableItemParent).As(ippAlias),
+				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ippAlias).Col("item_id"))),
 			).
 			Join(
-				goqu.T("item").As(iAlias),
+				goqu.T(tableItem).As(iAlias),
 				goqu.On(goqu.I(ippAlias+".parent_id").Eq(goqu.I(iAlias+".id"))),
 			)
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ParentItems)
@@ -278,11 +287,11 @@ func applyItem( //nolint:maintidx
 		iAlias := alias + "_id"
 		sqSelect = sqSelect.
 			Join(
-				goqu.T("item_parent_cache").As(ipcdAlias),
-				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ipcdAlias).Col("parent_id"))),
+				goqu.T(tableItemParentCache).As(ipcdAlias),
+				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipcdAlias).Col("parent_id"))),
 			).
 			Join(
-				goqu.T("item").As(iAlias),
+				goqu.T(tableItem).As(iAlias),
 				goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.DescendantItems)
@@ -297,11 +306,11 @@ func applyItem( //nolint:maintidx
 		iAlias := alias + "_ia"
 		sqSelect = sqSelect.
 			Join(
-				goqu.T("item_parent_cache").As(ipcaAlias),
-				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ipcaAlias).Col("item_id"))),
+				goqu.T(tableItemParentCache).As(ipcaAlias),
+				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipcaAlias).Col("item_id"))),
 			).
 			Join(
-				goqu.T("item").As(iAlias),
+				goqu.T(tableItem).As(iAlias),
 				goqu.On(goqu.T(ipcaAlias).Col("parent_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.AncestorItems)
@@ -315,10 +324,14 @@ func applyItem( //nolint:maintidx
 		ipnpAlias := alias + "_ipnp"
 		sqSelect = sqSelect.
 			LeftJoin(
-				goqu.T("item_parent").As(ipnpAlias),
-				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ipnpAlias).Col("item_id"))),
+				goqu.T(tableItemParent).As(ipnpAlias),
+				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipnpAlias).Col("item_id"))),
 			).
 			Where(goqu.T(ipnpAlias).Col("parent_id").IsNull())
+	}
+
+	if len(options.Catname) > 0 {
+		sqSelect = sqSelect.Where(goqu.T(alias).Col(colCatname).Eq(options.Catname))
 	}
 
 	columns := make([]interface{}, 0)
@@ -360,7 +373,7 @@ func applyItem( //nolint:maintidx
 					As("new_child_items_count"))
 		}
 
-		if options.Fields.Name || options.Fields.NameText || options.Fields.NameHTML {
+		if options.SortByName || options.Fields.NameOnly || options.Fields.NameText || options.Fields.NameHTML {
 			langPriority, ok := languagePriority[options.Language]
 			if !ok {
 				return sqSelect, fmt.Errorf("language `%s` not found", options.Language)
@@ -380,7 +393,7 @@ func applyItem( //nolint:maintidx
 					LIMIT 1),
 					`+alias+`.name
 				)
-			`, s...).As("name"))
+			`, s...).As("name_only"))
 		}
 
 		if options.Fields.ItemsCount {
@@ -398,9 +411,9 @@ func applyItem( //nolint:maintidx
 				(
 					SELECT count(distinct product1.id)
 					FROM item AS product1
-						JOIN item_parent_cache ON product1.id = item_parent_cache.item_id
-					WHERE item_parent_cache.parent_id = `+alias+`.id
-						AND item_parent_cache.item_id <> item_parent_cache.parent_id
+						JOIN `+tableItemParentCache+` ON product1.id = `+tableItemParentCache+`.item_id
+					WHERE `+tableItemParentCache+`.parent_id = `+alias+`.id
+						AND `+tableItemParentCache+`.item_id <> `+tableItemParentCache+`.parent_id
 					LIMIT 1
 				) 
 			`).As("descendants_count"))
@@ -411,9 +424,9 @@ func applyItem( //nolint:maintidx
 				(
 					SELECT count(distinct product2.id)
 					FROM item AS product2
-						JOIN item_parent_cache ON product2.id = item_parent_cache.item_id
-					WHERE item_parent_cache.parent_id = `+alias+`.id
-						AND item_parent_cache.item_id <> item_parent_cache.parent_id
+						JOIN `+tableItemParentCache+` ON product2.id = `+tableItemParentCache+`.item_id
+					WHERE `+tableItemParentCache+`.parent_id = `+alias+`.id
+						AND `+tableItemParentCache+`.item_id <> `+tableItemParentCache+`.parent_id
 						AND product2.add_datetime > DATE_SUB(NOW(), INTERVAL ? DAY)
 				) 
 			`, NewDays).As("new_descendants_count"))
@@ -428,7 +441,7 @@ func applyItem( //nolint:maintidx
 func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error) {
 	var err error
 
-	sqSelect := s.db.Select(goqu.L("COUNT(1)")).From(goqu.T("item").As("i"))
+	sqSelect := s.db.Select(goqu.L("COUNT(1)")).From(goqu.T(tableItem).As("i"))
 
 	sqSelect, err = applyItem("i", sqSelect, false, &options)
 	if err != nil {
@@ -448,7 +461,7 @@ func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error
 func (s *Repository) CountDistinct(ctx context.Context, options ListOptions) (int, error) {
 	var err error
 
-	sqSelect := s.db.Select(goqu.L("COUNT(DISTINCT i.id)")).From(goqu.T("item").As("i"))
+	sqSelect := s.db.Select(goqu.L("COUNT(DISTINCT i.id)")).From(goqu.T(tableItem).As("i"))
 
 	sqSelect, err = applyItem("i", sqSelect, false, &options)
 	if err != nil {
@@ -472,8 +485,8 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 	}*/
 	var err error
 
-	sqSelect := s.db.Select("i.id", "i.catname").From(goqu.T("item").As("i")).
-		GroupBy(goqu.T("i").Col("id"))
+	sqSelect := s.db.Select("i.id", goqu.T("i").Col(colCatname)).From(goqu.T(tableItem).As("i")).
+		GroupBy(goqu.T("i").Col(colID))
 
 	sqSelect, err = applyItem("i", sqSelect, true, &options)
 	if err != nil {
@@ -523,11 +536,11 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 
 		for i, colName := range columnNames {
 			switch colName {
-			case "id":
+			case colID:
 				pointers[i] = &r.ID
-			case "name":
-				pointers[i] = &r.Name
-			case "catname":
+			case "name_only":
+				pointers[i] = &r.NameOnly
+			case colCatname:
 				pointers[i] = &catname
 			case "items_count":
 				pointers[i] = &r.ItemsCount
@@ -658,8 +671,8 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 		cl := collate.New(tag, collate.IgnoreCase, collate.IgnoreDiacritics)
 
 		sort.SliceStable(result, func(i, j int) bool {
-			a := result[i].Name
-			b := result[j].Name
+			a := result[i].NameOnly
+			b := result[j].NameOnly
 
 			switch options.Language {
 			case "ru", "uk", "be":
@@ -702,8 +715,8 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 
 	var item row
 
-	success, err := s.db.Select("id", "name", "item_type_id").From("item").
-		Where(goqu.I("id").Eq(id)).ScanStructContext(ctx, item)
+	success, err := s.db.Select(colID, "name", "item_type_id").From(tableItem).
+		Where(goqu.I(colID).Eq(id)).ScanStructContext(ctx, item)
 	if err != nil {
 		return nil, err
 	}
@@ -899,8 +912,11 @@ func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, in
 func (s *Repository) getItemVehicleTypeInheritedIDs(ctx context.Context, itemID int64) ([]int64, error) {
 	sqlSelect := s.db.From("vehicle_vehicle_type").
 		Select("vehicle_type_id").Distinct().
-		Join(goqu.T("item_parent"), goqu.On(goqu.Ex{"vehicle_vehicle_type.vehicle_id": goqu.I("item_parent.parent_id")})).
-		Where(goqu.I("item_parent.item_id").Eq(itemID))
+		Join(
+			goqu.T(tableItemParent),
+			goqu.On(goqu.Ex{"vehicle_vehicle_type.vehicle_id": goqu.T(tableItemParent).Col("parent_id")}),
+		).
+		Where(goqu.T(tableItemParent).Col("item_id").Eq(itemID))
 
 	res := make([]int64, 0)
 
@@ -962,7 +978,7 @@ type parentInfo struct {
 func (s *Repository) collectParentInfo(ctx context.Context, id int64, diff int64) (map[int64]parentInfo, error) {
 	//nolint: sqlclosecheck
 	rows, err := s.db.Select("parent_id", "type").
-		From("item_parent").
+		From(tableItemParent).
 		Where(goqu.Ex{"item_id": id}).
 		Executor().QueryContext(ctx)
 	if err != nil {
@@ -1019,7 +1035,7 @@ func (s *Repository) getChildItemsIDs(ctx context.Context, parentID int64) ([]in
 	vals := make([]int64, 0)
 
 	err := s.db.Select("item_id").
-		From("item_parent").
+		From(tableItemParent).
 		Where(goqu.Ex{"parent_id": parentID}).
 		Executor().ScanValsContext(ctx, &vals)
 	if err != nil {
@@ -1046,7 +1062,7 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 
 	//nolint: sqlclosecheck
 	stmt, err := s.db.PrepareContext(ctx, `
-   		INSERT INTO item_parent_cache (item_id, parent_id, diff, tuning, sport, design)
+   		INSERT INTO `+tableItemParentCache+` (item_id, parent_id, diff, tuning, sport, design)
 		VALUES (?, ?, ?, ?, ?, ?)
 		ON DUPLICATE KEY UPDATE
 			diff = VALUES(diff),
@@ -1082,7 +1098,7 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 		i++
 	}
 
-	_, err = s.db.Delete("item_parent_cache").Where(goqu.Ex{
+	_, err = s.db.Delete(tableItemParentCache).Where(goqu.Ex{
 		"item_id":   itemID,
 		"parent_id": goqu.Op{"notIn": keys},
 	}).Executor().ExecContext(ctx)

@@ -98,7 +98,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 		options := items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
-				Name:                true,
+				NameOnly:            true,
 				DescendantsCount:    true,
 				NewDescendantsCount: true,
 			},
@@ -142,7 +142,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 		brands[idx] = &APITopBrandsListItem{
 			Id:            b.ID,
 			Catname:       b.Catname,
-			Name:          b.Name,
+			Name:          b.NameOnly,
 			ItemsCount:    b.DescendantsCount,
 			NewItemsCount: b.NewDescendantsCount,
 		}
@@ -182,7 +182,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
-				Name: true,
+				NameOnly: true,
 			},
 			TypeID: []items.ItemType{items.PERSON},
 			DescendantPictures: &items.ItemPicturesOptions{
@@ -218,7 +218,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 	for idx, b := range res {
 		is[idx] = &APITopPersonsListItem{
 			Id:   b.ID,
-			Name: b.Name,
+			Name: b.NameOnly,
 		}
 	}
 
@@ -244,7 +244,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
-				Name:               true,
+				NameOnly:           true,
 				ChildItemsCount:    true,
 				NewChildItemsCount: true,
 			},
@@ -279,7 +279,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 	for idx, b := range res {
 		is[idx] = &APITopFactoriesListItem{
 			Id:       b.ID,
-			Name:     b.Name,
+			Name:     b.NameOnly,
 			Count:    b.ChildItemsCount,
 			NewCount: b.NewChildItemsCount,
 		}
@@ -307,7 +307,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 		res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
-				Name:                true,
+				NameOnly:            true,
 				DescendantsCount:    true,
 				NewDescendantsCount: true,
 			},
@@ -340,7 +340,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 	for idx, b := range res {
 		is[idx] = &APITopCategoriesListItem{
 			Id:       b.ID,
-			Name:     b.Name,
+			Name:     b.NameOnly,
 			Catname:  b.Catname,
 			Count:    b.DescendantsCount,
 			NewCount: b.NewDescendantsCount,
@@ -375,7 +375,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 		twinsData.Res, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
-				Name: true,
+				NameOnly: true,
 			},
 			DescendantItems: &items.ListOptions{
 				ParentItems: &items.ListOptions{
@@ -427,7 +427,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 		is[idx] = &APITwinsBrandsListItem{
 			Id:       b.ID,
 			Catname:  b.Catname,
-			Name:     b.Name,
+			Name:     b.NameOnly,
 			Count:    b.ItemsCount,
 			NewCount: b.NewItemsCount,
 		}
@@ -446,7 +446,7 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	twinsData, err := s.repository.List(ctx, items.ListOptions{
 		Language: in.Language,
 		Fields: items.ListFields{
-			Name: true,
+			NameOnly: true,
 		},
 		DescendantItems: &items.ListOptions{
 			ParentItems: &items.ListOptions{
@@ -469,7 +469,7 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 		is[idx] = &APITwinsBrandsListItem{
 			Id:       b.ID,
 			Catname:  b.Catname,
-			Name:     b.Name,
+			Name:     b.NameOnly,
 			Count:    b.ItemsCount,
 			NewCount: b.NewItemsCount,
 		}
@@ -529,7 +529,9 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		Language:  in.Language,
 		Limit:     in.Limit,
 		NoParents: in.NoParent,
+		Catname:   in.Catname,
 		Fields: items.ListFields{
+			NameOnly:         in.Fields.NameOnly,
 			NameHTML:         in.Fields.NameHtml,
 			NameText:         in.Fields.NameText,
 			NameDefault:      in.Fields.NameDefault,
