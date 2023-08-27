@@ -35,8 +35,8 @@ func (s *ItemExtractor) Extract(
 		result.NameOnly = row.NameOnly
 	}
 
-	if fields.NameText {
-		nameText, err := s.nameFormatter.FormatText(items.ItemNameFormatterOptions{
+	if fields.NameText || fields.NameHtml {
+		formatterOptions := items.ItemNameFormatterOptions{
 			BeginModelYear:         row.BeginModelYear,
 			EndModelYear:           row.EndModelYear,
 			BeginModelYearFraction: row.BeginModelYearFraction,
@@ -50,12 +50,25 @@ func (s *ItemExtractor) Extract(
 			Today:                  row.Today,
 			BeginMonth:             row.BeginMonth,
 			EndMonth:               row.EndMonth,
-		}, localizer)
-		if err != nil {
-			return nil, err
 		}
 
-		result.NameText = nameText
+		if fields.NameText {
+			nameText, err := s.nameFormatter.FormatText(formatterOptions, localizer)
+			if err != nil {
+				return nil, err
+			}
+
+			result.NameText = nameText
+		}
+
+		if fields.NameHtml {
+			nameHTML, err := s.nameFormatter.FormatHTML(formatterOptions, localizer)
+			if err != nil {
+				return nil, err
+			}
+
+			result.NameHtml = nameHTML
+		}
 	}
 
 	return result, nil
