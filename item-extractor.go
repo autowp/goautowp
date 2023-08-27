@@ -31,8 +31,8 @@ func (s *ItemExtractor) Extract(
 		DescendantsCount: row.DescendantsCount,
 	}
 
-	if fields.Name {
-		result.Name = row.Name
+	if fields.NameOnly {
+		result.NameOnly = row.NameOnly
 	}
 
 	if fields.NameText {
@@ -44,7 +44,7 @@ func (s *ItemExtractor) Extract(
 			Spec:                   row.SpecShortName,
 			SpecFull:               row.SpecName,
 			Body:                   row.Body,
-			Name:                   row.Name,
+			Name:                   row.NameOnly,
 			BeginYear:              row.BeginYear,
 			EndYear:                row.EndYear,
 			Today:                  row.Today,

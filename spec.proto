@@ -732,7 +732,7 @@ message PreviewPicturesFields {
 }
 
 message ItemFields {
-  bool name = 1;
+  bool name_only = 1;
   bool name_default = 2;
   bool name_html = 3;
   bool name_text = 4;
@@ -751,6 +751,7 @@ message ListItemsRequest {
   ItemPicturesRequest preview_pictures = 5;
   uint32 limit = 6;
   bool no_parent = 7;
+  string catname = 8;
 }
 
 message GetTreeRequest {
@@ -767,7 +768,7 @@ message APITreeItem {
 message APIItem {
   int64 id = 1;
   string catname = 2;
-  string name = 3;
+  string name_only = 3;
   string name_text = 4;
   string name_html = 5;
   int32 descendants_count = 6;
