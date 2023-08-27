@@ -116,3 +116,9 @@ func GetTextPreview(text string, options TextPreviewOptions) string {
 
 	return text
 }
+
+func BoolPtr(b bool) *bool {
+	boolVar := b
+
+	return &boolVar
+}

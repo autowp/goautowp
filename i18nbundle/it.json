@@ -1,4 +1,7 @@
 {
   "pm/user-%s-post-new-message-%s": "{{.Name}} ha pubblicato un nuovo messaggio\n{{.Message}}",
-  "pm/user-%s-replies-to-you-%s": "{{.Name}} ti ha risposto\n{{.Message}}"
+  "pm/user-%s-replies-to-you-%s": "{{.Name}} ti ha risposto\n{{.Message}}",
+  "carlist/model-years": "anno del modello",
+  "carlist/years": "anni di produzione",
+  "present-time-abbr": "pr."
 }

@@ -881,7 +881,7 @@ func (s *Repository) NextMessageTime(ctx context.Context, userID int64) (time.Ti
 		userID,
 	).Scan(&lastMessageTime, &regDate, &messagingInterval)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return time.Time{}, nil
 	}
 

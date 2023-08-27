@@ -2,33 +2,39 @@ package items
 
 import (
 	"fmt"
+	"html"
 	"strconv"
 	"time"
+
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-const textMonthFormat = "%02d."
+const (
+	textMonthFormat = "%02d."
+	htmlMonthFormat = `<small class="month">%02d.</small>`
+)
 
 const hundred = 100
 
 type ItemNameFormatter struct{}
 
 type ItemNameFormatterOptions struct {
-	BeginModelYear         int
-	EndModelYear           int
+	BeginModelYear         int32
+	EndModelYear           int32
 	BeginModelYearFraction string
 	EndModelYearFraction   string
 	Spec                   string
 	SpecFull               string
 	Body                   string
 	Name                   string
-	BeginYear              int
-	EndYear                int
+	BeginYear              int32
+	EndYear                int32
 	Today                  *bool
-	BeginMonth             int
-	EndMonth               int
+	BeginMonth             int16
+	EndMonth               int16
 }
 
-func (s *ItemNameFormatter) Format(item ItemNameFormatterOptions, language string) string {
+func (s *ItemNameFormatter) FormatText(item ItemNameFormatterOptions, localizer *i18n.Localizer) (string, error) {
 	result := item.Name
 
 	if len(item.Spec) > 0 {
@@ -60,11 +66,16 @@ func (s *ItemNameFormatter) Format(item ItemNameFormatterOptions, language strin
 	equalM := equalY && bm > 0 && em > 0 && (bm == em)
 
 	if useModelYear {
-		result = s.getModelYearsPrefix(bmy, bmyf, emy, emyf, item.Today, language) + " " + result
+		modelYearsPrefix, err := s.getModelYearsPrefix(bmy, bmyf, emy, emyf, item.Today, localizer)
+		if err != nil {
+			return "", err
+		}
+
+		result = modelYearsPrefix + " " + result
 	}
 
 	if by > 0 || ey > 0 {
-		result += " '" + s.renderYears(
+		renderedYears, err := s.renderYears(
 			item.Today,
 			by,
 			bm,
@@ -73,75 +84,183 @@ func (s *ItemNameFormatter) Format(item ItemNameFormatterOptions, language strin
 			equalS,
 			equalY,
 			equalM,
-			language,
+			localizer,
 		)
+		if err != nil {
+			return "", err
+		}
+
+		result += " '" + renderedYears
 	}
 
-	return result
+	return result, nil
+}
+
+func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, localizer *i18n.Localizer) (string, error) {
+	result := html.EscapeString(item.Name)
+
+	if len(item.Spec) > 0 {
+		attrs := `class="badge bg-info text-dark"`
+		if len(item.SpecFull) > 0 {
+			attrs += ` title="` + html.EscapeString(item.SpecFull) + `" data-toggle="tooltip" data-placement="top"`
+		}
+
+		result += " <span " + attrs + ">" + html.EscapeString(item.Spec) + "</span>"
+	}
+
+	if len(item.Body) > 0 {
+		result += " (" + html.EscapeString(item.Body) + ")"
+	}
+
+	by := item.BeginYear
+	bm := item.BeginMonth
+	ey := item.EndYear
+	em := item.EndMonth
+
+	bmy := item.BeginModelYear
+	emy := item.EndModelYear
+
+	bmyf := item.BeginModelYearFraction
+	emyf := item.EndModelYearFraction
+
+	bs := by / hundred
+	es := ey / hundred
+
+	useModelYear := bmy > 0 || emy > 0
+
+	equalS := bs > 0 && es > 0 && (bs == es)
+	equalY := equalS && by > 0 && ey > 0 && (by == ey)
+	equalM := equalY && bm > 0 && em > 0 && (bm == em)
+
+	if useModelYear {
+		modelYearsMsg, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: "carlist/model-years"})
+		if err != nil {
+			return "", err
+		}
+
+		modelYearsPrefix, err := s.getModelYearsPrefix(bmy, bmyf, emy, emyf, item.Today, localizer)
+		if err != nil {
+			return "", err
+		}
+
+		result = `<span title="` + html.EscapeString(modelYearsMsg) + `">` + html.EscapeString(modelYearsPrefix) +
+			"</span> " + result
+
+		if by > 0 || ey > 0 {
+			yearsMsg, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: "carlist/years"})
+			if err != nil {
+				return "", err
+			}
+
+			renderedYears, err := s.renderYearsHTML(
+				item.Today,
+				by,
+				bm,
+				ey,
+				em,
+				equalS,
+				equalY,
+				equalM,
+				localizer,
+			)
+			if err != nil {
+				return "", err
+			}
+
+			result += `<small> '<span class="realyears" title="` + html.EscapeString(yearsMsg) + `">` +
+				renderedYears +
+				"</span></small>"
+		}
+	} else if by > 0 || ey > 0 {
+		renderedYears, err := s.renderYearsHTML(
+			item.Today,
+			by,
+			bm,
+			ey,
+			em,
+			equalS,
+			equalY,
+			equalM,
+			localizer,
+		)
+		if err != nil {
+			return "", err
+		}
+
+		result += " '" + renderedYears
+	}
+
+	return result, nil
 }
 
 func (s *ItemNameFormatter) getModelYearsPrefix(
-	begin int,
+	begin int32,
 	beginFraction string,
-	end int,
+	end int32,
 	endFraction string,
 	today *bool,
-	_ string,
-) string {
+	localizer *i18n.Localizer,
+) (string, error) {
 	if end == begin && beginFraction == endFraction {
-		return fmt.Sprintf("%d%s", begin, endFraction)
+		return fmt.Sprintf("%d%s", begin, endFraction), nil
 	}
 
 	bms := begin / hundred //nolint: ifshort
 	ems := end / hundred   //nolint: ifshort
 
 	if bms == ems {
-		return fmt.Sprintf("%d%s–%02d%s", begin, beginFraction, end%hundred, endFraction)
+		return fmt.Sprintf("%d%s–%02d%s", begin, beginFraction, end%hundred, endFraction), nil
 	}
 
 	if begin <= 0 {
-		return fmt.Sprintf("????–%02d%s", end, endFraction)
+		return fmt.Sprintf("????–%02d%s", end, endFraction), nil
 	}
 
 	if end > 0 {
-		return fmt.Sprintf("%d%s–%d%s", begin, beginFraction, end, endFraction)
+		return fmt.Sprintf("%d%s–%d%s", begin, beginFraction, end, endFraction), nil
 	}
 
 	if today == nil || !*today {
-		return fmt.Sprintf("%d%s–??", begin, beginFraction)
+		return fmt.Sprintf("%d%s–??", begin, beginFraction), nil
 	}
 
-	currentYear := time.Now().Year()
+	currentYear := int32(time.Now().Year())
 
 	if begin >= currentYear {
-		return fmt.Sprintf("%d%s", begin, beginFraction)
+		return fmt.Sprintf("%d%s", begin, beginFraction), nil
 	}
 
-	// $this->translate('present-time-abbr', $language);
-	return fmt.Sprintf("%d%s–%s", begin, beginFraction, "pr.")
+	prMsg, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: "present-time-abbr"})
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%d%s–%s", begin, beginFraction, prMsg), nil
 }
 
 func (s *ItemNameFormatter) renderYears(
 	today *bool,
-	by int,
-	bm int,
-	ey int,
-	em int,
+	by int32,
+	bm int16,
+	ey int32,
+	em int16,
 	equalS bool,
 	equalY bool,
 	equalM bool,
-	language string,
-) string {
+	localizer *i18n.Localizer,
+) (string, error) {
+	var err error
+
 	if equalM {
-		return fmt.Sprintf(textMonthFormat+"%d", bm, by)
+		return fmt.Sprintf(textMonthFormat+"%d", bm, by), nil
 	}
 
 	if equalY {
 		if bm > 0 && em > 0 {
-			return s.monthsRange(bm, em) + "." + strconv.Itoa(by)
+			return s.monthsRange(bm, em) + "." + strconv.Itoa(int(by)), nil
 		}
 
-		return strconv.Itoa(by)
+		return strconv.Itoa(int(by)), nil
 	}
 
 	if equalS {
@@ -150,7 +269,7 @@ func (s *ItemNameFormatter) renderYears(
 			result1 = fmt.Sprintf(textMonthFormat, bm)
 		}
 
-		result1 += strconv.Itoa(by) + "–"
+		result1 += strconv.Itoa(int(by)) + "–"
 
 		result2 := ""
 		if em > 0 {
@@ -159,12 +278,12 @@ func (s *ItemNameFormatter) renderYears(
 
 		var result3 string
 		if em > 0 {
-			result3 = strconv.Itoa(ey)
+			result3 = strconv.Itoa(int(ey))
 		} else {
 			result3 = fmt.Sprintf("%02d", ey%hundred)
 		}
 
-		return result1 + result2 + result3
+		return result1 + result2 + result3, nil
 	}
 
 	result1 := ""
@@ -175,7 +294,7 @@ func (s *ItemNameFormatter) renderYears(
 	result2 := "????"
 
 	if by > 0 {
-		result2 = strconv.Itoa(by)
+		result2 = strconv.Itoa(int(by))
 	}
 
 	result3 := ""
@@ -185,30 +304,111 @@ func (s *ItemNameFormatter) renderYears(
 			result3 = fmt.Sprintf(textMonthFormat, em)
 		}
 
-		result3 = "–" + result3 + strconv.Itoa(ey)
+		result3 = "–" + result3 + strconv.Itoa(int(ey))
 	} else {
-		result3 = s.missedEndYearYearsSuffix(today, by, language)
+		result3, err = s.missedEndYearYearsSuffix(today, by, localizer)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	return result1 + result2 + result3
+	return result1 + result2 + result3, nil
 }
 
-func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int, _ string) string {
-	currentYear := time.Now().Year()
+func (s *ItemNameFormatter) renderYearsHTML(
+	today *bool,
+	by int32,
+	bm int16,
+	ey int32,
+	em int16,
+	equalS bool,
+	equalY bool,
+	equalM bool,
+	localizer *i18n.Localizer,
+) (string, error) {
+	var err error
+
+	if equalM {
+		return fmt.Sprintf(textMonthFormat+"%d", bm, by), nil
+	}
+
+	if equalY {
+		if bm > 0 && em > 0 {
+			return `<small class="month">` + s.monthsRange(bm, em) + ".</small>" + strconv.Itoa(int(by)), nil
+		}
+
+		return strconv.Itoa(int(by)), nil
+	}
+
+	if equalS {
+		result1 := ""
+		if bm > 0 {
+			result1 = fmt.Sprintf(htmlMonthFormat, bm)
+		}
+
+		result2 := ""
+		if em > 0 {
+			result2 = fmt.Sprintf(htmlMonthFormat, em)
+		}
+
+		var result3 string
+		if em > 0 {
+			result3 = strconv.Itoa(int(ey))
+		} else {
+			result3 = fmt.Sprintf("%02d", ey%hundred)
+		}
+
+		return result1 + "–" + result2 + result3, nil
+	}
+
+	result1 := ""
+	if bm > 0 {
+		result1 = fmt.Sprintf(htmlMonthFormat, bm)
+	}
+
+	result2 := "????"
+	if by > 0 {
+		result2 = strconv.Itoa(int(by))
+	}
+
+	result3 := ""
+
+	if ey > 0 {
+		if em > 0 {
+			result3 = fmt.Sprintf(htmlMonthFormat, em)
+		}
+
+		result3 = "–" + result3 + strconv.Itoa(int(ey))
+	} else {
+		result3, err = s.missedEndYearYearsSuffix(today, by, localizer)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return result1 + result2 + result3, nil
+}
+
+func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int32, localizer *i18n.Localizer) (string, error) {
+	currentYear := int32(time.Now().Year())
 
 	if by >= currentYear {
-		return ""
+		return "", nil
 	}
 
 	if today != nil && *today {
-		// s.translate('present-time-abbr', $language)
-		return "–pr."
+		prMsg, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: "present-time-abbr"})
+		if err != nil {
+			return "", err
+		}
+
+		return "–" + prMsg, nil
 	}
 
-	return "–????"
+	return "–????", nil
 }
 
-func (s *ItemNameFormatter) monthsRange(from int, to int) string {
+func (s *ItemNameFormatter) monthsRange(from int16, to int16) string {
 	result1 := "??"
 	if from > 0 {
 		result1 = fmt.Sprintf("%02d", from)

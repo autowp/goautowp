@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/autowp/goautowp/i18nbundle"
+
 	"github.com/autowp/goautowp/users"
 
 	"github.com/autowp/goautowp/image/storage"
@@ -24,12 +26,14 @@ type MapGRPCServer struct {
 	UnimplementedMapServer
 	db           *goqu.Database
 	imageStorage *storage.Storage
+	i18n         *i18nbundle.I18n
 }
 
-func NewMapGRPCServer(db *goqu.Database, imageStorage *storage.Storage) *MapGRPCServer {
+func NewMapGRPCServer(db *goqu.Database, imageStorage *storage.Storage, i18n *i18nbundle.I18n) *MapGRPCServer {
 	return &MapGRPCServer{
 		db:           db,
 		imageStorage: imageStorage,
+		i18n:         i18n,
 	}
 }
 
@@ -134,6 +138,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 		}
 
 		nameFormatter := items.ItemNameFormatter{}
+		localizer := s.i18n.Localizer(in.GetLanguage())
 
 		for rows.Next() {
 			var p orb.Point
@@ -148,19 +153,29 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			beginYear := 0
+			var beginYear int32
 			if nullableBeginYear.Valid {
-				beginYear = int(nullableBeginYear.Int32)
+				beginYear = nullableBeginYear.Int32
 			}
 
-			endYear := 0
+			var endYear int32
 			if nullableEndYear.Valid {
-				endYear = int(nullableEndYear.Int32)
+				endYear = nullableEndYear.Int32
 			}
 
 			var todayRef *bool
 			if today.Valid {
 				todayRef = &today.Bool
+			}
+
+			nameText, err := nameFormatter.FormatText(items.ItemNameFormatterOptions{
+				Name:      name,
+				BeginYear: beginYear,
+				EndYear:   endYear,
+				Today:     todayRef,
+			}, localizer)
+			if err != nil {
+				return nil, err
 			}
 
 			mapPoint := &MapPoint{
@@ -169,12 +184,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 					Lat: p.Lat(),
 					Lng: p.Lon(),
 				},
-				Name: nameFormatter.Format(items.ItemNameFormatterOptions{
-					Name:      name,
-					BeginYear: beginYear,
-					EndYear:   endYear,
-					Today:     todayRef,
-				}, in.GetLanguage()),
+				Name: nameText,
 			}
 
 			const decimal = 10
