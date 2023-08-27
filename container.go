@@ -741,6 +741,10 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 	return s.itemsRepository, nil
 }
 
+func (s *Container) ItemExtractor() (*ItemExtractor, error) {
+	return NewItemExtractor(s.Enforcer()), nil
+}
+
 func (s *Container) Auth() (*Auth, error) {
 	if s.auth == nil {
 		cfg := s.Config()
@@ -940,8 +944,18 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
+		extractor, err := s.ItemExtractor()
+		if err != nil {
+			return nil, err
+		}
+
+		i, err := s.I18n()
+		if err != nil {
+			return nil, err
+		}
+
 		s.itemsGrpcServer = NewItemsGRPCServer(
-			r, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository,
+			r, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i,
 		)
 	}
 
@@ -1082,7 +1096,12 @@ func (s *Container) MapGRPCServer() (*MapGRPCServer, error) {
 			return nil, err
 		}
 
-		s.mapGrpcServer = NewMapGRPCServer(db, imageStorage)
+		i, err := s.I18n()
+		if err != nil {
+			return nil, err
+		}
+
+		s.mapGrpcServer = NewMapGRPCServer(db, imageStorage, i)
 	}
 
 	return s.mapGrpcServer, nil

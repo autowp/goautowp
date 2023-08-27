@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/autowp/goautowp/i18nbundle"
+
 	"github.com/autowp/goautowp/textstorage"
 
 	"github.com/redis/go-redis/v9"
@@ -38,6 +40,8 @@ type ItemsGRPCServer struct {
 	enforcer              *casbin.Enforcer
 	contentLanguages      []string
 	textstorageRepository *textstorage.Repository
+	extractor             *ItemExtractor
+	i18n                  *i18nbundle.I18n
 }
 
 type BrandsCache struct {
@@ -53,6 +57,8 @@ func NewItemsGRPCServer(
 	enforcer *casbin.Enforcer,
 	contentLanguages []string,
 	textstorageRepository *textstorage.Repository,
+	extractor *ItemExtractor,
+	i18n *i18nbundle.I18n,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository:            repository,
@@ -62,6 +68,8 @@ func NewItemsGRPCServer(
 		enforcer:              enforcer,
 		contentLanguages:      contentLanguages,
 		textstorageRepository: textstorageRepository,
+		extractor:             extractor,
+		i18n:                  i18n,
 	}
 }
 
@@ -509,20 +517,27 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 }
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
+	previewPictures := items.ListPreviewPicturesFields{}
+	if in.Fields.PreviewPictures != nil {
+		previewPictures.Route = in.Fields.PreviewPictures.Route
+		previewPictures.Picture = items.ListPreviewPicturesPictureFields{
+			NameText: in.Fields.PreviewPictures.Picture.NameText,
+		}
+	}
+
 	options := items.ListOptions{
-		Limit: in.Limit,
+		Language:  in.Language,
+		Limit:     in.Limit,
+		NoParents: in.NoParent,
 		Fields: items.ListFields{
-			NameHTML:    in.Fields.NameHtml,
-			NameDefault: in.Fields.NameDefault,
-			Description: in.Fields.Description,
-			HasText:     in.Fields.HasText,
-			PreviewPictures: items.ListPreviewPicturesFields{
-				Route: in.Fields.PreviewPictures.Route,
-				Picture: items.ListPreviewPicturesPictureFields{
-					NameText: in.Fields.PreviewPictures.Picture.NameText,
-				},
-			},
-			TotalPictures: in.Fields.TotalPictures,
+			NameHTML:         in.Fields.NameHtml,
+			NameText:         in.Fields.NameText,
+			NameDefault:      in.Fields.NameDefault,
+			Description:      in.Fields.Description,
+			HasText:          in.Fields.HasText,
+			PreviewPictures:  previewPictures,
+			TotalPictures:    in.Fields.TotalPictures,
+			DescendantsCount: in.Fields.DescendantsCount,
 		},
 	}
 
@@ -563,12 +578,13 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	localizer := s.i18n.Localizer(in.Language)
+
 	is := make([]*APIItem, len(res))
 	for idx, i := range res {
-		is[idx] = &APIItem{
-			Id:      i.ID,
-			Catname: i.Catname,
-			Name:    i.Name,
+		is[idx], err = s.extractor.Extract(ctx, i, in.Fields, localizer)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -591,7 +607,7 @@ func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *APIItemLinkReques
 		FROM links
 		WHERE id = ?
 	`, in.Id).Scan(&il.Id, &il.Name, &il.Url, &il.Type, &il.ItemId)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 

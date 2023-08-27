@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/grpc/codes"
@@ -39,7 +40,7 @@ func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*A
 		"SELECT revision FROM textstorage_text WHERE id = ?",
 		in.Id,
 	).Scan(&lastRevision)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, status.Error(codes.NotFound, "NotFound")
 	}
 

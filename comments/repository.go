@@ -462,7 +462,7 @@ func (s *Repository) Add(
 			typeID, itemID, parentID,
 		).Scan(&deleted)
 
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return 0, errors.New("message not found")
 		} else if err != nil {
 			return 0, err

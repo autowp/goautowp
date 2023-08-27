@@ -732,12 +732,15 @@ message PreviewPicturesFields {
 }
 
 message ItemFields {
-  bool name_html = 1;
+  bool name = 1;
   bool name_default = 2;
-  bool description = 3;
-  bool has_text = 4;
-  PreviewPicturesFields preview_pictures = 5;
-  bool total_pictures = 6;
+  bool name_html = 3;
+  bool name_text = 4;
+  bool description = 5;
+  bool has_text = 6;
+  PreviewPicturesFields preview_pictures = 7;
+  bool total_pictures = 8;
+  bool descendants_count = 9;
 }
 
 message ListItemsRequest {
@@ -746,7 +749,8 @@ message ListItemsRequest {
   ItemType type_id = 3;
   ItemPicturesRequest descendant_pictures = 4;
   ItemPicturesRequest preview_pictures = 5;
-  uint64 limit = 6;
+  uint32 limit = 6;
+  bool no_parent = 7;
 }
 
 message GetTreeRequest {
@@ -764,6 +768,9 @@ message APIItem {
   int64 id = 1;
   string catname = 2;
   string name = 3;
+  string name_text = 4;
+  string name_html = 5;
+  int32 descendants_count = 6;
 }
 
 message APIItemList {

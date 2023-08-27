@@ -512,3 +512,57 @@ func TestItemLanguages(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestCatalogueMenuList(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	r1, err := db.ExecContext(
+		ctx, `
+			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
+			VALUES (?, 0, 3, ?, '', 0)
+		`, fmt.Sprintf("category-%d", random.Int()), fmt.Sprintf("category-%d", random.Int()),
+	)
+	require.NoError(t, err)
+
+	category, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	rep, err := cnt.ItemsRepository()
+	require.NoError(t, err)
+
+	_, err = rep.RebuildCache(ctx, category)
+	require.NoError(t, err)
+
+	conn, err := grpc.DialContext(
+		ctx, "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	r, err := client.List(ctx, &ListItemsRequest{
+		Language: "ru",
+		Fields: &ItemFields{
+			NameText:         true,
+			DescendantsCount: true,
+		},
+		Limit:    20,
+		NoParent: true,
+		TypeId:   ItemType_ITEM_TYPE_CATEGORY,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, r)
+	require.NotEmpty(t, r.Items)
+}

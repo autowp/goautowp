@@ -73,15 +73,27 @@ type Repository struct {
 }
 
 type Item struct {
-	ID                  int64
-	Catname             string
-	Name                string
-	ItemsCount          int32
-	NewItemsCount       int32
-	ChildItemsCount     int32
-	NewChildItemsCount  int32
-	DescendantsCount    int32
-	NewDescendantsCount int32
+	ID                     int64
+	Catname                string
+	Name                   string
+	Body                   string
+	ItemsCount             int32
+	NewItemsCount          int32
+	ChildItemsCount        int32
+	NewChildItemsCount     int32
+	DescendantsCount       int32
+	NewDescendantsCount    int32
+	BeginYear              int32
+	EndYear                int32
+	BeginMonth             int16
+	EndMonth               int16
+	Today                  *bool
+	BeginModelYear         int32
+	EndModelYear           int32
+	BeginModelYearFraction string
+	EndModelYearFraction   string
+	SpecName               string
+	SpecShortName          string
 }
 
 type ItemLanguage struct {
@@ -142,6 +154,7 @@ type ListFields struct {
 	NewChildItemsCount  bool
 	DescendantsCount    bool
 	NewDescendantsCount bool
+	NameText            bool
 }
 
 type ListOptions struct {
@@ -150,7 +163,7 @@ type ListOptions struct {
 	TypeID             []ItemType
 	DescendantPictures *ItemPicturesOptions
 	PreviewPictures    *ItemPicturesOptions
-	Limit              uint64
+	Limit              uint32
 	OrderBy            []exp.OrderedExpression
 	SortByName         bool
 	ChildItems         *ListOptions
@@ -205,7 +218,7 @@ func applyItemPicture(alias string, sqSelect *goqu.SelectDataset, options *ItemP
 	return sqSelect
 }
 
-func applyItem(
+func applyItem( //nolint:maintidx
 	alias string,
 	sqSelect *goqu.SelectDataset,
 	fields bool,
@@ -226,8 +239,14 @@ func applyItem(
 	if options.ChildItems != nil {
 		iAlias := alias + "_ic"
 		sqSelect = sqSelect.
-			Join(goqu.T("item_parent").As(ipcAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ipcAlias+".parent_id")))).
-			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcAlias+".item_id").Eq(goqu.I(iAlias+".id"))))
+			Join(
+				goqu.T("item_parent").As(ipcAlias),
+				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ipcAlias).Col("parent_id"))),
+			).
+			Join(
+				goqu.T("item").As(iAlias),
+				goqu.On(goqu.T(ipcAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
+			)
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ChildItems)
 
 		if err != nil {
@@ -239,8 +258,14 @@ func applyItem(
 		iAlias := alias + "_ip"
 		ippAlias := alias + "_ipc"
 		sqSelect = sqSelect.
-			Join(goqu.T("item_parent").As(ippAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ippAlias+".item_id")))).
-			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ippAlias+".parent_id").Eq(goqu.I(iAlias+".id"))))
+			Join(
+				goqu.T("item_parent").As(ippAlias),
+				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ippAlias).Col("item_id"))),
+			).
+			Join(
+				goqu.T("item").As(iAlias),
+				goqu.On(goqu.I(ippAlias+".parent_id").Eq(goqu.I(iAlias+".id"))),
+			)
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ParentItems)
 
 		if err != nil {
@@ -252,8 +277,14 @@ func applyItem(
 		ipcdAlias := alias + "_ipcd"
 		iAlias := alias + "_id"
 		sqSelect = sqSelect.
-			Join(goqu.T("item_parent_cache").As(ipcdAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ipcdAlias+".parent_id")))).
-			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcdAlias+".item_id").Eq(goqu.I(iAlias+".id"))))
+			Join(
+				goqu.T("item_parent_cache").As(ipcdAlias),
+				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ipcdAlias).Col("parent_id"))),
+			).
+			Join(
+				goqu.T("item").As(iAlias),
+				goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
+			)
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.DescendantItems)
 
 		if err != nil {
@@ -265,8 +296,14 @@ func applyItem(
 		ipcaAlias := alias + "_ipca"
 		iAlias := alias + "_ia"
 		sqSelect = sqSelect.
-			Join(goqu.T("item_parent_cache").As(ipcaAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ipcaAlias+".item_id")))).
-			Join(goqu.T("item").As(iAlias), goqu.On(goqu.I(ipcaAlias+".parent_id").Eq(goqu.I(iAlias+".id"))))
+			Join(
+				goqu.T("item_parent_cache").As(ipcaAlias),
+				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ipcaAlias).Col("item_id"))),
+			).
+			Join(
+				goqu.T("item").As(iAlias),
+				goqu.On(goqu.T(ipcaAlias).Col("parent_id").Eq(goqu.T(iAlias).Col("id"))),
+			)
 		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.AncestorItems)
 
 		if err != nil {
@@ -277,13 +314,40 @@ func applyItem(
 	if options.NoParents {
 		ipnpAlias := alias + "_ipnp"
 		sqSelect = sqSelect.
-			LeftJoin(goqu.T("item_parent").As(ipnpAlias), goqu.On(goqu.I(alias+".id").Eq(goqu.I(ipnpAlias+".item_id")))).
-			Where(goqu.I(ipnpAlias + ".parent_id").IsNull())
+			LeftJoin(
+				goqu.T("item_parent").As(ipnpAlias),
+				goqu.On(goqu.T(alias).Col("id").Eq(goqu.T(ipnpAlias).Col("item_id"))),
+			).
+			Where(goqu.T(ipnpAlias).Col("parent_id").IsNull())
 	}
 
 	columns := make([]interface{}, 0)
 
 	if fields {
+		if options.Fields.NameText || options.Fields.NameHTML {
+			isAlias := alias + "_is"
+
+			columns = append(columns,
+				goqu.C("begin_year"), goqu.C("end_year"),
+				goqu.C("begin_month"), goqu.C("end_month"),
+				goqu.C("begin_model_year"), goqu.C("end_model_year"),
+				goqu.C("begin_model_year_fraction"), goqu.C("end_model_year_fraction"),
+				goqu.C("today"),
+				goqu.C("body"),
+				goqu.T(isAlias).Col("short_name").As("spec_short_name"),
+			)
+
+			if options.Fields.NameHTML {
+				columns = append(columns, goqu.T(isAlias).Col("name").As("spec_name"))
+			}
+
+			sqSelect = sqSelect.
+				LeftJoin(
+					goqu.T("spec").As(isAlias),
+					goqu.On(goqu.T(alias).Col("spec_id").Eq(goqu.T(isAlias).Col("id"))),
+				)
+		}
+
 		if options.Fields.ChildItemsCount {
 			columns = append(columns, goqu.L("count(distinct "+ipcAlias+".item_id)").As("child_items_count"))
 		}
@@ -296,7 +360,7 @@ func applyItem(
 					As("new_child_items_count"))
 		}
 
-		if options.Fields.Name {
+		if options.Fields.Name || options.Fields.NameText || options.Fields.NameHTML {
 			langPriority, ok := languagePriority[options.Language]
 			if !ok {
 				return sqSelect, fmt.Errorf("language `%s` not found", options.Language)
@@ -401,14 +465,15 @@ func (s *Repository) CountDistinct(ctx context.Context, options ListOptions) (in
 	return count, nil
 }
 
-func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, error) {
+func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, error) { //nolint:maintidx
 	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
 		return nil, fmt.Errorf("language `%s` not found", options.Language)
 	}*/
 	var err error
 
-	sqSelect := s.db.Select("i.id", "i.catname").From(goqu.T("item").As("i")).GroupBy("i.id")
+	sqSelect := s.db.Select("i.id", "i.catname").From(goqu.T("item").As("i")).
+		GroupBy(goqu.T("i").Col("id"))
 
 	sqSelect, err = applyItem("i", sqSelect, true, &options)
 	if err != nil {
@@ -439,7 +504,20 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 	for rows.Next() {
 		var r Item
 
-		var catname sql.NullString
+		var (
+			catname                sql.NullString
+			beginYear              sql.NullInt32
+			endYear                sql.NullInt32
+			beginMonth             sql.NullInt16
+			endMonth               sql.NullInt16
+			beginModelYear         sql.NullInt32
+			endModelYear           sql.NullInt32
+			beginModelYearFraction sql.NullString
+			endModelYearFraction   sql.NullString
+			today                  sql.NullBool
+			specName               sql.NullString
+			specShortName          sql.NullString
+		)
 
 		pointers := make([]interface{}, len(columnNames))
 
@@ -463,6 +541,30 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 				pointers[i] = &r.ChildItemsCount
 			case "new_child_items_count":
 				pointers[i] = &r.NewChildItemsCount
+			case "begin_year":
+				pointers[i] = &beginYear
+			case "end_year":
+				pointers[i] = &endYear
+			case "begin_month":
+				pointers[i] = &beginMonth
+			case "end_month":
+				pointers[i] = &endMonth
+			case "begin_model_year":
+				pointers[i] = &beginModelYear
+			case "end_model_year":
+				pointers[i] = &endModelYear
+			case "begin_model_year_fraction":
+				pointers[i] = &beginModelYearFraction
+			case "end_model_year_fraction":
+				pointers[i] = &endModelYearFraction
+			case "today":
+				pointers[i] = &today
+			case "body":
+				pointers[i] = &r.Body
+			case "spec_name":
+				pointers[i] = &specName
+			case "spec_short_name":
+				pointers[i] = &specShortName
 			default:
 				pointers[i] = nil
 			}
@@ -475,6 +577,50 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 
 		if catname.Valid {
 			r.Catname = catname.String
+		}
+
+		if beginYear.Valid {
+			r.BeginYear = beginYear.Int32
+		}
+
+		if endYear.Valid {
+			r.EndYear = endYear.Int32
+		}
+
+		if beginMonth.Valid {
+			r.BeginMonth = beginMonth.Int16
+		}
+
+		if endMonth.Valid {
+			r.EndMonth = endMonth.Int16
+		}
+
+		if beginModelYear.Valid {
+			r.BeginModelYear = beginModelYear.Int32
+		}
+
+		if endModelYear.Valid {
+			r.EndModelYear = endModelYear.Int32
+		}
+
+		if beginModelYearFraction.Valid {
+			r.BeginModelYearFraction = beginModelYearFraction.String
+		}
+
+		if endModelYearFraction.Valid {
+			r.EndModelYearFraction = endModelYearFraction.String
+		}
+
+		if today.Valid {
+			r.Today = util.BoolPtr(today.Bool)
+		}
+
+		if specName.Valid {
+			r.SpecName = specName.String
+		}
+
+		if specShortName.Valid {
+			r.SpecShortName = specShortName.String
 		}
 
 		result = append(result, r)

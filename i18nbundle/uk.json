@@ -1,4 +1,7 @@
 {
   "pm/user-%s-post-new-message-%s": "{{.Name}} написав повідомлення\n{{.Message}}",
-  "pm/user-%s-replies-to-you-%s" : "{{.Name}} відповів на ваше повідомлення\n{{.Message}}"
+  "pm/user-%s-replies-to-you-%s" : "{{.Name}} відповів на ваше повідомлення\n{{.Message}}",
+  "carlist/model-years": "модельний рік",
+  "carlist/years": "роки виробництва",
+  "present-time-abbr": "н.ч."
 }
