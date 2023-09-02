@@ -35,6 +35,9 @@ const (
 	colCatname           = "catname"
 	colEngineItemID      = "engine_item_id"
 	colItemTypeID        = "item_type_id"
+	colIsConcept         = "is_concept"
+	colIsConceptInherit  = "is_concept_inherit"
+	colSpecID            = "spec_id"
 	colID                = "id"
 )
 
@@ -105,10 +108,14 @@ type Item struct {
 	EndModelYear           int32
 	BeginModelYearFraction string
 	EndModelYearFraction   string
+	SpecID                 int64
 	SpecName               string
 	SpecShortName          string
 	EngineItemID           int64
 	ItemTypeID             ItemType
+	Description            string
+	IsConcept              bool
+	IsConceptInherit       bool
 }
 
 type ItemLanguage struct {
@@ -369,7 +376,7 @@ func applyItem( //nolint:maintidx
 			sqSelect = sqSelect.
 				LeftJoin(
 					goqu.T("spec").As(isAlias),
-					goqu.On(goqu.T(alias).Col("spec_id").Eq(goqu.T(isAlias).Col("id"))),
+					goqu.On(goqu.T(alias).Col(colSpecID).Eq(goqu.T(isAlias).Col("id"))),
 				)
 		}
 
@@ -524,6 +531,9 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 		goqu.T(alias).Col(colCatname),
 		goqu.T(alias).Col(colEngineItemID),
 		goqu.T(alias).Col(colItemTypeID),
+		goqu.T(alias).Col(colIsConcept),
+		goqu.T(alias).Col(colIsConceptInherit),
+		goqu.T(alias).Col(colSpecID),
 	).From(goqu.T(tableItem).As(alias)).
 		GroupBy(goqu.T(alias).Col(colID))
 
@@ -568,6 +578,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 			beginModelYearFraction sql.NullString
 			endModelYearFraction   sql.NullString
 			today                  sql.NullBool
+			specID                 sql.NullInt64
 			specName               sql.NullString
 			specShortName          sql.NullString
 		)
@@ -586,6 +597,12 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 				pointers[i] = &engineItemID
 			case colItemTypeID:
 				pointers[i] = &r.ItemTypeID
+			case colIsConcept:
+				pointers[i] = &r.IsConcept
+			case colIsConceptInherit:
+				pointers[i] = &r.IsConceptInherit
+			case colSpecID:
+				pointers[i] = &specID
 			case "items_count":
 				pointers[i] = &r.ItemsCount
 			case "new_items_count":
@@ -674,6 +691,10 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 
 		if today.Valid {
 			r.Today = util.BoolPtr(today.Bool)
+		}
+
+		if specID.Valid {
+			r.SpecID = specID.Int64
 		}
 
 		if specName.Valid {

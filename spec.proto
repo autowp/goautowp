@@ -781,6 +781,10 @@ message APIItem {
   int32 descendants_count = 6;
   int64 engine_item_id = 7;
   ItemType item_type_id = 8;
+  string description = 9;
+  bool is_concept = 10;
+  bool is_concept_inherit = 11;
+  int64 spec_id = 12;
 }
 
 message APIItemList {

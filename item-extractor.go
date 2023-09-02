@@ -58,6 +58,9 @@ func (s *ItemExtractor) Extract(
 		EngineItemId:     row.EngineItemID,
 		DescendantsCount: row.DescendantsCount,
 		ItemTypeId:       convertItemTypeID(row.ItemTypeID),
+		IsConcept:        row.IsConcept,
+		IsConceptInherit: row.IsConceptInherit,
+		SpecId:           row.SpecID,
 	}
 
 	if fields.NameOnly {
