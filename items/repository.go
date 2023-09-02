@@ -3,6 +3,7 @@ package items
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -15,6 +16,8 @@ import (
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
+
+var ErrItemNotFound = errors.New("item not found")
 
 const (
 	TopBrandsCount      = 150
@@ -30,6 +33,8 @@ const (
 	tableItemParent      = "item_parent"
 	tableItemParentCache = "item_parent_cache"
 	colCatname           = "catname"
+	colEngineItemID      = "engine_item_id"
+	colItemTypeID        = "item_type_id"
 	colID                = "id"
 )
 
@@ -102,6 +107,8 @@ type Item struct {
 	EndModelYearFraction   string
 	SpecName               string
 	SpecShortName          string
+	EngineItemID           int64
+	ItemTypeID             ItemType
 }
 
 type ItemLanguage struct {
@@ -168,6 +175,7 @@ type ListFields struct {
 type ListOptions struct {
 	Language           string
 	Fields             ListFields
+	ItemID             int64
 	TypeID             []ItemType
 	DescendantPictures *ItemPicturesOptions
 	PreviewPictures    *ItemPicturesOptions
@@ -235,8 +243,12 @@ func applyItem( //nolint:maintidx
 ) (*goqu.SelectDataset, error) {
 	var err error
 
+	if options.ItemID > 0 {
+		sqSelect = sqSelect.Where(goqu.T(alias).Col("id").Eq(options.ItemID))
+	}
+
 	if options.TypeID != nil && len(options.TypeID) > 0 {
-		sqSelect = sqSelect.Where(goqu.Ex{alias + ".item_type_id": options.TypeID})
+		sqSelect = sqSelect.Where(goqu.T(alias).Col("item_type_id").Eq(options.TypeID))
 	}
 
 	if options.DescendantPictures != nil {
@@ -478,6 +490,26 @@ func (s *Repository) CountDistinct(ctx context.Context, options ListOptions) (in
 	return count, nil
 }
 
+func (s *Repository) Item(ctx context.Context, id int64, language string, fields ListFields) (Item, error) {
+	options := ListOptions{
+		ItemID:   id,
+		Fields:   fields,
+		Limit:    1,
+		Language: language,
+	}
+
+	res, err := s.List(ctx, options)
+	if err != nil {
+		return Item{}, err
+	}
+
+	if len(res) == 0 {
+		return Item{}, ErrItemNotFound
+	}
+
+	return res[0], nil
+}
+
 func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, error) { //nolint:maintidx
 	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
@@ -485,8 +517,15 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 	}*/
 	var err error
 
-	sqSelect := s.db.Select("i.id", goqu.T("i").Col(colCatname)).From(goqu.T(tableItem).As("i")).
-		GroupBy(goqu.T("i").Col(colID))
+	alias := "i"
+
+	sqSelect := s.db.Select(
+		goqu.T(alias).Col(colID),
+		goqu.T(alias).Col(colCatname),
+		goqu.T(alias).Col(colEngineItemID),
+		goqu.T(alias).Col(colItemTypeID),
+	).From(goqu.T(tableItem).As(alias)).
+		GroupBy(goqu.T(alias).Col(colID))
 
 	sqSelect, err = applyItem("i", sqSelect, true, &options)
 	if err != nil {
@@ -519,6 +558,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 
 		var (
 			catname                sql.NullString
+			engineItemID           sql.NullInt64
 			beginYear              sql.NullInt32
 			endYear                sql.NullInt32
 			beginMonth             sql.NullInt16
@@ -542,6 +582,10 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 				pointers[i] = &r.NameOnly
 			case colCatname:
 				pointers[i] = &catname
+			case colEngineItemID:
+				pointers[i] = &engineItemID
+			case colItemTypeID:
+				pointers[i] = &r.ItemTypeID
 			case "items_count":
 				pointers[i] = &r.ItemsCount
 			case "new_items_count":
@@ -590,6 +634,10 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 
 		if catname.Valid {
 			r.Catname = catname.String
+		}
+
+		if engineItemID.Valid {
+			r.EngineItemID = engineItemID.Int64
 		}
 
 		if beginYear.Valid {
