@@ -61,6 +61,8 @@ func (s *ItemExtractor) Extract(
 		IsConcept:        row.IsConcept,
 		IsConceptInherit: row.IsConceptInherit,
 		SpecId:           row.SpecID,
+		Description:      row.Description,
+		FullText:         row.FullText,
 	}
 
 	if fields.NameOnly {
