@@ -516,31 +516,58 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 	dest.PerspectiveID = request.PerspectiveId
 }
 
-func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
+func convertFields(fields *ItemFields) items.ListFields {
+	if fields == nil {
+		return items.ListFields{}
+	}
+
 	previewPictures := items.ListPreviewPicturesFields{}
-	if in.Fields.PreviewPictures != nil {
-		previewPictures.Route = in.Fields.PreviewPictures.Route
+	if fields.PreviewPictures != nil {
+		previewPictures.Route = fields.PreviewPictures.Route
 		previewPictures.Picture = items.ListPreviewPicturesPictureFields{
-			NameText: in.Fields.PreviewPictures.Picture.NameText,
+			NameText: fields.PreviewPictures.Picture.NameText,
 		}
 	}
 
+	result := items.ListFields{
+		NameOnly:         fields.NameOnly,
+		NameHTML:         fields.NameHtml,
+		NameText:         fields.NameText,
+		NameDefault:      fields.NameDefault,
+		Description:      fields.Description,
+		HasText:          fields.HasText,
+		PreviewPictures:  previewPictures,
+		TotalPictures:    fields.TotalPictures,
+		DescendantsCount: fields.DescendantsCount,
+	}
+
+	return result
+}
+
+func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, error) {
+	fields := convertFields(in.Fields)
+
+	res, err := s.repository.Item(ctx, in.Id, in.Language, fields)
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	localizer := s.i18n.Localizer(in.Language)
+
+	return s.extractor.Extract(ctx, res, in.Fields, localizer)
+}
+
+func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
 	options := items.ListOptions{
 		Language:  in.Language,
 		Limit:     in.Limit,
 		NoParents: in.NoParent,
 		Catname:   in.Catname,
-		Fields: items.ListFields{
-			NameOnly:         in.Fields.NameOnly,
-			NameHTML:         in.Fields.NameHtml,
-			NameText:         in.Fields.NameText,
-			NameDefault:      in.Fields.NameDefault,
-			Description:      in.Fields.Description,
-			HasText:          in.Fields.HasText,
-			PreviewPictures:  previewPictures,
-			TotalPictures:    in.Fields.TotalPictures,
-			DescendantsCount: in.Fields.DescendantsCount,
-		},
+		Fields:    convertFields(in.Fields),
 	}
 
 	switch in.TypeId {

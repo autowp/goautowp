@@ -75,6 +75,7 @@ service Items {
   rpc GetTopCategoriesList(GetTopCategoriesListRequest) returns (APITopCategoriesList) {}
   rpc GetTwinsBrandsList(GetTwinsBrandsListRequest) returns (APITwinsBrandsList) {}
   rpc GetTopTwinsBrandsList(GetTopTwinsBrandsListRequest) returns (APITopTwinsBrandsList) {}
+  rpc Item(ItemRequest) returns (APIItem) {}
   rpc List(ListItemsRequest) returns (APIItemList) {}
   rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
   rpc GetContentLanguages(google.protobuf.Empty) returns (APIContentLanguages) {}
@@ -743,6 +744,12 @@ message ItemFields {
   bool descendants_count = 9;
 }
 
+message ItemRequest {
+  string language = 1;
+  int64 id = 2;
+  ItemFields fields = 3;
+}
+
 message ListItemsRequest {
   string language = 1;
   ItemFields fields = 2;
@@ -772,6 +779,8 @@ message APIItem {
   string name_text = 4;
   string name_html = 5;
   int32 descendants_count = 6;
+  int64 engine_item_id = 7;
+  ItemType item_type_id = 8;
 }
 
 message APIItemList {
