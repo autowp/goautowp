@@ -785,6 +785,7 @@ message APIItem {
   bool is_concept = 10;
   bool is_concept_inherit = 11;
   int64 spec_id = 12;
+  string full_text = 13;
 }
 
 message APIItemList {

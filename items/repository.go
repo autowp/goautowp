@@ -32,6 +32,7 @@ const (
 	tableItem            = "item"
 	tableItemParent      = "item_parent"
 	tableItemParentCache = "item_parent_cache"
+	tableItemLanguage    = "item_language"
 	colCatname           = "catname"
 	colEngineItemID      = "engine_item_id"
 	colItemTypeID        = "item_type_id"
@@ -114,6 +115,7 @@ type Item struct {
 	EngineItemID           int64
 	ItemTypeID             ItemType
 	Description            string
+	FullText               string
 	IsConcept              bool
 	IsConceptInherit       bool
 }
@@ -167,6 +169,7 @@ type ListFields struct {
 	NameHTML            bool
 	NameDefault         bool
 	Description         bool
+	FullText            bool
 	HasText             bool
 	PreviewPictures     ListPreviewPicturesFields
 	TotalPictures       bool
@@ -242,7 +245,7 @@ func applyItemPicture(alias string, sqSelect *goqu.SelectDataset, options *ItemP
 	return sqSelect
 }
 
-func applyItem( //nolint:maintidx
+func (s *Repository) applyItem( //nolint:maintidx
 	alias string,
 	sqSelect *goqu.SelectDataset,
 	fields bool,
@@ -275,7 +278,7 @@ func applyItem( //nolint:maintidx
 				goqu.T(tableItem).As(iAlias),
 				goqu.On(goqu.T(ipcAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
-		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ChildItems)
+		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ChildItems)
 
 		if err != nil {
 			return sqSelect, err
@@ -284,7 +287,7 @@ func applyItem( //nolint:maintidx
 
 	if options.ParentItems != nil {
 		iAlias := alias + "_ip"
-		ippAlias := alias + "_ipc"
+		ippAlias := alias + "_ipp"
 		sqSelect = sqSelect.
 			Join(
 				goqu.T(tableItemParent).As(ippAlias),
@@ -294,7 +297,7 @@ func applyItem( //nolint:maintidx
 				goqu.T(tableItem).As(iAlias),
 				goqu.On(goqu.I(ippAlias+".parent_id").Eq(goqu.I(iAlias+".id"))),
 			)
-		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.ParentItems)
+		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ParentItems)
 
 		if err != nil {
 			return sqSelect, err
@@ -313,7 +316,7 @@ func applyItem( //nolint:maintidx
 				goqu.T(tableItem).As(iAlias),
 				goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
-		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.DescendantItems)
+		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.DescendantItems)
 
 		if err != nil {
 			return sqSelect, err
@@ -332,7 +335,7 @@ func applyItem( //nolint:maintidx
 				goqu.T(tableItem).As(iAlias),
 				goqu.On(goqu.T(ipcaAlias).Col("parent_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
-		sqSelect, err = applyItem(iAlias, sqSelect, fields, options.AncestorItems)
+		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.AncestorItems)
 
 		if err != nil {
 			return sqSelect, err
@@ -378,6 +381,45 @@ func applyItem( //nolint:maintidx
 					goqu.T("spec").As(isAlias),
 					goqu.On(goqu.T(alias).Col(colSpecID).Eq(goqu.T(isAlias).Col("id"))),
 				)
+		}
+
+		if options.Fields.Description {
+			ilAlias := alias + "_ild"
+
+			columns = append(columns,
+				s.db.Select(goqu.T("textstorage_text").Col("text")).
+					From(goqu.T(tableItemLanguage).As(ilAlias)).
+					Join(
+						goqu.T("textstorage_text"),
+						goqu.On(goqu.T(ilAlias).Col("text_id").Eq(goqu.T("textstorage_text").Col("id"))),
+					).
+					Where(
+						goqu.T(ilAlias).Col("item_id").Eq(goqu.T(alias).Col(colID)),
+						goqu.Func("length", goqu.T("textstorage_text").Col("text")).Gt(0),
+					).
+					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
+					Limit(1).
+					As("description"),
+			)
+		}
+
+		if options.Fields.FullText {
+			ilAlias := alias + "_ilf"
+			columns = append(columns,
+				s.db.Select(goqu.T("textstorage_text").Col("text")).
+					From(goqu.T(tableItemLanguage).As(ilAlias)).
+					Join(
+						goqu.T("textstorage_text"),
+						goqu.On(goqu.T(ilAlias).Col("full_text_id").Eq(goqu.T("textstorage_text").Col("id"))),
+					).
+					Where(
+						goqu.T(ilAlias).Col("item_id").Eq(goqu.T(alias).Col(colID)),
+						goqu.Func("length", goqu.T("textstorage_text").Col("text")).Gt(0),
+					).
+					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
+					Limit(1).
+					As("full_text"),
+			)
 		}
 
 		if options.Fields.ChildItemsCount {
@@ -462,7 +504,7 @@ func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error
 
 	sqSelect := s.db.Select(goqu.L("COUNT(1)")).From(goqu.T(tableItem).As("i"))
 
-	sqSelect, err = applyItem("i", sqSelect, false, &options)
+	sqSelect, err = s.applyItem("i", sqSelect, false, &options)
 	if err != nil {
 		return 0, err
 	}
@@ -482,7 +524,7 @@ func (s *Repository) CountDistinct(ctx context.Context, options ListOptions) (in
 
 	sqSelect := s.db.Select(goqu.L("COUNT(DISTINCT i.id)")).From(goqu.T(tableItem).As("i"))
 
-	sqSelect, err = applyItem("i", sqSelect, false, &options)
+	sqSelect, err = s.applyItem("i", sqSelect, false, &options)
 	if err != nil {
 		return 0, err
 	}
@@ -537,7 +579,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 	).From(goqu.T(tableItem).As(alias)).
 		GroupBy(goqu.T(alias).Col(colID))
 
-	sqSelect, err = applyItem("i", sqSelect, true, &options)
+	sqSelect, err = s.applyItem("i", sqSelect, true, &options)
 	if err != nil {
 		return nil, err
 	}
@@ -581,6 +623,8 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 			specID                 sql.NullInt64
 			specName               sql.NullString
 			specShortName          sql.NullString
+			description            sql.NullString
+			fullText               sql.NullString
 		)
 
 		pointers := make([]interface{}, len(columnNames))
@@ -603,6 +647,10 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 				pointers[i] = &r.IsConceptInherit
 			case colSpecID:
 				pointers[i] = &specID
+			case "description":
+				pointers[i] = &description
+			case "full_text":
+				pointers[i] = &fullText
 			case "items_count":
 				pointers[i] = &r.ItemsCount
 			case "new_items_count":
@@ -703,6 +751,14 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 
 		if specShortName.Valid {
 			r.SpecShortName = specShortName.String
+		}
+
+		if description.Valid {
+			r.Description = description.String
+		}
+
+		if fullText.Valid {
+			r.FullText = fullText.String
 		}
 
 		result = append(result, r)
@@ -1194,7 +1250,7 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 
 func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLanguage, error) {
 	sqSelect := s.db.Select("item_id", "language", "name", "text_id", "full_text_id").
-		From(goqu.T("item_language")).Where(
+		From(goqu.T(tableItemLanguage)).Where(
 		goqu.I("item_id").Eq(itemID),
 		goqu.I("language").Neq("xx"),
 	)
