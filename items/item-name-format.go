@@ -346,6 +346,8 @@ func (s *ItemNameFormatter) renderYearsHTML(
 			result1 = fmt.Sprintf(htmlMonthFormat, bm)
 		}
 
+		result1 += strconv.Itoa(int(by)) + "–"
+
 		result2 := ""
 		if em > 0 {
 			result2 = fmt.Sprintf(htmlMonthFormat, em)
@@ -358,7 +360,7 @@ func (s *ItemNameFormatter) renderYearsHTML(
 			result3 = fmt.Sprintf("%02d", ey%hundred)
 		}
 
-		return result1 + "–" + result2 + result3, nil
+		return result1 + result2 + result3, nil
 	}
 
 	result1 := ""
