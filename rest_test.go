@@ -36,7 +36,10 @@ func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{authorizationHeader: bearerPrefix}))
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		metadata.New(map[string]string{authorizationHeader: bearerPrefix}),
+	)
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.Error(t, err)
