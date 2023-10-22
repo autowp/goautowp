@@ -114,7 +114,7 @@ services:
       MINIO_ROOT_USER: "AKIAIOSFODNN7EXAMPLE"
       MINIO_ROOT_PASSWORD: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
     ports:
-      #- "9000:9000"
+      - "19000:9000"
       - "9001:9001"
     volumes:
       - "./minio/data:/data"

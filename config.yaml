@@ -4,11 +4,11 @@ public-rest:
       - http://localhost
 image-storage:
   src-override:
-    host: 127.0.0.1:9000
+    host: 127.0.0.1:19000
     scheme: http
   s3:
     region: "us-east-1"
-    endpoint: http://127.0.0.1:9000
+    endpoint: http://127.0.0.1:19000
     credentials:
       key: "AKIAIOSFODNN7EXAMPLE"
       secret: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
