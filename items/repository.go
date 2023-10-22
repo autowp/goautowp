@@ -383,13 +383,20 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 	if len(options.Name) > 0 {
 		itemLanguageTable := goqu.T(tableItemLanguage)
+		subSelect := sqSelect.ClearSelect()
 
-		sqSelect = sqSelect.
-			Join(
-				itemLanguageTable,
-				goqu.On(aliasIDCol.Eq(itemLanguageTable.Col("item_id"))),
-			).
-			Where(itemLanguageTable.Col("name").Like(options.Name))
+		// WHERE EXISTS(SELECT item_id FROM item_language WHERE item.id = item_id AND name ILIKE ?)
+		sqSelect = sqSelect.Where(
+			goqu.L(
+				"EXISTS ?",
+				subSelect.
+					From(itemLanguageTable).
+					Where(
+						aliasIDCol.Eq(itemLanguageTable.Col("item_id")),
+						itemLanguageTable.Col("name").ILike(options.Name),
+					),
+			),
+		)
 	}
 
 	if fields {
@@ -626,8 +633,9 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 
 	if options.Limit > 0 {
 		paginator := util.Paginator{
-			SQLSelect:        sqSelect,
-			ItemCountPerPage: int32(options.Limit),
+			SQLSelect:         sqSelect,
+			ItemCountPerPage:  int32(options.Limit),
+			CurrentPageNumber: int32(options.Page),
 		}
 
 		pages, err = paginator.GetPages(ctx)
@@ -635,7 +643,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 			return nil, nil, err
 		}
 
-		sqSelect, err = paginator.GetItemsByPage(ctx, int32(options.Page))
+		sqSelect, err = paginator.GetCurrentItems(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
