@@ -6,3 +6,7 @@ const (
 	adminUsername = "admin"
 	adminPassword = "123123"
 )
+
+const bearerPrefix = "Bearer "
+
+const authorizationHeader = "authorization"

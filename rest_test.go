@@ -36,7 +36,7 @@ func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{"authorization": "Bearer "}))
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{authorizationHeader: bearerPrefix}))
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
 	require.Error(t, err)
@@ -52,7 +52,7 @@ func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
 
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer abc"}),
+		metadata.New(map[string]string{authorizationHeader: bearerPrefix + "abc"}),
 	)
 
 	_, err = srv.GetVehicleTypes(ctx, &emptypb.Empty{})
@@ -70,7 +70,7 @@ func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
 		metadata.New(map[string]string{
-			"authorization": "Bearer " + tokenWithInvalidSignature,
+			authorizationHeader: bearerPrefix + tokenWithInvalidSignature,
 		}),
 	)
 
@@ -99,7 +99,7 @@ func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 	_, err = srv.GetVehicleTypes(
 		metadata.NewIncomingContext(
 			ctx,
-			metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
+			metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
 		),
 		&emptypb.Empty{},
 	)
@@ -127,7 +127,7 @@ func TestGetVehicleTypes(t *testing.T) {
 	result, err := srv.GetVehicleTypes(
 		metadata.NewIncomingContext(
 			ctx,
-			metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
+			metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
 		),
 		&emptypb.Empty{},
 	)

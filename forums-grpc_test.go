@@ -37,7 +37,7 @@ func TestGetThemes(t *testing.T) {
 	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
 
 	themes, err := client.GetThemes(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&APIGetForumsThemesRequest{},
 	)
 	require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestGetTheme(t *testing.T) {
 	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
 
 	theme, err := client.GetTheme(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&APIGetForumsThemeRequest{Id: 2},
 	)
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
 
 	topicID, err := client.CreateTopic(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&APICreateTopicRequest{
 			ThemeId:            2,
 			Name:               "Topic name",
@@ -112,21 +112,21 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 	require.NotEmpty(t, topicID)
 
 	topic, err := client.GetLastTopic(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&APIGetForumsThemeRequest{Id: 2},
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, topic)
 
 	message, err := client.GetLastMessage(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&APIGetForumsTopicRequest{Id: topic.Id},
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, message)
 
 	topics, err := client.GetTopics(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&APIGetForumsTopicsRequest{ThemeId: 2, Page: 1},
 	)
 	require.NoError(t, err)

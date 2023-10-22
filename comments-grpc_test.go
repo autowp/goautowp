@@ -14,10 +14,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const bearerPrefix = "Bearer "
-
-const authorizationHeader = "authorization"
-
 //nolint:unparam
 func getUserWithCleanHistory(
 	t *testing.T,
@@ -187,7 +183,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 	_, user2Token := getUserWithCleanHistory(t, conn, cfg, db, adminUsername, adminPassword)
 
 	response, err := client.Add(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+user1Token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+user1Token),
 		&AddCommentRequest{
 			ItemId:             1,
 			TypeId:             CommentsType_ARTICLES_TYPE_ID,
@@ -201,7 +197,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 	require.NotEmpty(t, response.Id)
 
 	response, err = client.Add(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+user2Token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+user2Token),
 		&AddCommentRequest{
 			ItemId:             1,
 			TypeId:             CommentsType_ARTICLES_TYPE_ID,
@@ -216,7 +212,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 
 	messagesClient := NewMessagingClient(conn)
 	messages, err := messagesClient.GetMessages(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+user1Token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+user1Token),
 		&MessagingGetMessagesRequest{
 			Folder: "system",
 			Page:   1,

@@ -294,7 +294,7 @@ func TestItemLinks(t *testing.T) {
 	client := NewItemsClient(conn)
 
 	r1, err := client.CreateItemLink(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemLink{
 			Name:   "Link 1 ",
 			Url:    " https://example.org",
@@ -318,7 +318,7 @@ func TestItemLinks(t *testing.T) {
 	require.Equal(t, int64(1), r2.ItemId)
 
 	_, err = client.UpdateItemLink(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemLink{
 			Id:     r1.Id,
 			Name:   "Link 2",
@@ -372,7 +372,7 @@ func TestItemVehicleTypes(t *testing.T) {
 	client := NewItemsClient(conn)
 
 	_, err = client.CreateItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemVehicleType{
 			ItemId:        1,
 			VehicleTypeId: 1,
@@ -381,7 +381,7 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.NoError(t, err)
 
 	r2, err := client.GetItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemVehicleTypeRequest{
 			ItemId:        1,
 			VehicleTypeId: 1,
@@ -392,7 +392,7 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.Equal(t, int64(1), r2.VehicleTypeId)
 
 	_, err = client.CreateItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemVehicleType{
 			ItemId:        1,
 			VehicleTypeId: 2,
@@ -401,7 +401,7 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.NoError(t, err)
 
 	r4, err := client.GetItemVehicleTypes(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIGetItemVehicleTypesRequest{
 			ItemId: 1,
 		},
@@ -410,7 +410,7 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.Len(t, r4.Items, 2)
 
 	_, err = client.DeleteItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemVehicleTypeRequest{
 			ItemId:        1,
 			VehicleTypeId: 1,
@@ -419,7 +419,7 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.NoError(t, err)
 
 	r6, err := client.GetItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemVehicleTypeRequest{
 			ItemId:        1,
 			VehicleTypeId: 2,
@@ -430,7 +430,7 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.Equal(t, int64(2), r6.VehicleTypeId)
 
 	_, err = client.GetItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemVehicleTypeRequest{
 			ItemId:        1,
 			VehicleTypeId: 1,
@@ -439,7 +439,7 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.Error(t, err)
 
 	r8, err := client.GetItemVehicleTypes(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIGetItemVehicleTypesRequest{
 			ItemId: 1,
 		},
@@ -472,7 +472,7 @@ func TestItemParentLanguages(t *testing.T) {
 	client := NewItemsClient(conn)
 
 	_, err = client.GetItemParentLanguages(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIGetItemParentLanguagesRequest{
 			ItemId:   1,
 			ParentId: 1,
@@ -505,7 +505,7 @@ func TestItemLanguages(t *testing.T) {
 	client := NewItemsClient(conn)
 
 	_, err = client.GetItemLanguages(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIGetItemLanguagesRequest{
 			ItemId: 1,
 		},

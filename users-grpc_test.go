@@ -72,7 +72,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NotNil(t, token)
 
 	me, err := client.Me(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
@@ -102,7 +102,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NotNil(t, adminToken)
 
 	_, err = client.DeleteUser(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIDeleteUserRequest{UserId: me.Id, Password: password},
 	)
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	require.NotNil(t, token)
 
 	me, err := client.Me(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
@@ -202,20 +202,20 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 
 	// tester (me)
 	tester, err := client.Me(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
 
 	// disable
 	_, err = client.DisableUserCommentsNotifications(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIUserPreferencesRequest{UserId: tester.Id},
 	)
 	require.NoError(t, err)
 
 	res1, err := client.GetUserPreferences(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIUserPreferencesRequest{UserId: tester.Id},
 	)
 	require.NoError(t, err)
@@ -223,13 +223,13 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 
 	// enable
 	_, err = client.EnableUserCommentsNotifications(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIUserPreferencesRequest{UserId: tester.Id},
 	)
 	require.NoError(t, err)
 
 	res2, err := client.GetUserPreferences(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIUserPreferencesRequest{UserId: tester.Id},
 	)
 	require.NoError(t, err)
@@ -262,7 +262,7 @@ func TestGetOnlineUsers(t *testing.T) {
 
 	// touch last_online for tester
 	_, err = client.Me(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)

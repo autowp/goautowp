@@ -33,7 +33,7 @@ func TestHttpBanPost(t *testing.T) {
 
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
+		metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
 	)
 
 	_, err = trafficSrv.DeleteFromBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
@@ -79,7 +79,7 @@ func TestTop(t *testing.T) {
 
 	ctx := metadata.NewIncomingContext(
 		context.Background(),
-		metadata.New(map[string]string{"authorization": "Bearer " + token.AccessToken}),
+		metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
 	)
 
 	_, err = srv.GetTop(ctx, &emptypb.Empty{})
