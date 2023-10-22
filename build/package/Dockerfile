@@ -1,4 +1,4 @@
-FROM ubuntu:lunar as builder
+FROM ubuntu:mantic as builder
 
 ENV DEBIAN_FRONTEND=non-interactive \
     PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
@@ -35,7 +35,7 @@ COPY . $GOPATH/src/github.com/autowp/goautowp/
 RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
 
 ############################
-FROM ubuntu:lunar
+FROM ubuntu:mantic
 
 LABEL app_name="autowp.goautowp" \
       maintainer="dmitry@pereslegin.ru"

@@ -481,6 +481,8 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 }
 
 func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
+	dest.OwnerID = request.OwnerId
+
 	switch request.Status {
 	case PictureStatus_PICTURE_STATUS_UNKNOWN:
 	case PictureStatus_PICTURE_STATUS_ACCEPTED:
@@ -494,12 +496,14 @@ func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
 	}
 
 	if request.ItemPicture != nil {
+		dest.ItemPicture = &items.ItemPicturesOptions{}
 		mapItemPicturesRequest(request.ItemPicture, dest.ItemPicture)
 	}
 }
 
 func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPicturesOptions) {
 	if request.Pictures != nil {
+		dest.Pictures = &items.PicturesOptions{}
 		mapPicturesRequest(request.Pictures, dest.Pictures)
 	}
 
@@ -530,15 +534,16 @@ func convertFields(fields *ItemFields) items.ListFields {
 	}
 
 	result := items.ListFields{
-		NameOnly:         fields.NameOnly,
-		NameHTML:         fields.NameHtml,
-		NameText:         fields.NameText,
-		NameDefault:      fields.NameDefault,
-		Description:      fields.Description,
-		HasText:          fields.HasText,
-		PreviewPictures:  previewPictures,
-		TotalPictures:    fields.TotalPictures,
-		DescendantsCount: fields.DescendantsCount,
+		NameOnly:             fields.NameOnly,
+		NameHTML:             fields.NameHtml,
+		NameText:             fields.NameText,
+		NameDefault:          fields.NameDefault,
+		Description:          fields.Description,
+		HasText:              fields.HasText,
+		PreviewPictures:      previewPictures,
+		TotalPictures:        fields.TotalPictures,
+		DescendantsCount:     fields.DescendantsCount,
+		CurrentPicturesCount: fields.CurrentPicturesCount,
 	}
 
 	return result
@@ -570,6 +575,11 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		Fields:    convertFields(in.Fields),
 	}
 
+	switch in.Order {
+	case ListItemsRequest_NAME_NAT:
+		options.SortByName = true
+	}
+
 	switch in.TypeId {
 	case ItemType_ITEM_TYPE_UNKNOWN:
 	case ItemType_ITEM_TYPE_VEHICLE:
@@ -595,10 +605,12 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 	}
 
 	if in.DescendantPictures != nil {
+		options.DescendantPictures = &items.ItemPicturesOptions{}
 		mapItemPicturesRequest(in.DescendantPictures, options.DescendantPictures)
 	}
 
 	if in.PreviewPictures != nil {
+		options.PreviewPictures = &items.ItemPicturesOptions{}
 		mapItemPicturesRequest(in.PreviewPictures, options.PreviewPictures)
 	}
 
