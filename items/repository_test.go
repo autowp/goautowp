@@ -52,7 +52,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 			OrderBy:    []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
 			SortByName: true,
 		}
-		r, err := repository.List(ctx, options)
+		r, _, err := repository.List(ctx, options)
 		require.NoError(t, err)
 		require.NotEmpty(t, r)
 
@@ -82,7 +82,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 		TypeID: []ItemType{BRAND},
 		Limit:  10,
 	}
-	r, err := repository.List(ctx, options)
+	r, _, err := repository.List(ctx, options)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 
@@ -203,7 +203,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 		Limit:      10,
 		SortByName: true,
 	}
-	r, err := repository.List(ctx, options)
+	r, _, err := repository.List(ctx, options)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 
