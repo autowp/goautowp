@@ -60,6 +60,7 @@ func (s *Paginator) calculateCount(ctx context.Context) (int32, error) {
 	res, err := s.SQLSelect.ClearOrder().
 		ClearOffset().
 		ClearLimit().
+		GroupBy().
 		ClearSelect().
 		Prepared(true).
 		CountContext(ctx)
@@ -79,19 +80,19 @@ func (s *Paginator) getItemCountPerPage() int32 {
 }
 
 func MinMax(array []int32) (int32, int32) {
-	max, min := array[0], array[0]
+	maxValue, minValue := array[0], array[0]
 
 	for _, value := range array {
-		if max < value {
-			max = value
+		if maxValue < value {
+			maxValue = value
 		}
 
-		if min > value {
-			min = value
+		if minValue > value {
+			minValue = value
 		}
 	}
 
-	return min, max
+	return minValue, maxValue
 }
 
 func (s *Paginator) GetPages(ctx context.Context) (*Pages, error) {

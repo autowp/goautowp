@@ -193,6 +193,7 @@ type ListOptions struct {
 	DescendantPictures *ItemPicturesOptions
 	PreviewPictures    *ItemPicturesOptions
 	Limit              uint32
+	Page               uint32
 	OrderBy            []exp.OrderedExpression
 	SortByName         bool
 	ChildItems         *ListOptions
@@ -201,6 +202,7 @@ type ListOptions struct {
 	AncestorItems      *ListOptions
 	NoParents          bool
 	Catname            string
+	Name               string
 }
 
 func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesOptions) *goqu.SelectDataset {
@@ -263,12 +265,15 @@ func (s *Repository) applyItem( //nolint:maintidx
 ) (*goqu.SelectDataset, error) {
 	var err error
 
+	aliasTable := goqu.T(alias)
+	aliasIDCol := aliasTable.Col(colID)
+
 	if options.ItemID > 0 {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col("id").Eq(options.ItemID))
+		sqSelect = sqSelect.Where(aliasIDCol.Eq(options.ItemID))
 	}
 
 	if options.TypeID != nil && len(options.TypeID) > 0 {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col("item_type_id").Eq(options.TypeID))
+		sqSelect = sqSelect.Where(aliasTable.Col("item_type_id").Eq(options.TypeID))
 	}
 
 	ipcAlias := alias + "_ipc"
@@ -278,7 +283,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		sqSelect = sqSelect.
 			Join(
 				goqu.T(tableItemParent).As(ipcAlias),
-				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipcAlias).Col("parent_id"))),
+				goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col("parent_id"))),
 			).
 			Join(
 				goqu.T(tableItem).As(iAlias),
@@ -297,7 +302,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		sqSelect = sqSelect.
 			Join(
 				goqu.T(tableItemParent).As(ippAlias),
-				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ippAlias).Col("item_id"))),
+				goqu.On(aliasIDCol.Eq(goqu.T(ippAlias).Col("item_id"))),
 			).
 			Join(
 				goqu.T(tableItem).As(iAlias),
@@ -317,7 +322,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		iAlias := alias + "_id"
 		sqSelect = sqSelect.Join(
 			goqu.T(tableItemParentCache).As(ipcdAlias),
-			goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipcdAlias).Col("parent_id"))),
+			goqu.On(aliasIDCol.Eq(goqu.T(ipcdAlias).Col("parent_id"))),
 		)
 
 		if options.DescendantItems != nil {
@@ -349,7 +354,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		sqSelect = sqSelect.
 			Join(
 				goqu.T(tableItemParentCache).As(ipcaAlias),
-				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipcaAlias).Col("item_id"))),
+				goqu.On(aliasIDCol.Eq(goqu.T(ipcaAlias).Col("item_id"))),
 			).
 			Join(
 				goqu.T(tableItem).As(iAlias),
@@ -367,13 +372,31 @@ func (s *Repository) applyItem( //nolint:maintidx
 		sqSelect = sqSelect.
 			LeftJoin(
 				goqu.T(tableItemParent).As(ipnpAlias),
-				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipnpAlias).Col("item_id"))),
+				goqu.On(aliasIDCol.Eq(goqu.T(ipnpAlias).Col("item_id"))),
 			).
 			Where(goqu.T(ipnpAlias).Col("parent_id").IsNull())
 	}
 
 	if len(options.Catname) > 0 {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col(colCatname).Eq(options.Catname))
+		sqSelect = sqSelect.Where(aliasTable.Col(colCatname).Eq(options.Catname))
+	}
+
+	if len(options.Name) > 0 {
+		itemLanguageTable := goqu.T(tableItemLanguage)
+		subSelect := sqSelect.ClearSelect()
+
+		// WHERE EXISTS(SELECT item_id FROM item_language WHERE item.id = item_id AND name ILIKE ?)
+		sqSelect = sqSelect.Where(
+			goqu.L(
+				"EXISTS ?",
+				subSelect.
+					From(itemLanguageTable).
+					Where(
+						aliasIDCol.Eq(itemLanguageTable.Col("item_id")),
+						itemLanguageTable.Col("name").ILike(options.Name),
+					),
+			),
+		)
 	}
 
 	if fields {
@@ -397,7 +420,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 			sqSelect = sqSelect.
 				LeftJoin(
 					goqu.T("spec").As(isAlias),
-					goqu.On(goqu.T(alias).Col(colSpecID).Eq(goqu.T(isAlias).Col("id"))),
+					goqu.On(aliasTable.Col(colSpecID).Eq(goqu.T(isAlias).Col("id"))),
 				)
 		}
 
@@ -412,7 +435,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 						goqu.On(goqu.T(ilAlias).Col("text_id").Eq(goqu.T("textstorage_text").Col("id"))),
 					).
 					Where(
-						goqu.T(ilAlias).Col("item_id").Eq(goqu.T(alias).Col(colID)),
+						goqu.T(ilAlias).Col("item_id").Eq(aliasIDCol),
 						goqu.Func("length", goqu.T("textstorage_text").Col("text")).Gt(0),
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
@@ -431,7 +454,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 						goqu.On(goqu.T(ilAlias).Col("full_text_id").Eq(goqu.T("textstorage_text").Col("id"))),
 					).
 					Where(
-						goqu.T(ilAlias).Col("item_id").Eq(goqu.T(alias).Col(colID)),
+						goqu.T(ilAlias).Col("item_id").Eq(aliasIDCol),
 						goqu.Func("length", goqu.T("textstorage_text").Col("text")).Gt(0),
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
@@ -565,7 +588,7 @@ func (s *Repository) Item(ctx context.Context, id int64, language string, fields
 		Language: language,
 	}
 
-	res, err := s.List(ctx, options)
+	res, _, err := s.List(ctx, options)
 	if err != nil {
 		return Item{}, err
 	}
@@ -577,7 +600,7 @@ func (s *Repository) Item(ctx context.Context, id int64, language string, fields
 	return res[0], nil
 }
 
-func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, error) { //nolint:maintidx
+func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *util.Pages, error) { //nolint:maintidx
 	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
 		return nil, fmt.Errorf("language `%s` not found", options.Language)
@@ -599,26 +622,42 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 
 	sqSelect, err = s.applyItem("i", sqSelect, true, &options)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(options.OrderBy) > 0 {
 		sqSelect = sqSelect.Order(options.OrderBy...)
 	}
 
+	var pages *util.Pages
+
 	if options.Limit > 0 {
-		sqSelect = sqSelect.Limit(uint(options.Limit))
+		paginator := util.Paginator{
+			SQLSelect:         sqSelect,
+			ItemCountPerPage:  int32(options.Limit),
+			CurrentPageNumber: int32(options.Page),
+		}
+
+		pages, err = paginator.GetPages(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		sqSelect, err = paginator.GetCurrentItems(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer util.Close(rows)
 
 	columnNames, err := rows.Columns()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var result []Item
@@ -714,7 +753,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 
 		err = rows.Scan(pointers...)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if catname.Valid {
@@ -785,7 +824,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if options.SortByName {
@@ -848,7 +887,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 		})
 	}
 
-	return result, nil
+	return result, pages, nil
 }
 
 func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
