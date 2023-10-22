@@ -721,6 +721,7 @@ message ItemPicturesRequest {
 message PicturesRequest {
   PictureStatus status = 1;
   ItemPicturesRequest item_picture = 2;
+  int64 owner_id = 3;
 }
 
 message PictureFields {
@@ -742,6 +743,7 @@ message ItemFields {
   PreviewPicturesFields preview_pictures = 7;
   bool total_pictures = 8;
   bool descendants_count = 9;
+  bool current_pictures_count = 10;
 }
 
 message ItemRequest {
@@ -751,6 +753,11 @@ message ItemRequest {
 }
 
 message ListItemsRequest {
+  enum Order {
+    DEFAULT = 0;
+    NAME_NAT = 1;
+  }
+
   string language = 1;
   ItemFields fields = 2;
   ItemType type_id = 3;
@@ -759,6 +766,7 @@ message ListItemsRequest {
   uint32 limit = 6;
   bool no_parent = 7;
   string catname = 8;
+  Order order = 9;
 }
 
 message GetTreeRequest {
@@ -786,6 +794,7 @@ message APIItem {
   bool is_concept_inherit = 11;
   int64 spec_id = 12;
   string full_text = 13;
+  int32 current_pictures_count = 14;
 }
 
 message APIItemList {

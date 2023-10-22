@@ -118,6 +118,7 @@ type Item struct {
 	FullText               string
 	IsConcept              bool
 	IsConceptInherit       bool
+	CurrentPicturesCount   int32
 }
 
 type ItemLanguage struct {
@@ -146,6 +147,7 @@ func NewRepository(
 
 type PicturesOptions struct {
 	Status      pictures.Status
+	OwnerID     int64
 	ItemPicture *ItemPicturesOptions
 }
 
@@ -165,21 +167,22 @@ type ListPreviewPicturesFields struct {
 }
 
 type ListFields struct {
-	NameOnly            bool
-	NameHTML            bool
-	NameDefault         bool
-	Description         bool
-	FullText            bool
-	HasText             bool
-	PreviewPictures     ListPreviewPicturesFields
-	TotalPictures       bool
-	ItemsCount          bool
-	NewItemsCount       bool
-	ChildItemsCount     bool
-	NewChildItemsCount  bool
-	DescendantsCount    bool
-	NewDescendantsCount bool
-	NameText            bool
+	NameOnly             bool
+	NameHTML             bool
+	NameDefault          bool
+	Description          bool
+	FullText             bool
+	HasText              bool
+	PreviewPictures      ListPreviewPicturesFields
+	TotalPictures        bool
+	ItemsCount           bool
+	NewItemsCount        bool
+	ChildItemsCount      bool
+	NewChildItemsCount   bool
+	DescendantsCount     bool
+	NewDescendantsCount  bool
+	NameText             bool
+	CurrentPicturesCount bool
 }
 
 type ListOptions struct {
@@ -201,48 +204,55 @@ type ListOptions struct {
 }
 
 func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesOptions) *goqu.SelectDataset {
-	joinPicture := false
-
 	pAlias := alias + "_p"
 
-	if options.Status != "" {
-		joinPicture = true
-		sqSelect = sqSelect.Where(goqu.Ex{pAlias + ".status": options.Status})
-	}
+	if options.Status != "" || options.ItemPicture != nil || options.OwnerID != 0 {
+		sqSelect = sqSelect.Join(
+			goqu.I("pictures").As(pAlias),
+			goqu.On(goqu.I(alias+".picture_id").Eq(goqu.I(pAlias+".id"))),
+		)
 
-	if options.ItemPicture != nil {
-		joinPicture = true
-		sqSelect = applyItemPicture(pAlias, sqSelect, options.ItemPicture)
-	}
+		if options.Status != "" {
+			sqSelect = sqSelect.Where(goqu.Ex{pAlias + ".status": options.Status})
+		}
 
-	if joinPicture {
-		sqSelect = sqSelect.Join(goqu.I("pictures").As(pAlias), goqu.On(goqu.I(alias+".picture_id").Eq(goqu.I(pAlias+".id"))))
+		if options.OwnerID != 0 {
+			sqSelect = sqSelect.Where(goqu.Ex{pAlias + ".owner_id": options.OwnerID})
+		}
+
+		if options.ItemPicture != nil {
+			sqSelect, _ = applyItemPicture(pAlias, "id", sqSelect, options.ItemPicture)
+		}
 	}
 
 	return sqSelect
 }
 
-func applyItemPicture(alias string, sqSelect *goqu.SelectDataset, options *ItemPicturesOptions) *goqu.SelectDataset {
+func applyItemPicture(
+	alias string, itemIDColumn string, sqSelect *goqu.SelectDataset, options *ItemPicturesOptions,
+) (*goqu.SelectDataset, string) {
 	piAlias := alias + "_pi"
 
 	sqSelect = sqSelect.Join(
 		goqu.I("picture_item").As(piAlias),
-		goqu.On(goqu.I(alias+".id").Eq(goqu.I(piAlias+".item_id"))),
+		goqu.On(goqu.T(alias).Col(itemIDColumn).Eq(goqu.I(piAlias+".item_id"))),
 	)
 
-	if options.TypeID != 0 {
-		sqSelect = sqSelect.Where(goqu.Ex{piAlias + ".type": options.TypeID})
+	if options != nil {
+		if options.TypeID != 0 {
+			sqSelect = sqSelect.Where(goqu.Ex{piAlias + ".type": options.TypeID})
+		}
+
+		if options.PerspectiveID != 0 {
+			sqSelect = sqSelect.Where(goqu.Ex{piAlias + ".perspective_id": options.PerspectiveID})
+		}
+
+		if options.Pictures != nil {
+			sqSelect = applyPicture(piAlias, sqSelect, options.Pictures)
+		}
 	}
 
-	if options.PerspectiveID != 0 {
-		sqSelect = sqSelect.Where(goqu.Ex{piAlias + ".perspective_id": options.PerspectiveID})
-	}
-
-	if options.Pictures != nil {
-		sqSelect = applyPicture(piAlias, sqSelect, options.Pictures)
-	}
-
-	return sqSelect
+	return sqSelect, piAlias
 }
 
 func (s *Repository) applyItem( //nolint:maintidx
@@ -259,10 +269,6 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 	if options.TypeID != nil && len(options.TypeID) > 0 {
 		sqSelect = sqSelect.Where(goqu.T(alias).Col("item_type_id").Eq(options.TypeID))
-	}
-
-	if options.DescendantPictures != nil {
-		sqSelect = applyItemPicture(alias, sqSelect, options.DescendantPictures)
 	}
 
 	ipcAlias := alias + "_ipc"
@@ -304,23 +310,39 @@ func (s *Repository) applyItem( //nolint:maintidx
 		}
 	}
 
-	if options.DescendantItems != nil {
+	columns := make([]interface{}, 0)
+
+	if options.DescendantItems != nil || options.DescendantPictures != nil || options.Fields.CurrentPicturesCount {
+
 		ipcdAlias := alias + "_ipcd"
 		iAlias := alias + "_id"
-		sqSelect = sqSelect.
-			Join(
-				goqu.T(tableItemParentCache).As(ipcdAlias),
-				goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipcdAlias).Col("parent_id"))),
-			).
-			Join(
-				goqu.T(tableItem).As(iAlias),
-				goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
-			)
-		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.DescendantItems)
+		sqSelect = sqSelect.Join(
+			goqu.T(tableItemParentCache).As(ipcdAlias),
+			goqu.On(goqu.T(alias).Col(colID).Eq(goqu.T(ipcdAlias).Col("parent_id"))),
+		)
 
-		if err != nil {
-			return sqSelect, err
+		if options.DescendantItems != nil {
+			sqSelect = sqSelect.
+				Join(
+					goqu.T(tableItem).As(iAlias),
+					goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
+				)
+			sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.DescendantItems)
+
+			if err != nil {
+				return sqSelect, err
+			}
 		}
+
+		if options.DescendantPictures != nil || options.Fields.CurrentPicturesCount {
+			piAlias := ""
+			sqSelect, piAlias = applyItemPicture(ipcdAlias, "item_id", sqSelect, options.DescendantPictures)
+
+			if options.Fields.CurrentPicturesCount {
+				columns = append(columns, goqu.COUNT(goqu.DISTINCT(goqu.T(piAlias).Col("picture_id"))).As("current_pictures_count"))
+			}
+		}
+
 	}
 
 	if options.AncestorItems != nil {
@@ -355,8 +377,6 @@ func (s *Repository) applyItem( //nolint:maintidx
 	if len(options.Catname) > 0 {
 		sqSelect = sqSelect.Where(goqu.T(alias).Col(colCatname).Eq(options.Catname))
 	}
-
-	columns := make([]interface{}, 0)
 
 	if fields {
 		if options.Fields.NameText || options.Fields.NameHTML {
@@ -687,6 +707,8 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, err
 				pointers[i] = &specName
 			case "spec_short_name":
 				pointers[i] = &specShortName
+			case "current_pictures_count":
+				pointers[i] = &r.CurrentPicturesCount
 			default:
 				pointers[i] = nil
 			}
