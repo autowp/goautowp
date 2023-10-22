@@ -135,7 +135,7 @@ services:
       - minio
     entrypoint: >
       /bin/sh -c "
-      while ! /usr/bin/mc config host add autowp http://minio:19000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY;
+      while ! /usr/bin/mc config host add autowp http://minio:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY;
         do echo 'Wait minio to startup...' && sleep 1;
       done;
       /usr/bin/mc mb autowp/format;
