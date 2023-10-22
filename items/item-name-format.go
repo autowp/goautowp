@@ -16,6 +16,8 @@ const (
 
 const hundred = 100
 
+const rangeDelimiter = "–"
+
 type ItemNameFormatter struct{}
 
 type ItemNameFormatterOptions struct {
@@ -269,7 +271,7 @@ func (s *ItemNameFormatter) renderYears(
 			result1 = fmt.Sprintf(textMonthFormat, bm)
 		}
 
-		result1 += strconv.Itoa(int(by)) + "–"
+		result1 += strconv.Itoa(int(by)) + rangeDelimiter
 
 		result2 := ""
 		if em > 0 {
@@ -304,7 +306,7 @@ func (s *ItemNameFormatter) renderYears(
 			result3 = fmt.Sprintf(textMonthFormat, em)
 		}
 
-		result3 = "–" + result3 + strconv.Itoa(int(ey))
+		result3 = rangeDelimiter + result3 + strconv.Itoa(int(ey))
 	} else {
 		result3, err = s.missedEndYearYearsSuffix(today, by, localizer)
 		if err != nil {
@@ -346,7 +348,7 @@ func (s *ItemNameFormatter) renderYearsHTML(
 			result1 = fmt.Sprintf(htmlMonthFormat, bm)
 		}
 
-		result1 += strconv.Itoa(int(by)) + "–"
+		result1 += strconv.Itoa(int(by)) + rangeDelimiter
 
 		result2 := ""
 		if em > 0 {
@@ -380,7 +382,7 @@ func (s *ItemNameFormatter) renderYearsHTML(
 			result3 = fmt.Sprintf(htmlMonthFormat, em)
 		}
 
-		result3 = "–" + result3 + strconv.Itoa(int(ey))
+		result3 = rangeDelimiter + result3 + strconv.Itoa(int(ey))
 	} else {
 		result3, err = s.missedEndYearYearsSuffix(today, by, localizer)
 		if err != nil {
@@ -404,10 +406,10 @@ func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int32, loca
 			return "", err
 		}
 
-		return "–" + prMsg, nil
+		return rangeDelimiter + prMsg, nil
 	}
 
-	return "–????", nil
+	return rangeDelimiter + "????", nil
 }
 
 func (s *ItemNameFormatter) monthsRange(from int16, to int16) string {
@@ -421,5 +423,5 @@ func (s *ItemNameFormatter) monthsRange(from int16, to int16) string {
 		result2 = fmt.Sprintf("%02d", to)
 	}
 
-	return result1 + "–" + result2
+	return result1 + rangeDelimiter + result2
 }
