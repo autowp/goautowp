@@ -18,6 +18,8 @@ const hundred = 100
 
 const rangeDelimiter = "–"
 
+const unknownYear = "????"
+
 type ItemNameFormatter struct{}
 
 type ItemNameFormatterOptions struct {
@@ -215,7 +217,7 @@ func (s *ItemNameFormatter) getModelYearsPrefix(
 	}
 
 	if begin <= 0 {
-		return fmt.Sprintf("????–%02d%s", end, endFraction), nil
+		return unknownYear + rangeDelimiter + fmt.Sprintf("%02d%s", end, endFraction), nil
 	}
 
 	if end > 0 {
@@ -293,7 +295,7 @@ func (s *ItemNameFormatter) renderYears(
 		result1 = fmt.Sprintf(textMonthFormat, bm)
 	}
 
-	result2 := "????"
+	result2 := unknownYear
 
 	if by > 0 {
 		result2 = strconv.Itoa(int(by))
@@ -370,7 +372,7 @@ func (s *ItemNameFormatter) renderYearsHTML(
 		result1 = fmt.Sprintf(htmlMonthFormat, bm)
 	}
 
-	result2 := "????"
+	result2 := unknownYear
 	if by > 0 {
 		result2 = strconv.Itoa(int(by))
 	}
@@ -409,7 +411,7 @@ func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int32, loca
 		return rangeDelimiter + prMsg, nil
 	}
 
-	return rangeDelimiter + "????", nil
+	return rangeDelimiter + unknownYear, nil
 }
 
 func (s *ItemNameFormatter) monthsRange(from int16, to int16) string {

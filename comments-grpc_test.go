@@ -14,6 +14,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const bearerPrefix = "Bearer "
+
+const authorizationHeader = "authorization"
+
 //nolint:unparam
 func getUserWithCleanHistory(
 	t *testing.T,
@@ -33,7 +37,7 @@ func getUserWithCleanHistory(
 	require.NotNil(t, token)
 
 	user, err := NewUsersClient(conn).Me(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
@@ -67,7 +71,7 @@ func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
 
 	_, err = client.Add(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&AddCommentRequest{
 			ItemId:             1,
 			TypeId:             CommentsType_ITEM_TYPE_ID,
@@ -103,7 +107,7 @@ func TestAddComment(t *testing.T) {
 	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
 
 	r, err := client.Add(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&AddCommentRequest{
 			ItemId:             1,
 			TypeId:             CommentsType_ARTICLES_TYPE_ID,
@@ -116,7 +120,7 @@ func TestAddComment(t *testing.T) {
 	require.NoError(t, err)
 
 	r2, err := client.GetMessage(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&GetMessageRequest{
 			Id: r.Id,
 			Fields: &CommentMessageFields{
@@ -134,7 +138,7 @@ func TestAddComment(t *testing.T) {
 	require.Equal(t, "Test", r2.Text)
 
 	r3, err := client.GetMessages(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&GetMessagesRequest{
 			ItemId:    r2.ItemId,
 			TypeId:    r2.TypeId,
