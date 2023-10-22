@@ -17,15 +17,15 @@ file_storage:
   bucket: files
   srcOverride:
     host: '127.0.0.1'
-    port: '9001'
+    port: '19000'
   s3:
     credentials:
       key: AKIAIOSFODNN7EXAMPLE
       secret: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     region: ''
     endpoints:
-    - http://minio:9001
-    - http://minio2:9001
+    - http://minio:19000
+    - http://minio2:19000
     s3_force_path_style: true
 
 rabbitmq: amqp://guest:guest@127.0.0.1:5672/
@@ -233,7 +233,7 @@ image-storage:
   s3:
     region: ""
     #version: latest
-    endpoint: http://minio:9001
+    endpoint: http://minio:19000
     credentials:
       key: key
       secret: secret
