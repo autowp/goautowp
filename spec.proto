@@ -756,6 +756,7 @@ message ListItemsRequest {
   enum Order {
     DEFAULT = 0;
     NAME_NAT = 1;
+    NAME = 2;
   }
 
   string language = 1;
@@ -767,6 +768,8 @@ message ListItemsRequest {
   bool no_parent = 7;
   string catname = 8;
   Order order = 9;
+  string name = 10;
+  uint32 page = 11;
 }
 
 message GetTreeRequest {
@@ -799,6 +802,7 @@ message APIItem {
 
 message APIItemList {
   repeated APIItem items = 1;
+  Pages paginator = 2;
 }
 
 enum CommentsType {

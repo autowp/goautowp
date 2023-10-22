@@ -108,7 +108,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 			SortByName: true,
 		}
 
-		list, err := s.repository.List(ctx, options)
+		list, _, err := s.repository.List(ctx, options)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -179,7 +179,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 	var res []items.Item
 
 	if errors.Is(err, redis.Nil) {
-		res, err = s.repository.List(ctx, items.ListOptions{
+		res, _, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				NameOnly: true,
@@ -241,7 +241,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 	var res []items.Item
 
 	if errors.Is(err, redis.Nil) {
-		res, err = s.repository.List(ctx, items.ListOptions{
+		res, _, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				NameOnly:           true,
@@ -304,7 +304,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 	var res []items.Item
 
 	if errors.Is(err, redis.Nil) {
-		res, err = s.repository.List(ctx, items.ListOptions{
+		res, _, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				NameOnly:            true,
@@ -372,7 +372,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 	}
 
 	if errors.Is(err, redis.Nil) {
-		twinsData.Res, err = s.repository.List(ctx, items.ListOptions{
+		twinsData.Res, _, err = s.repository.List(ctx, items.ListOptions{
 			Language: in.Language,
 			Fields: items.ListFields{
 				NameOnly: true,
@@ -443,7 +443,7 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	ctx context.Context,
 	in *GetTwinsBrandsListRequest,
 ) (*APITwinsBrandsList, error) {
-	twinsData, err := s.repository.List(ctx, items.ListOptions{
+	twinsData, _, err := s.repository.List(ctx, items.ListOptions{
 		Language: in.Language,
 		Fields: items.ListFields{
 			NameOnly: true,
@@ -570,9 +570,18 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 	options := items.ListOptions{
 		Language:  in.Language,
 		Limit:     in.Limit,
+		Page:      in.Page,
 		NoParents: in.NoParent,
 		Catname:   in.Catname,
 		Fields:    convertFields(in.Fields),
+		OrderBy: []exp.OrderedExpression{
+			goqu.I("i.name").Asc(),
+			goqu.I("i.body").Asc(),
+			goqu.I("i.spec_id").Asc(),
+			goqu.I("i.begin_order_cache").Asc(),
+			goqu.I("i.end_order_cache").Asc(),
+		},
+		Name: in.Name,
 	}
 
 	if in.Order == ListItemsRequest_NAME_NAT {
@@ -613,7 +622,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		mapItemPicturesRequest(in.PreviewPictures, options.PreviewPictures)
 	}
 
-	res, err := s.repository.List(ctx, options)
+	res, pages, err := s.repository.List(ctx, options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -628,8 +637,22 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		}
 	}
 
+	var paginator *Pages
+	if pages != nil {
+		paginator = &Pages{
+			PageCount:        pages.PageCount,
+			First:            pages.First,
+			Current:          pages.Current,
+			FirstPageInRange: pages.FirstPageInRange,
+			LastPageInRange:  pages.LastPageInRange,
+			PagesInRange:     pages.PagesInRange,
+			TotalItemCount:   pages.TotalItemCount,
+		}
+	}
+
 	return &APIItemList{
-		Items: is,
+		Items:     is,
+		Paginator: paginator,
 	}, nil
 }
 
