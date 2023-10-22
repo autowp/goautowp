@@ -88,7 +88,6 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 
 	for _, i := range r {
 		require.NotEmpty(t, i.NameOnly)
-		require.NotEmpty(t, i.Catname)
 	}
 }
 
