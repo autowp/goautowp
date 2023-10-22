@@ -313,7 +313,6 @@ func (s *Repository) applyItem( //nolint:maintidx
 	columns := make([]interface{}, 0)
 
 	if options.DescendantItems != nil || options.DescendantPictures != nil || options.Fields.CurrentPicturesCount {
-
 		ipcdAlias := alias + "_ipcd"
 		iAlias := alias + "_id"
 		sqSelect = sqSelect.Join(
@@ -335,14 +334,13 @@ func (s *Repository) applyItem( //nolint:maintidx
 		}
 
 		if options.DescendantPictures != nil || options.Fields.CurrentPicturesCount {
-			piAlias := ""
+			var piAlias string
 			sqSelect, piAlias = applyItemPicture(ipcdAlias, "item_id", sqSelect, options.DescendantPictures)
 
 			if options.Fields.CurrentPicturesCount {
 				columns = append(columns, goqu.COUNT(goqu.DISTINCT(goqu.T(piAlias).Col("picture_id"))).As("current_pictures_count"))
 			}
 		}
-
 	}
 
 	if options.AncestorItems != nil {

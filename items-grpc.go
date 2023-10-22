@@ -575,8 +575,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		Fields:    convertFields(in.Fields),
 	}
 
-	switch in.Order {
-	case ListItemsRequest_NAME_NAT:
+	if in.Order == ListItemsRequest_NAME_NAT {
 		options.SortByName = true
 	}
 
