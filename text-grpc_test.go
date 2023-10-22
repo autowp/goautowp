@@ -44,7 +44,7 @@ func TestGetText(t *testing.T) {
 
 	// tester (me)
 	tester, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)

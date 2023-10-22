@@ -155,13 +155,13 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	vehicleID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	res, err = goquDB.ExecContext(ctx,
+	_, err = goquDB.ExecContext(ctx,
 		"INSERT INTO item_parent (item_id, parent_id, catname) VALUES (?, ?, '')",
 		vehicleID, brandID,
 	)
 	require.NoError(t, err)
 
-	res, err = goquDB.ExecContext(ctx,
+	_, err = goquDB.ExecContext(ctx,
 		"INSERT INTO item_parent_cache (item_id, parent_id, diff) VALUES (?, ?, 0), (?, ?, 0), (?, ?, 1)",
 		brandID, brandID, vehicleID, vehicleID, vehicleID, brandID,
 	)
@@ -180,7 +180,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	pictureID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	res, err = goquDB.ExecContext(ctx,
+	_, err = goquDB.ExecContext(ctx,
 		"INSERT INTO picture_item (picture_id, item_id) VALUES (?, ?)",
 		pictureID, vehicleID,
 	)

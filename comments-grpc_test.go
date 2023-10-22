@@ -33,7 +33,7 @@ func getUserWithCleanHistory(
 	require.NotNil(t, token)
 
 	user, err := NewUsersClient(conn).Me(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
 
 	_, err = client.Add(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&AddCommentRequest{
 			ItemId:             1,
 			TypeId:             CommentsType_ITEM_TYPE_ID,
@@ -103,7 +103,7 @@ func TestAddComment(t *testing.T) {
 	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
 
 	r, err := client.Add(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&AddCommentRequest{
 			ItemId:             1,
 			TypeId:             CommentsType_ARTICLES_TYPE_ID,
@@ -116,7 +116,7 @@ func TestAddComment(t *testing.T) {
 	require.NoError(t, err)
 
 	r2, err := client.GetMessage(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&GetMessageRequest{
 			Id: r.Id,
 			Fields: &CommentMessageFields{
@@ -134,7 +134,7 @@ func TestAddComment(t *testing.T) {
 	require.Equal(t, "Test", r2.Text)
 
 	r3, err := client.GetMessages(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&GetMessagesRequest{
 			ItemId:    r2.ItemId,
 			TypeId:    r2.TypeId,
@@ -183,7 +183,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 	_, user2Token := getUserWithCleanHistory(t, conn, cfg, db, adminUsername, adminPassword)
 
 	response, err := client.Add(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+user1Token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+user1Token),
 		&AddCommentRequest{
 			ItemId:             1,
 			TypeId:             CommentsType_ARTICLES_TYPE_ID,
@@ -197,7 +197,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 	require.NotEmpty(t, response.Id)
 
 	response, err = client.Add(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+user2Token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+user2Token),
 		&AddCommentRequest{
 			ItemId:             1,
 			TypeId:             CommentsType_ARTICLES_TYPE_ID,
@@ -212,7 +212,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 
 	messagesClient := NewMessagingClient(conn)
 	messages, err := messagesClient.GetMessages(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+user1Token),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+user1Token),
 		&MessagingGetMessagesRequest{
 			Folder: "system",
 			Page:   1,

@@ -48,14 +48,14 @@ func TestMessaging(t *testing.T) {
 
 	// tester (me)
 	tester, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
 
 	// create
 	_, err = messagingClient.CreateMessage(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&MessagingCreateMessage{
 			UserId: tester.Id,
 			Text:   "Test message",
@@ -65,7 +65,7 @@ func TestMessaging(t *testing.T) {
 
 	// get message
 	r, err := messagingClient.GetMessages(
-		metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&MessagingGetMessagesRequest{
 			UserId: tester.Id,
 			Folder: "sent",

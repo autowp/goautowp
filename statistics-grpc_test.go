@@ -62,7 +62,7 @@ func TestStatisticsPulse(t *testing.T) {
 
 	usersClient := NewUsersClient(conn)
 	user, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctxTimeout, "authorization", "Bearer "+token.AccessToken),
+		metadata.AppendToOutgoingContext(ctxTimeout, authorizationHeader, bearerPrefix+token.AccessToken),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
