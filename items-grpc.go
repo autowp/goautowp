@@ -581,7 +581,8 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 			goqu.I("i.begin_order_cache").Asc(),
 			goqu.I("i.end_order_cache").Asc(),
 		},
-		Name: in.Name,
+		Name:   in.Name,
+		ItemID: in.Id,
 	}
 
 	if in.Order == ListItemsRequest_NAME_NAT {
