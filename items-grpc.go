@@ -574,6 +574,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		NoParents: in.NoParent,
 		Catname:   in.Catname,
 		Fields:    convertFields(in.Fields),
+		IsConcept: in.IsConcept,
 		OrderBy: []exp.OrderedExpression{
 			goqu.I("i.name").Asc(),
 			goqu.I("i.body").Asc(),
@@ -583,6 +584,12 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		},
 		Name:   in.Name,
 		ItemID: in.Id,
+	}
+
+	if in.AncestorId != 0 {
+		options.AncestorItems = &items.ListOptions{
+			ItemID: in.AncestorId,
+		}
 	}
 
 	if in.Order == ListItemsRequest_NAME_NAT {

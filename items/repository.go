@@ -203,6 +203,7 @@ type ListOptions struct {
 	NoParents          bool
 	Catname            string
 	Name               string
+	IsConcept          bool
 }
 
 func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesOptions) *goqu.SelectDataset {
@@ -379,6 +380,10 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 	if len(options.Catname) > 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(colCatname).Eq(options.Catname))
+	}
+
+	if options.IsConcept {
+		sqSelect = sqSelect.Where(aliasTable.Col("is_concept"))
 	}
 
 	if len(options.Name) > 0 {
