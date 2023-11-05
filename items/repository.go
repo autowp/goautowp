@@ -409,12 +409,12 @@ func (s *Repository) applyItem( //nolint:maintidx
 			isAlias := alias + "_is"
 
 			columns = append(columns,
-				goqu.C("begin_year"), goqu.C("end_year"),
-				goqu.C("begin_month"), goqu.C("end_month"),
-				goqu.C("begin_model_year"), goqu.C("end_model_year"),
-				goqu.C("begin_model_year_fraction"), goqu.C("end_model_year_fraction"),
-				goqu.C("today"),
-				goqu.C("body"),
+				aliasTable.Col("begin_year"), aliasTable.Col("end_year"),
+				aliasTable.Col("begin_month"), aliasTable.Col("end_month"),
+				aliasTable.Col("begin_model_year"), aliasTable.Col("end_model_year"),
+				aliasTable.Col("begin_model_year_fraction"), aliasTable.Col("end_model_year_fraction"),
+				aliasTable.Col("today"),
+				aliasTable.Col("body"),
 				goqu.T(isAlias).Col("short_name").As("spec_short_name"),
 			)
 
