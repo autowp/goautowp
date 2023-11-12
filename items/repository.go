@@ -119,6 +119,7 @@ type Item struct {
 	IsConcept              bool
 	IsConceptInherit       bool
 	CurrentPicturesCount   int32
+	ChildsCount            int32
 }
 
 type ItemLanguage struct {
@@ -183,6 +184,7 @@ type ListFields struct {
 	NewDescendantsCount  bool
 	NameText             bool
 	CurrentPicturesCount bool
+	ChildsCount          bool
 }
 
 type ListOptions struct {
@@ -388,7 +390,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 	if len(options.Name) > 0 {
 		itemLanguageTable := goqu.T(tableItemLanguage)
-		subSelect := sqSelect.ClearSelect()
+		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy()
 
 		// WHERE EXISTS(SELECT item_id FROM item_language WHERE item.id = item_id AND name ILIKE ?)
 		sqSelect = sqSelect.Where(
@@ -468,18 +470,6 @@ func (s *Repository) applyItem( //nolint:maintidx
 			)
 		}
 
-		if options.Fields.ChildItemsCount {
-			columns = append(columns, goqu.L("count(distinct "+ipcAlias+".item_id)").As("child_items_count"))
-		}
-
-		if options.Fields.NewChildItemsCount {
-			columns = append(
-				columns,
-				goqu.L("count(distinct IF("+ipcAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+
-					ipcAlias+".item_id, NULL))", NewDays).
-					As("new_child_items_count"))
-		}
-
 		if options.SortByName || options.Fields.NameOnly || options.Fields.NameText || options.Fields.NameHTML {
 			langPriority, ok := languagePriority[options.Language]
 			if !ok {
@@ -503,6 +493,18 @@ func (s *Repository) applyItem( //nolint:maintidx
 			`, s...).As("name_only"))
 		}
 
+		if options.Fields.ChildItemsCount {
+			columns = append(columns, goqu.L("count(distinct "+ipcAlias+".item_id)").As("child_items_count"))
+		}
+
+		if options.Fields.NewChildItemsCount {
+			columns = append(
+				columns,
+				goqu.L("count(distinct IF("+ipcAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+
+					ipcAlias+".item_id, NULL))", NewDays).
+					As("new_child_items_count"))
+		}
+
 		if options.Fields.ItemsCount {
 			columns = append(columns, goqu.L("count(distinct "+alias+".id)").As("items_count"))
 		}
@@ -511,6 +513,18 @@ func (s *Repository) applyItem( //nolint:maintidx
 			columns = append(columns, goqu.L(`
 				count(distinct if(`+alias+`.add_datetime > date_sub(NOW(), INTERVAL ? DAY), `+alias+`.id, null))
 			`, NewDays).As("new_items_count"))
+		}
+
+		if options.Fields.ChildsCount {
+			subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy()
+
+			columns = append(
+				columns,
+				subSelect.Select(goqu.COUNT(goqu.Star())).
+					From(tableItemParent).
+					Where(goqu.T(tableItemParent).Col("parent_id").Eq(goqu.T(alias).Col(colID))).
+					As("childs_count"),
+			)
 		}
 
 		if options.Fields.DescendantsCount {
@@ -751,6 +765,8 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 				pointers[i] = &specShortName
 			case "current_pictures_count":
 				pointers[i] = &r.CurrentPicturesCount
+			case "childs_count":
+				pointers[i] = &r.ChildsCount
 			default:
 				pointers[i] = nil
 			}
