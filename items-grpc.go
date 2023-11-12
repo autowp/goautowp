@@ -529,6 +529,15 @@ func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
 		}
 	}
 
+	if in.Parent != nil {
+		options.ParentItems = &items.ListOptions{}
+
+		err := mapItemsRequest(in.Parent, options.ParentItems)
+		if err != nil {
+			return err
+		}
+	}
+
 	if in.DescendantPictures != nil {
 		options.DescendantPictures = &items.ItemPicturesOptions{}
 		mapItemPicturesRequest(in.DescendantPictures, options.DescendantPictures)
@@ -585,6 +594,7 @@ func convertFields(fields *ItemFields) items.ListFields {
 		TotalPictures:        fields.TotalPictures,
 		DescendantsCount:     fields.DescendantsCount,
 		CurrentPicturesCount: fields.CurrentPicturesCount,
+		ChildsCount:          fields.ChildsCount,
 	}
 
 	return result

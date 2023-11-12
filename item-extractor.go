@@ -91,6 +91,7 @@ func (s *ItemExtractor) Extract(
 		Description:          row.Description,
 		FullText:             row.FullText,
 		CurrentPicturesCount: row.CurrentPicturesCount,
+		ChildsCount:          row.ChildsCount,
 	}
 
 	if fields.NameOnly {

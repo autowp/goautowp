@@ -744,6 +744,7 @@ message ItemFields {
   bool total_pictures = 8;
   bool descendants_count = 9;
   bool current_pictures_count = 10;
+  bool childs_count = 11;
 }
 
 message ItemRequest {
@@ -774,6 +775,7 @@ message ListItemsRequest {
   int64 ancestor_id = 13;
   bool is_concept = 14;
   ListItemsRequest descendant = 15;
+  ListItemsRequest parent = 16;
 }
 
 message GetTreeRequest {
@@ -802,6 +804,7 @@ message APIItem {
   int64 spec_id = 12;
   string full_text = 13;
   int32 current_pictures_count = 14;
+  int32 childs_count = 15;
 }
 
 message APIItemList {

@@ -78,6 +78,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 		Fields: ListFields{
 			NameOnly:         true,
 			DescendantsCount: true,
+			ChildsCount:      true,
 		},
 		TypeID: []ItemType{BRAND},
 		Limit:  10,
@@ -191,6 +192,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 		Fields: ListFields{
 			NameOnly:             true,
 			CurrentPicturesCount: true,
+			ChildsCount:          true,
 		},
 		DescendantPictures: &ItemPicturesOptions{
 			Pictures: &PicturesOptions{
