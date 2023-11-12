@@ -773,6 +773,7 @@ message ListItemsRequest {
   int64 id = 12;
   int64 ancestor_id = 13;
   bool is_concept = 14;
+  ListItemsRequest descendant = 15;
 }
 
 message GetTreeRequest {

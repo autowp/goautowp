@@ -9,18 +9,15 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/i18nbundle"
-
-	"github.com/autowp/goautowp/textstorage"
-
-	"github.com/redis/go-redis/v9"
-
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -501,6 +498,50 @@ func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
 	}
 }
 
+func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
+	options.NoParents = in.NoParent
+	options.Catname = in.Catname
+	options.IsConcept = in.IsConcept
+	options.Name = in.Name
+	options.ItemID = in.Id
+
+	if in.AncestorId != 0 {
+		options.AncestorItems = &items.ListOptions{
+			ItemID: in.AncestorId,
+		}
+	}
+
+	if in.Order == ListItemsRequest_NAME_NAT {
+		options.SortByName = true
+	}
+
+	itemTypeID := reverseConvertItemTypeID(in.TypeId)
+	if itemTypeID != 0 {
+		options.TypeID = []items.ItemType{itemTypeID}
+	}
+
+	if in.Descendant != nil {
+		options.DescendantItems = &items.ListOptions{}
+
+		err := mapItemsRequest(in.Descendant, options.DescendantItems)
+		if err != nil {
+			return err
+		}
+	}
+
+	if in.DescendantPictures != nil {
+		options.DescendantPictures = &items.ItemPicturesOptions{}
+		mapItemPicturesRequest(in.DescendantPictures, options.DescendantPictures)
+	}
+
+	if in.PreviewPictures != nil {
+		options.PreviewPictures = &items.ItemPicturesOptions{}
+		mapItemPicturesRequest(in.PreviewPictures, options.PreviewPictures)
+	}
+
+	return nil
+}
+
 func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPicturesOptions) {
 	if request.Pictures != nil {
 		dest.Pictures = &items.PicturesOptions{}
@@ -568,13 +609,10 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
 	options := items.ListOptions{
-		Language:  in.Language,
-		Limit:     in.Limit,
-		Page:      in.Page,
-		NoParents: in.NoParent,
-		Catname:   in.Catname,
-		Fields:    convertFields(in.Fields),
-		IsConcept: in.IsConcept,
+		Language: in.Language,
+		Limit:    in.Limit,
+		Page:     in.Page,
+		Fields:   convertFields(in.Fields),
 		OrderBy: []exp.OrderedExpression{
 			goqu.I("i.name").Asc(),
 			goqu.I("i.body").Asc(),
@@ -582,52 +620,11 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 			goqu.I("i.begin_order_cache").Asc(),
 			goqu.I("i.end_order_cache").Asc(),
 		},
-		Name:   in.Name,
-		ItemID: in.Id,
 	}
 
-	if in.AncestorId != 0 {
-		options.AncestorItems = &items.ListOptions{
-			ItemID: in.AncestorId,
-		}
-	}
-
-	if in.Order == ListItemsRequest_NAME_NAT {
-		options.SortByName = true
-	}
-
-	switch in.TypeId {
-	case ItemType_ITEM_TYPE_UNKNOWN:
-	case ItemType_ITEM_TYPE_VEHICLE:
-		options.TypeID = []items.ItemType{items.VEHICLE}
-	case ItemType_ITEM_TYPE_ENGINE:
-		options.TypeID = []items.ItemType{items.ENGINE}
-	case ItemType_ITEM_TYPE_CATEGORY:
-		options.TypeID = []items.ItemType{items.CATEGORY}
-	case ItemType_ITEM_TYPE_TWINS:
-		options.TypeID = []items.ItemType{items.TWINS}
-	case ItemType_ITEM_TYPE_BRAND:
-		options.TypeID = []items.ItemType{items.BRAND}
-	case ItemType_ITEM_TYPE_FACTORY:
-		options.TypeID = []items.ItemType{items.FACTORY}
-	case ItemType_ITEM_TYPE_MUSEUM:
-		options.TypeID = []items.ItemType{items.MUSEUM}
-	case ItemType_ITEM_TYPE_PERSON:
-		options.TypeID = []items.ItemType{items.PERSON}
-	case ItemType_ITEM_TYPE_COPYRIGHT:
-		options.TypeID = []items.ItemType{items.COPYRIGHT}
-	default:
-		return nil, status.Error(codes.InvalidArgument, "Unexpected item_type")
-	}
-
-	if in.DescendantPictures != nil {
-		options.DescendantPictures = &items.ItemPicturesOptions{}
-		mapItemPicturesRequest(in.DescendantPictures, options.DescendantPictures)
-	}
-
-	if in.PreviewPictures != nil {
-		options.PreviewPictures = &items.ItemPicturesOptions{}
-		mapItemPicturesRequest(in.PreviewPictures, options.PreviewPictures)
+	err := mapItemsRequest(in, &options)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	res, pages, err := s.repository.List(ctx, options)
