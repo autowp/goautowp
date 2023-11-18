@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Nerzal/gocloak/v13 v13.8.0
-	github.com/aws/aws-sdk-go v1.47.9
+	github.com/aws/aws-sdk-go v1.48.0
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.1.0
 	github.com/doug-martin/goqu/v9 v9.18.0
