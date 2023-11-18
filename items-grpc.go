@@ -504,6 +504,7 @@ func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
 	options.IsConcept = in.IsConcept
 	options.Name = in.Name
 	options.ItemID = in.Id
+	options.EngineItemID = in.EngineId
 
 	if in.AncestorId != 0 {
 		options.AncestorItems = &items.ListOptions{
