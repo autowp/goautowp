@@ -42,7 +42,7 @@ func NewMonitoring(db *goqu.Database) (*Monitoring, error) {
 }
 
 // Listen for incoming messages.
-func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error {
+func (s *Monitoring) Listen(ctx context.Context, url string, queue string, quitChan chan bool) error {
 	conn, err := util.ConnectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)
@@ -100,7 +100,7 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 				continue
 			}
 
-			err = s.Add(message.IP, message.Timestamp)
+			err = s.Add(ctx, message.IP, message.Timestamp)
 			if err != nil {
 				logrus.Error(err.Error())
 			}
@@ -116,8 +116,8 @@ func (s *Monitoring) Listen(url string, queue string, quitChan chan bool) error 
 }
 
 // Add item to Monitoring.
-func (s *Monitoring) Add(ip net.IP, timestamp time.Time) error {
-	_, err := s.db.ExecContext(context.Background(), `
+func (s *Monitoring) Add(ctx context.Context, ip net.IP, timestamp time.Time) error {
+	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO ip_monitoring (day_date, hour, tenminute, minute, ip, count)
 		VALUES (
 			$1::timestamptz,

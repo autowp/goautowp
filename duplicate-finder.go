@@ -46,7 +46,7 @@ func NewDuplicateFinder(db *goqu.Database) (*DuplicateFinder, error) {
 }
 
 // ListenAMQP for incoming messages.
-func (s *DuplicateFinder) ListenAMQP(_ context.Context, url string, queue string, quitChan chan bool) error {
+func (s *DuplicateFinder) ListenAMQP(ctx context.Context, url string, queue string, quitChan chan bool) error {
 	rabbitMQ, err := util.ConnectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)
@@ -110,7 +110,7 @@ func (s *DuplicateFinder) ListenAMQP(_ context.Context, url string, queue string
 				continue
 			}
 
-			err = s.Index(message.PictureID, message.URL)
+			err = s.Index(ctx, message.PictureID, message.URL)
 			if err != nil {
 				sentry.CaptureException(err)
 			}
@@ -124,10 +124,8 @@ func (s *DuplicateFinder) ListenAMQP(_ context.Context, url string, queue string
 
 // Index picture image
 // #nosec G107
-func (s *DuplicateFinder) Index(id int, url string) error {
+func (s *DuplicateFinder) Index(ctx context.Context, id int, url string) error {
 	logrus.Infof("Indexing picture %v", id)
-
-	ctx := context.Background()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

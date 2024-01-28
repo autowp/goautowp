@@ -1,6 +1,7 @@
 package goautowp
 
 import (
+	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
@@ -11,9 +12,8 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/doug-martin/goqu/v9"
-
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 )
 
@@ -116,12 +116,14 @@ func TestDuplicateFinder(t *testing.T) {
 	df, err := NewDuplicateFinder(goquDB)
 	require.NoError(t, err)
 
+	ctx := context.Background()
+
 	id1 := addPicture(t, db, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")
-	err = df.Index(id1, "http://localhost:80/large.jpg")
+	err = df.Index(ctx, id1, "http://localhost:80/large.jpg")
 	require.NoError(t, err)
 
 	id2 := addPicture(t, db, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/small.jpg")
-	err = df.Index(id2, "http://localhost:80/small.jpg")
+	err = df.Index(ctx, id2, "http://localhost:80/small.jpg")
 	require.NoError(t, err)
 
 	var hash1 uint64

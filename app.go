@@ -193,8 +193,8 @@ func (s *Application) MigratePostgres(_ context.Context) error {
 	return nil
 }
 
-func (s *Application) ServePrivate(_ context.Context, quit chan bool) error {
-	httpServer, err := s.container.PrivateHTTPServer()
+func (s *Application) ServePrivate(ctx context.Context, quit chan bool) error {
+	httpServer, err := s.container.PrivateHTTPServer(ctx)
 	if err != nil {
 		return err
 	}
@@ -373,7 +373,7 @@ func (s *Application) ExportUsersToKeycloak(ctx context.Context) error {
 	return ur.ExportUsersToKeycloak(ctx)
 }
 
-func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
+func (s *Application) ListenMonitoringAMQP(ctx context.Context, quit chan bool) error {
 	traffic, err := s.container.Traffic()
 	if err != nil {
 		return err
@@ -383,7 +383,7 @@ func (s *Application) ListenMonitoringAMQP(quit chan bool) error {
 
 	logrus.Info("Monitoring listener started")
 
-	err = traffic.Monitoring.Listen(cfg.RabbitMQ, cfg.MonitoringQueue, quit)
+	err = traffic.Monitoring.Listen(ctx, cfg.RabbitMQ, cfg.MonitoringQueue, quit)
 
 	if err != nil {
 		logrus.Error(err.Error())

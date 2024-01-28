@@ -146,10 +146,10 @@ func mainReturnWithCode() int {
 			},
 			{
 				Name: "listen-monitoring-amqp",
-				Action: func(_ context.Context, command *cli.Command) error {
+				Action: func(ctx context.Context, command *cli.Command) error {
 					quit := captureOsInterrupt()
 
-					return autowpApp.ListenMonitoringAMQP(quit)
+					return autowpApp.ListenMonitoringAMQP(ctx, quit)
 				},
 			},
 			{
