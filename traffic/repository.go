@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/ban"
-	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
@@ -30,12 +29,11 @@ const (
 
 // Traffic Traffic.
 type Traffic struct {
-	Monitoring    *Monitoring
-	Whitelist     *Whitelist
-	Ban           *ban.Repository
-	autowpDB      *goqu.Database
-	enforcer      *casbin.Enforcer
-	userExtractor *users.UserExtractor
+	Monitoring *Monitoring
+	Whitelist  *Whitelist
+	Ban        *ban.Repository
+	autowpDB   *goqu.Database
+	enforcer   *casbin.Enforcer
 }
 
 // AutobanProfile AutobanProfile.
@@ -91,7 +89,6 @@ func NewTraffic(
 	autowpDB *goqu.Database,
 	enforcer *casbin.Enforcer,
 	ban *ban.Repository,
-	userExtractor *users.UserExtractor,
 ) (*Traffic, error) {
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
@@ -108,12 +105,11 @@ func NewTraffic(
 	}
 
 	s := &Traffic{
-		Monitoring:    monitoring,
-		Whitelist:     whitelist,
-		Ban:           ban,
-		autowpDB:      autowpDB,
-		enforcer:      enforcer,
-		userExtractor: userExtractor,
+		Monitoring: monitoring,
+		Whitelist:  whitelist,
+		Ban:        ban,
+		autowpDB:   autowpDB,
+		enforcer:   enforcer,
 	}
 
 	return s, nil

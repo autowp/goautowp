@@ -9,10 +9,9 @@ import (
 
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/image/storage"
-	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
+	_ "github.com/go-sql-driver/mysql" // enable mysql driver
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,12 +35,7 @@ func createTrafficService(t *testing.T) *Traffic {
 
 	enforcer := casbin.NewEnforcer("../model.conf", "../policy.csv")
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
-	require.NoError(t, err)
-
-	userExtractor := users.NewUserExtractor(enforcer, imageStorage)
-
-	traf, err := NewTraffic(goquPostgresDB, goquDB, enforcer, banRepository, userExtractor)
+	traf, err := NewTraffic(goquPostgresDB, goquDB, enforcer, banRepository)
 	require.NoError(t, err)
 
 	return traf

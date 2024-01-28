@@ -16,14 +16,14 @@ type ContactsGRPCServer struct {
 	auth               *Auth
 	contactsRepository *ContactsRepository
 	userRepository     *users.Repository
-	userExtractor      *users.UserExtractor
+	userExtractor      *UserExtractor
 }
 
 func NewContactsGRPCServer(
 	auth *Auth,
 	contactsRepository *ContactsRepository,
 	userRepository *users.Repository,
-	userExtractor *users.UserExtractor,
+	userExtractor *UserExtractor,
 ) *ContactsGRPCServer {
 	return &ContactsGRPCServer{
 		auth:               auth,
@@ -139,8 +139,8 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 		}
 
 		items[idx] = &Contact{
-			ContactUserId: user.ID,
-			User:          APIUserToGRPC(user),
+			ContactUserId: user.Id,
+			User:          user,
 		}
 	}
 

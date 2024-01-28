@@ -28,7 +28,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	repository := NewRepository(goquDB)
+	repository := NewRepository(goquDB, 200)
 
 	langs := []string{"ru", "zh"}
 
@@ -72,7 +72,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	repository := NewRepository(goquDB)
+	repository := NewRepository(goquDB, 200)
 	options := ListOptions{
 		Language: "en",
 		Fields: ListFields{
@@ -186,7 +186,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	repository := NewRepository(goquDB)
+	repository := NewRepository(goquDB, 200)
 	options := ListOptions{
 		Language: "en",
 		Fields: ListFields{
@@ -243,7 +243,7 @@ func TestPaginator(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	repository := NewRepository(goquDB)
+	repository := NewRepository(goquDB, 200)
 	options := ListOptions{
 		Language: "en",
 		Limit:    2,

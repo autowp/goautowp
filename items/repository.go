@@ -29,17 +29,44 @@ const (
 )
 
 const (
-	tableItem            = "item"
-	tableItemParent      = "item_parent"
-	tableItemParentCache = "item_parent_cache"
-	tableItemLanguage    = "item_language"
-	colCatname           = "catname"
-	colEngineItemID      = "engine_item_id"
-	colItemTypeID        = "item_type_id"
-	colIsConcept         = "is_concept"
-	colIsConceptInherit  = "is_concept_inherit"
-	colSpecID            = "spec_id"
-	colID                = "id"
+	tableItem                     = "item"
+	tableItemParent               = "item_parent"
+	tableItemParentCache          = "item_parent_cache"
+	tableItemLanguage             = "item_language"
+	colNameOnly                   = "name_only"
+	colCatname                    = "catname"
+	colEngineItemID               = "engine_item_id"
+	colItemTypeID                 = "item_type_id"
+	colIsConcept                  = "is_concept"
+	colIsConceptInherit           = "is_concept_inherit"
+	colSpecID                     = "spec_id"
+	colID                         = "id"
+	colFullName                   = "full_name"
+	colLogoID                     = "logo_id"
+	colBeginYear                  = "begin_year"
+	colEndYear                    = "end_year"
+	colBeginMonth                 = "begin_month"
+	colEndMonth                   = "end_month"
+	colBeginModelYear             = "begin_model_year"
+	colEndModelYear               = "end_model_year"
+	colBeginModelYearFraction     = "begin_model_year_fraction"
+	colEndModelYearFraction       = "end_model_year_fraction"
+	colToday                      = "today"
+	colBody                       = "body"
+	colSpecName                   = "spec_name"
+	colSpecShortName              = "spec_short_name"
+	colDescription                = "description"
+	colFullText                   = "full_text"
+	colItemsCount                 = "items_count"
+	colNewItemsCount              = "new_items_count"
+	colDescendantsCount           = "descendants_count"
+	colNewDescendantsCount        = "new_descendants_count"
+	colChildItemsCount            = "child_items_count"
+	colNewChildItemsCount         = "new_child_items_count"
+	colCurrentPicturesCount       = "current_pictures_count"
+	colChildsCount                = "childs_count"
+	colDescendantTwinsGroupsCount = "descendant_twins_groups_count"
+	colInboxPicturesCount         = "inbox_pictures_count"
 )
 
 type TreeItem struct {
@@ -86,40 +113,46 @@ const (
 
 // Repository Main Object.
 type Repository struct {
-	db *goqu.Database
+	db                *goqu.Database
+	mostsMinCarsCount int
 }
 
 type Item struct {
-	ID                     int64
-	Catname                string
-	NameOnly               string
-	Body                   string
-	ItemsCount             int32
-	NewItemsCount          int32
-	ChildItemsCount        int32
-	NewChildItemsCount     int32
-	DescendantsCount       int32
-	NewDescendantsCount    int32
-	BeginYear              int32
-	EndYear                int32
-	BeginMonth             int16
-	EndMonth               int16
-	Today                  *bool
-	BeginModelYear         int32
-	EndModelYear           int32
-	BeginModelYearFraction string
-	EndModelYearFraction   string
-	SpecID                 int64
-	SpecName               string
-	SpecShortName          string
-	EngineItemID           int64
-	ItemTypeID             ItemType
-	Description            string
-	FullText               string
-	IsConcept              bool
-	IsConceptInherit       bool
-	CurrentPicturesCount   int32
-	ChildsCount            int32
+	ID                         int64
+	Catname                    string
+	NameOnly                   string
+	Body                       string
+	ItemsCount                 int32
+	NewItemsCount              int32
+	ChildItemsCount            int32
+	NewChildItemsCount         int32
+	DescendantsCount           int32
+	NewDescendantsCount        int32
+	BeginYear                  int32
+	EndYear                    int32
+	BeginMonth                 int16
+	EndMonth                   int16
+	Today                      *bool
+	BeginModelYear             int32
+	EndModelYear               int32
+	BeginModelYearFraction     string
+	EndModelYearFraction       string
+	SpecID                     int64
+	SpecName                   string
+	SpecShortName              string
+	EngineItemID               int64
+	ItemTypeID                 ItemType
+	Description                string
+	FullText                   string
+	IsConcept                  bool
+	IsConceptInherit           bool
+	CurrentPicturesCount       int32
+	ChildsCount                int32
+	DescendantTwinsGroupsCount int32
+	InboxPicturesCount         int32
+	FullName                   string
+	LogoID                     int64
+	MostsActive                bool
 }
 
 type ItemLanguage struct {
@@ -140,9 +173,11 @@ type ItemParentLanguage struct {
 // NewRepository constructor.
 func NewRepository(
 	db *goqu.Database,
+	mostsMinCarsCount int,
 ) *Repository {
 	return &Repository{
-		db: db,
+		db:                db,
+		mostsMinCarsCount: mostsMinCarsCount,
 	}
 }
 
@@ -168,29 +203,35 @@ type ListPreviewPicturesFields struct {
 }
 
 type ListFields struct {
-	NameOnly             bool
-	NameHTML             bool
-	NameDefault          bool
-	Description          bool
-	FullText             bool
-	HasText              bool
-	PreviewPictures      ListPreviewPicturesFields
-	TotalPictures        bool
-	ItemsCount           bool
-	NewItemsCount        bool
-	ChildItemsCount      bool
-	NewChildItemsCount   bool
-	DescendantsCount     bool
-	NewDescendantsCount  bool
-	NameText             bool
-	CurrentPicturesCount bool
-	ChildsCount          bool
+	NameOnly                   bool
+	NameHTML                   bool
+	NameDefault                bool
+	Description                bool
+	FullText                   bool
+	HasText                    bool
+	PreviewPictures            ListPreviewPicturesFields
+	TotalPictures              bool
+	ItemsCount                 bool
+	NewItemsCount              bool
+	ChildItemsCount            bool
+	NewChildItemsCount         bool
+	DescendantsCount           bool
+	NewDescendantsCount        bool
+	NameText                   bool
+	CurrentPicturesCount       bool
+	ChildsCount                bool
+	DescendantTwinsGroupsCount bool
+	InboxPicturesCount         bool
+	FullName                   bool
+	Logo                       bool
+	MostsActive                bool
 }
 
 type ListOptions struct {
 	Language           string
 	Fields             ListFields
 	ItemID             int64
+	ItemIDExpr         goqu.Expression
 	TypeID             []ItemType
 	DescendantPictures *ItemPicturesOptions
 	PreviewPictures    *ItemPicturesOptions
@@ -276,6 +317,10 @@ func (s *Repository) applyItem( //nolint:maintidx
 		sqSelect = sqSelect.Where(aliasIDCol.Eq(options.ItemID))
 	}
 
+	if options.ItemID > 0 {
+		sqSelect = sqSelect.Where(aliasIDCol.Eq(options.ItemIDExpr))
+	}
+
 	if options.TypeID != nil && len(options.TypeID) > 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col("item_type_id").Eq(options.TypeID))
 	}
@@ -347,7 +392,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 			sqSelect, piAlias = applyItemPicture(ipcdAlias, "item_id", sqSelect, options.DescendantPictures)
 
 			if options.Fields.CurrentPicturesCount {
-				columns = append(columns, goqu.COUNT(goqu.DISTINCT(goqu.T(piAlias).Col("picture_id"))).As("current_pictures_count"))
+				columns = append(columns, goqu.COUNT(goqu.DISTINCT(goqu.T(piAlias).Col("picture_id"))).As(colCurrentPicturesCount))
 			}
 		}
 	}
@@ -412,21 +457,29 @@ func (s *Repository) applyItem( //nolint:maintidx
 	}
 
 	if fields {
+		if options.Fields.FullName {
+			columns = append(columns, aliasTable.Col(colFullName))
+		}
+
+		if options.Fields.Logo {
+			columns = append(columns, aliasTable.Col(colLogoID))
+		}
+
 		if options.Fields.NameText || options.Fields.NameHTML {
 			isAlias := alias + "_is"
 
 			columns = append(columns,
-				aliasTable.Col("begin_year"), aliasTable.Col("end_year"),
-				aliasTable.Col("begin_month"), aliasTable.Col("end_month"),
-				aliasTable.Col("begin_model_year"), aliasTable.Col("end_model_year"),
-				aliasTable.Col("begin_model_year_fraction"), aliasTable.Col("end_model_year_fraction"),
-				aliasTable.Col("today"),
-				aliasTable.Col("body"),
-				goqu.T(isAlias).Col("short_name").As("spec_short_name"),
+				aliasTable.Col(colBeginYear), aliasTable.Col(colEndYear),
+				aliasTable.Col(colBeginMonth), aliasTable.Col(colEndMonth),
+				aliasTable.Col(colBeginModelYear), aliasTable.Col(colEndModelYear),
+				aliasTable.Col(colBeginModelYearFraction), aliasTable.Col(colEndModelYearFraction),
+				aliasTable.Col(colToday),
+				aliasTable.Col(colBody),
+				goqu.T(isAlias).Col("short_name").As(colSpecShortName),
 			)
 
 			if options.Fields.NameHTML {
-				columns = append(columns, goqu.T(isAlias).Col("name").As("spec_name"))
+				columns = append(columns, goqu.T(isAlias).Col("name").As(colSpecName))
 			}
 
 			sqSelect = sqSelect.
@@ -452,7 +505,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
 					Limit(1).
-					As("description"),
+					As(colDescription),
 			)
 		}
 
@@ -471,7 +524,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
 					Limit(1).
-					As("full_text"),
+					As(colFullText),
 			)
 		}
 
@@ -495,11 +548,11 @@ func (s *Repository) applyItem( //nolint:maintidx
 					LIMIT 1),
 					`+alias+`.name
 				)
-			`, s...).As("name_only"))
+			`, s...).As(colNameOnly))
 		}
 
 		if options.Fields.ChildItemsCount {
-			columns = append(columns, goqu.L("count(distinct "+ipcAlias+".item_id)").As("child_items_count"))
+			columns = append(columns, goqu.L("count(distinct "+ipcAlias+".item_id)").As(colChildItemsCount))
 		}
 
 		if options.Fields.NewChildItemsCount {
@@ -507,17 +560,17 @@ func (s *Repository) applyItem( //nolint:maintidx
 				columns,
 				goqu.L("count(distinct IF("+ipcAlias+".timestamp > DATE_SUB(NOW(), INTERVAL ? DAY), "+
 					ipcAlias+".item_id, NULL))", NewDays).
-					As("new_child_items_count"))
+					As(colNewChildItemsCount))
 		}
 
 		if options.Fields.ItemsCount {
-			columns = append(columns, goqu.L("count(distinct "+alias+".id)").As("items_count"))
+			columns = append(columns, goqu.L("count(distinct "+alias+".id)").As(colItemsCount))
 		}
 
 		if options.Fields.NewItemsCount {
 			columns = append(columns, goqu.L(`
 				count(distinct if(`+alias+`.add_datetime > date_sub(NOW(), INTERVAL ? DAY), `+alias+`.id, null))
-			`, NewDays).As("new_items_count"))
+			`, NewDays).As(colNewItemsCount))
 		}
 
 		if options.Fields.ChildsCount {
@@ -528,7 +581,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 				subSelect.Select(goqu.COUNT(goqu.Star())).
 					From(tableItemParent).
 					Where(goqu.T(tableItemParent).Col("parent_id").Eq(goqu.T(alias).Col(colID))).
-					As("childs_count"),
+					As(colChildsCount),
 			)
 		}
 
@@ -542,7 +595,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 						AND `+tableItemParentCache+`.item_id <> `+tableItemParentCache+`.parent_id
 					LIMIT 1
 				) 
-			`).As("descendants_count"))
+			`).As(colDescendantsCount))
 		}
 
 		if options.Fields.NewDescendantsCount {
@@ -555,7 +608,43 @@ func (s *Repository) applyItem( //nolint:maintidx
 						AND `+tableItemParentCache+`.item_id <> `+tableItemParentCache+`.parent_id
 						AND product2.add_datetime > DATE_SUB(NOW(), INTERVAL ? DAY)
 				) 
-			`, NewDays).As("new_descendants_count"))
+			`, NewDays).As(colNewDescendantsCount))
+		}
+
+		if options.Fields.DescendantTwinsGroupsCount {
+			subSelect, err := s.CountSelect(ListOptions{
+				TypeID: []ItemType{TWINS},
+				DescendantItems: &ListOptions{
+					AncestorItems: &ListOptions{
+						ItemIDExpr: goqu.T(alias).Col(colID),
+					},
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			columns = append(
+				columns,
+				subSelect.As(colDescendantTwinsGroupsCount),
+			)
+		}
+
+		if options.Fields.InboxPicturesCount {
+			subSelect, err := s.CountSelect(ListOptions{
+				TypeID: []ItemType{TWINS},
+				AncestorItems: &ListOptions{
+					ItemIDExpr: goqu.T(alias).Col(colID),
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			columns = append(
+				columns,
+				subSelect.As(colInboxPicturesCount),
+			)
 		}
 
 		sqSelect = sqSelect.SelectAppend(columns...)
@@ -564,12 +653,23 @@ func (s *Repository) applyItem( //nolint:maintidx
 	return sqSelect, nil
 }
 
-func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error) {
+func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, error) {
 	var err error
 
 	sqSelect := s.db.Select(goqu.L("COUNT(1)")).From(goqu.T(tableItem).As("i"))
 
 	sqSelect, err = s.applyItem("i", sqSelect, false, &options)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect, nil
+}
+
+func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error) {
+	var err error
+
+	sqSelect, err := s.CountSelect(options)
 	if err != nil {
 		return 0, err
 	}
@@ -641,6 +741,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 		goqu.T(alias).Col(colIsConcept),
 		goqu.T(alias).Col(colIsConceptInherit),
 		goqu.T(alias).Col(colSpecID),
+		goqu.T(alias).Col(colFullName),
 	).From(goqu.T(tableItem).As(alias)).
 		GroupBy(goqu.T(alias).Col(colID))
 
@@ -706,6 +807,8 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 			specShortName          sql.NullString
 			description            sql.NullString
 			fullText               sql.NullString
+			fullName               sql.NullString
+			logoID                 sql.NullInt64
 		)
 
 		pointers := make([]interface{}, len(columnNames))
@@ -714,10 +817,12 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 			switch colName {
 			case colID:
 				pointers[i] = &r.ID
-			case "name_only":
+			case colNameOnly:
 				pointers[i] = &r.NameOnly
 			case colCatname:
 				pointers[i] = &catname
+			case colFullName:
+				pointers[i] = &fullName
 			case colEngineItemID:
 				pointers[i] = &engineItemID
 			case colItemTypeID:
@@ -728,50 +833,56 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 				pointers[i] = &r.IsConceptInherit
 			case colSpecID:
 				pointers[i] = &specID
-			case "description":
+			case colDescription:
 				pointers[i] = &description
-			case "full_text":
+			case colFullText:
 				pointers[i] = &fullText
-			case "items_count":
+			case colItemsCount:
 				pointers[i] = &r.ItemsCount
-			case "new_items_count":
+			case colNewItemsCount:
 				pointers[i] = &r.NewItemsCount
-			case "descendants_count":
+			case colDescendantsCount:
 				pointers[i] = &r.DescendantsCount
-			case "new_descendants_count":
+			case colNewDescendantsCount:
 				pointers[i] = &r.NewDescendantsCount
-			case "child_items_count":
+			case colChildItemsCount:
 				pointers[i] = &r.ChildItemsCount
-			case "new_child_items_count":
+			case colNewChildItemsCount:
 				pointers[i] = &r.NewChildItemsCount
-			case "begin_year":
+			case colBeginYear:
 				pointers[i] = &beginYear
-			case "end_year":
+			case colEndYear:
 				pointers[i] = &endYear
-			case "begin_month":
+			case colBeginMonth:
 				pointers[i] = &beginMonth
-			case "end_month":
+			case colEndMonth:
 				pointers[i] = &endMonth
-			case "begin_model_year":
+			case colBeginModelYear:
 				pointers[i] = &beginModelYear
-			case "end_model_year":
+			case colEndModelYear:
 				pointers[i] = &endModelYear
-			case "begin_model_year_fraction":
+			case colBeginModelYearFraction:
 				pointers[i] = &beginModelYearFraction
-			case "end_model_year_fraction":
+			case colEndModelYearFraction:
 				pointers[i] = &endModelYearFraction
-			case "today":
+			case colToday:
 				pointers[i] = &today
-			case "body":
+			case colBody:
 				pointers[i] = &r.Body
-			case "spec_name":
+			case colSpecName:
 				pointers[i] = &specName
-			case "spec_short_name":
+			case colSpecShortName:
 				pointers[i] = &specShortName
-			case "current_pictures_count":
+			case colCurrentPicturesCount:
 				pointers[i] = &r.CurrentPicturesCount
-			case "childs_count":
+			case colChildsCount:
 				pointers[i] = &r.ChildsCount
+			case colDescendantTwinsGroupsCount:
+				pointers[i] = &r.DescendantTwinsGroupsCount
+			case colInboxPicturesCount:
+				pointers[i] = &r.InboxPicturesCount
+			case colLogoID:
+				pointers[i] = &logoID
 			default:
 				pointers[i] = nil
 			}
@@ -844,6 +955,27 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 
 		if fullText.Valid {
 			r.FullText = fullText.String
+		}
+
+		if fullName.Valid {
+			r.FullName = fullName.String
+		}
+
+		if logoID.Valid {
+			r.LogoID = logoID.Int64
+		}
+
+		if options.Fields.MostsActive {
+			carsCount, err := s.Count(ctx, ListOptions{
+				AncestorItems: &ListOptions{
+					ItemID: r.ID,
+				},
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+
+			r.MostsActive = carsCount >= s.mostsMinCarsCount
 		}
 
 		result = append(result, r)

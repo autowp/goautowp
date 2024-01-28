@@ -1,4 +1,4 @@
-package users
+package goautowp
 
 import (
 	"context"
@@ -8,21 +8,16 @@ import (
 	"net/url"
 	"time"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 )
 
 type UserExtractor struct {
 	enforcer     *casbin.Enforcer
 	imageStorage *storage.Storage
-}
-
-type APIImage struct {
-	ID       int32
-	Src      string
-	Width    int32
-	Height   int32
-	Filesize int32
 }
 
 func NewUserExtractor(enforcer *casbin.Enforcer, imageStorage *storage.Storage) *UserExtractor {
@@ -32,21 +27,7 @@ func NewUserExtractor(enforcer *casbin.Enforcer, imageStorage *storage.Storage) 
 	}
 }
 
-func ImageToAPIImage(i *storage.Image) *APIImage {
-	if i == nil {
-		return nil
-	}
-
-	return &APIImage{
-		ID:       int32(i.ID()),
-		Width:    int32(i.Width()),
-		Height:   int32(i.Height()),
-		Filesize: int32(i.FileSize()),
-		Src:      i.Src(),
-	}
-}
-
-func (s *UserExtractor) Extract(ctx context.Context, row *DBUser) (*APIUser, error) {
+func (s *UserExtractor) Extract(ctx context.Context, row *users.DBUser) (*APIUser, error) {
 	longAway := true
 
 	if row.LastOnline != nil {
@@ -67,7 +48,7 @@ func (s *UserExtractor) Extract(ctx context.Context, row *DBUser) (*APIUser, err
 	}
 
 	user := APIUser{
-		ID:          row.ID,
+		Id:          row.ID,
 		Name:        row.Name,
 		Deleted:     row.Deleted,
 		LongAway:    longAway,
@@ -75,7 +56,10 @@ func (s *UserExtractor) Extract(ctx context.Context, row *DBUser) (*APIUser, err
 		Route:       route,
 		Identity:    identity,
 		SpecsWeight: row.SpecsWeight,
-		LastOnline:  row.LastOnline,
+	}
+
+	if row.LastOnline != nil {
+		user.LastOnline = timestamppb.New(*row.LastOnline)
 	}
 
 	if row.EMail != nil {
@@ -94,7 +78,7 @@ func (s *UserExtractor) Extract(ctx context.Context, row *DBUser) (*APIUser, err
 			return nil, err
 		}
 
-		user.Avatar = ImageToAPIImage(avatar)
+		user.Avatar = APIImageToGRPC(avatar)
 	}
 
 	return &user, nil

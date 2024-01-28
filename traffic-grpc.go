@@ -30,7 +30,7 @@ type TrafficGRPCServer struct {
 	auth          *Auth
 	db            *goqu.Database
 	enforcer      *casbin.Enforcer
-	userExtractor *users.UserExtractor
+	userExtractor *UserExtractor
 	traffic       *traffic.Traffic
 }
 
@@ -38,7 +38,7 @@ func NewTrafficGRPCServer(
 	auth *Auth,
 	db *goqu.Database,
 	enforcer *casbin.Enforcer,
-	userExtractor *users.UserExtractor,
+	userExtractor *UserExtractor,
 	traffic *traffic.Traffic,
 ) *TrafficGRPCServer {
 	return &TrafficGRPCServer{
@@ -77,7 +77,7 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			var extractedUser *users.APIUser
+			var extractedUser *APIUser
 
 			if user != nil {
 				extractedUser, err = s.userExtractor.Extract(ctx, user)
@@ -89,7 +89,7 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 			topItemBan = &APIBanItem{
 				Until:    timestamppb.New(banItem.Until),
 				ByUserId: banItem.ByUserID,
-				ByUser:   APIUserToGRPC(extractedUser),
+				ByUser:   extractedUser,
 				Reason:   banItem.Reason,
 			}
 		}

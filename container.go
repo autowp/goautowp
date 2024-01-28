@@ -660,12 +660,7 @@ func (s *Container) Traffic() (*traffic.Traffic, error) {
 			return nil, err
 		}
 
-		userExtractor, err := s.UserExtractor()
-		if err != nil {
-			return nil, err
-		}
-
-		traf, err := traffic.NewTraffic(db, autowpDB, s.Enforcer(), banRepository, userExtractor)
+		traf, err := traffic.NewTraffic(db, autowpDB, s.Enforcer(), banRepository)
 		if err != nil {
 			logrus.Error(err.Error())
 
@@ -678,13 +673,13 @@ func (s *Container) Traffic() (*traffic.Traffic, error) {
 	return s.traffic, nil
 }
 
-func (s *Container) UserExtractor() (*users.UserExtractor, error) {
+func (s *Container) UserExtractor() (*UserExtractor, error) {
 	is, err := s.ImageStorage()
 	if err != nil {
 		return nil, err
 	}
 
-	return users.NewUserExtractor(s.Enforcer(), is), nil
+	return NewUserExtractor(s.Enforcer(), is), nil
 }
 
 func (s *Container) UsersRepository() (*users.Repository, error) {
@@ -735,14 +730,21 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 			return nil, err
 		}
 
-		s.itemsRepository = items.NewRepository(db)
+		cfg := s.Config()
+
+		s.itemsRepository = items.NewRepository(db, cfg.MostsMinCarsCount)
 	}
 
 	return s.itemsRepository, nil
 }
 
 func (s *Container) ItemExtractor() (*ItemExtractor, error) {
-	return NewItemExtractor(s.Enforcer()), nil
+	imageStorage, err := s.ImageStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewItemExtractor(s.Enforcer(), imageStorage), nil
 }
 
 func (s *Container) Auth() (*Auth, error) {
