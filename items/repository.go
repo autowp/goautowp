@@ -317,7 +317,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		sqSelect = sqSelect.Where(aliasIDCol.Eq(options.ItemID))
 	}
 
-	if options.ItemID > 0 {
+	if options.ItemIDExpr != nil {
 		sqSelect = sqSelect.Where(aliasIDCol.Eq(options.ItemIDExpr))
 	}
 
