@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/users"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
 	"github.com/getsentry/sentry-go"
@@ -39,7 +38,7 @@ func NewApplication(cfg config.Config) *Application {
 	return s
 }
 
-func (s *Application) MigrateAutowp() error {
+func (s *Application) MigrateAutowp(_ context.Context) error {
 	_, err := s.container.AutowpDB()
 	if err != nil {
 		return err
@@ -85,7 +84,7 @@ func (s *Application) ServeGRPC(quit chan bool) error {
 	return nil
 }
 
-func (s *Application) ServePublic(quit chan bool) error {
+func (s *Application) ServePublic(_ context.Context, quit chan bool) error {
 	httpServer, err := s.container.PublicHTTPServer()
 	if err != nil {
 		return err
@@ -112,7 +111,7 @@ func (s *Application) ServePublic(quit chan bool) error {
 	return nil
 }
 
-func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
+func (s *Application) ListenDuplicateFinderAMQP(ctx context.Context, quit chan bool) error {
 	df, err := s.container.DuplicateFinder()
 	if err != nil {
 		return err
@@ -122,7 +121,7 @@ func (s *Application) ListenDuplicateFinderAMQP(quit chan bool) error {
 
 	logrus.Println("DuplicateFinder listener started")
 
-	err = df.ListenAMQP(cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
+	err = df.ListenAMQP(ctx, cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
 
 	if err != nil {
 		logrus.Error(err.Error())
@@ -178,7 +177,7 @@ func applyMigrations(config config.MigrationsConfig) error {
 	return nil
 }
 
-func (s *Application) MigratePostgres() error {
+func (s *Application) MigratePostgres(_ context.Context) error {
 	_, err := s.container.GoquPostgresDB()
 	if err != nil {
 		return err
@@ -194,7 +193,7 @@ func (s *Application) MigratePostgres() error {
 	return nil
 }
 
-func (s *Application) ServePrivate(quit chan bool) error {
+func (s *Application) ServePrivate(_ context.Context, quit chan bool) error {
 	httpServer, err := s.container.PrivateHTTPServer()
 	if err != nil {
 		return err
@@ -336,7 +335,7 @@ func (s *Application) SchedulerMidnight(ctx context.Context) error {
 	return nil
 }
 
-func (s *Application) Autoban(quit chan bool) error {
+func (s *Application) Autoban(ctx context.Context, quit chan bool) error {
 	traffic, err := s.container.Traffic()
 	if err != nil {
 		return err
@@ -349,7 +348,7 @@ loop:
 	for {
 		select {
 		case <-banTicker.C:
-			err := traffic.AutoBan(context.Background())
+			err := traffic.AutoBan(ctx)
 			if err != nil {
 				logrus.Error(err.Error())
 			}
@@ -408,7 +407,7 @@ func (s *Application) ImageStorageGetImage(ctx context.Context, imageID int) (*A
 		return nil, err
 	}
 
-	return APIImageToGRPC(users.ImageToAPIImage(img)), nil
+	return APIImageToGRPC(img), nil
 }
 
 func (s *Application) ImageStorageGetFormattedImage(
@@ -426,5 +425,5 @@ func (s *Application) ImageStorageGetFormattedImage(
 		return nil, err
 	}
 
-	return APIImageToGRPC(users.ImageToAPIImage(img)), nil
+	return APIImageToGRPC(img), nil
 }

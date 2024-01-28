@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/casbin/casbin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -63,35 +64,49 @@ func reverseConvertItemTypeID(itemTypeID ItemType) items.ItemType {
 type ItemExtractor struct {
 	enforcer      *casbin.Enforcer
 	nameFormatter *items.ItemNameFormatter
+	imageStorage  *storage.Storage
 }
 
-func NewItemExtractor(enforcer *casbin.Enforcer) *ItemExtractor {
+func NewItemExtractor(enforcer *casbin.Enforcer, imageStorage *storage.Storage) *ItemExtractor {
 	return &ItemExtractor{
 		enforcer:      enforcer,
 		nameFormatter: &items.ItemNameFormatter{},
+		imageStorage:  imageStorage,
 	}
 }
 
 func (s *ItemExtractor) Extract(
-	_ context.Context, row items.Item, fields *ItemFields, localizer *i18n.Localizer,
+	ctx context.Context, row items.Item, fields *ItemFields, localizer *i18n.Localizer,
 ) (*APIItem, error) {
 	if fields == nil {
 		fields = &ItemFields{}
 	}
 
 	result := &APIItem{
-		Id:                   row.ID,
-		Catname:              row.Catname,
-		EngineItemId:         row.EngineItemID,
-		DescendantsCount:     row.DescendantsCount,
-		ItemTypeId:           convertItemTypeID(row.ItemTypeID),
-		IsConcept:            row.IsConcept,
-		IsConceptInherit:     row.IsConceptInherit,
-		SpecId:               row.SpecID,
-		Description:          row.Description,
-		FullText:             row.FullText,
-		CurrentPicturesCount: row.CurrentPicturesCount,
-		ChildsCount:          row.ChildsCount,
+		Id:                         row.ID,
+		Catname:                    row.Catname,
+		EngineItemId:               row.EngineItemID,
+		DescendantsCount:           row.DescendantsCount,
+		ItemTypeId:                 convertItemTypeID(row.ItemTypeID),
+		IsConcept:                  row.IsConcept,
+		IsConceptInherit:           row.IsConceptInherit,
+		SpecId:                     row.SpecID,
+		Description:                row.Description,
+		FullText:                   row.FullText,
+		CurrentPicturesCount:       row.CurrentPicturesCount,
+		ChildsCount:                row.ChildsCount,
+		DescendantTwinsGroupsCount: row.DescendantTwinsGroupsCount,
+		InboxPicturesCount:         row.InboxPicturesCount,
+		FullName:                   row.FullName,
+	}
+
+	if fields.Logo120 && row.LogoID != 0 {
+		logo120, err := s.imageStorage.FormattedImage(ctx, int(row.LogoID), "logo")
+		if err != nil {
+			return nil, err
+		}
+
+		result.Logo120 = APIImageToGRPC(logo120)
 	}
 
 	if fields.NameOnly {

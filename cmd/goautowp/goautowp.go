@@ -86,8 +86,8 @@ func mainReturnWithCode() int {
 								Required: true,
 							},
 						},
-						Action: func(cCtx *cli.Context) error {
-							i, err := autowpApp.ImageStorageGetImage(cCtx.Context, int(cCtx.Int("image_id")))
+						Action: func(ctx context.Context, command *cli.Command) error {
+							i, err := autowpApp.ImageStorageGetImage(ctx, int(command.Int("image_id")))
 							if err != nil {
 								return err
 							}
@@ -111,11 +111,11 @@ func mainReturnWithCode() int {
 								Required: true,
 							},
 						},
-						Action: func(cCtx *cli.Context) error {
+						Action: func(ctx context.Context, command *cli.Command) error {
 							i, err := autowpApp.ImageStorageGetFormattedImage(
-								cCtx.Context,
-								int(cCtx.Int("image_id")),
-								cCtx.String("format"),
+								ctx,
+								int(command.Int("image_id")),
+								command.String("format"),
 							)
 							if err != nil {
 								return err
@@ -130,23 +130,23 @@ func mainReturnWithCode() int {
 			},
 			{
 				Name: "autoban",
-				Action: func(cCtx *cli.Context) error {
+				Action: func(ctx context.Context, command *cli.Command) error {
 					quit := captureOsInterrupt()
 
-					return autowpApp.Autoban(quit)
+					return autowpApp.Autoban(ctx, quit)
 				},
 			},
 			{
 				Name: "listen-df-amqp",
-				Action: func(cCtx *cli.Context) error {
+				Action: func(ctx context.Context, command *cli.Command) error {
 					quit := captureOsInterrupt()
 
-					return autowpApp.ListenDuplicateFinderAMQP(quit)
+					return autowpApp.ListenDuplicateFinderAMQP(ctx, quit)
 				},
 			},
 			{
 				Name: "listen-monitoring-amqp",
-				Action: func(cCtx *cli.Context) error {
+				Action: func(_ context.Context, command *cli.Command) error {
 					quit := captureOsInterrupt()
 
 					return autowpApp.ListenMonitoringAMQP(quit)
@@ -154,13 +154,13 @@ func mainReturnWithCode() int {
 			},
 			{
 				Name: "serve-grpc",
-				Action: func(cCtx *cli.Context) error {
-					err := autowpApp.MigrateAutowp()
+				Action: func(ctx context.Context, command *cli.Command) error {
+					err := autowpApp.MigrateAutowp(ctx)
 					if err != nil {
 						return err
 					}
 
-					err = autowpApp.MigratePostgres()
+					err = autowpApp.MigratePostgres(ctx)
 					if err != nil {
 						return err
 					}
@@ -172,64 +172,64 @@ func mainReturnWithCode() int {
 			},
 			{
 				Name: "serve-public",
-				Action: func(cCtx *cli.Context) error {
-					err := autowpApp.MigrateAutowp()
+				Action: func(ctx context.Context, command *cli.Command) error {
+					err := autowpApp.MigrateAutowp(ctx)
 					if err != nil {
 						return err
 					}
 
-					err = autowpApp.MigratePostgres()
+					err = autowpApp.MigratePostgres(ctx)
 					if err != nil {
 						return err
 					}
 
 					quit := captureOsInterrupt()
 
-					return autowpApp.ServePublic(quit)
+					return autowpApp.ServePublic(ctx, quit)
 				},
 			},
 			{
 				Name: "serve-private",
-				Action: func(cCtx *cli.Context) error {
+				Action: func(ctx context.Context, command *cli.Command) error {
 					quit := captureOsInterrupt()
 
-					return autowpApp.ServePrivate(quit)
+					return autowpApp.ServePrivate(ctx, quit)
 				},
 			},
 			{
 				Name: "migrate-autowp",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.MigrateAutowp()
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.MigrateAutowp(ctx)
 				},
 			},
 			{
 				Name: "migrate-postgres",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.MigratePostgres()
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.MigratePostgres(ctx)
 				},
 			},
 			{
 				Name: "scheduler-hourly",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.SchedulerHourly(cCtx.Context)
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.SchedulerHourly(ctx)
 				},
 			},
 			{
 				Name: "scheduler-daily",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.SchedulerDaily(cCtx.Context)
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.SchedulerDaily(ctx)
 				},
 			},
 			{
 				Name: "scheduler-midnight",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.SchedulerMidnight(cCtx.Context)
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.SchedulerMidnight(ctx)
 				},
 			},
 			{
 				Name: "export-users-to-keycloak",
-				Action: func(cCtx *cli.Context) error {
-					return autowpApp.ExportUsersToKeycloak(cCtx.Context)
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.ExportUsersToKeycloak(ctx)
 				},
 			},
 		},

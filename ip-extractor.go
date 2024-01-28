@@ -18,14 +18,14 @@ type IPExtractor struct {
 	enforcer       *casbin.Enforcer
 	banRepository  *ban.Repository
 	userRepository *users.Repository
-	userExtractor  *users.UserExtractor
+	userExtractor  *UserExtractor
 }
 
 func NewIPExtractor(
 	enforcer *casbin.Enforcer,
 	banRepository *ban.Repository,
 	userRepository *users.Repository,
-	userExtractor *users.UserExtractor,
+	userExtractor *UserExtractor,
 ) *IPExtractor {
 	return &IPExtractor{
 		enforcer:       enforcer,
@@ -84,7 +84,7 @@ func (s *IPExtractor) Extract(ctx context.Context, ip net.IP, fields map[string]
 						return nil, err
 					}
 
-					result.Blacklist.ByUser = APIUserToGRPC(apiUser)
+					result.Blacklist.ByUser = apiUser
 				}
 			}
 		}

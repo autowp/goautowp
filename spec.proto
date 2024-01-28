@@ -745,6 +745,11 @@ message ItemFields {
   bool descendants_count = 9;
   bool current_pictures_count = 10;
   bool childs_count = 11;
+  bool descendant_twins_groups_count = 12;
+  bool inbox_pictures_count = 13;
+  bool full_name = 14;
+  bool logo120 = 15;
+  bool mosts_active = 16;
 }
 
 message ItemRequest {
@@ -806,6 +811,10 @@ message APIItem {
   string full_text = 13;
   int32 current_pictures_count = 14;
   int32 childs_count = 15;
+  int32 descendant_twins_groups_count = 16;
+  int32 inbox_pictures_count = 17;
+  string full_name = 18;
+  APIImage logo120 = 19;
 }
 
 message APIItemList {

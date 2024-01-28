@@ -22,7 +22,7 @@ type UsersGRPCServer struct {
 	events             *Events
 	languages          map[string]config.LanguageConfig
 	captcha            bool
-	userExtractor      *users.UserExtractor
+	userExtractor      *UserExtractor
 }
 
 func NewUsersGRPCServer(
@@ -33,7 +33,7 @@ func NewUsersGRPCServer(
 	events *Events,
 	languages map[string]config.LanguageConfig,
 	captcha bool,
-	userExtractor *users.UserExtractor,
+	userExtractor *UserExtractor,
 ) *UsersGRPCServer {
 	return &UsersGRPCServer{
 		auth:               auth,
@@ -75,7 +75,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return APIUserToGRPC(apiUser), err
+	return apiUser, err
 }
 
 func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {
@@ -225,7 +225,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		items = append(items, APIUserToGRPC(apiUser))
+		items = append(items, apiUser)
 	}
 
 	var paginator *Pages

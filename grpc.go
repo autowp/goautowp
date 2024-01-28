@@ -8,11 +8,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/autowp/goautowp/users"
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -21,45 +19,45 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func APIImageToGRPC(image *users.APIImage) *APIImage {
+func APIImageToGRPC(image *storage.Image) *APIImage {
 	if image == nil {
 		return nil
 	}
 
 	return &APIImage{
-		Id:       image.ID,
-		Src:      image.Src,
-		Width:    image.Width,
-		Height:   image.Height,
-		Filesize: image.Filesize,
+		Id:       int32(image.ID()),
+		Src:      image.Src(),
+		Width:    int32(image.Width()),
+		Height:   int32(image.Height()),
+		Filesize: int32(image.FileSize()),
 	}
 }
 
-func APIUserToGRPC(user *users.APIUser) *APIUser {
-	if user == nil {
-		return nil
-	}
-
-	var ts *timestamppb.Timestamp
-
-	if user.LastOnline != nil {
-		ts = timestamppb.New(*user.LastOnline)
-	}
-
-	return &APIUser{
-		Id:          user.ID,
-		Name:        user.Name,
-		Deleted:     user.Deleted,
-		LongAway:    user.LongAway,
-		Green:       user.Green,
-		Route:       user.Route,
-		Identity:    user.Identity,
-		Avatar:      APIImageToGRPC(user.Avatar),
-		Gravatar:    user.Gravatar,
-		LastOnline:  ts,
-		SpecsWeight: user.SpecsWeight,
-	}
-}
+//func APIUserToGRPC(user *users.APIUser) *APIUser {
+//	if user == nil {
+//		return nil
+//	}
+//
+//	var ts *timestamppb.Timestamp
+//
+//	if user.LastOnline != nil {
+//		ts = timestamppb.New(*user.LastOnline)
+//	}
+//
+//	return &APIUser{
+//		Id:          user.ID,
+//		Name:        user.Name,
+//		Deleted:     user.Deleted,
+//		LongAway:    user.LongAway,
+//		Green:       user.Green,
+//		Route:       user.Route,
+//		Identity:    user.Identity,
+//		Avatar:      APIImageToGRPC(user.Avatar),
+//		Gravatar:    user.Gravatar,
+//		LastOnline:  ts,
+//		SpecsWeight: user.SpecsWeight,
+//	}
+//}
 
 type GRPCServer struct {
 	UnimplementedAutowpServer

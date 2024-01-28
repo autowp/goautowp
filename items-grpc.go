@@ -585,17 +585,22 @@ func convertFields(fields *ItemFields) items.ListFields {
 	}
 
 	result := items.ListFields{
-		NameOnly:             fields.NameOnly,
-		NameHTML:             fields.NameHtml,
-		NameText:             fields.NameText,
-		NameDefault:          fields.NameDefault,
-		Description:          fields.Description,
-		HasText:              fields.HasText,
-		PreviewPictures:      previewPictures,
-		TotalPictures:        fields.TotalPictures,
-		DescendantsCount:     fields.DescendantsCount,
-		CurrentPicturesCount: fields.CurrentPicturesCount,
-		ChildsCount:          fields.ChildsCount,
+		NameOnly:                   fields.NameOnly,
+		NameHTML:                   fields.NameHtml,
+		NameText:                   fields.NameText,
+		NameDefault:                fields.NameDefault,
+		Description:                fields.Description,
+		HasText:                    fields.HasText,
+		PreviewPictures:            previewPictures,
+		TotalPictures:              fields.TotalPictures,
+		DescendantsCount:           fields.DescendantsCount,
+		CurrentPicturesCount:       fields.CurrentPicturesCount,
+		ChildsCount:                fields.ChildsCount,
+		DescendantTwinsGroupsCount: fields.DescendantTwinsGroupsCount,
+		InboxPicturesCount:         fields.InboxPicturesCount,
+		FullName:                   fields.FullName,
+		Logo:                       fields.Logo120,
+		MostsActive:                fields.MostsActive,
 	}
 
 	return result

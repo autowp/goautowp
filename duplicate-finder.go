@@ -46,7 +46,7 @@ func NewDuplicateFinder(db *goqu.Database) (*DuplicateFinder, error) {
 }
 
 // ListenAMQP for incoming messages.
-func (s *DuplicateFinder) ListenAMQP(url string, queue string, quitChan chan bool) error {
+func (s *DuplicateFinder) ListenAMQP(_ context.Context, url string, queue string, quitChan chan bool) error {
 	rabbitMQ, err := util.ConnectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)
