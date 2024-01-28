@@ -33,32 +33,6 @@ func APIImageToGRPC(image *storage.Image) *APIImage {
 	}
 }
 
-//func APIUserToGRPC(user *users.APIUser) *APIUser {
-//	if user == nil {
-//		return nil
-//	}
-//
-//	var ts *timestamppb.Timestamp
-//
-//	if user.LastOnline != nil {
-//		ts = timestamppb.New(*user.LastOnline)
-//	}
-//
-//	return &APIUser{
-//		Id:          user.ID,
-//		Name:        user.Name,
-//		Deleted:     user.Deleted,
-//		LongAway:    user.LongAway,
-//		Green:       user.Green,
-//		Route:       user.Route,
-//		Identity:    user.Identity,
-//		Avatar:      APIImageToGRPC(user.Avatar),
-//		Gravatar:    user.Gravatar,
-//		LastOnline:  ts,
-//		SpecsWeight: user.SpecsWeight,
-//	}
-//}
-
 type GRPCServer struct {
 	UnimplementedAutowpServer
 	auth              *Auth

@@ -55,7 +55,7 @@ func TestAutoWhitelist(t *testing.T) { //nolint:paralleltest
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	err = s.Monitoring.Add(ip, time.Now())
+	err = s.Monitoring.Add(ctx, ip, time.Now())
 	require.NoError(t, err)
 
 	exists, err = s.Monitoring.ExistsIP(ip)
@@ -103,11 +103,11 @@ func TestAutoBanByProfile(t *testing.T) { //nolint:paralleltest
 	err = s.Ban.Remove(ctx, ip2)
 	require.NoError(t, err)
 
-	err = s.Monitoring.Add(ip1, time.Now())
+	err = s.Monitoring.Add(ctx, ip1, time.Now())
 	require.NoError(t, err)
 
 	for i := 0; i < 4; i++ {
-		err = s.Monitoring.Add(ip2, time.Now())
+		err = s.Monitoring.Add(ctx, ip2, time.Now())
 		require.NoError(t, err)
 	}
 
@@ -143,7 +143,7 @@ func TestWhitelistedNotBanned(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < 4; i++ {
-		err = s.Monitoring.Add(ip, time.Now())
+		err = s.Monitoring.Add(ctx, ip, time.Now())
 		require.NoError(t, err)
 	}
 
@@ -171,12 +171,12 @@ func TestTop(t *testing.T) {
 	err = s.Monitoring.Clear(ctx)
 	require.NoError(t, err)
 
-	err = s.Monitoring.Add(net.IPv4(192, 168, 0, 1), time.Now())
+	err = s.Monitoring.Add(ctx, net.IPv4(192, 168, 0, 1), time.Now())
 	require.NoError(t, err)
 
 	now := time.Now()
 	for i := 0; i < 10; i++ {
-		err = s.Monitoring.Add(net.IPv6loopback, now)
+		err = s.Monitoring.Add(ctx, net.IPv6loopback, now)
 		require.NoError(t, err)
 	}
 }

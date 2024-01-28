@@ -764,7 +764,7 @@ func (s *Repository) UserPreferences(ctx context.Context, userID int64, toUserID
 	return &row, err
 }
 
-func (s *Repository) SetupPrivateRouter(r *gin.Engine) {
+func (s *Repository) SetupPrivateRouter(_ context.Context, r *gin.Engine) {
 	r.GET("/user-user-preferences/:user_id/:to_user_id", func(c *gin.Context) {
 		userID, err := strconv.ParseInt(c.Param("user_id"), Decimal, BitSize64)
 		if err != nil {

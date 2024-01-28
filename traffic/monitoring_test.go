@@ -34,10 +34,12 @@ func TestMonitoringAdd(t *testing.T) {
 
 	s := createMonitoringService(t)
 
-	err := s.Add(net.IPv4(192, 168, 0, 1), time.Now())
+	ctx := context.Background()
+
+	err := s.Add(ctx, net.IPv4(192, 168, 0, 1), time.Now())
 	require.NoError(t, err)
 
-	err = s.Add(net.IPv6loopback, time.Now())
+	err = s.Add(ctx, net.IPv6loopback, time.Now())
 	require.NoError(t, err)
 }
 
@@ -51,7 +53,7 @@ func TestMonitoringGC(t *testing.T) {
 	err := s.Clear(ctx)
 	require.NoError(t, err)
 
-	err = s.Add(net.IPv4(192, 168, 0, 77), time.Now())
+	err = s.Add(ctx, net.IPv4(192, 168, 0, 77), time.Now())
 	require.NoError(t, err)
 
 	affected, err := s.GC(ctx)
@@ -71,7 +73,7 @@ func TestListByBanProfile(t *testing.T) { //nolint:paralleltest
 	require.NoError(t, err)
 
 	for i := 0; i < 2; i++ {
-		err = s.Add(net.IPv4(192, 168, 0, 77), time.Now())
+		err = s.Add(ctx, net.IPv4(192, 168, 0, 77), time.Now())
 		require.NoError(t, err)
 	}
 

@@ -1,13 +1,10 @@
 package goautowp
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"time"
-
-	"github.com/autowp/goautowp/textstorage"
-
-	"github.com/redis/go-redis/v9"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/attrs"
@@ -23,6 +20,7 @@ import (
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/telegram"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/traffic"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
@@ -34,6 +32,7 @@ import (
 	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -418,11 +417,11 @@ func (s *Container) PicturesRepository() (*pictures.Repository, error) {
 	return s.picturesRepository, nil
 }
 
-func (s *Container) PrivateHTTPServer() (*http.Server, error) {
+func (s *Container) PrivateHTTPServer(ctx context.Context) (*http.Server, error) {
 	if s.privateHTTPServer == nil {
 		cfg := s.Config()
 
-		router, err := s.PrivateRouter()
+		router, err := s.PrivateRouter(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -437,7 +436,7 @@ func (s *Container) PrivateHTTPServer() (*http.Server, error) {
 	return s.privateHTTPServer, nil
 }
 
-func (s *Container) PrivateRouter() (*gin.Engine, error) {
+func (s *Container) PrivateRouter(ctx context.Context) (*gin.Engine, error) {
 	if s.privateRouter != nil {
 		return s.privateRouter, nil
 	}
@@ -456,8 +455,8 @@ func (s *Container) PrivateRouter() (*gin.Engine, error) {
 	r.Use(gin.Recovery())
 	r.Use(sentrygin.New(sentrygin.Options{}))
 
-	trafficRepo.SetupPrivateRouter(r)
-	usersRepo.SetupPrivateRouter(r)
+	trafficRepo.SetupPrivateRouter(ctx, r)
+	usersRepo.SetupPrivateRouter(ctx, r)
 
 	s.privateRouter = r
 

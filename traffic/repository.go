@@ -203,7 +203,7 @@ func (s *Traffic) AutoWhitelistIP(ctx context.Context, ip net.IP) error {
 	return nil
 }
 
-func (s *Traffic) SetupPrivateRouter(r *gin.Engine) {
+func (s *Traffic) SetupPrivateRouter(ctx context.Context, r *gin.Engine) {
 	r.GET("/ban/:ip", func(c *gin.Context) {
 		ip := net.ParseIP(c.Param("ip"))
 		if ip == nil {
@@ -211,8 +211,6 @@ func (s *Traffic) SetupPrivateRouter(r *gin.Engine) {
 
 			return
 		}
-
-		ctx := context.Background()
 
 		b, err := s.Ban.Get(ctx, ip)
 		if err != nil {
