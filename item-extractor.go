@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 
+	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/casbin/casbin"
@@ -62,16 +63,22 @@ func reverseConvertItemTypeID(itemTypeID ItemType) items.ItemType {
 }
 
 type ItemExtractor struct {
-	enforcer      *casbin.Enforcer
-	nameFormatter *items.ItemNameFormatter
-	imageStorage  *storage.Storage
+	enforcer           *casbin.Enforcer
+	nameFormatter      *items.ItemNameFormatter
+	imageStorage       *storage.Storage
+	commentsRepository *comments.Repository
 }
 
-func NewItemExtractor(enforcer *casbin.Enforcer, imageStorage *storage.Storage) *ItemExtractor {
+func NewItemExtractor(
+	enforcer *casbin.Enforcer,
+	imageStorage *storage.Storage,
+	commentsRepository *comments.Repository,
+) *ItemExtractor {
 	return &ItemExtractor{
-		enforcer:      enforcer,
-		nameFormatter: &items.ItemNameFormatter{},
-		imageStorage:  imageStorage,
+		enforcer:           enforcer,
+		nameFormatter:      &items.ItemNameFormatter{},
+		imageStorage:       imageStorage,
+		commentsRepository: commentsRepository,
 	}
 }
 
@@ -147,6 +154,15 @@ func (s *ItemExtractor) Extract(
 			}
 
 			result.NameHtml = nameHTML
+		}
+
+		if fields.CommentsAttentionsCount {
+			cnt, err := s.commentsRepository.Count(ctx, comments.ModeratorAttentionRequired, comments.TypeIDPictures, row.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			result.CommentsAttentionsCount = cnt
 		}
 	}
 

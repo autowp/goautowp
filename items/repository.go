@@ -225,6 +225,7 @@ type ListFields struct {
 	FullName                   bool
 	Logo                       bool
 	MostsActive                bool
+	CommentsAttentionsCount    bool
 }
 
 type ListOptions struct {

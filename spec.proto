@@ -750,6 +750,7 @@ message ItemFields {
   bool full_name = 14;
   bool logo120 = 15;
   bool mosts_active = 16;
+  bool comments_attentions_count = 17;
 }
 
 message ItemRequest {
@@ -816,6 +817,7 @@ message APIItem {
   string full_name = 18;
   APIImage logo120 = 19;
   bool mosts_active = 20;
+  int32 comments_attentions_count = 21;
 }
 
 message APIItemList {

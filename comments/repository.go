@@ -35,6 +35,11 @@ const (
 	TypeIDForums   CommentType = 5
 )
 
+const (
+	tableCommentMessage   = "comment_message"
+	colModeratorAttention = "moderator_attention"
+)
+
 const deleteTTLDays = 300
 
 type ModeratorAttention int32
@@ -478,8 +483,8 @@ func (s *Repository) Add(
 		ma = ModeratorAttentionRequired
 	}
 
-	res, err := s.db.Insert("comment_message").
-		Cols("datetime", "type_id", "item_id", "parent_id", "author_id", "message", "ip", "moderator_attention").
+	res, err := s.db.Insert(tableCommentMessage).
+		Cols("datetime", "type_id", "item_id", "parent_id", "author_id", "message", "ip", colModeratorAttention).
 		Vals(goqu.Vals{
 			goqu.L("NOW()"),
 			typeID,
@@ -1249,7 +1254,7 @@ func (s *Repository) TopicStat(ctx context.Context, typeID CommentType, itemID i
 func (s *Repository) MessagesCountFromTimestamp(
 	ctx context.Context, typeID CommentType, itemID int64, timestamp time.Time,
 ) (int32, error) {
-	sqSelect := s.db.Select(goqu.COUNT(goqu.L("1"))).From("comment_message").
+	sqSelect := s.db.Select(goqu.COUNT(goqu.L("1"))).From(tableCommentMessage).
 		Where(
 			goqu.I("item_id").Eq(itemID),
 			goqu.I("type_id").Eq(typeID),
@@ -1309,6 +1314,47 @@ func (s *Repository) TopicStatForUser(
 	return messages.Messages, newMessages, nil
 }
 
+func (s *Repository) Count(
+	ctx context.Context, attention ModeratorAttention, commentType CommentType, itemID int64,
+) (int32, error) {
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).
+		From(tableCommentMessage).
+		Where(
+			goqu.I(colModeratorAttention).Eq(attention),
+			goqu.I("type_id").Eq(commentType),
+		)
+
+	if itemID != 0 {
+		sqSelect = sqSelect.
+			Join(
+				goqu.T("pictures"),
+				goqu.On(goqu.T(tableCommentMessage).Col("item_id").Eq(goqu.T("pictures").Col("id"))),
+			).
+			Join(
+				goqu.T("picture_item"),
+				goqu.On(goqu.T("pictures").Col("id").Eq(goqu.T("picture_item").Col("picture_id"))),
+			).
+			Join(
+				goqu.T("item_parent_cache"),
+				goqu.On(goqu.T("picture_item").Col("item_id").Eq(goqu.T("item_parent_cache").Col("item_id"))),
+			).
+			Where(goqu.T("item_parent_cache").Col("parent_id").Eq(itemID))
+	}
+
+	var cnt int32
+
+	success, err := sqSelect.ScanValContext(ctx, &cnt)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, nil
+	}
+
+	return cnt, nil
+}
+
 func (s *Repository) MessagePage(
 	ctx context.Context, messageID int64, perPage int32,
 ) (int64, CommentType, int32, error) {
@@ -1325,7 +1371,7 @@ func (s *Repository) MessagePage(
 	}{}
 
 	success, err = s.db.Select("type_id", "item_id", "parent_id", "datetime").
-		From("comment_message").
+		From(tableCommentMessage).
 		Where(goqu.I("id").Eq(messageID)).
 		ScanStructContext(ctx, &row)
 	if err != nil {
@@ -1344,7 +1390,7 @@ func (s *Repository) MessagePage(
 	parentRow.Datetime = row.Datetime
 
 	for success && parentRow.ParentID.Valid {
-		success, err = s.db.Select("parent_id", "datetime").From("comment_message").Where(
+		success, err = s.db.Select("parent_id", "datetime").From(tableCommentMessage).Where(
 			goqu.I("item_id").Eq(row.ItemID),
 			goqu.I("type_id").Eq(row.TypeID),
 			goqu.I("id").Eq(parentRow.ParentID.Int64),
@@ -1356,7 +1402,7 @@ func (s *Repository) MessagePage(
 
 	var count int32
 
-	success, err = s.db.Select(goqu.COUNT(goqu.L("1"))).From("comment_message").Where(
+	success, err = s.db.Select(goqu.COUNT(goqu.L("1"))).From(tableCommentMessage).Where(
 		goqu.I("item_id").Eq(row.ItemID),
 		goqu.I("type_id").Eq(row.TypeID),
 		goqu.I("datetime").Lt(parentRow.Datetime),
@@ -1371,21 +1417,22 @@ func (s *Repository) MessagePage(
 
 func (s *Repository) columns(fetchMessage bool, fetchVote bool, fetchIP bool) []interface{} {
 	columns := []interface{}{
-		"comment_message.id", "comment_message.type_id", "comment_message.item_id", "comment_message.parent_id",
-		"comment_message.datetime", "comment_message.deleted", "comment_message.moderator_attention",
-		"comment_message.author_id",
+		goqu.T(tableCommentMessage).Col("id"), goqu.T(tableCommentMessage).Col("type_id"),
+		goqu.T(tableCommentMessage).Col("item_id"), goqu.T(tableCommentMessage).Col("parent_id"),
+		goqu.T(tableCommentMessage).Col("datetime"), goqu.T(tableCommentMessage).Col("deleted"),
+		goqu.T(tableCommentMessage).Col(colModeratorAttention), goqu.T(tableCommentMessage).Col("author_id"),
 	}
 
 	if fetchIP {
-		columns = append(columns, "comment_message.ip")
+		columns = append(columns, goqu.T(tableCommentMessage).Col("ip"))
 	}
 
 	if fetchMessage {
-		columns = append(columns, "comment_message.message")
+		columns = append(columns, goqu.T(tableCommentMessage).Col("message"))
 	}
 
 	if fetchVote {
-		columns = append(columns, "comment_message.vote")
+		columns = append(columns, goqu.T(tableCommentMessage).Col("vote"))
 	}
 
 	return columns
@@ -1399,8 +1446,8 @@ func (s *Repository) Message(
 	columns := s.columns(fetchMessage, fetchVote, canViewIP)
 
 	success, err := s.db.Select(columns...).
-		From("comment_message").
-		Where(goqu.I("comment_message.id").Eq(messageID)).
+		From(tableCommentMessage).
+		Where(goqu.T(tableCommentMessage).Col("id").Eq(messageID)).
 		ScanStructContext(ctx, &row)
 	if err != nil {
 		return nil, err
@@ -1509,39 +1556,39 @@ func (s *Repository) Paginator(request Request) *util.Paginator {
 	columns := s.columns(request.FetchMessage, request.FetchVote, request.FetchIP)
 
 	sqSelect := s.db.Select(columns...).
-		From("comment_message")
+		From(tableCommentMessage)
 
 	if request.ItemID > 0 {
-		sqSelect = sqSelect.Where(goqu.I("comment_message.item_id").Eq(request.ItemID))
+		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("item_id").Eq(request.ItemID))
 	}
 
 	if request.TypeID > 0 {
-		sqSelect = sqSelect.Where(goqu.I("comment_message.type_id").Eq(request.TypeID))
+		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("type_id").Eq(request.TypeID))
 	}
 
 	if request.ParentID > 0 {
-		sqSelect = sqSelect.Where(goqu.I("comment_message.parent_id").Eq(request.ParentID))
+		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("parent_id").Eq(request.ParentID))
 	}
 
 	if request.PicturesOfItemID > 0 {
 		sqSelect = sqSelect.
-			Join(goqu.T("pictures"), goqu.On(goqu.I("comment_message.item_id").Eq(goqu.I("pictures.id")))).
+			Join(goqu.T("pictures"), goqu.On(goqu.T(tableCommentMessage).Col("item_id").Eq(goqu.I("pictures.id")))).
 			Join(goqu.T("picture_item"), goqu.On(goqu.I("pictures.id").Eq(goqu.I("picture_item.picture_id")))).
 			Join(goqu.T("item_parent_cache"), goqu.On(goqu.I("picture_item.item_id").Eq(goqu.I("item_parent_cache.item_id")))).
 			Where(goqu.I("item_parent_cache.parent_id").Eq(request.PicturesOfItemID)).
-			Where(goqu.I("comment_message.type_id").Eq(TypeIDPictures))
+			Where(goqu.T(tableCommentMessage).Col("type_id").Eq(TypeIDPictures))
 	}
 
 	if request.NoParents {
-		sqSelect = sqSelect.Where(goqu.I("comment_message.parent_id").IsNull())
+		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("parent_id").IsNull())
 	}
 
 	if request.UserID > 0 {
-		sqSelect = sqSelect.Where(goqu.I("comment_message.author_id").Eq(request.UserID))
+		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("author_id").Eq(request.UserID))
 	}
 
 	if request.ModeratorAttention > 0 {
-		sqSelect = sqSelect.Where(goqu.I("comment_message.moderator_attention").Eq(request.ModeratorAttention))
+		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col(colModeratorAttention).Eq(request.ModeratorAttention))
 	}
 
 	sqSelect = sqSelect.Order(request.Order...)
