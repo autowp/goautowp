@@ -601,6 +601,7 @@ func convertFields(fields *ItemFields) items.ListFields {
 		FullName:                   fields.FullName,
 		Logo:                       fields.Logo120,
 		MostsActive:                fields.MostsActive,
+		CommentsAttentionsCount:    fields.CommentsAttentionsCount,
 	}
 
 	return result
