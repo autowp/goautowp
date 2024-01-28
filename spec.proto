@@ -815,6 +815,7 @@ message APIItem {
   int32 inbox_pictures_count = 17;
   string full_name = 18;
   APIImage logo120 = 19;
+  bool mosts_active = 20;
 }
 
 message APIItemList {

@@ -98,6 +98,7 @@ func (s *ItemExtractor) Extract(
 		DescendantTwinsGroupsCount: row.DescendantTwinsGroupsCount,
 		InboxPicturesCount:         row.InboxPicturesCount,
 		FullName:                   row.FullName,
+		MostsActive:                row.MostsActive,
 	}
 
 	if fields.Logo120 && row.LogoID != 0 {
