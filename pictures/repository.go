@@ -13,6 +13,17 @@ import (
 type Status string
 
 const (
+	tablePicture         = "pictures"
+	tablePictureItem     = "picture_item"
+	tableItemParentCache = "item_parent_cache"
+	colID                = "id"
+	colStatus            = "status"
+	colPictureID         = "picture_id"
+	colItemID            = "item_id"
+	colParentID          = "parent_id"
+)
+
+const (
 	StatusAccepted Status = "accepted"
 	StatusRemoving Status = "removing"
 	StatusRemoved  Status = "removed"
@@ -42,6 +53,11 @@ type VoteSummary struct {
 	Negative int32
 }
 
+type ListOptions struct {
+	Status         Status
+	AncestorItemID int64
+}
+
 type Repository struct {
 	db *goqu.Database
 }
@@ -52,7 +68,7 @@ func NewRepository(db *goqu.Database) *Repository {
 	}
 }
 
-func (s Repository) IncView(ctx context.Context, id int64) error {
+func (s *Repository) IncView(ctx context.Context, id int64) error {
 	_, err := s.db.ExecContext(ctx, `
         INSERT INTO picture_view (picture_id, views)
 		VALUES (?, 1)
@@ -62,7 +78,7 @@ func (s Repository) IncView(ctx context.Context, id int64) error {
 	return err
 }
 
-func (s Repository) Status(ctx context.Context, id int64) (Status, error) {
+func (s *Repository) Status(ctx context.Context, id int64) (Status, error) {
 	var status Status
 
 	err := s.db.QueryRowContext(ctx, "SELECT status FROM pictures WHERE id = ?", id).Scan(&status)
@@ -73,7 +89,7 @@ func (s Repository) Status(ctx context.Context, id int64) (Status, error) {
 	return status, nil
 }
 
-func (s Repository) GetVote(ctx context.Context, id int64, userID int64) (*VoteSummary, error) {
+func (s *Repository) GetVote(ctx context.Context, id int64, userID int64) (*VoteSummary, error) {
 	var value, positive, negative int32
 	if userID > 0 {
 		err := s.db.QueryRowContext(
@@ -102,7 +118,7 @@ func (s Repository) GetVote(ctx context.Context, id int64, userID int64) (*VoteS
 	}, nil
 }
 
-func (s Repository) Vote(ctx context.Context, id int64, value int32, userID int64) error {
+func (s *Repository) Vote(ctx context.Context, id int64, value int32, userID int64) error {
 	normalizedValue := 1
 	if value < 0 {
 		normalizedValue = -1
@@ -121,7 +137,7 @@ func (s Repository) Vote(ctx context.Context, id int64, value int32, userID int6
 	return s.updatePictureSummary(ctx, id)
 }
 
-func (s Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteTemplate) (ModerVoteTemplate, error) {
+func (s *Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteTemplate) (ModerVoteTemplate, error) {
 	if tpl.Vote < 0 {
 		tpl.Vote = -1
 	}
@@ -147,13 +163,13 @@ func (s Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteTe
 	return tpl, err
 }
 
-func (s Repository) DeleteModerVoteTemplate(ctx context.Context, id int64, userID int64) error {
+func (s *Repository) DeleteModerVoteTemplate(ctx context.Context, id int64, userID int64) error {
 	_, err := s.db.ExecContext(ctx, "DELETE FROM picture_moder_vote_template WHERE user_id = ? AND id = ?", userID, id)
 
 	return err
 }
 
-func (s Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]ModerVoteTemplate, error) {
+func (s *Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]ModerVoteTemplate, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
 		"SELECT id, reason, vote FROM picture_moder_vote_template WHERE user_id = ? ORDER BY reason",
@@ -185,7 +201,7 @@ func (s Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mode
 	return items, nil
 }
 
-func (s Repository) updatePictureSummary(ctx context.Context, id int64) error {
+func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
 	_, err := s.db.ExecContext(ctx, `
         insert into picture_vote_summary (picture_id, positive, negative)
 		values (
@@ -230,4 +246,57 @@ func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation,
 	}
 
 	return result, nil
+}
+
+func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, error) {
+	alias := "p"
+
+	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.I(alias).Col(colID)))).
+		From(goqu.T(tablePicture).As(alias))
+
+	sqSelect = s.applyPicture(alias, sqSelect, &options)
+
+	return sqSelect, nil
+}
+
+func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error) {
+	var err error
+
+	sqSelect, err := s.CountSelect(options)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int
+
+	_, err = sqSelect.Executor().ScanValContext(ctx, &count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (s *Repository) applyPicture(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+	options *ListOptions,
+) *goqu.SelectDataset {
+	aliasTable := goqu.T(alias)
+
+	if options.Status != "" {
+		sqSelect = sqSelect.Where(aliasTable.Col(colStatus).Eq(options.Status))
+	}
+
+	if options.AncestorItemID != 0 {
+		ipcTable := goqu.T(tableItemParentCache)
+		piTable := goqu.T(tablePictureItem)
+
+		sqSelect = sqSelect.
+			Join(piTable, goqu.On(aliasTable.Col(colID).Eq(piTable.Col(colPictureID)))).
+			Join(ipcTable, goqu.On(piTable.Col(colItemID).Eq(ipcTable.Col(colItemID)))).
+			Where(ipcTable.Col(colParentID).Eq(options.AncestorItemID))
+	}
+
+	return sqSelect
 }
