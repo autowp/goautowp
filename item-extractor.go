@@ -6,6 +6,7 @@ import (
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/casbin/casbin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
@@ -67,18 +68,21 @@ type ItemExtractor struct {
 	nameFormatter      *items.ItemNameFormatter
 	imageStorage       *storage.Storage
 	commentsRepository *comments.Repository
+	picturesRepository *pictures.Repository
 }
 
 func NewItemExtractor(
 	enforcer *casbin.Enforcer,
 	imageStorage *storage.Storage,
 	commentsRepository *comments.Repository,
+	picturesRepository *pictures.Repository,
 ) *ItemExtractor {
 	return &ItemExtractor{
 		enforcer:           enforcer,
 		nameFormatter:      &items.ItemNameFormatter{},
 		imageStorage:       imageStorage,
 		commentsRepository: commentsRepository,
+		picturesRepository: picturesRepository,
 	}
 }
 
@@ -163,6 +167,18 @@ func (s *ItemExtractor) Extract(
 			}
 
 			result.CommentsAttentionsCount = cnt
+		}
+
+		if fields.InboxPicturesCount {
+			cnt, err := s.picturesRepository.Count(ctx, pictures.ListOptions{
+				Status:         pictures.StatusInbox,
+				AncestorItemID: row.ID,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			result.InboxPicturesCount = int32(cnt)
 		}
 	}
 

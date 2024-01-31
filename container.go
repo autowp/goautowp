@@ -748,7 +748,12 @@ func (s *Container) ItemExtractor() (*ItemExtractor, error) {
 		return nil, err
 	}
 
-	return NewItemExtractor(s.Enforcer(), imageStorage, commentsRepository), nil
+	picturesRepository, err := s.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewItemExtractor(s.Enforcer(), imageStorage, commentsRepository, picturesRepository), nil
 }
 
 func (s *Container) Auth() (*Auth, error) {
