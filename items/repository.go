@@ -229,6 +229,7 @@ type ListFields struct {
 }
 
 type ListOptions struct {
+	Alias              string
 	Language           string
 	Fields             ListFields
 	ItemID             int64
@@ -614,6 +615,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 		if options.Fields.DescendantTwinsGroupsCount {
 			subSelect, err := s.CountSelect(ListOptions{
+				Alias:  alias + "dtgc",
 				TypeID: []ItemType{TWINS},
 				DescendantItems: &ListOptions{
 					AncestorItems: &ListOptions{
@@ -633,6 +635,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 		if options.Fields.InboxPicturesCount {
 			subSelect, err := s.CountSelect(ListOptions{
+				Alias:  alias + "ipc",
 				TypeID: []ItemType{TWINS},
 				AncestorItems: &ListOptions{
 					ItemIDExpr: goqu.T(alias).Col(colID),
@@ -657,9 +660,14 @@ func (s *Repository) applyItem( //nolint:maintidx
 func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, error) {
 	var err error
 
-	sqSelect := s.db.Select(goqu.L("COUNT(1)")).From(goqu.T(tableItem).As("i"))
+	alias := "i"
+	if options.Alias != "" {
+		alias = options.Alias
+	}
 
-	sqSelect, err = s.applyItem("i", sqSelect, false, &options)
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(goqu.T(tableItem).As(alias))
+
+	sqSelect, err = s.applyItem(alias, sqSelect, false, &options)
 	if err != nil {
 		return nil, err
 	}
