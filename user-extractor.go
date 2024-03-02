@@ -62,7 +62,7 @@ func (s *UserExtractor) Extract(ctx context.Context, row *users.DBUser) (*APIUse
 	}
 
 	if row.EMail != nil {
-		url := gravatar.New("mail@example.org").DefaultURL("https://www.autowp.ru/_.gif").Size(70).Rating(gravatar.G).AvatarURL()
+		url := gravatar.New(*row.EMail).DefaultURL("https://www.autowp.ru/_.gif").Size(70).Rating(gravatar.G).AvatarURL()
 		user.Gravatar = url
 	}
 
