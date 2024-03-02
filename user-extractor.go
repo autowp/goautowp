@@ -2,16 +2,14 @@ package goautowp
 
 import (
 	"context"
-	//nolint:gosec
 	"fmt"
-	"github.com/drexedam/gravatar"
 	"time"
-
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
+	"github.com/drexedam/gravatar"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type UserExtractor struct {
