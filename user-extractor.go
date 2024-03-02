@@ -2,10 +2,9 @@ package goautowp
 
 import (
 	"context"
-	"crypto/md5" //nolint:gosec
-	"encoding/hex"
+	//nolint:gosec
 	"fmt"
-	"net/url"
+	"github.com/drexedam/gravatar"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -63,13 +62,8 @@ func (s *UserExtractor) Extract(ctx context.Context, row *users.DBUser) (*APIUse
 	}
 
 	if row.EMail != nil {
-		hash := md5.Sum([]byte(*row.EMail)) //nolint: gosec
-		str := fmt.Sprintf(
-			"https://www.gravatar.com/avatar/%x?s=70&d=%s&r=g",
-			hex.EncodeToString(hash[:]),
-			url.PathEscape("https://www.autowp.ru/_.gif"),
-		)
-		user.Gravatar = str
+		url := gravatar.New(*row.EMail).Size(70).Rating(gravatar.G).AvatarURL()
+		user.Gravatar = url
 	}
 
 	if row.Img != nil {
