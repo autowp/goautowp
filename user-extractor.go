@@ -12,6 +12,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const avatarSize = 70
+
 type UserExtractor struct {
 	enforcer     *casbin.Enforcer
 	imageStorage *storage.Storage
@@ -60,7 +62,7 @@ func (s *UserExtractor) Extract(ctx context.Context, row *users.DBUser) (*APIUse
 	}
 
 	if row.EMail != nil {
-		url := gravatar.New(*row.EMail).Size(70).Rating(gravatar.G).AvatarURL()
+		url := gravatar.New(*row.EMail).Size(avatarSize).Rating(gravatar.G).AvatarURL()
 		user.Gravatar = url
 	}
 
