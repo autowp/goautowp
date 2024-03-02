@@ -3,35 +3,36 @@ module github.com/autowp/goautowp
 go 1.21
 
 require (
-	github.com/Nerzal/gocloak/v13 v13.8.0
-	github.com/aws/aws-sdk-go v1.50.5
+	github.com/Nerzal/gocloak/v13 v13.9.0
+	github.com/aws/aws-sdk-go v1.50.30
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.1.0
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/dpapathanasiou/go-recaptcha v0.0.0-20190121160230-be5090b17804
+	github.com/drexedam/gravatar v0.0.0-20210327211422-e94eea8c338e
 	github.com/fiam/gounidecode v0.0.0-20150629112515-8deddbd03fec
-	github.com/getsentry/sentry-go v0.26.0
+	github.com/getsentry/sentry-go v0.27.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-mysql/errors v0.0.0-20180603193453-03314bea68e0
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/golang-migrate/migrate/v4 v4.17.0
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/improbable-eng/grpc-web v0.15.0
-	github.com/jackc/pgtype v1.14.1
+	github.com/jackc/pgtype v1.14.2
 	github.com/lib/pq v1.10.9
-	github.com/nicksnyder/go-i18n/v2 v2.3.0
-	github.com/paulmach/orb v0.11.0
+	github.com/nicksnyder/go-i18n/v2 v2.4.0
+	github.com/paulmach/orb v0.11.1
 	github.com/rabbitmq/amqp091-go v1.9.0
-	github.com/redis/go-redis/v9 v9.4.0
+	github.com/redis/go-redis/v9 v9.5.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v3 v3.0.0-alpha8
 	golang.org/x/text v0.14.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe
-	google.golang.org/grpc v1.61.0
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240228224816-df926f6c8641
+	google.golang.org/grpc v1.62.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/gographics/imagick.v2 v2.6.3
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -40,7 +41,7 @@ require (
 
 require (
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
-	github.com/bytedance/sonic v1.10.2 // indirect
+	github.com/bytedance/sonic v1.11.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
@@ -53,10 +54,10 @@ require (
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.17.0 // indirect
+	github.com/go-playground/validator/v10 v10.18.0 // indirect
 	github.com/go-resty/resty/v2 v2.11.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -64,8 +65,8 @@ require (
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
-	github.com/leodido/go-urn v1.3.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
+	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -91,10 +92,10 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.7.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
-	golang.org/x/net v0.20.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/crypto v0.20.0 // indirect
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
+	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
