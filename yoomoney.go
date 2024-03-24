@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/gin-gonic/gin"
 	decimal2 "github.com/shopspring/decimal"
+	"github.com/sirupsen/logrus"
 )
 
 type YoomoneyHandler struct {
