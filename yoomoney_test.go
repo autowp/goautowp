@@ -47,7 +47,7 @@ func TestYoomoneyWebhookInvalidLabel(t *testing.T) {
 		Unaccepted:       false,
 	})
 
-	require.ErrorContains(t, err, "failed to parse date")
+	require.ErrorContains(t, err, "label not matched by regular expression")
 }
 
 func TestYoomoneyWebhookHappyPath(t *testing.T) {
