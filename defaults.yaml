@@ -262,3 +262,6 @@ content-languages:
   - jp
 message-interval: 300
 mosts-min-cars-count: 200
+yoomoney:
+  secret: "secret"
+  price: "999"
