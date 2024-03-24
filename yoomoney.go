@@ -162,18 +162,16 @@ func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) er
 
 func (s *YoomoneyHandler) SetupRouter(ctx context.Context, r *gin.Engine) {
 	r.POST("/yoomoney/informing", func(c *gin.Context) {
-		fields := YoomoneyWebhook{}
+		var fields YoomoneyWebhook
 
-		err := c.ShouldBind(fields)
-		if err != nil {
+		if err := c.ShouldBind(&fields); err != nil {
 			logrus.Warn("yoomoney: bad request")
 			c.Status(http.StatusBadRequest)
 
 			return
 		}
 
-		err = s.Handle(ctx, fields)
-		if err != nil {
+		if err := s.Handle(ctx, fields); err != nil {
 			logrus.Warnf("yoomoney: %s", err.Error())
 			c.String(http.StatusInternalServerError, err.Error())
 

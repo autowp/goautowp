@@ -26,8 +26,6 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/getsentry/sentry-go"
-	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -116,7 +114,6 @@ func (s *Container) Close() error {
 		err := s.autowpDB.Close()
 		if err != nil {
 			logrus.Error(err.Error())
-			sentry.CaptureException(err)
 		}
 
 		s.autowpDB = nil
@@ -454,7 +451,6 @@ func (s *Container) PrivateRouter(ctx context.Context) (*gin.Engine, error) {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(sentrygin.New(sentrygin.Options{}))
 
 	trafficRepo.SetupPrivateRouter(ctx, r)
 	usersRepo.SetupPrivateRouter(ctx, r)
@@ -512,7 +508,6 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(sentrygin.New(sentrygin.Options{}))
 	yoomoney.SetupRouter(ctx, r)
 
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
