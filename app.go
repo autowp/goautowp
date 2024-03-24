@@ -11,7 +11,6 @@ import (
 	"github.com/autowp/goautowp/config"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
-	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
 	"github.com/golang-migrate/migrate/v4"
@@ -125,7 +124,6 @@ func (s *Application) ListenDuplicateFinderAMQP(ctx context.Context, quit chan b
 
 	if err != nil {
 		logrus.Error(err.Error())
-		sentry.CaptureException(err)
 
 		return err
 	}

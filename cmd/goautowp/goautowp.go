@@ -5,18 +5,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/autowp/goautowp"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
-	"github.com/getsentry/sentry-go"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
-
-const sentryFlushTime = time.Second * 5
 
 var autowpApp *goautowp.Application
 
@@ -51,20 +47,6 @@ func mainReturnWithCode() int {
 	cfg := config.LoadConfig(".")
 
 	config.ValidateConfig(cfg)
-
-	err := sentry.Init(sentry.ClientOptions{
-		Dsn:         cfg.Sentry.DSN,
-		Environment: cfg.Sentry.Environment,
-	})
-	if err != nil {
-		logrus.Error(err)
-
-		return 1
-	}
-
-	defer func() {
-		sentry.Flush(sentryFlushTime)
-	}()
 
 	autowpApp = goautowp.NewApplication(cfg)
 	defer util.Close(autowpApp)
@@ -235,9 +217,8 @@ func mainReturnWithCode() int {
 		},
 	}
 
-	if err = app.Run(context.Background(), os.Args); err != nil {
+	if err := app.Run(context.Background(), os.Args); err != nil {
 		logrus.Fatal(err)
-		sentry.CaptureException(err)
 
 		return 1
 	}

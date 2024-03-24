@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"image"
 	_ "image/jpeg" // support JPEG decoding.
 	_ "image/png"  // support PNG decoding.
@@ -16,7 +15,6 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/getsentry/sentry-go"
 	"github.com/sirupsen/logrus"
 )
 
@@ -96,7 +94,7 @@ func (s *DuplicateFinder) ListenAMQP(ctx context.Context, url string, queue stri
 			break
 		case d := <-msgs:
 			if d.ContentType != "application/json" {
-				sentry.CaptureException(fmt.Errorf("unexpected mime `%v`", d.ContentType))
+				logrus.Errorf("unexpected mime `%v`", d.ContentType)
 
 				continue
 			}
@@ -105,14 +103,14 @@ func (s *DuplicateFinder) ListenAMQP(ctx context.Context, url string, queue stri
 
 			err := json.Unmarshal(d.Body, &message)
 			if err != nil {
-				sentry.CaptureException(fmt.Errorf("failed to parse json `%w`: %s", err, d.Body))
+				logrus.Errorf("failed to parse json `%s`: %s", err.Error(), d.Body)
 
 				continue
 			}
 
 			err = s.Index(ctx, message.PictureID, message.URL)
 			if err != nil {
-				sentry.CaptureException(err)
+				logrus.Error(err)
 			}
 		}
 	}

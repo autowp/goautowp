@@ -39,12 +39,6 @@ type SMTPConfig struct {
 	Password string `yaml:"password" mapstructure:"password"`
 }
 
-// SentryConfig SentryConfig.
-type SentryConfig struct {
-	DSN         string `yaml:"dsn"         mapstructure:"dsn"`
-	Environment string `yaml:"environment" mapstructure:"environment"`
-}
-
 // FileStorageConfig FileStorageConfig.
 type FileStorageConfig struct {
 	S3     S3Config `yaml:"s3"     mapstructure:"s3"`
@@ -122,7 +116,6 @@ type Config struct {
 	DuplicateFinder    DuplicateFinderConfig     `yaml:"duplicate_finder"     mapstructure:"duplicate_finder"`
 	AutowpDSN          string                    `yaml:"autowp-dsn"           mapstructure:"autowp-dsn"`
 	AutowpMigrations   MigrationsConfig          `yaml:"autowp-migrations"    mapstructure:"autowp-migrations"`
-	Sentry             SentryConfig              `yaml:"sentry"               mapstructure:"sentry"`
 	FileStorage        FileStorageConfig         `yaml:"file_storage"         mapstructure:"file_storage"`
 	RabbitMQ           string                    `yaml:"rabbitmq"             mapstructure:"rabbitmq"`
 	MonitoringQueue    string                    `yaml:"monitoring_queue"     mapstructure:"monitoring_queue"`
