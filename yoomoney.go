@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -153,6 +154,7 @@ func (s *YoomoneyHandler) SetupRouter(ctx context.Context, r *gin.Engine) {
 
 		err := c.ShouldBind(fields)
 		if err != nil {
+			logrus.Warn("yoomoney: bad request")
 			c.Status(http.StatusBadRequest)
 
 			return
@@ -160,11 +162,13 @@ func (s *YoomoneyHandler) SetupRouter(ctx context.Context, r *gin.Engine) {
 
 		err = s.Handle(ctx, fields)
 		if err != nil {
+			logrus.Warnf("yoomoney: %s", err.Error())
 			c.String(http.StatusInternalServerError, err.Error())
 
 			return
 		}
 
+		logrus.Info("yoomoney: success")
 		c.Status(http.StatusOK)
 	})
 }
