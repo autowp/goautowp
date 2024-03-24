@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
-	"strconv"
 
 	"github.com/doug-martin/goqu/v9"
 )
@@ -38,17 +37,12 @@ func (n *NullAttributeTypeID) Scan(value any) error {
 
 	n.Valid = true
 
-	v, ok := value.([]uint8)
+	v, ok := value.(int64)
 	if !ok {
 		return errors.New("unsupported type for AttributeTypeID")
 	}
 
-	i, err := strconv.ParseInt(string(v), 10, 32)
-	if err != nil {
-		return err
-	}
-
-	n.AttributeTypeID = AttributeTypeID(i)
+	n.AttributeTypeID = AttributeTypeID(v)
 
 	return nil
 }
