@@ -92,6 +92,7 @@ type Container struct {
 	forumsGrpcServer       *ForumsGRPCServer
 	attrsGRPCServer        *AttrsGRPCServer
 	textStorageRepository  *textstorage.Repository
+	yoomoneyHandler        *YoomoneyHandler
 }
 
 // NewContainer constructor.
@@ -463,11 +464,11 @@ func (s *Container) PrivateRouter(ctx context.Context) (*gin.Engine, error) {
 	return s.privateRouter, nil
 }
 
-func (s *Container) PublicHTTPServer() (*http.Server, error) {
+func (s *Container) PublicHTTPServer(ctx context.Context) (*http.Server, error) {
 	if s.publicHTTPServer == nil {
 		cfg := s.Config()
 
-		r, err := s.PublicRouter()
+		r, err := s.PublicRouter(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -489,7 +490,7 @@ type TokenForm struct {
 	Password     string `json:"password"`
 }
 
-func (s *Container) PublicRouter() (http.HandlerFunc, error) {
+func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) {
 	if s.publicRouter != nil {
 		return s.publicRouter, nil
 	}
@@ -504,8 +505,26 @@ func (s *Container) PublicRouter() (http.HandlerFunc, error) {
 	}
 	wrappedGrpc := grpcweb.WrapServer(grpcServer, grpcweb.WithOriginFunc(originFunc))
 
+	yoomoney, err := s.YoomoneyHandler()
+	if err != nil {
+		return nil, err
+	}
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(sentrygin.New(sentrygin.Options{}))
+	yoomoney.SetupRouter(ctx, r)
+
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
-		wrappedGrpc.ServeHTTP(resp, req)
+		if wrappedGrpc.IsGrpcWebRequest(req) {
+			wrappedGrpc.ServeHTTP(resp, req)
+
+			s.grpcServerWithServices = grpcServer
+
+			return
+		}
+		// Fall back to gRPC+h2c server
+		r.ServeHTTP(resp, req)
 	}
 
 	return s.publicRouter, nil
@@ -1309,4 +1328,22 @@ func (s *Container) TextStorageRepository() (*textstorage.Repository, error) {
 	}
 
 	return s.textStorageRepository, nil
+}
+
+func (s *Container) YoomoneyHandler() (*YoomoneyHandler, error) {
+	if s.yoomoneyHandler == nil {
+		repository, err := s.ItemOfDayRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		cfg := s.Config().YoomoneyConfig
+
+		s.yoomoneyHandler, err = NewYoomoneyHandler(cfg.Price, cfg.Secret, repository)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s.yoomoneyHandler, nil
 }

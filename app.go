@@ -84,8 +84,8 @@ func (s *Application) ServeGRPC(quit chan bool) error {
 	return nil
 }
 
-func (s *Application) ServePublic(_ context.Context, quit chan bool) error {
-	httpServer, err := s.container.PublicHTTPServer()
+func (s *Application) ServePublic(ctx context.Context, quit chan bool) error {
+	httpServer, err := s.container.PublicHTTPServer(ctx)
 	if err != nil {
 		return err
 	}
@@ -331,6 +331,20 @@ func (s *Application) SchedulerMidnight(ctx context.Context) error {
 	}
 
 	logrus.Infof("Updated %d users vote limits", affected)
+
+	idr, err := s.container.ItemOfDayRepository()
+	if err != nil {
+		return err
+	}
+
+	success, err := idr.Pick(ctx)
+	if err != nil {
+		logrus.Error(err.Error())
+
+		return err
+	}
+
+	logrus.Infof("item of day status: `%v`", success)
 
 	return nil
 }

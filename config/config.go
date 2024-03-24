@@ -107,6 +107,11 @@ type AboutConfig struct {
 	PtBrTranslator string `yaml:"pt-br-translator" mapstructure:"pt-br-translator"`
 }
 
+type YoomoneyConfig struct {
+	Secret string `yaml:"secret" mapstructure:"secret"`
+	Price  string `yaml:"price"  mapstructure:"price"`
+}
+
 // Config Application config definition.
 type Config struct {
 	GinMode string `yaml:"gin-mode"            mapstructure:"gin-mode"`
@@ -141,6 +146,7 @@ type Config struct {
 	ContentLanguages   []string                  `yaml:"content-languages"    mapstructure:"content-languages"`
 	MessageInterval    int64                     `yaml:"message-interval"     mapstructure:"message-interval"`
 	MostsMinCarsCount  int                       `yaml:"mosts-min-cars-count" mapstructure:"mosts-min-cars-count"`
+	YoomoneyConfig     YoomoneyConfig            `yaml:"yoomoney"             mapstructure:"yoomoney"`
 }
 
 var configMutex = sync.RWMutex{}
