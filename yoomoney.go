@@ -58,7 +58,11 @@ type YoomoneyWebhook struct {
 	Unaccepted       bool   `json:"unaccepted"`
 }
 
-func (s *YoomoneyHandler) Hash(fields YoomoneyWebhook) string {
+func (s *YoomoneyHandler) Hash(fields YoomoneyWebhook) (string, error) {
+	if s.notificationSecret == "" {
+		return "", errors.New("notification secret not configured")
+	}
+
 	str := strings.Join([]string{
 		fields.NotificationType,
 		fields.OperationID,
@@ -75,11 +79,19 @@ func (s *YoomoneyHandler) Hash(fields YoomoneyWebhook) string {
 	h.Write([]byte(str))
 	sha1hash := h.Sum(nil)
 
-	return hex.EncodeToString(sha1hash[0:sha1.Size])
+	return hex.EncodeToString(sha1hash[0:sha1.Size]), nil
 }
 
 func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) error {
-	sha1hashStr := s.Hash(fields)
+	sha1hashStr, err := s.Hash(fields)
+	if err != nil {
+		return err
+	}
+
+	if fields.SHA1Hash == "" {
+		return errors.New("sha1_hash not provided")
+	}
+
 	if !strings.EqualFold(sha1hashStr, fields.SHA1Hash) {
 		return errors.New("sha1 hash not matched")
 	}
