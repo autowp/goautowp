@@ -44,18 +44,18 @@ func NewYoomoneyHandler(
 const RUB = "643"
 
 type YoomoneyWebhook struct {
-	NotificationType string `json:"notification_type"`
-	OperationID      string `json:"operation_id"`
-	Amount           string `json:"amount"`
-	WithdrawAmount   string `json:"withdraw_amount"`
-	Currency         string `json:"currency"`
-	Datetime         string `json:"datetime"`
-	Sender           string `json:"sender"`
-	Codepro          string `json:"codepro"`
-	Label            string `json:"label"`
-	SHA1Hash         string `json:"sha1_hash"`
-	TestNotification bool   `json:"test_notification"`
-	Unaccepted       bool   `json:"unaccepted"`
+	NotificationType string `json:"notification_type" form:"notification_type"`
+	OperationID      string `json:"operation_id"      form:"operation_id"`
+	Amount           string `json:"amount"            form:"amount"`
+	WithdrawAmount   string `json:"withdraw_amount"   form:"withdraw_amount"`
+	Currency         string `json:"currency"          form:"currency"`
+	Datetime         string `json:"datetime"          form:"datetime"`
+	Sender           string `json:"sender"            form:"sender"`
+	Codepro          string `json:"codepro"           form:"codepro"`
+	Label            string `json:"label"             form:"label"`
+	SHA1Hash         string `json:"sha1_hash"         form:"sha1_hash"`
+	TestNotification bool   `json:"test_notification" form:"test_notification"`
+	Unaccepted       bool   `json:"unaccepted"        form:"unaccepted"`
 }
 
 func (s *YoomoneyHandler) Hash(fields YoomoneyWebhook) (string, error) {
