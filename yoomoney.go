@@ -47,12 +47,12 @@ type YoomoneyWebhook struct {
 	NotificationType string `json:"notification_type" form:"notification_type" binding:"required"`
 	OperationID      string `json:"operation_id"      form:"operation_id"      binding:"required"`
 	Amount           string `json:"amount"            form:"amount"            binding:"required"`
-	WithdrawAmount   string `json:"withdraw_amount"   form:"withdraw_amount"   binding:"required"`
+	WithdrawAmount   string `json:"withdraw_amount"   form:"withdraw_amount"`
 	Currency         string `json:"currency"          form:"currency"          binding:"required"`
 	Datetime         string `json:"datetime"          form:"datetime"          binding:"required"`
 	Sender           string `json:"sender"            form:"sender"            binding:"required"`
 	Codepro          string `json:"codepro"           form:"codepro"           binding:"required"`
-	Label            string `json:"label"             form:"label"             binding:"required"`
+	Label            string `json:"label"             form:"label"`
 	SHA1Hash         string `json:"sha1_hash"         form:"sha1_hash"         binding:"required"`
 	TestNotification bool   `json:"test_notification" form:"test_notification"`
 	Unaccepted       bool   `json:"unaccepted"        form:"unaccepted"`
