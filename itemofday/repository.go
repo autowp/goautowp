@@ -112,7 +112,7 @@ func (s *Repository) Pick(ctx context.Context) (bool, error) {
 
 func (s *Repository) candidate(ctx context.Context) (int64, error) {
 	sqSelect := s.CandidateQuery().
-		Where(goqu.L("c.begin_year AND c.end_year OR c.begin_model_year AND c.end_model_year")).
+		Where(goqu.L("item.begin_year AND item.end_year OR item.begin_model_year AND item.end_model_year")).
 		Order(goqu.Func("RAND").Desc()).
 		Limit(1)
 
