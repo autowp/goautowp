@@ -133,7 +133,8 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 		TestNotification: false,
 		Unaccepted:       false,
 	}
-	fields.SHA1Hash = yh.Hash(fields)
+	fields.SHA1Hash, err = yh.Hash(fields)
+	require.NoError(t, err)
 
 	err = yh.Handle(ctx, fields)
 
