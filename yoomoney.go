@@ -165,7 +165,7 @@ func (s *YoomoneyHandler) SetupRouter(ctx context.Context, r *gin.Engine) {
 		var fields YoomoneyWebhook
 
 		if err := c.ShouldBind(&fields); err != nil {
-			logrus.Warn("yoomoney: bad request")
+			logrus.Warnf("yoomoney bad request: %s", err.Error())
 			c.Status(http.StatusBadRequest)
 
 			return
