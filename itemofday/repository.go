@@ -15,6 +15,7 @@ const (
 	tableName          = "of_day"
 	colItemID          = "item_id"
 	colUserID          = "user_id"
+	colDayDate         = "day_date"
 	defaultMinPictures = 3
 )
 
@@ -58,7 +59,7 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 		found := false
 
 		_, err := s.db.Select(goqu.L("1")).From(tableName).Where(
-			goqu.I("day_date").Eq(now.Format("2006-01-02")),
+			goqu.I(colDayDate).Eq(now.Format("2006-01-02")),
 			goqu.I(colItemID).IsNotNull(),
 		).ScanValContext(ctx, &found)
 		if err != nil {
@@ -192,9 +193,9 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 
 	table := goqu.T(tableName)
 
-	dateExpr := goqu.I("day_date").Eq(dateTime.Format("2006-01-02"))
+	dateExpr := goqu.I(colDayDate).Eq(dateTime.Format("2006-01-02"))
 
-	sqSelect := s.db.Select(goqu.L("item_id")).From(table).Where(dateExpr)
+	sqSelect := s.db.Select(goqu.L(colItemID)).From(table).Where(dateExpr)
 
 	var exists int64
 
@@ -212,9 +213,15 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 		Valid: userID > 0,
 	}
 
-	_, err = s.db.Update(table).Set(
-		goqu.Record{colItemID: itemID, colUserID: userIDVal},
-	).Where(dateExpr).Executor().Exec()
+	if success {
+		_, err = s.db.Insert(table).Rows(
+			goqu.Record{colItemID: itemID, colUserID: userIDVal, colDayDate: dateExpr},
+		).Executor().Exec()
+	} else {
+		_, err = s.db.Update(table).Set(
+			goqu.Record{colItemID: itemID, colUserID: userIDVal},
+		).Where(dateExpr).Executor().Exec()
+	}
 
 	if err != nil {
 		return false, err
