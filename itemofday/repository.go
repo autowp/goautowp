@@ -164,7 +164,7 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 	return sqSelect
 }
 
-func (s *Repository) isComplies(ctx context.Context, itemID int64) (bool, error) {
+func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error) {
 	sqSelect := s.CandidateQuery().Where(goqu.T("item").Col("id").Eq(itemID))
 
 	r := CandidateRecord{}
@@ -182,7 +182,7 @@ func (s *Repository) isComplies(ctx context.Context, itemID int64) (bool, error)
 }
 
 func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemID int64, userID int64) (bool, error) {
-	isComplies, err := s.isComplies(ctx, itemID)
+	isComplies, err := s.IsComplies(ctx, itemID)
 	if err != nil {
 		return false, err
 	}
@@ -214,13 +214,13 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 	}
 
 	if success {
-		_, err = s.db.Insert(table).Rows(
-			goqu.Record{colItemID: itemID, colUserID: userIDVal, colDayDate: dateExpr},
-		).Executor().Exec()
-	} else {
 		_, err = s.db.Update(table).Set(
 			goqu.Record{colItemID: itemID, colUserID: userIDVal},
 		).Where(dateExpr).Executor().Exec()
+	} else {
+		_, err = s.db.Insert(table).Rows(
+			goqu.Record{colItemID: itemID, colUserID: userIDVal, colDayDate: dateExpr},
+		).Executor().Exec()
 	}
 
 	if err != nil {
