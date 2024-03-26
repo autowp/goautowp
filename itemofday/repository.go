@@ -165,6 +165,10 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 }
 
 func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error) {
+	if itemID == 0 {
+		return false, errors.New("itemID must be defined")
+	}
+
 	sqSelect := s.CandidateQuery().Where(goqu.T("item").Col("id").Eq(itemID))
 
 	r := CandidateRecord{}
@@ -175,7 +179,7 @@ func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error)
 	}
 
 	if !success {
-		return false, errors.New("expected 1 row")
+		return false, nil
 	}
 
 	return r.ItemID != 0, nil
