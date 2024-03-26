@@ -118,7 +118,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, itemID)
 
-	label := fmt.Sprintf("vod/%s/%d/123", dateStr, itemID)
+	label := fmt.Sprintf("vod/%s/%d/0", dateStr, itemID)
 
 	fields := YoomoneyWebhook{
 		NotificationType: "p2p-incoming",
