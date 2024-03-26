@@ -193,7 +193,8 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 
 	table := goqu.T(tableName)
 
-	dateExpr := goqu.I(colDayDate).Eq(dateTime.Format("2006-01-02"))
+	dateStr := dateTime.Format("2006-01-02")
+	dateExpr := goqu.I(colDayDate).Eq(dateStr)
 
 	sqSelect := s.db.Select(goqu.L(colItemID)).From(table).Where(dateExpr)
 
@@ -219,7 +220,7 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 		).Where(dateExpr).Executor().Exec()
 	} else {
 		_, err = s.db.Insert(table).Rows(
-			goqu.Record{colItemID: itemID, colUserID: userIDVal, colDayDate: dateExpr},
+			goqu.Record{colItemID: itemID, colUserID: userIDVal, colDayDate: dateStr},
 		).Executor().Exec()
 	}
 
