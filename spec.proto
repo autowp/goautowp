@@ -751,6 +751,7 @@ message ItemFields {
   bool logo120 = 15;
   bool mosts_active = 16;
   bool comments_attentions_count = 17;
+  bool is_compiles_item_of_day = 18;
 }
 
 message ItemRequest {
@@ -818,6 +819,7 @@ message APIItem {
   APIImage logo120 = 19;
   bool mosts_active = 20;
   int32 comments_attentions_count = 21;
+  bool is_compiles_item_of_day = 22;
 }
 
 message APIItemList {

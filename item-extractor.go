@@ -5,6 +5,7 @@ import (
 
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/casbin/casbin"
@@ -64,11 +65,12 @@ func reverseConvertItemTypeID(itemTypeID ItemType) items.ItemType {
 }
 
 type ItemExtractor struct {
-	enforcer           *casbin.Enforcer
-	nameFormatter      *items.ItemNameFormatter
-	imageStorage       *storage.Storage
-	commentsRepository *comments.Repository
-	picturesRepository *pictures.Repository
+	enforcer            *casbin.Enforcer
+	nameFormatter       *items.ItemNameFormatter
+	imageStorage        *storage.Storage
+	commentsRepository  *comments.Repository
+	picturesRepository  *pictures.Repository
+	itemOfDayRepository *itemofday.Repository
 }
 
 func NewItemExtractor(
@@ -76,13 +78,15 @@ func NewItemExtractor(
 	imageStorage *storage.Storage,
 	commentsRepository *comments.Repository,
 	picturesRepository *pictures.Repository,
+	itemOfDayRepository *itemofday.Repository,
 ) *ItemExtractor {
 	return &ItemExtractor{
-		enforcer:           enforcer,
-		nameFormatter:      &items.ItemNameFormatter{},
-		imageStorage:       imageStorage,
-		commentsRepository: commentsRepository,
-		picturesRepository: picturesRepository,
+		enforcer:            enforcer,
+		nameFormatter:       &items.ItemNameFormatter{},
+		imageStorage:        imageStorage,
+		commentsRepository:  commentsRepository,
+		picturesRepository:  picturesRepository,
+		itemOfDayRepository: itemOfDayRepository,
 	}
 }
 
@@ -179,6 +183,15 @@ func (s *ItemExtractor) Extract(
 			}
 
 			result.InboxPicturesCount = int32(cnt)
+		}
+
+		if fields.IsCompilesItemOfDay {
+			IsCompiles, err := s.itemOfDayRepository.IsComplies(ctx, row.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			result.IsCompilesItemOfDay = IsCompiles
 		}
 	}
 
