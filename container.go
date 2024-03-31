@@ -984,8 +984,19 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
+		attrsRepository, err := s.AttrsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		picturesRepository, err := s.PicturesRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		s.itemsGrpcServer = NewItemsGRPCServer(
 			r, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i,
+			attrsRepository, picturesRepository,
 		)
 	}
 

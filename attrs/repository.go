@@ -12,6 +12,9 @@ import (
 type AttributeTypeID int32
 
 const (
+	attrsAttributesTableName     = "attrs_attributes"
+	attrsZoneAttributesTableName = "attrs_zone_attributes"
+
 	TypeUnknown AttributeTypeID = 0
 	TypeString  AttributeTypeID = 1
 	TypeInteger AttributeTypeID = 2
@@ -110,13 +113,15 @@ func NewRepository(
 }
 
 func (s *Repository) Attribute(ctx context.Context, id int64) (bool, Attribute, error) {
+	attrAttributesTable := goqu.T(attrsAttributesTableName)
+
 	sqSelect := s.db.Select(
-		"attrs_attributes.id", "attrs_attributes.name", "attrs_attributes.description",
-		"attrs_attributes.type_id", "attrs_attributes.unit_id", "attrs_attributes.multiple",
-		"attrs_attributes.precision", "attrs_attributes.parent_id",
+		attrAttributesTable.Col("id"), attrAttributesTable.Col("name"), attrAttributesTable.Col("description"),
+		attrAttributesTable.Col("type_id"), attrAttributesTable.Col("unit_id"), attrAttributesTable.Col("multiple"),
+		attrAttributesTable.Col("precision"), attrAttributesTable.Col("parent_id"),
 	).
-		From("attrs_attributes").
-		Order(goqu.I("position").Asc()).Where(goqu.I("attrs_attributes.id").Eq(id))
+		From(attrAttributesTable).
+		Order(goqu.I("position").Asc()).Where(attrAttributesTable.Col("id").Eq(id))
 
 	r := Attribute{}
 	success, err := sqSelect.ScanStructContext(ctx, &r)
@@ -125,26 +130,29 @@ func (s *Repository) Attribute(ctx context.Context, id int64) (bool, Attribute, 
 }
 
 func (s *Repository) Attributes(ctx context.Context, zoneID int64, parentID int64) ([]Attribute, error) {
+	attrAttributesTable := goqu.T(attrsAttributesTableName)
+	attrZoneAttributesTable := goqu.T(attrsZoneAttributesTableName)
+
 	sqSelect := s.db.Select(
-		"attrs_attributes.id", "attrs_attributes.name", "attrs_attributes.description",
-		"attrs_attributes.type_id", "attrs_attributes.unit_id", "attrs_attributes.multiple",
-		"attrs_attributes.precision", "attrs_attributes.parent_id",
+		attrAttributesTable.Col("id"), attrAttributesTable.Col("name"), attrAttributesTable.Col("description"),
+		attrAttributesTable.Col("type_id"), attrAttributesTable.Col("unit_id"), attrAttributesTable.Col("multiple"),
+		attrAttributesTable.Col("precision"), attrAttributesTable.Col("parent_id"),
 	).
-		From("attrs_attributes")
+		From(attrAttributesTable)
 
 	if zoneID > 0 {
 		sqSelect = sqSelect.Join(
-			goqu.T("attrs_zone_attributes"),
-			goqu.On(goqu.I("attrs_attributes.id").Eq(goqu.I("attrs_zone_attributes.attribute_id"))),
+			attrZoneAttributesTable,
+			goqu.On(attrAttributesTable.Col("id").Eq(attrZoneAttributesTable.Col("attribute_id"))),
 		).
-			Where(goqu.I("attrs_zone_attributes.zone_id").Eq(zoneID)).
-			Order(goqu.I("attrs_zone_attributes.position").Asc())
+			Where(attrZoneAttributesTable.Col("zone_id").Eq(zoneID)).
+			Order(attrZoneAttributesTable.Col("position").Asc())
 	} else {
-		sqSelect = sqSelect.Order(goqu.I("attrs_attributes.position").Asc())
+		sqSelect = sqSelect.Order(attrAttributesTable.Col("position").Asc())
 	}
 
 	if parentID > 0 {
-		sqSelect = sqSelect.Where(goqu.I("attrs_attributes.parent_id").Eq(parentID))
+		sqSelect = sqSelect.Where(attrAttributesTable.Col("parent_id").Eq(parentID))
 	}
 
 	r := make([]Attribute, 0)
@@ -184,8 +192,8 @@ func (s *Repository) Units(ctx context.Context) ([]Unit, error) {
 func (s *Repository) ZoneAttributes(ctx context.Context, zoneID int64) ([]ZoneAttribute, error) {
 	r := make([]ZoneAttribute, 0)
 	err := s.db.Select("zone_id", "attribute_id").
-		From("attrs_zone_attributes").
-		Where(goqu.I("zone_id").Eq(zoneID)).
+		From(attrsZoneAttributesTableName).
+		Where(goqu.C("zone_id").Eq(zoneID)).
 		ScanStructsContext(ctx, &r)
 
 	return r, err
@@ -196,4 +204,46 @@ func (s *Repository) Zones(ctx context.Context) ([]Zone, error) {
 	err := s.db.Select("id", "name").From("attrs_zones").ScanStructsContext(ctx, &r)
 
 	return r, err
+}
+
+func (s *Repository) TotalValues(ctx context.Context) (int32, error) {
+	var result int32
+
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(goqu.T("attrs_values"))
+
+	success, err := sqSelect.ScanValContext(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, sql.ErrNoRows
+	}
+
+	return result, nil
+}
+
+func (s *Repository) TotalZoneAttrs(ctx context.Context, zoneID int64) (int32, error) {
+	var result int32
+
+	attrAttributesTable := goqu.T(attrsAttributesTableName)
+	attrZoneAttributesTable := goqu.T(attrsZoneAttributesTableName)
+
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(attrAttributesTable).
+		Join(
+			attrZoneAttributesTable,
+			goqu.On(attrAttributesTable.Col("id").Eq(attrZoneAttributesTable.Col("attribute_id"))),
+		).
+		Where(attrZoneAttributesTable.Col("zone_id").Eq(zoneID))
+
+	success, err := sqSelect.ScanValContext(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, sql.ErrNoRows
+	}
+
+	return result, nil
 }

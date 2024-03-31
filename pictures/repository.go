@@ -56,6 +56,7 @@ type VoteSummary struct {
 type ListOptions struct {
 	Status         Status
 	AncestorItemID int64
+	HasCopyrights  bool
 }
 
 type Repository struct {
@@ -296,6 +297,10 @@ func (s *Repository) applyPicture(
 			Join(piTable, goqu.On(aliasTable.Col(colID).Eq(piTable.Col(colPictureID)))).
 			Join(ipcTable, goqu.On(piTable.Col(colItemID).Eq(ipcTable.Col(colItemID)))).
 			Where(ipcTable.Col(colParentID).Eq(options.AncestorItemID))
+	}
+
+	if options.HasCopyrights {
+		sqSelect = sqSelect.Where(aliasTable.Col("copyrights_text_id").IsNotNull())
 	}
 
 	return sqSelect

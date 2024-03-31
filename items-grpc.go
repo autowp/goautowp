@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
@@ -28,6 +29,8 @@ const defaultCacheExpiration = 180 * time.Second
 
 const itemLinkNameMaxLength = 255
 
+const typicalPicturesInList = 4
+
 type ItemsGRPCServer struct {
 	UnimplementedItemsServer
 	repository            *items.Repository
@@ -39,6 +42,8 @@ type ItemsGRPCServer struct {
 	textstorageRepository *textstorage.Repository
 	extractor             *ItemExtractor
 	i18n                  *i18nbundle.I18n
+	attrsRepository       *attrs.Repository
+	picturesRepository    *pictures.Repository
 }
 
 type BrandsCache struct {
@@ -56,6 +61,8 @@ func NewItemsGRPCServer(
 	textstorageRepository *textstorage.Repository,
 	extractor *ItemExtractor,
 	i18n *i18nbundle.I18n,
+	attrsRepository *attrs.Repository,
+	picturesRepository *pictures.Repository,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository:            repository,
@@ -67,6 +74,8 @@ func NewItemsGRPCServer(
 		textstorageRepository: textstorageRepository,
 		extractor:             extractor,
 		i18n:                  i18n,
+		attrsRepository:       attrsRepository,
+		picturesRepository:    picturesRepository,
 	}
 }
 
@@ -1132,5 +1141,130 @@ func (s *ItemsGRPCServer) GetItemParentLanguages(
 
 	return &ItemParentLanguages{
 		Items: result,
+	}, nil
+}
+
+func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*StatsResponse, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	totalBrands, err := s.repository.Count(ctx, items.ListOptions{
+		TypeID: []items.ItemType{items.BRAND},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	totalCars, err := s.repository.Count(ctx, items.ListOptions{
+		TypeID: []items.ItemType{items.VEHICLE},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	totalCarAttrs, err := s.attrsRepository.TotalZoneAttrs(ctx, 1)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	carAttrsValues, err := s.attrsRepository.TotalValues(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	carsWith4OrMorePictures, err := s.repository.ItemsWithPicturesCount(ctx, typicalPicturesInList)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	itemsWithBeginYear, err := s.repository.Count(ctx, items.ListOptions{
+		HasBeginYear: true,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	itemsWithBeginAndEndYears, err := s.repository.Count(ctx, items.ListOptions{
+		HasBeginYear: true,
+		HasEndYear:   true,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	itemsWithBeginAndEndYearsAndMonths, err := s.repository.Count(ctx, items.ListOptions{
+		HasBeginYear:  true,
+		HasEndYear:    true,
+		HasBeginMonth: true,
+		HasEndMonth:   true,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	brandsWithLogo, err := s.repository.Count(ctx, items.ListOptions{
+		HasLogo: true,
+		TypeID:  []items.ItemType{items.BRAND},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	totalPictures, err := s.picturesRepository.Count(ctx, pictures.ListOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	picturesWithCopyrights, err := s.picturesRepository.Count(ctx, pictures.ListOptions{
+		HasCopyrights: true,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &StatsResponse{
+		Values: []*StatsValue{
+			{
+				Name:  "moder/statistics/photos-with-copyrights",
+				Total: int32(totalPictures),
+				Value: int32(picturesWithCopyrights),
+			},
+			{
+				Name:  "moder/statistics/vehicles-with-4-or-more-photos",
+				Total: int32(totalCars),
+				Value: carsWith4OrMorePictures,
+			},
+			{
+				Name:  "moder/statistics/specifications-values",
+				Total: int32(totalCars) * totalCarAttrs,
+				Value: carAttrsValues,
+			},
+			{
+				Name:  "moder/statistics/brand-logos",
+				Total: int32(totalBrands),
+				Value: int32(brandsWithLogo),
+			},
+			{
+				Name:  "moder/statistics/from-years",
+				Total: int32(totalCars),
+				Value: int32(itemsWithBeginYear),
+			},
+			{
+				Name:  "moder/statistics/from-and-to-years",
+				Total: int32(totalCars),
+				Value: int32(itemsWithBeginAndEndYears),
+			},
+			{
+				Name:  "moder/statistics/from-and-to-years-and-months",
+				Total: int32(totalCars),
+				Value: int32(itemsWithBeginAndEndYearsAndMonths),
+			},
+		},
 	}, nil
 }
