@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
@@ -29,10 +30,6 @@ const (
 )
 
 const (
-	tableItem                     = "item"
-	tableItemParent               = "item_parent"
-	tableItemParentCache          = "item_parent_cache"
-	tableItemLanguage             = "item_language"
 	colNameOnly                   = "name_only"
 	colCatname                    = "catname"
 	colEngineItemID               = "engine_item_id"
@@ -262,7 +259,7 @@ func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesO
 
 	if options.Status != "" || options.ItemPicture != nil || options.OwnerID != 0 {
 		sqSelect = sqSelect.Join(
-			goqu.I("pictures").As(pAlias),
+			goqu.T(schema.TablePicture).As(pAlias),
 			goqu.On(goqu.I(alias+".picture_id").Eq(goqu.I(pAlias+".id"))),
 		)
 
@@ -288,7 +285,7 @@ func applyItemPicture(
 	piAlias := alias + "_pi"
 
 	sqSelect = sqSelect.Join(
-		goqu.I("picture_item").As(piAlias),
+		goqu.T(schema.TablePictureItem).As(piAlias),
 		goqu.On(goqu.T(alias).Col(itemIDColumn).Eq(goqu.I(piAlias+".item_id"))),
 	)
 
@@ -338,11 +335,11 @@ func (s *Repository) applyItem( //nolint:maintidx
 		iAlias := alias + "_ic"
 		sqSelect = sqSelect.
 			Join(
-				goqu.T(tableItemParent).As(ipcAlias),
+				goqu.T(schema.TableItemParent).As(ipcAlias),
 				goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col("parent_id"))),
 			).
 			Join(
-				goqu.T(tableItem).As(iAlias),
+				goqu.T(schema.TableItem).As(iAlias),
 				goqu.On(goqu.T(ipcAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
 		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ChildItems)
@@ -357,11 +354,11 @@ func (s *Repository) applyItem( //nolint:maintidx
 		ippAlias := alias + "_ipp"
 		sqSelect = sqSelect.
 			Join(
-				goqu.T(tableItemParent).As(ippAlias),
+				goqu.T(schema.TableItemParent).As(ippAlias),
 				goqu.On(aliasIDCol.Eq(goqu.T(ippAlias).Col("item_id"))),
 			).
 			Join(
-				goqu.T(tableItem).As(iAlias),
+				goqu.T(schema.TableItem).As(iAlias),
 				goqu.On(goqu.I(ippAlias+".parent_id").Eq(goqu.I(iAlias+".id"))),
 			)
 		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ParentItems)
@@ -377,14 +374,14 @@ func (s *Repository) applyItem( //nolint:maintidx
 		ipcdAlias := alias + "_ipcd"
 		iAlias := alias + "_id"
 		sqSelect = sqSelect.Join(
-			goqu.T(tableItemParentCache).As(ipcdAlias),
+			goqu.T(schema.TableItemParentCache).As(ipcdAlias),
 			goqu.On(aliasIDCol.Eq(goqu.T(ipcdAlias).Col("parent_id"))),
 		)
 
 		if options.DescendantItems != nil {
 			sqSelect = sqSelect.
 				Join(
-					goqu.T(tableItem).As(iAlias),
+					goqu.T(schema.TableItem).As(iAlias),
 					goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 				)
 			sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.DescendantItems)
@@ -409,11 +406,11 @@ func (s *Repository) applyItem( //nolint:maintidx
 		iAlias := alias + "_ia"
 		sqSelect = sqSelect.
 			Join(
-				goqu.T(tableItemParentCache).As(ipcaAlias),
+				goqu.T(schema.TableItemParentCache).As(ipcaAlias),
 				goqu.On(aliasIDCol.Eq(goqu.T(ipcaAlias).Col("item_id"))),
 			).
 			Join(
-				goqu.T(tableItem).As(iAlias),
+				goqu.T(schema.TableItem).As(iAlias),
 				goqu.On(goqu.T(ipcaAlias).Col("parent_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
 		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.AncestorItems)
@@ -427,7 +424,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		ipnpAlias := alias + "_ipnp"
 		sqSelect = sqSelect.
 			LeftJoin(
-				goqu.T(tableItemParent).As(ipnpAlias),
+				goqu.T(schema.TableItemParent).As(ipnpAlias),
 				goqu.On(aliasIDCol.Eq(goqu.T(ipnpAlias).Col("item_id"))),
 			).
 			Where(goqu.T(ipnpAlias).Col("parent_id").IsNull())
@@ -446,7 +443,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 	}
 
 	if len(options.Name) > 0 {
-		itemLanguageTable := goqu.T(tableItemLanguage)
+		itemLanguageTable := goqu.T(schema.TableItemLanguage)
 		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy()
 
 		// WHERE EXISTS(SELECT item_id FROM item_language WHERE item.id = item_id AND name ILIKE ?)
@@ -511,7 +508,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 			sqSelect = sqSelect.
 				LeftJoin(
-					goqu.T("spec").As(isAlias),
+					goqu.T(schema.TableSpec).As(isAlias),
 					goqu.On(aliasTable.Col(colSpecID).Eq(goqu.T(isAlias).Col("id"))),
 				)
 		}
@@ -520,15 +517,15 @@ func (s *Repository) applyItem( //nolint:maintidx
 			ilAlias := alias + "_ild"
 
 			columns = append(columns,
-				s.db.Select(goqu.T("textstorage_text").Col("text")).
-					From(goqu.T(tableItemLanguage).As(ilAlias)).
+				s.db.Select(goqu.T(schema.TableTextstorageText).Col("text")).
+					From(goqu.T(schema.TableItemLanguage).As(ilAlias)).
 					Join(
-						goqu.T("textstorage_text"),
-						goqu.On(goqu.T(ilAlias).Col("text_id").Eq(goqu.T("textstorage_text").Col("id"))),
+						goqu.T(schema.TableTextstorageText),
+						goqu.On(goqu.T(ilAlias).Col("text_id").Eq(goqu.T(schema.TableTextstorageText).Col("id"))),
 					).
 					Where(
 						goqu.T(ilAlias).Col("item_id").Eq(aliasIDCol),
-						goqu.Func("length", goqu.T("textstorage_text").Col("text")).Gt(0),
+						goqu.Func("length", goqu.T(schema.TableTextstorageText).Col("text")).Gt(0),
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
 					Limit(1).
@@ -539,15 +536,15 @@ func (s *Repository) applyItem( //nolint:maintidx
 		if options.Fields.FullText {
 			ilAlias := alias + "_ilf"
 			columns = append(columns,
-				s.db.Select(goqu.T("textstorage_text").Col("text")).
-					From(goqu.T(tableItemLanguage).As(ilAlias)).
+				s.db.Select(goqu.T(schema.TableTextstorageText).Col("text")).
+					From(goqu.T(schema.TableItemLanguage).As(ilAlias)).
 					Join(
-						goqu.T("textstorage_text"),
-						goqu.On(goqu.T(ilAlias).Col("full_text_id").Eq(goqu.T("textstorage_text").Col("id"))),
+						goqu.T(schema.TableTextstorageText),
+						goqu.On(goqu.T(ilAlias).Col("full_text_id").Eq(goqu.T(schema.TableTextstorageText).Col("id"))),
 					).
 					Where(
 						goqu.T(ilAlias).Col("item_id").Eq(aliasIDCol),
-						goqu.Func("length", goqu.T("textstorage_text").Col("text")).Gt(0),
+						goqu.Func("length", goqu.T(schema.TableTextstorageText).Col("text")).Gt(0),
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
 					Limit(1).
@@ -569,7 +566,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 			columns = append(columns, goqu.L(`
 				IFNULL(
 					(SELECT name
-					FROM item_language
+					FROM `+schema.TableItemLanguage+`
 					WHERE item_id = `+alias+`.id AND length(name) > 0
 					ORDER BY FIELD(language, `+strings.Repeat(",?", len(s))[1:]+`)
 					LIMIT 1),
@@ -606,8 +603,8 @@ func (s *Repository) applyItem( //nolint:maintidx
 			columns = append(
 				columns,
 				subSelect.Select(goqu.COUNT(goqu.Star())).
-					From(tableItemParent).
-					Where(goqu.T(tableItemParent).Col("parent_id").Eq(goqu.T(alias).Col(colID))).
+					From(schema.TableItemParent).
+					Where(goqu.T(schema.TableItemParent).Col("parent_id").Eq(goqu.T(alias).Col(colID))).
 					As(colChildsCount),
 			)
 		}
@@ -616,10 +613,10 @@ func (s *Repository) applyItem( //nolint:maintidx
 			columns = append(columns, goqu.L(`
 				(
 					SELECT count(distinct product1.id)
-					FROM item AS product1
-						JOIN `+tableItemParentCache+` ON product1.id = `+tableItemParentCache+`.item_id
-					WHERE `+tableItemParentCache+`.parent_id = `+alias+`.id
-						AND `+tableItemParentCache+`.item_id <> `+tableItemParentCache+`.parent_id
+					FROM `+schema.TableItem+` AS product1
+						JOIN `+schema.TableItemParentCache+` ON product1.id = `+schema.TableItemParentCache+`.item_id
+					WHERE `+schema.TableItemParentCache+`.parent_id = `+alias+`.id
+						AND `+schema.TableItemParentCache+`.item_id <> `+schema.TableItemParentCache+`.parent_id
 					LIMIT 1
 				) 
 			`).As(colDescendantsCount))
@@ -629,10 +626,10 @@ func (s *Repository) applyItem( //nolint:maintidx
 			columns = append(columns, goqu.L(`
 				(
 					SELECT count(distinct product2.id)
-					FROM item AS product2
-						JOIN `+tableItemParentCache+` ON product2.id = `+tableItemParentCache+`.item_id
-					WHERE `+tableItemParentCache+`.parent_id = `+alias+`.id
-						AND `+tableItemParentCache+`.item_id <> `+tableItemParentCache+`.parent_id
+					FROM `+schema.TableItem+` AS product2
+						JOIN `+schema.TableItemParentCache+` ON product2.id = `+schema.TableItemParentCache+`.item_id
+					WHERE `+schema.TableItemParentCache+`.parent_id = `+alias+`.id
+						AND `+schema.TableItemParentCache+`.item_id <> `+schema.TableItemParentCache+`.parent_id
 						AND product2.add_datetime > DATE_SUB(NOW(), INTERVAL ? DAY)
 				) 
 			`, NewDays).As(colNewDescendantsCount))
@@ -690,7 +687,7 @@ func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, erro
 		alias = options.Alias
 	}
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(goqu.T(tableItem).As(alias))
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(goqu.T(schema.TableItem).As(alias))
 
 	sqSelect, err = s.applyItem(alias, sqSelect, false, &options)
 	if err != nil {
@@ -721,7 +718,7 @@ func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error
 func (s *Repository) CountDistinct(ctx context.Context, options ListOptions) (int, error) {
 	var err error
 
-	sqSelect := s.db.Select(goqu.L("COUNT(DISTINCT i.id)")).From(goqu.T(tableItem).As("i"))
+	sqSelect := s.db.Select(goqu.L("COUNT(DISTINCT i.id)")).From(goqu.T(schema.TableItem).As("i"))
 
 	sqSelect, err = s.applyItem("i", sqSelect, false, &options)
 	if err != nil {
@@ -776,7 +773,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 		goqu.T(alias).Col(colIsConceptInherit),
 		goqu.T(alias).Col(colSpecID),
 		goqu.T(alias).Col(colFullName),
-	).From(goqu.T(tableItem).As(alias)).
+	).From(goqu.T(schema.TableItem).As(alias)).
 		GroupBy(goqu.T(alias).Col(colID))
 
 	sqSelect, err = s.applyItem("i", sqSelect, true, &options)
@@ -1091,7 +1088,7 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 
 	var item row
 
-	success, err := s.db.Select(colID, "name", "item_type_id").From(tableItem).
+	success, err := s.db.Select(colID, "name", "item_type_id").From(schema.TableItem).
 		Where(goqu.I(colID).Eq(id)).ScanStructContext(ctx, item)
 	if err != nil {
 		return nil, err
@@ -1130,7 +1127,7 @@ func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehic
 }
 
 func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
-	res, err := s.db.From("vehicle_vehicle_type").Delete().
+	res, err := s.db.From(schema.TableVehicleVehicleType).Delete().
 		Where(
 			goqu.I("vehicle_id").Eq(itemID),
 			goqu.I("vehicle_type_id").Eq(vehicleTypeID),
@@ -1169,7 +1166,7 @@ func (s *Repository) setItemVehicleTypeRow(
 	res, err := s.db.ExecContext(
 		ctx,
 		`
-			INSERT INTO vehicle_vehicle_type (vehicle_id, vehicle_type_id, inherited)
+			INSERT INTO `+schema.TableVehicleVehicleType+` (vehicle_id, vehicle_type_id, inherited)
 			VALUES (?, ?, ?)
 			ON DUPLICATE KEY UPDATE inherited = VALUES(inherited)
         `,
@@ -1197,7 +1194,7 @@ func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 		// do not inherit when own value
 		res, err := s.db.ExecContext(
 			ctx,
-			"DELETE FROM vehicle_vehicle_type WHERE vehicle_id = ? AND inherited",
+			"DELETE FROM "+schema.TableVehicleVehicleType+" WHERE vehicle_id = ? AND inherited",
 			itemID,
 		)
 		if err != nil {
@@ -1242,7 +1239,7 @@ func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, itemID int64) error {
 	rows, err := s.db.QueryContext(
 		ctx,
-		"SELECT item_id FROM item_parent WHERE parent_id = ?",
+		"SELECT item_id FROM "+schema.TableItemParent+" WHERE parent_id = ?",
 		itemID,
 	)
 	if err != nil {
@@ -1269,7 +1266,7 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 }
 
 func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
-	sqlSelect := s.db.From("vehicle_vehicle_type").Select("vehicle_type_id").Where(
+	sqlSelect := s.db.From(schema.TableVehicleVehicleType).Select("vehicle_type_id").Where(
 		goqu.I("vehicle_id").Eq(itemID),
 	)
 	if inherited {
@@ -1286,13 +1283,13 @@ func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, in
 }
 
 func (s *Repository) getItemVehicleTypeInheritedIDs(ctx context.Context, itemID int64) ([]int64, error) {
-	sqlSelect := s.db.From("vehicle_vehicle_type").
+	sqlSelect := s.db.From(schema.TableVehicleVehicleType).
 		Select("vehicle_type_id").Distinct().
 		Join(
-			goqu.T(tableItemParent),
-			goqu.On(goqu.Ex{"vehicle_vehicle_type.vehicle_id": goqu.T(tableItemParent).Col("parent_id")}),
+			goqu.T(schema.TableItemParent),
+			goqu.On(goqu.Ex{schema.TableVehicleVehicleType + ".vehicle_id": goqu.T(schema.TableItemParent).Col("parent_id")}),
 		).
-		Where(goqu.T(tableItemParent).Col("item_id").Eq(itemID))
+		Where(goqu.T(schema.TableItemParent).Col("item_id").Eq(itemID))
 
 	res := make([]int64, 0)
 
@@ -1320,7 +1317,7 @@ func (s *Repository) setItemVehicleTypeRows(
 		}
 	}
 
-	sqlDelete := s.db.From("vehicle_vehicle_type").Delete().
+	sqlDelete := s.db.From(schema.TableVehicleVehicleType).Delete().
 		Where(goqu.I("vehicle_id").Eq(itemID))
 
 	if len(types) > 0 {
@@ -1354,7 +1351,7 @@ type parentInfo struct {
 func (s *Repository) collectParentInfo(ctx context.Context, id int64, diff int64) (map[int64]parentInfo, error) {
 	//nolint: sqlclosecheck
 	rows, err := s.db.Select("parent_id", "type").
-		From(tableItemParent).
+		From(schema.TableItemParent).
 		Where(goqu.Ex{"item_id": id}).
 		Executor().QueryContext(ctx)
 	if err != nil {
@@ -1411,7 +1408,7 @@ func (s *Repository) getChildItemsIDs(ctx context.Context, parentID int64) ([]in
 	vals := make([]int64, 0)
 
 	err := s.db.Select("item_id").
-		From(tableItemParent).
+		From(schema.TableItemParent).
 		Where(goqu.Ex{"parent_id": parentID}).
 		Executor().ScanValsContext(ctx, &vals)
 	if err != nil {
@@ -1438,7 +1435,7 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 
 	//nolint: sqlclosecheck
 	stmt, err := s.db.PrepareContext(ctx, `
-   		INSERT INTO `+tableItemParentCache+` (item_id, parent_id, diff, tuning, sport, design)
+   		INSERT INTO `+schema.TableItemParentCache+` (item_id, parent_id, diff, tuning, sport, design)
 		VALUES (?, ?, ?, ?, ?, ?)
 		ON DUPLICATE KEY UPDATE
 			diff = VALUES(diff),
@@ -1474,7 +1471,7 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 		i++
 	}
 
-	_, err = s.db.Delete(tableItemParentCache).Where(goqu.Ex{
+	_, err = s.db.Delete(schema.TableItemParentCache).Where(goqu.Ex{
 		"item_id":   itemID,
 		"parent_id": goqu.Op{"notIn": keys},
 	}).Executor().ExecContext(ctx)
@@ -1501,7 +1498,7 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 
 func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLanguage, error) {
 	sqSelect := s.db.Select("item_id", "language", "name", "text_id", "full_text_id").
-		From(goqu.T(tableItemLanguage)).Where(
+		From(goqu.T(schema.TableItemLanguage)).Where(
 		goqu.I("item_id").Eq(itemID),
 		goqu.I("language").Neq("xx"),
 	)
@@ -1556,7 +1553,7 @@ func (s *Repository) ParentLanguageList(
 	ctx context.Context, itemID int64, parentID int64,
 ) ([]ItemParentLanguage, error) {
 	sqSelect := s.db.Select("item_id", "parent_id", "language", "name").
-		From(goqu.T("item_parent_language")).Where(
+		From(goqu.T(schema.TableItemParentLanguage)).Where(
 		goqu.I("item_id").Eq(itemID),
 		goqu.I("parent_id").Eq(parentID),
 	)
@@ -1592,9 +1589,9 @@ func (s *Repository) ItemsWithPicturesCount(
 ) (int32, error) {
 	var result int32
 
-	itemTable := goqu.T(tableItem)
-	pictureItemTable := goqu.T("picture_item")
-	pictureTable := goqu.T("pictures")
+	itemTable := goqu.T(schema.TableItem)
+	pictureItemTable := goqu.T(schema.TablePictureItem)
+	pictureTable := goqu.T(schema.TablePicture)
 	itemIDCol := itemTable.Col("id")
 	pictureIDCol := pictureTable.Col("id")
 

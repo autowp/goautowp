@@ -17,9 +17,8 @@ func TestMessaging(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

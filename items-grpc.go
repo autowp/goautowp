@@ -12,6 +12,7 @@ import (
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
@@ -923,7 +924,7 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From("vehicle_vehicle_type").Where(
+	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From(schema.TableVehicleVehicleType).Where(
 		goqu.L("NOT inherited"),
 	)
 
@@ -981,7 +982,7 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From("vehicle_vehicle_type").Where(
+	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From(schema.TableVehicleVehicleType).Where(
 		goqu.L("NOT inherited"),
 		goqu.I("vehicle_id").Eq(in.ItemId),
 		goqu.I("vehicle_type_id").Eq(in.VehicleTypeId),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 )
@@ -26,7 +27,7 @@ func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 }
 
 func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]*VehicleType, error) {
-	sqSelect := s.db.Select("id", "name").From("car_types").Order(goqu.I("position").Asc())
+	sqSelect := s.db.Select("id", "name").From(schema.TableCarTypes).Order(goqu.I("position").Asc())
 
 	if parentID != 0 {
 		sqSelect = sqSelect.Where(goqu.I("parent_id").Eq(parentID))
@@ -67,7 +68,7 @@ func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]
 }
 
 func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, error) {
-	sqSelect := s.db.Select("id", "name", "short_name").From("spec").Order(goqu.I("name").Asc())
+	sqSelect := s.db.Select("id", "name", "short_name").From(schema.TableSpec).Order(goqu.I("name").Asc())
 
 	if parentID != 0 {
 		sqSelect = sqSelect.Where(goqu.I("parent_id").Eq(parentID))
@@ -109,7 +110,7 @@ func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, erro
 
 func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*PerspectiveGroup, error) {
 	sqSelect := s.db.Select("id", "name").
-		From("perspectives_groups").
+		From(schema.TablePerspectivesGroups).
 		Where(goqu.Ex{"page_id": pageID}).Order(goqu.I("position").Asc())
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
@@ -156,7 +157,7 @@ func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*
 }
 
 func (s *Catalogue) getPerspectivePages(ctx context.Context) ([]*PerspectivePage, error) {
-	sqSelect := s.db.Select("id", "name").From("perspectives_pages").Order(goqu.I("id").Asc())
+	sqSelect := s.db.Select("id", "name").From(schema.TablePerspectivesPages).Order(goqu.I("id").Asc())
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if err != nil {
@@ -202,18 +203,22 @@ func (s *Catalogue) getPerspectivePages(ctx context.Context) ([]*PerspectivePage
 }
 
 func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Perspective, error) {
-	sqSelect := s.db.Select("perspectives.id", "perspectives.name").From("perspectives")
+	perspectivesTable := goqu.T(schema.TablePerspectives)
+	perspectivesGroupPerspectivesTable := goqu.T(schema.TablePerspectivesGroupsPerspectives)
+
+	sqSelect := s.db.Select(perspectivesTable.Col("id"), perspectivesTable.Col("name")).
+		From(schema.TablePerspectives)
 
 	if groupID != nil {
 		sqSelect = sqSelect.
 			Join(
-				goqu.T("perspectives_groups_perspectives"),
-				goqu.On(goqu.I("perspectives.id").Eq(goqu.I("perspectives_groups_perspectives.perspective_id"))),
+				perspectivesGroupPerspectivesTable,
+				goqu.On(perspectivesTable.Col("id").Eq(perspectivesGroupPerspectivesTable.Col("perspective_id"))),
 			).
-			Where(goqu.Ex{"perspectives_groups_perspectives.group_id": *groupID}).
-			Order(goqu.I("perspectives_groups_perspectives.position").Asc())
+			Where(perspectivesGroupPerspectivesTable.Col("group_id").Eq(*groupID)).
+			Order(perspectivesGroupPerspectivesTable.Col("position").Asc())
 	} else {
-		sqSelect = sqSelect.Order(goqu.I("perspectives.position").Asc())
+		sqSelect = sqSelect.Order(perspectivesTable.Col("position").Asc())
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
@@ -243,22 +248,26 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 }
 
 func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]*BrandVehicleType, error) {
+	carTypeTable := goqu.T(schema.TableCarTypes)
+	itemTable := goqu.T(schema.TableItem)
+	itemParentCacheTable := goqu.T(schema.TableItemParentCache)
 	sqSelect := s.db.
-		Select("car_types.id", "car_types.name", "car_types.catname", goqu.L("COUNT(DISTINCT item.id)")).
-		From("car_types").
+		Select(carTypeTable.Col("id"), carTypeTable.Col("name"), carTypeTable.Col("catname"),
+			goqu.COUNT(goqu.DISTINCT(itemTable.Col("id")))).
+		From(carTypeTable).
 		Join(
-			goqu.T("vehicle_vehicle_type"),
-			goqu.On(goqu.I("car_types.id").Eq(goqu.I("vehicle_vehicle_type.vehicle_type_id"))),
+			goqu.T(schema.TableVehicleVehicleType),
+			goqu.On(carTypeTable.Col("id").Eq(goqu.T(schema.TableVehicleVehicleType).Col("vehicle_type_id"))),
 		).
-		Join(goqu.T("item"), goqu.On(goqu.I("vehicle_vehicle_type.vehicle_id").Eq(goqu.I("item.id")))).
-		Join(goqu.T("item_parent_cache"), goqu.On(goqu.I("item.id").Eq(goqu.I("item_parent_cache.item_id")))).
+		Join(itemTable, goqu.On(goqu.T(schema.TableVehicleVehicleType).Col("vehicle_id").Eq(itemTable.Col("id")))).
+		Join(itemParentCacheTable, goqu.On(itemTable.Col("id").Eq(itemParentCacheTable.Col("item_id")))).
 		Where(
-			goqu.I("item_parent_cache.parent_id").Eq(brandID),
-			goqu.L("(item.begin_year or item.begin_model_year)"),
-			goqu.L("not item.is_group"),
+			itemParentCacheTable.Col("parent_id").Eq(brandID),
+			goqu.L("("+schema.TableItem+".begin_year or "+schema.TableItem+".begin_model_year)"),
+			goqu.L("not "+schema.TableItem+".is_group"),
 		).
-		GroupBy("car_types.id").
-		Order(goqu.I("car_types.position").Asc())
+		GroupBy(carTypeTable.Col("id")).
+		Order(carTypeTable.Col("position").Asc())
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
 	defer util.Close(rows)

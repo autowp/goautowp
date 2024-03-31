@@ -3,8 +3,8 @@ package pictures
 import (
 	"context"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
-
 	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -13,14 +13,11 @@ import (
 type Status string
 
 const (
-	tablePicture         = "pictures"
-	tablePictureItem     = "picture_item"
-	tableItemParentCache = "item_parent_cache"
-	colID                = "id"
-	colStatus            = "status"
-	colPictureID         = "picture_id"
-	colItemID            = "item_id"
-	colParentID          = "parent_id"
+	colID        = "id"
+	colStatus    = "status"
+	colPictureID = "picture_id"
+	colItemID    = "item_id"
+	colParentID  = "parent_id"
 )
 
 const (
@@ -82,7 +79,7 @@ func (s *Repository) IncView(ctx context.Context, id int64) error {
 func (s *Repository) Status(ctx context.Context, id int64) (Status, error) {
 	var status Status
 
-	err := s.db.QueryRowContext(ctx, "SELECT status FROM pictures WHERE id = ?", id).Scan(&status)
+	err := s.db.QueryRowContext(ctx, "SELECT status FROM "+schema.TablePicture+" WHERE id = ?", id).Scan(&status)
 	if err != nil {
 		return "", err
 	}
@@ -253,7 +250,7 @@ func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, erro
 	alias := "p"
 
 	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.I(alias).Col(colID)))).
-		From(goqu.T(tablePicture).As(alias))
+		From(goqu.T(schema.TablePicture).As(alias))
 
 	sqSelect = s.applyPicture(alias, sqSelect, &options)
 
@@ -290,8 +287,8 @@ func (s *Repository) applyPicture(
 	}
 
 	if options.AncestorItemID != 0 {
-		ipcTable := goqu.T(tableItemParentCache)
-		piTable := goqu.T(tablePictureItem)
+		ipcTable := goqu.T(schema.TableItemParentCache)
+		piTable := goqu.T(schema.TablePicture)
 
 		sqSelect = sqSelect.
 			Join(piTable, goqu.On(aliasTable.Col(colID).Eq(piTable.Col(colPictureID)))).

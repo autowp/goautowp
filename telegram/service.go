@@ -10,6 +10,7 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -47,7 +48,7 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 	fromName := "New personal message"
 
 	if fromID > 0 {
-		err := s.db.QueryRowContext(ctx, "SELECT name FROM users WHERE id = ?", fromID).Scan(&fromName)
+		err := s.db.QueryRowContext(ctx, "SELECT name FROM "+schema.UserTableName+" WHERE id = ?", fromID).Scan(&fromName)
 		if err != nil {
 			return err
 		}
@@ -106,7 +107,7 @@ func (s *Service) getURIByChatID(ctx context.Context, chatID int64) (*url.URL, e
 
 	if chatID > 0 && userID > 0 {
 		language := ""
-		err = s.db.QueryRowContext(ctx, "SELECT language FROM users WHERE id = ?", userID).Scan(&language)
+		err = s.db.QueryRowContext(ctx, "SELECT language FROM "+schema.UserTableName+" WHERE id = ?", userID).Scan(&language)
 
 		if err != nil {
 			return nil, err

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
 	"github.com/doug-martin/goqu/v9"
@@ -143,21 +144,16 @@ func (s *DuplicateFinder) Index(ctx context.Context, id int, url string) error {
 		return err
 	}
 
-	stmt, err := s.db.Prepare(`
-		INSERT INTO df_hash (picture_id, hash)
-		VALUES (?, ?)
-	`)
-	if err != nil {
-		return err
-	}
-	defer util.Close(stmt)
-
-	_, err = stmt.Exec(id, hash)
+	_, err = s.db.Insert(schema.DfHashTable).Rows(goqu.Record{
+		"picture_id": id,
+		// can't use uint64 directly because of mysql driver issue
+		"hash": goqu.L(strconv.FormatUint(hash, 10)),
+	}).Executor().Exec()
 	if err != nil {
 		return err
 	}
 
-	return s.updateDistance(id)
+	return s.updateDistance(ctx, id)
 }
 
 func getFileHash(reader io.Reader) (uint64, error) {
@@ -174,20 +170,26 @@ func getFileHash(reader io.Reader) (uint64, error) {
 	return hash.GetHash(), nil
 }
 
-func (s *DuplicateFinder) updateDistance(id int) error {
+func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 	if id <= 0 {
 		return errors.New("invalid id provided")
 	}
 
 	var hash uint64
 
-	err := s.db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id).Scan(&hash)
+	success, err := s.db.Select(schema.DfHashTable.Col("hash")).From(schema.DfHashTable).
+		Where(schema.DfHashTable.Col("picture_id").Eq(id)).
+		ScanValContext(ctx, &hash)
 	if err != nil {
 		return err
 	}
 
+	if !success {
+		return sql.ErrNoRows
+	}
+
 	insertStmt, err := s.db.Prepare(`
-		INSERT INTO df_distance (src_picture_id, dst_picture_id, distance)
+		INSERT INTO ` + schema.TableDfDistance + ` (src_picture_id, dst_picture_id, distance)
 		VALUES (?, ?, ?)
 		ON DUPLICATE KEY UPDATE distance=distance;
 	`)
@@ -196,9 +198,9 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 	}
 	defer util.Close(insertStmt)
 
-	rows, err := s.db.Query(`
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT picture_id, BIT_COUNT(hash ^ `+strconv.FormatUint(hash, decimal)+`) AS distance
-		FROM df_hash 
+		FROM `+schema.DfHashTableName+` 
 		WHERE picture_id != ? 
 		HAVING distance <= ?
 	`, id, threshold)
@@ -224,12 +226,12 @@ func (s *DuplicateFinder) updateDistance(id int) error {
 			return serr
 		}
 
-		_, serr = insertStmt.Exec(id, pictureID, distance)
+		_, serr = insertStmt.ExecContext(ctx, id, pictureID, distance)
 		if serr != nil {
 			return serr
 		}
 
-		_, serr = insertStmt.Exec(pictureID, id, distance)
+		_, serr = insertStmt.ExecContext(ctx, pictureID, id, distance)
 		if serr != nil {
 			return serr
 		}

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -113,31 +114,34 @@ func (s *Repository) GetDialogCount(ctx context.Context, userID int64, withUserI
 }
 
 func (s *Repository) DeleteMessage(ctx context.Context, userID int64, messageID int64) error {
-	_, err := s.db.ExecContext(ctx, `
-		UPDATE personal_messages SET deleted_by_from = 1 WHERE from_user_id = ? AND id = ?
-    `, userID, messageID)
+	_, err := s.db.Update(schema.TablePersonalMessages).
+		Set(goqu.Record{"deleted_by_from": 1}).
+		Where(goqu.C("from_user_id").Eq(userID), goqu.C("id").Eq(messageID)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.db.ExecContext(ctx, `
-		UPDATE personal_messages SET deleted_by_to = 1 WHERE to_user_id = ? AND id = ?
-    `, userID, messageID)
+	_, err = s.db.Update(schema.TablePersonalMessages).
+		Set(goqu.Record{"deleted_by_to": 1}).
+		Where(goqu.C("to_user_id").Eq(userID), goqu.C("id").Eq(messageID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }
 
 func (s *Repository) ClearSent(ctx context.Context, userID int64) error {
-	_, err := s.db.ExecContext(ctx, `
-		UPDATE personal_messages SET deleted_by_from = 1 WHERE from_user_id = ?
-    `, userID)
+	_, err := s.db.Update(schema.TablePersonalMessages).
+		Set(goqu.Record{"deleted_by_from": 1}).
+		Where(goqu.C("from_user_id").Eq(userID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }
 
 func (s *Repository) ClearSystem(ctx context.Context, userID int64) error {
 	_, err := s.db.ExecContext(ctx, `
-		DELETE FROM personal_messages WHERE to_user_id = ? AND from_user_id IS NULL
+		DELETE FROM `+schema.TablePersonalMessages+` WHERE to_user_id = ? AND from_user_id IS NULL
     `, userID)
 
 	return err
@@ -157,7 +161,7 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 
 	nullableFromUserID := sql.NullInt64{Int64: fromUserID, Valid: fromUserID != 0}
 
-	_, err := s.db.Insert("personal_messages").Rows(
+	_, err := s.db.Insert(schema.TablePersonalMessages).Rows(
 		goqu.Record{
 			"from_user_id": nullableFromUserID,
 			"to_user_id":   toUserID,
@@ -181,7 +185,7 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 func (s *Repository) markReaden(ids []int64) error {
 	var err error
 	if len(ids) > 0 {
-		_, err = s.db.Update("personal_messages").
+		_, err = s.db.Update(schema.TablePersonalMessages).
 			Set(goqu.Record{"readen": true}).
 			Where(
 				goqu.I("id").In(ids),
@@ -288,7 +292,7 @@ func (s *Repository) GetDialogbox(
 }
 
 func (s *Repository) getReceivedSelect(userID int64) *goqu.SelectDataset {
-	return s.db.From("personal_messages").
+	return s.db.From(schema.TablePersonalMessages).
 		Where(
 			goqu.I("to_user_id").Eq(userID),
 			goqu.I("deleted_by_to").IsFalse(),
@@ -305,7 +309,7 @@ func (s *Repository) getInboxSelect(userID int64) *goqu.SelectDataset {
 }
 
 func (s *Repository) getSentSelect(userID int64) *goqu.SelectDataset {
-	return s.db.From("personal_messages").
+	return s.db.From(schema.TablePersonalMessages).
 		Where(
 			goqu.I("from_user_id").Eq(userID),
 			goqu.I("deleted_by_from").IsNotTrue(),
@@ -314,7 +318,7 @@ func (s *Repository) getSentSelect(userID int64) *goqu.SelectDataset {
 }
 
 func (s *Repository) getDialogSelect(userID int64, withUserID int64) *goqu.SelectDataset {
-	return s.db.From("personal_messages").
+	return s.db.From(schema.TablePersonalMessages).
 		Where(
 			goqu.Or(
 				goqu.And(

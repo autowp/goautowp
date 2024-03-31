@@ -10,6 +10,7 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
 	"github.com/doug-martin/goqu/v9/exp"
@@ -100,7 +101,7 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 
 	emailAddr := "test" + strconv.Itoa(random.Int()) + "@example.com"
 	name := "ivan"
-	r, err := db.Insert("users").
+	r, err := db.Insert(schema.UserTable).
 		Rows(goqu.Record{
 			"login":            nil,
 			"e_mail":           emailAddr,
@@ -138,53 +139,61 @@ func TestGetUserPicturesBrands(t *testing.T) {
 
 	userID := createRandomUser(ctx, t, goquDB)
 
-	res, err := goquDB.ExecContext(ctx,
-		"INSERT INTO item (item_type_id, name, body, produced_exactly) VALUES (?, '', '', 0)",
-		BRAND,
-	)
+	res, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+		"item_type_id":     BRAND,
+		"name":             "",
+		"body":             "",
+		"produced_exactly": 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	brandID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	res, err = goquDB.ExecContext(ctx,
-		"INSERT INTO item (item_type_id, name, body, produced_exactly) VALUES (?, '', '', 0)",
-		VEHICLE,
-	)
+	res, err = goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+		"item_type_id":     VEHICLE,
+		"name":             "",
+		"body":             "",
+		"produced_exactly": 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	vehicleID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.ExecContext(ctx,
-		"INSERT INTO item_parent (item_id, parent_id, catname) VALUES (?, ?, '')",
-		vehicleID, brandID,
-	)
+	_, err = goquDB.Insert(schema.TableItemParent).Rows(goqu.Record{
+		"item_id":   vehicleID,
+		"parent_id": brandID,
+		"catname":   "",
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	_, err = goquDB.ExecContext(ctx,
-		"INSERT INTO item_parent_cache (item_id, parent_id, diff) VALUES (?, ?, 0), (?, ?, 0), (?, ?, 1)",
-		brandID, brandID, vehicleID, vehicleID, vehicleID, brandID,
-	)
+	_, err = goquDB.Insert(schema.TableItemParentCache).Cols("item_id", "parent_id", "diff").Vals(
+		goqu.Vals{brandID, brandID, 0},
+		goqu.Vals{vehicleID, vehicleID, 0},
+		goqu.Vals{vehicleID, brandID, 1},
+	).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
-	res, err = goquDB.ExecContext(ctx,
-		"INSERT INTO pictures (identity, status, ip, owner_id) VALUES (?, 'accepted', '', ?)",
-		identity, userID,
-	)
+	res, err = goquDB.Insert(schema.TablePicture).Rows(goqu.Record{
+		"identity": identity,
+		"status":   "accepted",
+		"ip":       "",
+		"owner_id": userID,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	pictureID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.ExecContext(ctx,
-		"INSERT INTO picture_item (picture_id, item_id) VALUES (?, ?)",
-		pictureID, vehicleID,
-	)
+	_, err = goquDB.Insert(schema.TablePictureItem).Rows(goqu.Record{
+		"picture_id": pictureID,
+		"item_id":    vehicleID,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	repository := NewRepository(goquDB, 200)
@@ -229,7 +238,7 @@ func TestPaginator(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		res, err := goquDB.ExecContext(ctx,
-			"INSERT INTO item (item_type_id, name, body, produced_exactly) VALUES (?, ?, '', 0)",
+			"INSERT INTO "+schema.TableItem+" (item_type_id, name, body, produced_exactly) VALUES (?, ?, '', 0)",
 			BRAND, name+"_"+strconv.Itoa(i),
 		)
 		require.NoError(t, err)
@@ -238,7 +247,7 @@ func TestPaginator(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = goquDB.ExecContext(ctx,
-			"INSERT INTO item_language (item_id, language, name) VALUES (?, ?, ?)",
+			"INSERT INTO "+schema.TableItemLanguage+" (item_id, language, name) VALUES (?, ?, ?)",
 			itemID, "en", name+"_"+strconv.Itoa(i),
 		)
 		require.NoError(t, err)

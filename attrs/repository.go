@@ -6,15 +6,13 @@ import (
 	"database/sql/driver"
 	"errors"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 )
 
 type AttributeTypeID int32
 
 const (
-	attrsAttributesTableName     = "attrs_attributes"
-	attrsZoneAttributesTableName = "attrs_zone_attributes"
-
 	TypeUnknown AttributeTypeID = 0
 	TypeString  AttributeTypeID = 1
 	TypeInteger AttributeTypeID = 2
@@ -113,7 +111,7 @@ func NewRepository(
 }
 
 func (s *Repository) Attribute(ctx context.Context, id int64) (bool, Attribute, error) {
-	attrAttributesTable := goqu.T(attrsAttributesTableName)
+	attrAttributesTable := goqu.T(schema.TableAttrsAttributes)
 
 	sqSelect := s.db.Select(
 		attrAttributesTable.Col("id"), attrAttributesTable.Col("name"), attrAttributesTable.Col("description"),
@@ -130,8 +128,8 @@ func (s *Repository) Attribute(ctx context.Context, id int64) (bool, Attribute, 
 }
 
 func (s *Repository) Attributes(ctx context.Context, zoneID int64, parentID int64) ([]Attribute, error) {
-	attrAttributesTable := goqu.T(attrsAttributesTableName)
-	attrZoneAttributesTable := goqu.T(attrsZoneAttributesTableName)
+	attrAttributesTable := goqu.T(schema.TableAttrsAttributes)
+	attrZoneAttributesTable := goqu.T(schema.TableAttrsZoneAttributes)
 
 	sqSelect := s.db.Select(
 		attrAttributesTable.Col("id"), attrAttributesTable.Col("name"), attrAttributesTable.Col("description"),
@@ -163,14 +161,14 @@ func (s *Repository) Attributes(ctx context.Context, zoneID int64, parentID int6
 
 func (s *Repository) AttributeTypes(ctx context.Context) ([]AttributeType, error) {
 	r := make([]AttributeType, 0)
-	err := s.db.Select("id", "name").From("attrs_types").ScanStructsContext(ctx, &r)
+	err := s.db.Select("id", "name").From(schema.TableAttrsTypes).ScanStructsContext(ctx, &r)
 
 	return r, err
 }
 
 func (s *Repository) ListOptions(ctx context.Context, attributeID int64) ([]ListOption, error) {
 	sqSelect := s.db.Select("id", "name", "attribute_id", "parent_id").
-		From("attrs_list_options").Order(goqu.I("position").Asc())
+		From(schema.TableAttrsListOptions).Order(goqu.I("position").Asc())
 
 	if attributeID > 0 {
 		sqSelect = sqSelect.Where(goqu.I("attribute_id").Eq(attributeID))
@@ -184,7 +182,7 @@ func (s *Repository) ListOptions(ctx context.Context, attributeID int64) ([]List
 
 func (s *Repository) Units(ctx context.Context) ([]Unit, error) {
 	r := make([]Unit, 0)
-	err := s.db.Select("id", "name", "abbr").From("attrs_units").ScanStructsContext(ctx, &r)
+	err := s.db.Select("id", "name", "abbr").From(schema.TableAttrsUnits).ScanStructsContext(ctx, &r)
 
 	return r, err
 }
@@ -192,7 +190,7 @@ func (s *Repository) Units(ctx context.Context) ([]Unit, error) {
 func (s *Repository) ZoneAttributes(ctx context.Context, zoneID int64) ([]ZoneAttribute, error) {
 	r := make([]ZoneAttribute, 0)
 	err := s.db.Select("zone_id", "attribute_id").
-		From(attrsZoneAttributesTableName).
+		From(schema.TableAttrsZoneAttributes).
 		Where(goqu.C("zone_id").Eq(zoneID)).
 		ScanStructsContext(ctx, &r)
 
@@ -201,7 +199,7 @@ func (s *Repository) ZoneAttributes(ctx context.Context, zoneID int64) ([]ZoneAt
 
 func (s *Repository) Zones(ctx context.Context) ([]Zone, error) {
 	r := make([]Zone, 0)
-	err := s.db.Select("id", "name").From("attrs_zones").ScanStructsContext(ctx, &r)
+	err := s.db.Select("id", "name").From(schema.TableAttrsZones).ScanStructsContext(ctx, &r)
 
 	return r, err
 }
@@ -209,7 +207,7 @@ func (s *Repository) Zones(ctx context.Context) ([]Zone, error) {
 func (s *Repository) TotalValues(ctx context.Context) (int32, error) {
 	var result int32
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(goqu.T("attrs_values"))
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(goqu.T(schema.TableAttrsValues))
 
 	success, err := sqSelect.ScanValContext(ctx, &result)
 	if err != nil {
@@ -226,8 +224,8 @@ func (s *Repository) TotalValues(ctx context.Context) (int32, error) {
 func (s *Repository) TotalZoneAttrs(ctx context.Context, zoneID int64) (int32, error) {
 	var result int32
 
-	attrAttributesTable := goqu.T(attrsAttributesTableName)
-	attrZoneAttributesTable := goqu.T(attrsZoneAttributesTableName)
+	attrAttributesTable := goqu.T(schema.TableAttrsAttributes)
+	attrZoneAttributesTable := goqu.T(schema.TableAttrsZoneAttributes)
 
 	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(attrAttributesTable).
 		Join(

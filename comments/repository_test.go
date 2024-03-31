@@ -13,6 +13,7 @@ import (
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/messaging"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9"
@@ -31,7 +32,7 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 
 	emailAddr := "test" + strconv.Itoa(random.Int()) + "@example.com"
 	name := "ivan"
-	r, err := db.Insert("users").
+	r, err := db.Insert(schema.UserTable).
 		Rows(goqu.Record{
 			"login":            nil,
 			"e_mail":           emailAddr,

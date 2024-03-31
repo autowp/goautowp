@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/autowp/goautowp/traffic"
-
 	"github.com/autowp/goautowp/ban"
+	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/traffic"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
@@ -260,7 +260,7 @@ func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*users.DBUse
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, name, deleted, identity, last_online, role, specs_weight
-		FROM users
+		FROM `+schema.UserTableName+`
 		WHERE id = ?
 	`, id).Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight)
 	if errors.Is(err, sql.ErrNoRows) {

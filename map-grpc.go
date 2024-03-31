@@ -12,6 +12,7 @@ import (
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/encoding/wkb"
@@ -195,10 +196,10 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 
 			var imageID sql.NullInt64
 			err = s.db.QueryRowContext(ctx, `
-				SELECT pictures.image_id
-				FROM pictures 
-				    INNER JOIN picture_item ON pictures.id = picture_item.picture_id
-				WHERE pictures.status = ? AND picture_item.item_id = ?
+				SELECT `+schema.TablePicture+`.image_id
+				FROM `+schema.TablePicture+` 
+				    INNER JOIN `+schema.TablePictureItem+` ON `+schema.TablePicture+`.id = `+schema.TablePictureItem+`.picture_id
+				WHERE `+schema.TablePicture+`.status = ? AND `+schema.TablePictureItem+`.item_id = ?
 			`, pictures.StatusAccepted, id).Scan(&imageID)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return nil, status.Error(codes.Internal, err.Error())

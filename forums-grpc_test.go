@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
-
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -18,9 +18,8 @@ func TestGetThemes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -34,7 +33,9 @@ func TestGetThemes(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
 	themes, err := client.GetThemes(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
@@ -48,9 +49,8 @@ func TestGetTheme(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -64,7 +64,9 @@ func TestGetTheme(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
 	theme, err := client.GetTheme(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
@@ -80,9 +82,8 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -96,7 +97,9 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
 	topicID, err := client.CreateTopic(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),

@@ -17,6 +17,7 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/sampler"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -179,10 +180,12 @@ func (s *Storage) FormattedImage(ctx context.Context, id int, formatName string)
 	var r Image
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT image.id, image.width, image.height, image.filesize, image.filepath, image.dir
-		FROM image
-			INNER JOIN formated_image ON image.id = formated_image.formated_image_id
-		WHERE formated_image.image_id = ? AND formated_image.format = ?
+		SELECT `+schema.TableImage+`.id, `+schema.TableImage+`.width, `+schema.TableImage+`.height,
+		    `+schema.TableImage+`.filesize, `+schema.TableImage+`.filepath, `+schema.TableImage+`.dir
+		FROM `+schema.TableImage+`
+			INNER JOIN `+schema.TableFormattedImage+` 
+				ON `+schema.TableImage+`.id = `+schema.TableFormattedImage+`.formated_image_id
+		WHERE `+schema.TableFormattedImage+`.image_id = ? AND `+schema.TableFormattedImage+`.format = ?
 	`, id, formatName).Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir)
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -307,7 +310,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 
 	_, err = s.db.ExecContext(
 		ctx,
-		"INSERT INTO formated_image (format, image_id, status, formated_image_id) VALUES (?, ?, ?, ?)",
+		"INSERT INTO "+schema.TableFormattedImage+" (format, image_id, status, formated_image_id) VALUES (?, ?, ?, ?)",
 		formatName,
 		imageID,
 		StatusProcessing,
@@ -350,14 +353,11 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 
 		if !done {
 			// mark as failed
-			_, err = s.db.ExecContext(
-				ctx,
-				"UPDATE formated_image SET status = ? WHERE format = ? AND image_id = ? AND status = ?",
-				StatusFailed,
-				formatName,
-				imageID,
-				StatusProcessing,
-			)
+			_, err = s.db.Update(schema.TableFormattedImage).Set(goqu.Record{"status": StatusFailed}).Where(
+				goqu.C("format").Eq(formatName),
+				goqu.C("image_id").Eq(imageID),
+				goqu.C("status").Eq(StatusProcessing),
+			).Executor().ExecContext(ctx)
 			if err != nil {
 				return 0, err
 			}
@@ -425,7 +425,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 
 	_, err = s.db.ExecContext(
 		ctx,
-		"UPDATE formated_image SET formated_image_id = ?, status = ? WHERE format = ? AND image_id = ?",
+		"UPDATE "+schema.TableFormattedImage+" SET formated_image_id = ?, status = ? WHERE format = ? AND image_id = ?",
 		formattedImageID,
 		StatusDefault,
 		formatName,
@@ -438,7 +438,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 	// } catch (Exception $e) {
 	_, err = s.db.ExecContext(
 		ctx,
-		"UPDATE formated_image SET status = ? WHERE format = ? AND image_id = ?",
+		"UPDATE "+schema.TableFormattedImage+" SET status = ? WHERE format = ? AND image_id = ?",
 		StatusFailed,
 		formatName,
 		imageID,
@@ -640,10 +640,10 @@ func indexByAttempt(attempt int) int {
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	float := float64(attempt)
-	min := int(math.Pow(powBase, float-1))
-	max := int(math.Pow(powBase, float) - 1)
+	minVal := int(math.Pow(powBase, float-1))
+	maxVal := int(math.Pow(powBase, float) - 1)
 
-	return random.Intn(max-min+1) + min
+	return random.Intn(maxVal-minVal+1) + minVal
 }
 
 func (s *Storage) createImagePath(ctx context.Context, dirName string, options GenerateOptions) (string, error) {
@@ -699,7 +699,7 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 	}
 
 	// to save remove formatted image
-	_, err = s.db.Exec("DELETE FROM formated_image WHERE formated_image_id = ?", r.ID())
+	_, err = s.db.Exec("DELETE FROM "+schema.TableFormattedImage+" WHERE formated_image_id = ?", r.ID())
 	if err != nil {
 		return err
 	}
@@ -732,14 +732,14 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 }
 
 func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
-	sqSelect := s.db.Select("image_id", "format", "formated_image_id").From("formated_image")
+	sqSelect := s.db.Select("image_id", "format", "formated_image_id").From(schema.TableFormattedImage)
 
 	if len(options.Format) > 0 {
-		sqSelect = sqSelect.Where(goqu.Ex{"formated_image.format": options.Format})
+		sqSelect = sqSelect.Where(goqu.Ex{schema.TableFormattedImage + ".format": options.Format})
 	}
 
 	if options.Image > 0 {
-		sqSelect = sqSelect.Where(goqu.Ex{"formated_image.image_id": options.Image})
+		sqSelect = sqSelect.Where(goqu.Ex{schema.TableFormattedImage + ".image_id": options.Image})
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
@@ -773,7 +773,7 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 			}
 		}
 
-		_, err = s.db.Exec("DELETE FROM formated_image WHERE image_id = ? AND format = ?", iID, f)
+		_, err = s.db.Exec("DELETE FROM "+schema.TableFormattedImage+" WHERE image_id = ? AND format = ?", iID, f)
 		if err != nil {
 			return err
 		}
@@ -1117,7 +1117,7 @@ func (s *Storage) imageCrop(ctx context.Context, imageID int) (*sampler.Crop, er
 
 func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, error) {
 	sqSelect := s.db.Select("id", "width", "height", "filesize", "filepath", "dir").
-		From("image").
+		From(schema.TableImage).
 		Where(goqu.Ex{"id": imageIds})
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
@@ -1158,14 +1158,19 @@ func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, er
 
 func (s *Storage) FormattedImages(ctx context.Context, imageIds []int, formatName string) (map[int]Image, error) {
 	sqSelect := s.db.Select(
-		"image.id", "image.width", "image.height", "image.filesize", "image.filepath", "image.dir",
-		"formated_image.image_id",
+		goqu.T(schema.TableImage).Col("id"), goqu.T(schema.TableImage).Col("width"),
+		goqu.T(schema.TableImage).Col("height"), goqu.T(schema.TableImage).Col("filesize"),
+		goqu.T(schema.TableImage).Col("filepath"), goqu.T(schema.TableImage).Col("dir"),
+		goqu.T(schema.TableFormattedImage).Col("image_id"),
 	).
-		From("image").
-		Join(goqu.T("formated_image"), goqu.On(goqu.Ex{"image.id": goqu.I("formated_image.formated_image_id")})).
+		From(schema.TableImage).
+		Join(
+			goqu.T(schema.TableFormattedImage),
+			goqu.On(goqu.Ex{schema.TableImage + ".id": goqu.T(schema.TableFormattedImage).Col("formated_image_id")}),
+		).
 		Where(goqu.Ex{
-			"formated_image.image_id": imageIds,
-			"formated_image.format":   formatName,
+			schema.TableFormattedImage + ".image_id": imageIds,
+			schema.TableFormattedImage + ".format":   formatName,
 		})
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)

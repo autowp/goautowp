@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -37,9 +38,8 @@ func TestStatisticsPulse(t *testing.T) {
 	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
 	defer cancel()
 
-	conn, err := grpc.DialContext(
-		ctxTimeout,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -67,7 +67,7 @@ func TestStatisticsPulse(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	_, err = db.Insert("log_events").
+	_, err = db.Insert(schema.TableLogEvents).
 		Cols("description", "user_id", "add_datetime").
 		Vals(
 			goqu.Vals{"Description", user.Id, goqu.L("NOW()")},
@@ -104,12 +104,8 @@ func TestAboutData(t *testing.T) {
 
 	ctx := context.Background()
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(
-		ctxTimeout,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -125,12 +121,8 @@ func TestAboutData(t *testing.T) {
 func BenchmarkAboutData(b *testing.B) {
 	ctx := context.Background()
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(
-		ctxTimeout,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
