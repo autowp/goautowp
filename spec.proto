@@ -90,6 +90,7 @@ service Items {
   rpc DeleteItemVehicleType(APIItemVehicleTypeRequest) returns (google.protobuf.Empty) {}
   rpc GetItemLanguages(APIGetItemLanguagesRequest) returns (ItemLanguages) {}
   rpc GetItemParentLanguages(APIGetItemParentLanguagesRequest) returns (ItemParentLanguages) {}
+  rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
 }
 
 service Comments {
@@ -1125,6 +1126,16 @@ message ItemParentLanguage {
   int64 parent_id = 2;
   string name = 3;
   string language = 4;
+}
+
+message StatsResponse {
+  repeated StatsValue values = 1;
+}
+
+message StatsValue {
+  string name = 1;
+  int32 total = 2;
+  int32 value = 3;
 }
 
 message AddCommentRequest {

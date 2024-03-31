@@ -250,6 +250,11 @@ type ListOptions struct {
 	Name               string
 	IsConcept          bool
 	EngineItemID       int64
+	HasBeginYear       bool
+	HasEndYear         bool
+	HasBeginMonth      bool
+	HasEndMonth        bool
+	HasLogo            bool
 }
 
 func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesOptions) *goqu.SelectDataset {
@@ -456,6 +461,26 @@ func (s *Repository) applyItem( //nolint:maintidx
 					),
 			),
 		)
+	}
+
+	if options.HasBeginYear {
+		sqSelect = sqSelect.Where(aliasTable.Col("begin_year"))
+	}
+
+	if options.HasEndYear {
+		sqSelect = sqSelect.Where(aliasTable.Col("end_year"))
+	}
+
+	if options.HasBeginMonth {
+		sqSelect = sqSelect.Where(aliasTable.Col("begin_month"))
+	}
+
+	if options.HasEndMonth {
+		sqSelect = sqSelect.Where(aliasTable.Col("end_month"))
+	}
+
+	if options.HasLogo {
+		sqSelect = sqSelect.Where(aliasTable.Col("logo_id").IsNotNull())
 	}
 
 	if fields {
@@ -1557,6 +1582,41 @@ func (s *Repository) ParentLanguageList(
 
 	if err = rows.Err(); err != nil {
 		return nil, err
+	}
+
+	return result, nil
+}
+
+func (s *Repository) ItemsWithPicturesCount(
+	ctx context.Context, nPictures int,
+) (int32, error) {
+	var result int32
+
+	itemTable := goqu.T(tableItem)
+	pictureItemTable := goqu.T("picture_item")
+	pictureTable := goqu.T("pictures")
+	itemIDCol := itemTable.Col("id")
+	pictureIDCol := pictureTable.Col("id")
+
+	const countAlias = "c"
+
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(
+		s.db.Select(itemIDCol, goqu.COUNT(pictureIDCol).As(countAlias)).
+			From(itemTable).
+			Join(pictureItemTable, goqu.On(itemIDCol.Eq(pictureItemTable.Col("item_id")))).
+			Join(pictureTable, goqu.On(pictureItemTable.Col("picture_id").Eq(pictureIDCol))).
+			GroupBy(itemIDCol).
+			Having(goqu.C(countAlias).Gte(nPictures)).
+			As("T1"),
+	)
+
+	success, err := sqSelect.ScanValContext(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, sql.ErrNoRows
 	}
 
 	return result, nil
