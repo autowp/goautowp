@@ -326,7 +326,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 	formatName := "picture-gallery"
 
 	tables := serviceManager.get("TableManager")
-	formattedImageTable := tables.get("formated_image")
+	formattedImageTable := tables.get(schema.TableFormattedImage)
 
 	formattedImageTable.insert(Row{
 		"format":            formatName,

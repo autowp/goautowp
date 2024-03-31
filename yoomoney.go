@@ -116,7 +116,7 @@ func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) er
 		return errors.New("label not matched by regular expression")
 	}
 
-	dateTime, err := time.Parse("2006-01-02", matches[1])
+	dateTime, err := time.Parse(itemofday.YoomoneyLabelDateFormat, matches[1])
 	if err != nil {
 		return fmt.Errorf("failed to parse date in label: %w", err)
 	}

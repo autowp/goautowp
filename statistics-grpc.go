@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
@@ -107,7 +108,7 @@ func (s *StatisticsGRPCServer) totalUsers(ctx context.Context) (int32, error) {
 	var result int32
 
 	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From("users").
+		From(schema.UserTable).
 		Where(goqu.L("NOT deleted")).
 		ScanValContext(ctx, &result)
 	if err != nil {
@@ -145,7 +146,7 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 	contributors := make([]string, 0)
 
 	if len(greenUserRoles) > 0 {
-		err := s.db.Select("id").From("users").Where(
+		err := s.db.Select("id").From(schema.UserTable).Where(
 			goqu.I("deleted").IsFalse(),
 			goqu.I("role").In(greenUserRoles),
 			goqu.L("(identity is null or identity <> ?)", "autowp"),
@@ -158,7 +159,7 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 
 	picturesUsers := make([]string, 0)
 
-	err := s.db.Select("id").From("users").
+	err := s.db.Select("id").From(schema.UserTable).
 		Where(goqu.I("deleted").IsFalse()).
 		Order(goqu.I("pictures_total").Desc()).
 		Limit(numberOfTopUploadersToShowInAboutUs).ScanValsContext(ctx, &picturesUsers)
@@ -176,7 +177,7 @@ func (s *StatisticsGRPCServer) picturesStat(ctx context.Context) (int32, int32, 
 		goqu.COUNT(goqu.Star()).As("count"),
 		goqu.L("SUM(filesize) / 1024 / 1024").As("size"),
 	).
-		From("pictures").
+		From(schema.TablePicture).
 		ScanStructContext(ctx, &picsStat)
 	if err != nil {
 		return 0, 0, err
@@ -193,7 +194,7 @@ func (s *StatisticsGRPCServer) totalItems(ctx context.Context) (int32, error) {
 	var result int32
 
 	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From("item").
+		From(schema.TableItem).
 		ScanValContext(ctx, &result)
 	if err != nil {
 		return 0, err
@@ -210,7 +211,7 @@ func (s *StatisticsGRPCServer) totalComments(ctx context.Context) (int32, error)
 	var result int32
 
 	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From("comment_message").
+		From(schema.CommentMessageTableName).
 		Where(goqu.I("deleted").IsFalse()).
 		ScanValContext(ctx, &result)
 	if err != nil {
@@ -346,7 +347,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 		goqu.L("user_id").As("user_id"),
 		goqu.L(dateExpr).As("date"),
 		goqu.L("count(1)").As("value"),
-	).From("log_events").
+	).From(schema.TableLogEvents).
 		Where(
 			goqu.I("add_datetime").Gte(from),
 			goqu.I("add_datetime").Lt(to),

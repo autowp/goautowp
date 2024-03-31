@@ -7,16 +7,17 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	tableName          = "of_day"
-	colItemID          = "item_id"
-	colUserID          = "user_id"
-	colDayDate         = "day_date"
-	defaultMinPictures = 3
+	colItemID               = "item_id"
+	colUserID               = "user_id"
+	colDayDate              = "day_date"
+	defaultMinPictures      = 3
+	YoomoneyLabelDateFormat = time.DateOnly
 )
 
 type Repository struct {
@@ -58,8 +59,8 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 	for i := 0; i < 10; i++ {
 		found := false
 
-		_, err := s.db.Select(goqu.L("1")).From(tableName).Where(
-			goqu.I(colDayDate).Eq(now.Format("2006-01-02")),
+		_, err := s.db.Select(goqu.L("1")).From(schema.TableOfDay).Where(
+			goqu.I(colDayDate).Eq(now.Format(time.DateOnly)),
 			goqu.I(colItemID).IsNotNull(),
 		).ScanValContext(ctx, &found)
 		if err != nil {
@@ -78,7 +79,7 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 }
 
 func (s *Repository) IsAvailableDate(ctx context.Context, date time.Time) (bool, error) {
-	dateStr := date.Format("2006-01-02")
+	dateStr := date.Format(time.DateOnly)
 
 	nextDates, err := s.NextDates(ctx)
 	if err != nil {
@@ -86,7 +87,7 @@ func (s *Repository) IsAvailableDate(ctx context.Context, date time.Time) (bool,
 	}
 
 	for _, nextDate := range nextDates {
-		if nextDate.Date.Format("2006-01-02") == dateStr {
+		if nextDate.Date.Format(time.DateOnly) == dateStr {
 			return true, nil
 		}
 	}
@@ -113,7 +114,10 @@ func (s *Repository) Pick(ctx context.Context) (bool, error) {
 
 func (s *Repository) candidate(ctx context.Context) (int64, error) {
 	sqSelect := s.CandidateQuery().
-		Where(goqu.L("item.begin_year AND item.end_year OR item.begin_model_year AND item.end_model_year")).
+		Where(goqu.L(
+			schema.TableItem + ".begin_year AND " + schema.TableItem + ".end_year OR " +
+				schema.TableItem + ".begin_model_year AND " + schema.TableItem + ".end_model_year",
+		)).
 		Order(goqu.Func("RAND").Desc()).
 		Limit(1)
 
@@ -132,14 +136,14 @@ func (s *Repository) candidate(ctx context.Context) (int64, error) {
 }
 
 func (s *Repository) CandidateQuery() *goqu.SelectDataset {
-	pTable := goqu.T("pictures")
-	iTable := goqu.T("item")
-	ipcTable := goqu.T("item_parent_cache")
-	piTable := goqu.T("picture_item")
+	pTable := goqu.T(schema.TablePicture)
+	iTable := goqu.T(schema.TableItem)
+	ipcTable := goqu.T(schema.TableItemParentCache)
+	piTable := goqu.T(schema.TablePictureItem)
 
 	iIDCol := iTable.Col("id")
 
-	table := goqu.T(tableName)
+	table := goqu.T(schema.TableOfDay)
 	tableItemIDCol := table.Col(colItemID)
 
 	const picturesCountAlias = "p_count"
@@ -169,7 +173,7 @@ func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error)
 		return false, errors.New("itemID must be defined")
 	}
 
-	sqSelect := s.CandidateQuery().Where(goqu.T("item").Col("id").Eq(itemID))
+	sqSelect := s.CandidateQuery().Where(goqu.T(schema.TableItem).Col("id").Eq(itemID))
 
 	r := CandidateRecord{}
 
@@ -195,9 +199,9 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 		return false, nil
 	}
 
-	table := goqu.T(tableName)
+	table := goqu.T(schema.TableOfDay)
 
-	dateStr := dateTime.Format("2006-01-02")
+	dateStr := dateTime.Format(time.DateOnly)
 	dateExpr := goqu.I(colDayDate).Eq(dateStr)
 
 	sqSelect := s.db.Select(goqu.L(colItemID)).From(table).Where(dateExpr)

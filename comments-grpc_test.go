@@ -7,7 +7,9 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -19,7 +21,7 @@ func getUserWithCleanHistory(
 	t *testing.T,
 	conn *grpc.ClientConn,
 	cfg config.Config,
-	db *sql.DB,
+	db *goqu.Database,
 	username string,
 	password string,
 ) (int64, string) {
@@ -38,7 +40,10 @@ func getUserWithCleanHistory(
 	)
 	require.NoError(t, err)
 
-	_, err = db.Exec("UPDATE users SET last_message_time = '2000-01-01' WHERE id = ?", user.Id)
+	_, err = db.Update(schema.UserTable).
+		Set(goqu.Record{"last_message_time": "2000-01-01"}).
+		Where(goqu.C("id").Eq(user.Id)).
+		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	return user.Id, token.AccessToken
@@ -48,9 +53,8 @@ func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -64,7 +68,9 @@ func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
 	_, err = client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
@@ -84,9 +90,8 @@ func TestAddComment(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -100,7 +105,9 @@ func TestAddComment(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	_, token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
 	r, err := client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
@@ -163,9 +170,8 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -179,8 +185,10 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	_, user1Token := getUserWithCleanHistory(t, conn, cfg, db, testUsername, testPassword)
-	_, user2Token := getUserWithCleanHistory(t, conn, cfg, db, adminUsername, adminPassword)
+	goquDB := goqu.New("mysql", db)
+
+	_, user1Token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+	_, user2Token := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
 	response, err := client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+user1Token),

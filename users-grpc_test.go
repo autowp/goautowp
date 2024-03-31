@@ -10,7 +10,9 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,8 +25,8 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -78,7 +80,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, me)
 
-	db, err := cnt.AutowpDB()
+	db, err := cnt.GoquDB()
 	require.NoError(t, err)
 
 	// set avatar
@@ -87,7 +89,11 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	imageID, err := imageStorage.AddImageFromFile(ctx, TestImageFile, "user", storage.GenerateOptions{})
 	require.NoError(t, err)
-	_, err = db.Exec("UPDATE users SET img = ? WHERE id = ?", imageID, me.Id)
+
+	_, err = db.Update(schema.UserTable).
+		Set(goqu.Record{"img": imageID}).
+		Where(goqu.C("id").Eq(me.Id)).
+		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id})
@@ -114,8 +120,8 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -175,8 +181,8 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -240,8 +246,8 @@ func TestGetOnlineUsers(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

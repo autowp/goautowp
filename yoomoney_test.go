@@ -11,6 +11,7 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/itemofday"
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 )
@@ -68,7 +69,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	yh, err := NewYoomoneyHandler("0.99", "01234567890ABCDEF01234567890", itemOfDayRepository)
 	require.NoError(t, err)
 
-	dateStr := time.Now().Format("2006-01-02")
+	dateStr := time.Now().Format(itemofday.YoomoneyLabelDateFormat)
 
 	// prepare test data
 	_, err = goquDB.Delete("of_day").Where(goqu.C("day_date").Eq(dateStr)).Executor().Exec()
@@ -76,9 +77,10 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
+	//nolint:gosec
 	r1, err := db.ExecContext(
 		ctx, `
-			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
+			INSERT INTO `+schema.TableItem+` (name, is_group, item_type_id, catname, body, produced_exactly)
 			VALUES (?, 0, 5, ?, '', 0)
 		`, fmt.Sprintf("item-of-day-%d", random.Int()), fmt.Sprintf("brand1-%d", random.Int()),
 	)
@@ -87,16 +89,17 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	itemID, err := r1.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.ExecContext(ctx,
-		"INSERT INTO item_parent_cache (item_id, parent_id, diff) VALUES (?, ?, 0)",
-		itemID, itemID,
-	)
+	_, err = goquDB.Insert(schema.TableItemParentCache).Rows(goqu.Record{
+		"item_id":   itemID,
+		"parent_id": itemID,
+		"diff":      0,
+	}).Executor().Exec()
 	require.NoError(t, err)
 
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
 	res, err := goquDB.ExecContext(ctx,
-		"INSERT INTO pictures (identity, status, ip, owner_id) VALUES (?, 'accepted', '', null)",
+		"INSERT INTO "+schema.TablePicture+" (identity, status, ip, owner_id) VALUES (?, 'accepted', '', null)",
 		identity,
 	)
 	require.NoError(t, err)
@@ -105,7 +108,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = goquDB.ExecContext(ctx,
-		"INSERT INTO picture_item (picture_id, item_id) VALUES (?, ?)",
+		"INSERT INTO "+schema.TablePictureItem+" (picture_id, item_id) VALUES (?, ?)",
 		pictureID, itemID,
 	)
 	require.NoError(t, err)

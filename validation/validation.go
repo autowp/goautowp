@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/dpapathanasiou/go-recaptcha"
 )
@@ -134,7 +135,7 @@ func (s *Recaptcha) IsValidString(value string) ([]string, error) {
 // IsValidString IsValidString.
 func (s *EmailNotExists) IsValidString(value string) ([]string, error) {
 	var exists bool
-	err := s.DB.QueryRow("SELECT 1 FROM users WHERE e_mail = ?", value).Scan(&exists)
+	err := s.DB.QueryRow("SELECT 1 FROM "+schema.UserTableName+" WHERE e_mail = ?", value).Scan(&exists)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return []string{}, nil

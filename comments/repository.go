@@ -16,6 +16,7 @@ import (
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -33,11 +34,6 @@ const (
 	TypeIDVotings  CommentType = 3
 	TypeIDArticles CommentType = 4
 	TypeIDForums   CommentType = 5
-)
-
-const (
-	tableCommentMessage   = "comment_message"
-	colModeratorAttention = "moderator_attention"
 )
 
 const deleteTTLDays = 300
@@ -115,11 +111,12 @@ func NewRepository(
 
 func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT users.id, users.name, users.deleted, users.identity, users.last_online, users.role, 
-            users.specs_weight, comment_vote.vote
-		FROM comment_vote
-			INNER JOIN users ON comment_vote.user_id = users.id
-		WHERE comment_vote.comment_id = ?
+		SELECT `+schema.UserTableName+`.id, `+schema.UserTableName+`.name, `+schema.UserTableName+`.deleted, 
+            `+schema.UserTableName+`.identity, `+schema.UserTableName+`.last_online, `+schema.UserTableName+`.role, 
+            `+schema.UserTableName+`.specs_weight, `+schema.CommentVoteTableName+`.vote
+		FROM `+schema.CommentVoteTableName+`
+			INNER JOIN `+schema.UserTableName+` ON `+schema.CommentVoteTableName+`.user_id = `+schema.UserTableName+`.id
+		WHERE `+schema.CommentVoteTableName+`.comment_id = ?
 	`, id)
 	if err != nil {
 		return nil, err
@@ -162,7 +159,7 @@ func (s *Repository) IsSubscribed(
 ) (bool, error) {
 	var result bool
 	success, err := s.db.ScanValContext(ctx, &result, `
-		SELECT 1 FROM comment_topic_subscribe WHERE type_id = ? AND item_id = ? AND user_id = ?
+		SELECT 1 FROM `+schema.CommentTopicSubscribeTableName+` WHERE type_id = ? AND item_id = ? AND user_id = ?
     `, commentsType, itemID, userID)
 
 	return success && result, err
@@ -170,7 +167,7 @@ func (s *Repository) IsSubscribed(
 
 func (s *Repository) Subscribe(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
 	_, err := s.db.ExecContext(ctx, `
-		INSERT IGNORE INTO comment_topic_subscribe (type_id, item_id, user_id, sent)
+		INSERT IGNORE INTO `+schema.CommentTopicSubscribeTableName+` (type_id, item_id, user_id, sent)
 		VALUES (?, ?, ?, 0)
     `, commentsType, itemID, userID)
 
@@ -180,7 +177,7 @@ func (s *Repository) Subscribe(ctx context.Context, userID int64, commentsType C
 func (s *Repository) UnSubscribe(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
 	_, err := s.db.ExecContext(
 		ctx,
-		"DELETE FROM comment_topic_subscribe WHERE type_id = ? AND item_id = ? AND user_id = ?",
+		"DELETE FROM `+schema.CommentTopicSubscribeTableName+` WHERE type_id = ? AND item_id = ? AND user_id = ?",
 		commentsType, itemID, userID,
 	)
 
@@ -191,7 +188,7 @@ func (s *Repository) View(ctx context.Context, userID int64, commentsType Commen
 	_, err := s.db.ExecContext(
 		ctx,
 		`
-			INSERT INTO comment_topic_view (user_id, type_id, item_id, timestamp)
+			INSERT INTO `+schema.TableCommentTopicView+` (user_id, type_id, item_id, timestamp)
             VALUES (?, ?, ?, NOW())
             ON DUPLICATE KEY UPDATE timestamp = values(timestamp)
         `,
@@ -204,64 +201,86 @@ func (s *Repository) View(ctx context.Context, userID int64, commentsType Commen
 func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, byUserID int64) error {
 	var moderatorAttention ModeratorAttention
 
-	err := s.db.QueryRowContext(ctx, "SELECT moderator_attention FROM comment_message WHERE id = ?", commentID).
-		Scan(&moderatorAttention)
+	success, err := s.db.Select(schema.CommentMessageTableColModeratorAttention).From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableColID.Eq(commentID)).
+		ScanValContext(ctx, &moderatorAttention)
 	if err != nil {
 		return err
+	}
+
+	if !success {
+		return sql.ErrNoRows
 	}
 
 	if moderatorAttention == ModeratorAttentionRequired {
 		return errors.New("comment with moderation attention requirement can't be deleted")
 	}
 
-	_, err = s.db.ExecContext(
-		ctx,
-		`
-			UPDATE comment_message SET deleted = 1, deleted_by = ?, delete_date = NOW()
-            WHERE id = ?
-        `,
-		byUserID, commentID,
-	)
+	_, err = s.db.Update(schema.CommentMessageTableName).
+		Set(goqu.Record{
+			"deleted":     1,
+			"deleted_by":  byUserID,
+			"delete_date": goqu.Func("NOW"),
+		}).
+		Where(goqu.C("id").Eq(commentID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }
 
 func (s *Repository) RestoreMessage(ctx context.Context, commentID int64) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		"UPDATE comment_message SET deleted = 0, delete_date = null WHERE id = ?",
-		commentID,
-	)
+	_, err := s.db.Update(schema.CommentMessageTableName).
+		Set(goqu.Record{
+			"deleted":     0,
+			"delete_date": nil,
+		}).
+		Where(goqu.C("id").Eq(commentID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }
 
 func (s *Repository) GetCommentType(ctx context.Context, commentID int64) (CommentType, error) {
 	var commentType CommentType
-	err := s.db.QueryRowContext(ctx, "SELECT type_id FROM comment_message WHERE id = ?", commentID).Scan(&commentType)
 
-	return commentType, err
+	success, err := s.db.Select("type_id").
+		From(schema.CommentMessageTableName).Where(goqu.C("id").Eq(commentID)).
+		ScanValContext(ctx, &commentType)
+	if err != nil {
+		return commentType, err
+	}
+
+	if !success {
+		return commentType, sql.ErrNoRows
+	}
+
+	return commentType, nil
 }
 
 func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType CommentType, dstItemID int64) error {
-	var (
+	st := struct {
 		srcType   CommentType
 		srcItemID int64
-	)
+	}{}
 
-	err := s.db.QueryRowContext(ctx, "SELECT type_id, item_id FROM comment_message WHERE id = ?", commentID).
-		Scan(&srcType, &srcItemID)
+	success, err := s.db.Select("type_id", "item_id").
+		From(schema.CommentMessageTableName).Where(goqu.C("id").Eq(commentID)).
+		ScanStructContext(ctx, &st)
 	if err != nil {
 		return err
 	}
 
-	if srcItemID == dstItemID && srcType == dstType {
+	if !success {
+		return sql.ErrNoRows
+	}
+
+	if st.srcItemID == dstItemID && st.srcType == dstType {
 		return nil
 	}
 
 	_, err = s.db.ExecContext(
 		ctx,
-		"UPDATE comment_message SET type_id = ?, item_id = ?, parent_id = null WHERE id = ?",
+		"UPDATE "+schema.CommentMessageTableName+" SET type_id = ?, item_id = ?, parent_id = null WHERE id = ?",
 		dstType, dstItemID, commentID,
 	)
 	if err != nil {
@@ -273,7 +292,7 @@ func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType C
 		return err
 	}
 
-	err = s.updateTopicStat(ctx, srcType, srcItemID)
+	err = s.updateTopicStat(ctx, st.srcType, st.srcItemID)
 	if err != nil {
 		return err
 	}
@@ -289,14 +308,14 @@ func (s *Repository) moveMessageRecursive(
 ) error {
 	_, err := s.db.ExecContext(
 		ctx,
-		"UPDATE comment_message SET type_id = ?, item_id = ? WHERE id = ?",
+		"UPDATE "+schema.CommentMessageTableName+" SET type_id = ?, item_id = ? WHERE id = ?",
 		dstType, dstItemID, parentID,
 	)
 	if err != nil {
 		return err
 	}
 
-	rows, err := s.db.QueryContext(ctx, "SELECT id FROM comment_message WHERE parent_id = ?", parentID)
+	rows, err := s.db.QueryContext(ctx, "SELECT id FROM "+schema.CommentMessageTableName+" WHERE parent_id = ?", parentID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -326,7 +345,7 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 
 	err := s.db.QueryRowContext(
 		ctx,
-		"SELECT COUNT(1), MAX(datetime) FROM comment_message WHERE type_id = ? AND item_id = ?",
+		"SELECT COUNT(1), MAX(datetime) FROM "+schema.CommentMessageTableName+" WHERE type_id = ? AND item_id = ?",
 		commentType, itemID,
 	).Scan(&messagesCount, &lastUpdate)
 	if err != nil {
@@ -334,11 +353,10 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 	}
 
 	if messagesCount <= 0 {
-		_, err = s.db.ExecContext(
-			ctx,
-			"DELETE FROM comment_topic WHERE type_id = ? AND item_id = ?",
-			commentType, itemID,
-		)
+		_, err = s.db.Delete(schema.CommentTopicTableName).Where(
+			goqu.C("type_id").Eq(commentType),
+			goqu.C("item_id").Eq(itemID),
+		).Executor().ExecContext(ctx)
 
 		return err
 	}
@@ -347,11 +365,11 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 		_, err = s.db.ExecContext(
 			ctx,
 			`
-				INSERT INTO comment_topic (item_id, type_id, last_update, messages)
+				INSERT INTO `+schema.CommentTopicTableName+` (item_id, type_id, last_update, messages)
 				VALUES (?, ?, ?, ?)
 				ON DUPLICATE KEY UPDATE last_update = VALUES(last_update), messages = VALUES(messages)
 			`,
-			itemID, commentType, lastUpdate.Time.Format("2006-01-02 15:04:05"), messagesCount,
+			itemID, commentType, lastUpdate.Time.Format(time.DateTime), messagesCount,
 		)
 	}
 
@@ -361,7 +379,7 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 func (s *Repository) UserVote(ctx context.Context, userID int64, commentID int64) (int32, error) {
 	var vote int32
 	err := s.db.QueryRowContext(
-		ctx, "SELECT vote FROM comment_vote WHERE comment_id = ? AND user_id = ?", commentID, userID,
+		ctx, "SELECT vote FROM "+schema.CommentVoteTableName+" WHERE comment_id = ? AND user_id = ?", commentID, userID,
 	).Scan(&vote)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -380,11 +398,15 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 
 	var authorID int64
 
-	err := s.db.QueryRowContext(
-		ctx, "SELECT author_id FROM comment_message WHERE id = ?", commentID,
-	).Scan(&authorID)
+	success, err := s.db.Select("author_id").From(schema.CommentMessageTableName).
+		Where(goqu.C("id").Eq(commentID)).
+		ScanValContext(ctx, &authorID)
 	if err != nil {
 		return 0, err
+	}
+
+	if !success {
+		return 0, sql.ErrNoRows
 	}
 
 	if authorID == userID {
@@ -394,7 +416,7 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 	res, err := s.db.ExecContext(
 		ctx,
 		`
-            INSERT INTO comment_vote (comment_id, user_id, vote)
+            INSERT INTO `+schema.CommentVoteTableName+` (comment_id, user_id, vote)
 			VALUES (?, ?, ?)
 			ON DUPLICATE KEY UPDATE vote = VALUES(vote)
         `,
@@ -426,25 +448,29 @@ func (s *Repository) updateVote(ctx context.Context, commentID int64) (int32, er
 
 	err := s.db.QueryRowContext(
 		ctx,
-		"SELECT sum(vote) FROM comment_vote WHERE comment_id = ?",
+		"SELECT sum(vote) FROM `+schema.CommentVoteTableName+` WHERE comment_id = ?",
 		commentID,
 	).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
 
-	_, err = s.db.ExecContext(
-		ctx, "UPDATE comment_message SET vote = ? WHERE id = ?", count, commentID,
-	)
+	_, err = s.db.Update(schema.CommentMessageTableName).
+		Set(goqu.Record{"vote": count}).
+		Where(goqu.C("id").Eq(commentID)).
+		Executor().ExecContext(ctx)
 
 	return count, err
 }
 
 func (s *Repository) CompleteMessage(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(
-		ctx, "UPDATE comment_message SET moderator_attention = ? WHERE id = ? AND moderator_attention = ?",
-		ModeratorAttentionCompleted, id, ModeratorAttentionRequired,
-	)
+	_, err := s.db.Update(schema.CommentMessageTable).
+		Set(goqu.Record{schema.CommentMessageTableModeratorAttentionColName: ModeratorAttentionCompleted}).
+		Where(
+			schema.CommentMessageTableColID.Eq(id),
+			schema.CommentMessageTableColModeratorAttention.Eq(ModeratorAttentionRequired),
+		).
+		Executor().ExecContext(ctx)
 
 	return err
 }
@@ -463,7 +489,7 @@ func (s *Repository) Add(
 		deleted := false
 		err := s.db.QueryRowContext(
 			ctx,
-			"SELECT deleted FROM comment_message WHERE type_id = ? AND item_id = ? AND id = ?",
+			"SELECT deleted FROM "+schema.CommentMessageTableName+" WHERE type_id = ? AND item_id = ? AND id = ?",
 			typeID, itemID, parentID,
 		).Scan(&deleted)
 
@@ -483,8 +509,9 @@ func (s *Repository) Add(
 		ma = ModeratorAttentionRequired
 	}
 
-	res, err := s.db.Insert(tableCommentMessage).
-		Cols("datetime", "type_id", "item_id", "parent_id", "author_id", "message", "ip", colModeratorAttention).
+	res, err := s.db.Insert(schema.CommentMessageTableName).
+		Cols("datetime", "type_id", "item_id", "parent_id", "author_id", "message", "ip",
+			schema.CommentMessageTableColModeratorAttention).
 		Vals(goqu.Vals{
 			goqu.L("NOW()"),
 			typeID,
@@ -532,16 +559,17 @@ func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID in
 
 	err := s.db.QueryRowContext(
 		ctx,
-		"SELECT count(1) FROM comment_message WHERE parent_id = ?",
+		"SELECT count(1) FROM "+schema.CommentMessageTableName+" WHERE parent_id = ?",
 		messageID,
 	).Scan(&count)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.db.ExecContext(
-		ctx, "UPDATE comment_message SET replies_count = ? WHERE id = ?", count, messageID,
-	)
+	_, err = s.db.Update(schema.CommentMessageTableName).
+		Set(goqu.Record{"replies_count": count}).
+		Where(goqu.C("id").Eq(messageID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }
@@ -549,7 +577,7 @@ func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID in
 func (s *Repository) UpdateTopicView(ctx context.Context, typeID CommentType, itemID int64, userID int64) error {
 	_, err := s.db.ExecContext(
 		ctx, `
-			INSERT INTO comment_topic_view (user_id, type_id, item_id, timestamp)
+			INSERT INTO `+schema.TableCommentTopicView+` (user_id, type_id, item_id, timestamp)
 			VALUES (?, ?, ?, NOW())
 			ON DUPLICATE KEY UPDATE timestamp = VALUES(timestamp)
 		`,
@@ -561,28 +589,38 @@ func (s *Repository) UpdateTopicView(ctx context.Context, typeID CommentType, it
 
 func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID int64) error {
 	var (
-		err error
-		val int
+		err     error
+		val     int
+		success bool
 	)
 
 	switch typeID {
 	case TypeIDPictures:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM pictures WHERE id = ?", itemID).Scan(&val)
+		success, err = s.db.Select(goqu.L("1")).From(schema.TablePicture).
+			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDItems:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM item WHERE id = ?", itemID).Scan(&val)
+		success, err = s.db.Select(goqu.L("1")).From(schema.TableItem).
+			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDVotings:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM voting WHERE id = ?", itemID).Scan(&val)
+		success, err = s.db.Select(goqu.L("1")).From(schema.TableVoting).
+			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDArticles:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM articles WHERE id = ?", itemID).Scan(&val)
+		success, err = s.db.Select(goqu.L("1")).From(schema.TableArticles).
+			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDForums:
-		err = s.db.QueryRowContext(ctx, "SELECT 1 FROM forums_topics WHERE id = ?", itemID).Scan(&val)
+		success, err = s.db.Select(goqu.L("1")).From(schema.ForumsTopicsTable).
+			Where(schema.ForumsTopicsTable.Col("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	default:
-		err = errors.New("invalid type")
+		return errors.New("invalid type")
+	}
+
+	if !success {
+		return sql.ErrNoRows
 	}
 
 	return err
@@ -598,10 +636,10 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT cm1.author_id, parent_message.author_id, u.identity, parent_user.language
-		FROM comment_message AS cm1 
-		    JOIN comment_message AS parent_message ON cm1.parent_id = parent_message.id
-			JOIN users AS u ON cm1.author_id = u.id
-			JOIN users AS parent_user ON parent_message.author_id = parent_user.id
+		FROM `+schema.CommentMessageTableName+` AS cm1 
+		    JOIN `+schema.CommentMessageTableName+` AS parent_message ON cm1.parent_id = parent_message.id
+			JOIN `+schema.UserTableName+` AS u ON cm1.author_id = u.id
+			JOIN `+schema.UserTableName+` AS parent_user ON parent_message.author_id = parent_user.id
 		WHERE cm1.id = ? AND cm1.author_id != parent_message.author_id AND NOT parent_user.deleted
     `, messageID).Scan(&authorID, &parentAuthorID, &authorIdentity, &parentLanguage)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -651,29 +689,37 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 }
 
 func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) error {
-	var (
-		itemID         int64
-		typeID         CommentType
-		authorID       sql.NullInt64
-		authorIdentity sql.NullString
-	)
+	var authorIdentity sql.NullString
 
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT item_id, type_id, author_id FROM comment_message WHERE id = ?",
-		messageID,
-	).Scan(&itemID, &typeID, &authorID)
+	st := struct {
+		ItemID   int64         `db:"item_id"`
+		TypeID   CommentType   `db:"type_id"`
+		AuthorID sql.NullInt64 `db:"author_id"`
+	}{}
+
+	success, err := s.db.Select("item_id", "type_id", "author_id").
+		From(schema.CommentMessageTable).Where(schema.CommentMessageTable.Col("id").Eq(messageID)).
+		ScanStructContext(ctx, &st)
 	if err != nil {
 		return err
 	}
 
-	if !authorID.Valid {
+	if !success {
+		return sql.ErrNoRows
+	}
+
+	if !st.AuthorID.Valid {
 		return nil
 	}
 
-	err = s.db.QueryRowContext(ctx, "SELECT identity FROM users WHERE id = ?", authorID.Int64).Scan(&authorIdentity)
+	success, err = s.db.Select("identity").From(schema.UserTable).Where(goqu.C("id").Eq(st.AuthorID.Int64)).
+		ScanValContext(ctx, &authorIdentity)
 	if err != nil {
 		return err
+	}
+
+	if !success {
+		return sql.ErrNoRows
 	}
 
 	au := ""
@@ -681,7 +727,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		au = authorIdentity.String
 	}
 
-	ids, err := s.getSubscribersIDs(ctx, typeID, itemID, true)
+	ids, err := s.getSubscribersIDs(ctx, st.TypeID, st.ItemID, true)
 	if err != nil {
 		return err
 	}
@@ -689,7 +735,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 	filteredIDs := make([]int64, 0)
 
 	for _, id := range ids {
-		prefs, err := s.userRepository.UserPreferences(ctx, id, authorID.Int64)
+		prefs, err := s.userRepository.UserPreferences(ctx, id, st.AuthorID.Int64)
 		if err != nil {
 			return err
 		}
@@ -703,9 +749,9 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		return nil
 	}
 
-	subscribers, err := s.db.From("users").Select("id", "language").Where(
+	subscribers, err := s.db.From(schema.UserTable).Select("id", "language").Where(
 		goqu.I("id").In(filteredIDs),
-		goqu.I("id").Neq(authorID),
+		goqu.I("id").Neq(st.AuthorID.Int64),
 	).Executor().QueryContext(ctx)
 	if err != nil {
 		return err
@@ -722,7 +768,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 			return err
 		}
 
-		userURL, err := s.userURL(authorID.Int64, au, subscriberLanguage)
+		userURL, err := s.userURL(st.AuthorID.Int64, au, subscriberLanguage)
 		if err != nil {
 			return err
 		}
@@ -757,7 +803,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 			return err
 		}
 
-		err = s.SetSubscriptionSent(ctx, typeID, itemID, subscriberID, true)
+		err = s.SetSubscriptionSent(ctx, st.TypeID, st.ItemID, subscriberID, true)
 		if err != nil {
 			return err
 		}
@@ -772,7 +818,7 @@ func (s *Repository) getSubscribersIDs(
 	itemID int64,
 	onlyAwaiting bool,
 ) ([]int64, error) {
-	sel := s.db.Select("user_id").From("comment_topic_subscribe").Where(
+	sel := s.db.Select("user_id").From(schema.CommentTopicSubscribeTableName).Where(
 		goqu.I("type_id").Eq(typeID),
 		goqu.I("item_id").Eq(itemID),
 	)
@@ -795,7 +841,7 @@ func (s *Repository) SetSubscriptionSent(
 	subscriberID int64,
 	sent bool,
 ) error {
-	_, err := s.db.Update("comment_topic_subscribe").
+	_, err := s.db.Update(schema.CommentTopicSubscribeTableName).
 		Set(goqu.Record{"sent": sent}).
 		Where(
 			goqu.I("type_id").Eq(typeID),
@@ -815,7 +861,7 @@ func (s *Repository) messageURL(ctx context.Context, messageID int64, uri *url.U
 
 	err := s.db.QueryRowContext(
 		ctx,
-		"SELECT item_id, type_id FROM comment_message WHERE id = ?",
+		"SELECT item_id, type_id FROM "+schema.CommentMessageTableName+" WHERE id = ?",
 		messageID,
 	).Scan(&itemID, &typeID)
 	if err != nil {
@@ -844,9 +890,14 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 	case TypeIDPictures:
 		var identity string
 
-		err := s.db.QueryRowContext(ctx, "SELECT identity FROM pictures WHERE id = ?", itemID).Scan(&identity)
+		success, err := s.db.Select("identity").From(schema.TablePicture).Where(goqu.C("id").Eq(itemID)).
+			ScanValContext(ctx, &identity)
 		if err != nil {
 			return nil, err
+		}
+
+		if !success {
+			return nil, sql.ErrNoRows
 		}
 
 		return []string{"/picture", identity}, nil
@@ -854,9 +905,14 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 	case TypeIDItems:
 		var itemTypeID items.ItemType
 
-		err := s.db.QueryRowContext(ctx, "SELECT item_type_id FROM item WHERE id = ?", itemID).Scan(&itemTypeID)
+		success, err := s.db.Select("item_type_id").From(schema.TableItem).Where(goqu.C("id").Eq(itemID)).
+			ScanValContext(ctx, &itemTypeID)
 		if err != nil {
 			return nil, err
+		}
+
+		if !success {
+			return nil, sql.ErrNoRows
 		}
 
 		switch itemTypeID { //nolint:exhaustive
@@ -878,9 +934,14 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 	case TypeIDArticles:
 		var catname string
 
-		err := s.db.QueryRowContext(ctx, "SELECT catname FROM articles WHERE id = ?", itemID).Scan(&catname)
+		success, err := s.db.Select("catname").From(schema.TableArticles).Where(goqu.C("id").Eq(itemID)).
+			ScanValContext(ctx, &catname)
 		if err != nil {
 			return nil, err
+		}
+
+		if !success {
+			return nil, sql.ErrNoRows
 		}
 
 		return []string{"/articles", catname}, nil
@@ -895,8 +956,8 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 	query := `
 		SELECT cm1.id, cm1.item_id, cm1.type_id
-		FROM comment_message AS cm1
-			LEFT JOIN comment_message AS cm2 ON cm1.id = cm2.parent_id
+		FROM ` + schema.CommentMessageTableName + ` AS cm1
+			LEFT JOIN ` + schema.CommentMessageTableName + ` AS cm2 ON cm1.id = cm2.parent_id
 		WHERE cm2.parent_id IS NULL
 		  AND cm1.delete_date < DATE_SUB(NOW(), INTERVAL ? DAY)
     `
@@ -920,7 +981,7 @@ func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 			return 0, err
 		}
 
-		res, err := s.db.ExecContext(ctx, "DELETE FROM comment_message WHERE id = ?", id)
+		res, err := s.db.ExecContext(ctx, "DELETE FROM "+schema.CommentMessageTableName+" WHERE id = ?", id)
 		if err != nil {
 			return 0, err
 		}
@@ -949,7 +1010,7 @@ func (s *Repository) RefreshRepliesCount(ctx context.Context) (int64, error) {
 	_, err := s.db.ExecContext(ctx, `
 		create temporary table __cms
 		select type_id, item_id, parent_id as id, count(1) as count
-		from comment_message
+		from `+schema.CommentMessageTableName+`
 		where parent_id is not null
 		group by type_id, item_id, parent_id
     `)
@@ -958,10 +1019,10 @@ func (s *Repository) RefreshRepliesCount(ctx context.Context) (int64, error) {
 	}
 
 	res, err := s.db.ExecContext(ctx, `
-		update comment_message
+		update `+schema.CommentMessageTableName+`
 		inner join __cms
 		using(type_id, item_id, id)
-		set comment_message.replies_count = __cms.count
+		set `+schema.CommentMessageTableName+`.replies_count = __cms.count
     `)
 	if err != nil {
 		return 0, err
@@ -1006,152 +1067,127 @@ func (s *Repository) NeedWait(ctx context.Context, userID int64) (bool, error) {
 func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 	var (
 		affected int64
-		id       int64
+		ids      []int64
 	)
 
 	// pictures
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT comment_message.id
-		FROM comment_message
-			LEFT JOIN pictures ON comment_message.item_id = pictures.id
-		WHERE pictures.id IS NULL AND comment_message.type_id = ?
-    `, TypeIDPictures)
+	err := s.db.Select(schema.CommentMessageTable.Col("id")).
+		From(schema.CommentMessageTable).
+		LeftJoin(
+			goqu.T(schema.TablePicture),
+			goqu.On(schema.CommentMessageTable.Col("item_id").Eq(goqu.T(schema.TablePicture).Col("id"))),
+		).
+		Where(
+			goqu.T(schema.TablePicture).Col("id").IsNull(),
+			schema.CommentMessageTable.Col("type_id").Eq(TypeIDPictures),
+		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
 	}
 
-	for rows.Next() {
-		err = rows.Scan(&id)
-		if err != nil {
-			return 0, err
-		}
-
+	for _, id := range ids {
 		a, err := s.deleteMessage(ctx, id)
 		if err != nil {
 			return 0, err
 		}
 
 		affected += a
-	}
-
-	if err = rows.Err(); err != nil {
-		return 0, err
 	}
 
 	// item
-	rows, err = s.db.QueryContext(ctx, `
-		SELECT comment_message.id
-		FROM comment_message
-			LEFT JOIN item ON comment_message.item_id = item.id
-		WHERE item.id IS NULL AND comment_message.type_id = ?
-    `, TypeIDItems)
+	err = s.db.Select(schema.CommentMessageTable.Col("id")).
+		From(schema.CommentMessageTable).
+		LeftJoin(
+			goqu.T(schema.TableItem),
+			goqu.On(schema.CommentMessageTable.Col("item_id").Eq(goqu.T(schema.TableItem).Col("id"))),
+		).
+		Where(
+			goqu.T(schema.TableItem).Col("id").IsNull(),
+			schema.CommentMessageTable.Col("type_id").Eq(TypeIDItems),
+		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
 	}
 
-	for rows.Next() {
-		err = rows.Scan(&id)
-		if err != nil {
-			return 0, err
-		}
-
+	for _, id := range ids {
 		a, err := s.deleteMessage(ctx, id)
 		if err != nil {
 			return 0, err
 		}
 
 		affected += a
-	}
-
-	if err = rows.Err(); err != nil {
-		return 0, err
 	}
 
 	// votings
-	rows, err = s.db.QueryContext(ctx, `
-		SELECT comment_message.id
-		FROM comment_message
-			LEFT JOIN voting ON comment_message.item_id = voting.id
-		WHERE voting.id IS NULL AND comment_message.type_id = ?
-    `, TypeIDVotings)
+	err = s.db.Select(schema.CommentMessageTable.Col("id")).
+		From(schema.CommentMessageTable).
+		LeftJoin(
+			goqu.T(schema.TableVoting),
+			goqu.On(schema.CommentMessageTable.Col("item_id").Eq(goqu.T(schema.TableVoting).Col("id"))),
+		).
+		Where(
+			goqu.T(schema.TableVoting).Col("id").IsNull(),
+			schema.CommentMessageTable.Col("type_id").Eq(TypeIDArticles),
+		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
 	}
 
-	for rows.Next() {
-		err = rows.Scan(&id)
-		if err != nil {
-			return 0, err
-		}
-
+	for _, id := range ids {
 		a, err := s.deleteMessage(ctx, id)
 		if err != nil {
 			return 0, err
 		}
 
 		affected += a
-	}
-
-	if err = rows.Err(); err != nil {
-		return 0, err
 	}
 
 	// articles
-	rows, err = s.db.QueryContext(ctx, `
-		SELECT comment_message.id
-		FROM comment_message
-			LEFT JOIN articles ON comment_message.item_id = articles.id
-		WHERE articles.id IS NULL AND comment_message.type_id = ?
-    `, TypeIDArticles)
+	err = s.db.Select(schema.CommentMessageTable.Col("id")).
+		From(schema.CommentMessageTable).
+		LeftJoin(
+			goqu.T(schema.TableArticles),
+			goqu.On(schema.CommentMessageTable.Col("item_id").Eq(goqu.T(schema.TableArticles).Col("id"))),
+		).
+		Where(
+			goqu.T(schema.TableArticles).Col("id").IsNull(),
+			schema.CommentMessageTable.Col("type_id").Eq(TypeIDArticles),
+		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
 	}
 
-	for rows.Next() {
-		err = rows.Scan(&id)
-		if err != nil {
-			return 0, err
-		}
-
+	for _, id := range ids {
 		a, err := s.deleteMessage(ctx, id)
 		if err != nil {
 			return 0, err
 		}
 
 		affected += a
-	}
-
-	if err = rows.Err(); err != nil {
-		return 0, err
 	}
 
 	// forums
-	rows, err = s.db.QueryContext(ctx, `
-		SELECT comment_message.id
-		FROM comment_message
-			LEFT JOIN forums_topics ON comment_message.item_id = forums_topics.id
-		WHERE forums_topics.id IS NULL AND comment_message.type_id = ?
-    `, TypeIDForums)
+	err = s.db.Select(schema.CommentMessageTable.Col("id")).
+		From(schema.CommentMessageTable).
+		LeftJoin(
+			schema.ForumsTopicsTable,
+			goqu.On(schema.CommentMessageTable.Col("item_id").Eq(schema.ForumsTopicsTable.Col("id"))),
+		).
+		Where(
+			schema.ForumsTopicsTable.Col("id").IsNull(),
+			schema.CommentMessageTable.Col("type_id").Eq(TypeIDForums),
+		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
 	}
 
-	for rows.Next() {
-		err = rows.Scan(&id)
-		if err != nil {
-			return 0, err
-		}
-
+	for _, id := range ids {
 		a, err := s.deleteMessage(ctx, id)
 		if err != nil {
 			return 0, err
 		}
 
 		affected += a
-	}
-
-	if err = rows.Err(); err != nil {
-		return 0, err
 	}
 
 	return affected, nil
@@ -1160,19 +1196,19 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error) {
 	var typeID CommentType
 
-	err := s.db.QueryRowContext(ctx, "SELECT type_id FROM comment_message WHERE id = ?", id).Scan(&typeID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, nil
-	}
-
+	success, err := s.db.Select("type_id").
+		From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTable.Col("id").Eq(id)).
+		ScanValContext(ctx, &typeID)
 	if err != nil {
 		return 0, err
 	}
 
-	res, err := s.db.ExecContext(ctx, `
-		DELETE FROM comment_message
-		WHERE id = ?
-    `, id)
+	if !success {
+		return 0, nil
+	}
+
+	res, err := s.db.Delete(schema.CommentMessageTableName).Where(goqu.C("id").Eq(id)).Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -1192,12 +1228,12 @@ func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error)
 
 func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 	res, err := s.db.ExecContext(ctx, `
-		DELETE comment_topic_view
-		FROM comment_topic_view
-			LEFT JOIN comment_message 
-				ON comment_topic_view.item_id = comment_message.item_id
-				AND comment_topic_view.type_id = comment_message.type_id
-		WHERE comment_message.type_id IS NULL
+		DELETE `+schema.TableCommentTopicView+`
+		FROM `+schema.TableCommentTopicView+`
+			LEFT JOIN `+schema.CommentMessageTableName+` 
+				ON `+schema.TableCommentTopicView+`.item_id = `+schema.CommentMessageTableName+`.item_id
+				AND `+schema.TableCommentTopicView+`.type_id = `+schema.CommentMessageTableName+`.type_id
+		WHERE `+schema.CommentMessageTableName+`.type_id IS NULL
     `)
 	if err != nil {
 		return 0, err
@@ -1209,12 +1245,12 @@ func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 	}
 
 	res, err = s.db.ExecContext(ctx, `
-		DELETE comment_topic
-		FROM comment_topic
-			LEFT JOIN comment_message 
-				ON comment_topic.item_id = comment_message.item_id
-				AND comment_topic.type_id = comment_message.type_id
-		WHERE comment_message.type_id IS NULL
+		DELETE `+schema.CommentTopicTableName+`
+		FROM `+schema.CommentTopicTableName+`
+			LEFT JOIN `+schema.CommentMessageTableName+` 
+				ON `+schema.CommentTopicTableName+`.item_id = `+schema.CommentMessageTableName+`.item_id
+				AND `+schema.CommentTopicTableName+`.type_id = `+schema.CommentMessageTableName+`.type_id
+		WHERE `+schema.CommentMessageTableName+`.type_id IS NULL
     `)
 	if err != nil {
 		return 0, err
@@ -1231,10 +1267,10 @@ func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 }
 
 func (s *Repository) TopicStat(ctx context.Context, typeID CommentType, itemID int64) (int32, error) {
-	sqSelect := s.db.Select("messages").From("comment_topic").
+	sqSelect := s.db.Select("messages").From(schema.CommentTopicTable).
 		Where(
-			goqu.I("comment_topic.type_id").Eq(typeID),
-			goqu.I("comment_topic.item_id").Eq(itemID),
+			schema.CommentTopicTableColTypeID.Eq(typeID),
+			schema.CommentTopicTableColItemID.Eq(itemID),
 		)
 
 	var messages int32
@@ -1254,7 +1290,7 @@ func (s *Repository) TopicStat(ctx context.Context, typeID CommentType, itemID i
 func (s *Repository) MessagesCountFromTimestamp(
 	ctx context.Context, typeID CommentType, itemID int64, timestamp time.Time,
 ) (int32, error) {
-	sqSelect := s.db.Select(goqu.COUNT(goqu.L("1"))).From(tableCommentMessage).
+	sqSelect := s.db.Select(goqu.COUNT(goqu.L("1"))).From(schema.CommentMessageTableName).
 		Where(
 			goqu.I("item_id").Eq(itemID),
 			goqu.I("type_id").Eq(typeID),
@@ -1278,15 +1314,18 @@ func (s *Repository) MessagesCountFromTimestamp(
 func (s *Repository) TopicStatForUser(
 	ctx context.Context, typeID CommentType, itemID int64, userID int64,
 ) (int32, int32, error) {
-	sqSelect := s.db.Select("comment_topic.messages", "comment_topic_view.timestamp").From("comment_topic").
-		LeftJoin(goqu.I("comment_topic_view"), goqu.On(
-			goqu.I("comment_topic.type_id").Eq(goqu.I("comment_topic_view.type_id")),
-			goqu.I("comment_topic.item_id").Eq(goqu.I("comment_topic_view.item_id")),
-			goqu.I("comment_topic_view.user_id").Eq(userID),
+	commentTopicTable := goqu.T(schema.CommentTopicTableName)
+
+	sqSelect := s.db.Select(commentTopicTable.Col("messages"), goqu.T(schema.TableCommentTopicView).Col("timestamp")).
+		From(commentTopicTable).
+		LeftJoin(goqu.T(schema.TableCommentTopicView), goqu.On(
+			commentTopicTable.Col("type_id").Eq(goqu.T(schema.TableCommentTopicView).Col("type_id")),
+			commentTopicTable.Col("item_id").Eq(goqu.T(schema.TableCommentTopicView).Col("item_id")),
+			goqu.T(schema.TableCommentTopicView).Col("user_id").Eq(userID),
 		)).
 		Where(
-			goqu.I("comment_topic.type_id").Eq(typeID),
-			goqu.I("comment_topic.item_id").Eq(itemID),
+			commentTopicTable.Col("type_id").Eq(typeID),
+			commentTopicTable.Col("item_id").Eq(itemID),
 		)
 
 	var messages struct {
@@ -1318,27 +1357,27 @@ func (s *Repository) Count(
 	ctx context.Context, attention ModeratorAttention, commentType CommentType, itemID int64,
 ) (int32, error) {
 	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(tableCommentMessage).
+		From(schema.CommentMessageTable).
 		Where(
-			goqu.I(colModeratorAttention).Eq(attention),
-			goqu.I("type_id").Eq(commentType),
+			schema.CommentMessageTableColModeratorAttention.Eq(attention),
+			schema.CommentMessageTableColTypeID.Eq(commentType),
 		)
 
 	if itemID != 0 {
 		sqSelect = sqSelect.
 			Join(
-				goqu.T("pictures"),
-				goqu.On(goqu.T(tableCommentMessage).Col("item_id").Eq(goqu.T("pictures").Col("id"))),
+				goqu.T(schema.TablePicture),
+				goqu.On(goqu.T(schema.CommentMessageTableName).Col("item_id").Eq(goqu.T(schema.TablePicture).Col("id"))),
 			).
 			Join(
-				goqu.T("picture_item"),
-				goqu.On(goqu.T("pictures").Col("id").Eq(goqu.T("picture_item").Col("picture_id"))),
+				goqu.T(schema.TablePictureItem),
+				goqu.On(goqu.T(schema.TablePicture).Col("id").Eq(goqu.T(schema.TablePictureItem).Col("picture_id"))),
 			).
 			Join(
-				goqu.T("item_parent_cache"),
-				goqu.On(goqu.T("picture_item").Col("item_id").Eq(goqu.T("item_parent_cache").Col("item_id"))),
+				goqu.T(schema.TableItemParentCache),
+				goqu.On(goqu.T(schema.TablePictureItem).Col("item_id").Eq(goqu.T(schema.TableItemParentCache).Col("item_id"))),
 			).
-			Where(goqu.T("item_parent_cache").Col("parent_id").Eq(itemID))
+			Where(goqu.T(schema.TableItemParentCache).Col("parent_id").Eq(itemID))
 	}
 
 	var cnt int32
@@ -1371,8 +1410,8 @@ func (s *Repository) MessagePage(
 	}{}
 
 	success, err = s.db.Select("type_id", "item_id", "parent_id", "datetime").
-		From(tableCommentMessage).
-		Where(goqu.I("id").Eq(messageID)).
+		From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableColID.Eq(messageID)).
 		ScanStructContext(ctx, &row)
 	if err != nil {
 		return 0, 0, 0, err
@@ -1390,7 +1429,7 @@ func (s *Repository) MessagePage(
 	parentRow.Datetime = row.Datetime
 
 	for success && parentRow.ParentID.Valid {
-		success, err = s.db.Select("parent_id", "datetime").From(tableCommentMessage).Where(
+		success, err = s.db.Select("parent_id", "datetime").From(schema.CommentMessageTableName).Where(
 			goqu.I("item_id").Eq(row.ItemID),
 			goqu.I("type_id").Eq(row.TypeID),
 			goqu.I("id").Eq(parentRow.ParentID.Int64),
@@ -1402,7 +1441,7 @@ func (s *Repository) MessagePage(
 
 	var count int32
 
-	success, err = s.db.Select(goqu.COUNT(goqu.L("1"))).From(tableCommentMessage).Where(
+	success, err = s.db.Select(goqu.COUNT(goqu.L("1"))).From(schema.CommentMessageTableName).Where(
 		goqu.I("item_id").Eq(row.ItemID),
 		goqu.I("type_id").Eq(row.TypeID),
 		goqu.I("datetime").Lt(parentRow.Datetime),
@@ -1417,22 +1456,22 @@ func (s *Repository) MessagePage(
 
 func (s *Repository) columns(fetchMessage bool, fetchVote bool, fetchIP bool) []interface{} {
 	columns := []interface{}{
-		goqu.T(tableCommentMessage).Col("id"), goqu.T(tableCommentMessage).Col("type_id"),
-		goqu.T(tableCommentMessage).Col("item_id"), goqu.T(tableCommentMessage).Col("parent_id"),
-		goqu.T(tableCommentMessage).Col("datetime"), goqu.T(tableCommentMessage).Col("deleted"),
-		goqu.T(tableCommentMessage).Col(colModeratorAttention), goqu.T(tableCommentMessage).Col("author_id"),
+		schema.CommentMessageTable.Col("id"), schema.CommentMessageTable.Col("type_id"),
+		schema.CommentMessageTable.Col("item_id"), schema.CommentMessageTable.Col("parent_id"),
+		schema.CommentMessageTable.Col("datetime"), schema.CommentMessageTable.Col("deleted"),
+		schema.CommentMessageTableColModeratorAttention, schema.CommentMessageTable.Col("author_id"),
 	}
 
 	if fetchIP {
-		columns = append(columns, goqu.T(tableCommentMessage).Col("ip"))
+		columns = append(columns, schema.CommentMessageTable.Col("ip"))
 	}
 
 	if fetchMessage {
-		columns = append(columns, goqu.T(tableCommentMessage).Col("message"))
+		columns = append(columns, schema.CommentMessageTable.Col("message"))
 	}
 
 	if fetchVote {
-		columns = append(columns, goqu.T(tableCommentMessage).Col("vote"))
+		columns = append(columns, schema.CommentMessageTable.Col("vote"))
 	}
 
 	return columns
@@ -1446,8 +1485,8 @@ func (s *Repository) Message(
 	columns := s.columns(fetchMessage, fetchVote, canViewIP)
 
 	success, err := s.db.Select(columns...).
-		From(tableCommentMessage).
-		Where(goqu.T(tableCommentMessage).Col("id").Eq(messageID)).
+		From(schema.CommentMessageTableName).
+		Where(goqu.T(schema.CommentMessageTableName).Col("id").Eq(messageID)).
 		ScanStructContext(ctx, &row)
 	if err != nil {
 		return nil, err
@@ -1466,7 +1505,7 @@ func (s *Repository) IsNewMessage(
 	var success bool
 
 	success, err := s.db.Select(goqu.L("1")).
-		From("comment_topic_view").
+		From(schema.TableCommentTopicView).
 		Where(
 			goqu.I("type_id").Eq(typeID),
 			goqu.I("item_id").Eq(itemID),
@@ -1490,7 +1529,7 @@ func (s *Repository) MessageRowRoute(
 	case TypeIDPictures:
 		var identity string
 
-		success, err := s.db.Select("identity").From("pictures").Where(goqu.I("id").Eq(itemID)).
+		success, err := s.db.Select("identity").From(schema.TablePicture).Where(goqu.I("id").Eq(itemID)).
 			ScanValContext(ctx, &identity)
 		if err != nil {
 			return nil, err
@@ -1505,7 +1544,7 @@ func (s *Repository) MessageRowRoute(
 	case TypeIDItems:
 		var itemTypeID items.ItemType
 
-		success, err := s.db.Select("item_type_id").From("item").Where(goqu.I("id").Eq(itemID)).
+		success, err := s.db.Select("item_type_id").From(schema.TableItem).Where(goqu.I("id").Eq(itemID)).
 			ScanValContext(ctx, &itemTypeID)
 		if err != nil {
 			return nil, err
@@ -1530,7 +1569,7 @@ func (s *Repository) MessageRowRoute(
 	case TypeIDArticles:
 		var catname string
 
-		success, err := s.db.Select("catname").From("articles").Where(goqu.I("id").Eq(itemID)).
+		success, err := s.db.Select("catname").From(schema.TableArticles).Where(goqu.I("id").Eq(itemID)).
 			ScanValContext(ctx, &catname)
 		if err != nil {
 			return nil, err
@@ -1556,39 +1595,49 @@ func (s *Repository) Paginator(request Request) *util.Paginator {
 	columns := s.columns(request.FetchMessage, request.FetchVote, request.FetchIP)
 
 	sqSelect := s.db.Select(columns...).
-		From(tableCommentMessage)
+		From(schema.CommentMessageTableName)
 
 	if request.ItemID > 0 {
-		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("item_id").Eq(request.ItemID))
+		sqSelect = sqSelect.Where(schema.CommentMessageTable.Col("item_id").Eq(request.ItemID))
 	}
 
 	if request.TypeID > 0 {
-		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("type_id").Eq(request.TypeID))
+		sqSelect = sqSelect.Where(schema.CommentMessageTable.Col("type_id").Eq(request.TypeID))
 	}
 
 	if request.ParentID > 0 {
-		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("parent_id").Eq(request.ParentID))
+		sqSelect = sqSelect.Where(schema.CommentMessageTable.Col("parent_id").Eq(request.ParentID))
 	}
 
 	if request.PicturesOfItemID > 0 {
+		tablePictureItems := goqu.T(schema.TablePictureItem)
 		sqSelect = sqSelect.
-			Join(goqu.T("pictures"), goqu.On(goqu.T(tableCommentMessage).Col("item_id").Eq(goqu.I("pictures.id")))).
-			Join(goqu.T("picture_item"), goqu.On(goqu.I("pictures.id").Eq(goqu.I("picture_item.picture_id")))).
-			Join(goqu.T("item_parent_cache"), goqu.On(goqu.I("picture_item.item_id").Eq(goqu.I("item_parent_cache.item_id")))).
-			Where(goqu.I("item_parent_cache.parent_id").Eq(request.PicturesOfItemID)).
-			Where(goqu.T(tableCommentMessage).Col("type_id").Eq(TypeIDPictures))
+			Join(
+				goqu.T(schema.TablePicture),
+				goqu.On(schema.CommentMessageTable.Col("item_id").Eq(goqu.T(schema.TablePicture).Col("id"))),
+			).
+			Join(
+				tablePictureItems,
+				goqu.On(goqu.T(schema.TablePicture).Col("id").Eq(tablePictureItems.Col("picture_id"))),
+			).
+			Join(
+				goqu.T(schema.TableItemParentCache),
+				goqu.On(tablePictureItems.Col("item_id").Eq(goqu.T(schema.TableItemParentCache).Col("item_id"))),
+			).
+			Where(goqu.T(schema.TableItemParentCache).Col("parent_id").Eq(request.PicturesOfItemID)).
+			Where(schema.CommentMessageTable.Col("type_id").Eq(TypeIDPictures))
 	}
 
 	if request.NoParents {
-		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("parent_id").IsNull())
+		sqSelect = sqSelect.Where(schema.CommentMessageTable.Col("parent_id").IsNull())
 	}
 
 	if request.UserID > 0 {
-		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col("author_id").Eq(request.UserID))
+		sqSelect = sqSelect.Where(schema.CommentMessageTable.Col("author_id").Eq(request.UserID))
 	}
 
 	if request.ModeratorAttention > 0 {
-		sqSelect = sqSelect.Where(goqu.T(tableCommentMessage).Col(colModeratorAttention).Eq(request.ModeratorAttention))
+		sqSelect = sqSelect.Where(schema.CommentMessageTableColModeratorAttention.Eq(request.ModeratorAttention))
 	}
 
 	sqSelect = sqSelect.Order(request.Order...)

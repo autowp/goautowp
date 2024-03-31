@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 )
 
 const (
-	tableText = "textstorage_text"
-	colID     = "id"
-	colText   = "text"
+	colID   = "id"
+	colText = "text"
 )
 
 // Repository Main Object.
@@ -28,7 +28,7 @@ func New(
 }
 
 func (s *Repository) Text(ctx context.Context, id int64) (string, error) {
-	sqlSelect := s.db.From(tableText).
+	sqlSelect := s.db.From(schema.TableTextstorageText).
 		Select(colText).
 		Where(goqu.I(colID).Eq(id))
 
@@ -53,7 +53,7 @@ func (s *Repository) FirstText(ctx context.Context, ids []int64) (string, error)
 
 	args := append([]interface{}{colID}, ids)
 
-	sqlSelect := s.db.From(tableText).
+	sqlSelect := s.db.From(schema.TableTextstorageText).
 		Select(colText).
 		Where(
 			goqu.C(colID).In(ids),

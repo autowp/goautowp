@@ -3,8 +3,8 @@ package goautowp
 import (
 	"context"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -124,7 +124,10 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 
 	userRows, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{
 		InContacts: userID,
-		Order:      []exp.OrderedExpression{goqu.I("users.deleted").Asc(), goqu.I("users.name").Asc()},
+		Order: []exp.OrderedExpression{
+			schema.UserTable.Col("deleted").Asc(),
+			schema.UserTable.Col("name").Asc(),
+		},
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,7 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
-func addImage(t *testing.T, db *sql.DB, filepath string) int {
+func addImage(t *testing.T, db *goqu.Database, filepath string) int {
 	t.Helper()
 
 	_, filename := path.Split(filepath)
@@ -59,7 +60,7 @@ func addImage(t *testing.T, db *sql.DB, filepath string) int {
 	require.NoError(t, err)
 
 	stmt, err := db.Prepare(`
-		INSERT INTO image (filepath, filesize, width, height, dir)
+		INSERT INTO ` + schema.TableImage + ` (filepath, filesize, width, height, dir)
 		VALUES (?, 1, 1, 1, "picture")
 	`)
 	require.NoError(t, err)
@@ -75,7 +76,7 @@ func addImage(t *testing.T, db *sql.DB, filepath string) int {
 	return int(imageID)
 }
 
-func addPicture(t *testing.T, db *sql.DB, filepath string) int {
+func addPicture(t *testing.T, db *goqu.Database, filepath string) int {
 	t.Helper()
 
 	imageID := addImage(t, db, filepath)
@@ -85,16 +86,14 @@ func addPicture(t *testing.T, db *sql.DB, filepath string) int {
 	require.NoError(t, err)
 
 	identity := hex.EncodeToString(randBytes)
+	ctx := context.Background()
 
-	stmt, err := db.Prepare(`
-		INSERT INTO pictures (image_id, identity, ip, owner_id)
-		VALUES (?, ?, INET6_ATON("127.0.0.1"), NULL)
-	`)
-	require.NoError(t, err)
-
-	defer util.Close(stmt)
-
-	res, err := stmt.Exec(imageID, identity)
+	res, err := db.Insert(schema.TablePicture).Rows(goqu.Record{
+		"image_id": imageID,
+		"identity": identity,
+		"ip":       goqu.L(`INET6_ATON("127.0.0.1")`),
+		"owner_id": nil,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	pictureID, err := res.LastInsertId()
@@ -118,25 +117,25 @@ func TestDuplicateFinder(t *testing.T) {
 
 	ctx := context.Background()
 
-	id1 := addPicture(t, db, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")
+	id1 := addPicture(t, goquDB, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")
 	err = df.Index(ctx, id1, "http://localhost:80/large.jpg")
 	require.NoError(t, err)
 
-	id2 := addPicture(t, db, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/small.jpg")
+	id2 := addPicture(t, goquDB, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/small.jpg")
 	err = df.Index(ctx, id2, "http://localhost:80/small.jpg")
 	require.NoError(t, err)
 
 	var hash1 uint64
-	err = db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id1).Scan(&hash1)
+	err = db.QueryRow("SELECT hash FROM "+schema.DfHashTableName+" WHERE picture_id = ?", id1).Scan(&hash1)
 	require.NoError(t, err)
 
 	var hash2 uint64
-	err = db.QueryRow("SELECT hash FROM df_hash WHERE picture_id = ?", id2).Scan(&hash2)
+	err = db.QueryRow("SELECT hash FROM "+schema.DfHashTableName+" WHERE picture_id = ?", id2).Scan(&hash2)
 	require.NoError(t, err)
 
 	var distance int
 	err = db.QueryRow(`
-		SELECT distance FROM df_distance 
+		SELECT distance FROM `+schema.TableDfDistance+` 
 		WHERE src_picture_id = ? AND dst_picture_id = ?
 	`, id1, id2).Scan(&distance)
 	require.NoError(t, err)

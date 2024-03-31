@@ -7,14 +7,14 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/google/uuid"
-
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/telegram"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
 	_ "github.com/go-sql-driver/mysql"               // enable mysql driver
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -152,7 +152,7 @@ func createRandomUser(t *testing.T, s *Repository) int64 {
 
 	emailAddr := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
 	name := "ivan"
-	r, err := s.db.Insert("users").
+	r, err := s.db.Insert(schema.UserTable).
 		Rows(goqu.Record{
 			"login":            nil,
 			"e_mail":           emailAddr,

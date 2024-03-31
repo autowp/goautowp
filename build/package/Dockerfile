@@ -1,4 +1,4 @@
-FROM ubuntu:mantic as builder
+FROM ubuntu:mantic AS builder
 
 ENV DEBIAN_FRONTEND=non-interactive \
     PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
@@ -18,6 +18,7 @@ RUN apt-get update -qqy && \
         libc-dev \
         wget \
     && \
+    apt-get clean && \
     update-ca-certificates && \
     wget -q https://go.dev/dl/go1.21.3.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.3.linux-amd64.tar.gz && \
@@ -56,6 +57,7 @@ RUN apt-get update -qqy && \
         ca-certificates \
         imagemagick \
     && \
+    apt-get clean && \
     update-ca-certificates && \
     # See https://stackoverflow.com/a/55757473/12429735RUN
     adduser \

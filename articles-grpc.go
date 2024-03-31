@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -38,7 +39,7 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 
 	paginator := util.Paginator{
 		SQLSelect: s.db.Select("id", "name", "author_id", "catname", "add_date", "preview_filename", "description").
-			From("articles").
+			From(schema.TableArticles).
 			Where(goqu.L("enabled")).
 			Order(goqu.I("add_date").Desc()),
 		CurrentPageNumber: int32(in.Page),
@@ -113,13 +114,15 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 	article := row{}
 
 	success, err := s.db.Select(
-		"articles.id", "articles.name", "articles.author_id", "articles.catname", "articles.add_date",
-		"articles.preview_filename", "htmls.html",
+		goqu.T(schema.TableArticles).Col("id"), goqu.T(schema.TableArticles).Col("name"),
+		goqu.T(schema.TableArticles).Col("author_id"), goqu.T(schema.TableArticles).Col("catname"),
+		goqu.T(schema.TableArticles).Col("add_date"), goqu.T(schema.TableArticles).Col("preview_filename"),
+		goqu.T(schema.TableHtmls).Col("html"),
 	).
-		From("articles").
+		From(schema.TableArticles).
 		LeftJoin(
-			goqu.T("htmls"),
-			goqu.On(goqu.Ex{"articles.html_id": goqu.I("htmls.id")}),
+			goqu.T(schema.TableHtmls),
+			goqu.On(goqu.Ex{schema.TableArticles + ".html_id": goqu.T(schema.TableHtmls).Col("id")}),
 		).
 		Where(goqu.L("enabled"), goqu.I("catname").Eq(in.Catname)).
 		ScanStructContext(ctx, &article)

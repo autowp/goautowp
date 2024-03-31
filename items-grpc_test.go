@@ -10,7 +10,9 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,8 +24,8 @@ import (
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -51,79 +53,86 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
+	goquDB := goqu.New("mysql", db)
+
 	ctx := context.Background()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := db.ExecContext(
-		ctx, `
-			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
-			VALUES (?, 0, 5, ?, '', 0)
-		`, fmt.Sprintf("brand1-%d", random.Int()), fmt.Sprintf("brand1-%d", random.Int()),
-	)
+	r1, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+		"name":             fmt.Sprintf("brand1-%d", random.Int()),
+		"is_group":         0,
+		"item_type_id":     5,
+		"catname":          fmt.Sprintf("brand1-%d", random.Int()),
+		"body":             "",
+		"produced_exactly": 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	brand1, err := r1.LastInsertId()
 	require.NoError(t, err)
 
-	r2, err := db.ExecContext(
-		ctx, `
-			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
-			VALUES (?, 0, 5, ?, '', 0)
-		`, fmt.Sprintf("brand2-%d", random.Int()), fmt.Sprintf("brand2-%d", random.Int()),
-	)
+	r2, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+		"name":             fmt.Sprintf("brand2-%d", random.Int()),
+		"is_group":         0,
+		"item_type_id":     5,
+		"catname":          fmt.Sprintf("brand2-%d", random.Int()),
+		"body":             "",
+		"produced_exactly": 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	brand2, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	r3, err := db.ExecContext(
-		ctx, `
-			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
-			VALUES (?, 0, 1, ?, '', 0)
-		`, fmt.Sprintf("vehicle1-%d", random.Int()), fmt.Sprintf("vehicle1-%d", random.Int()),
-	)
+	r3, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+		"name":             fmt.Sprintf("vehicle1-%d", random.Int()),
+		"is_group":         0,
+		"item_type_id":     1,
+		"catname":          fmt.Sprintf("vehicle1-%d", random.Int()),
+		"body":             "",
+		"produced_exactly": 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	vehicle1, err := r3.LastInsertId()
 	require.NoError(t, err)
 
-	r4, err := db.ExecContext(
-		ctx, `
-			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
-			VALUES (?, 0, 1, ?, '', 0)
-		`, fmt.Sprintf("vehicle2-%d", random.Int()), fmt.Sprintf("vehicle2-%d", random.Int()),
-	)
+	r4, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+		"name":             fmt.Sprintf("vehicle2-%d", random.Int()),
+		"is_group":         0,
+		"item_type_id":     1,
+		"catname":          fmt.Sprintf("vehicle2-%d", random.Int()),
+		"body":             "",
+		"produced_exactly": 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	vehicle2, err := r4.LastInsertId()
 	require.NoError(t, err)
 
-	r5, err := db.ExecContext(
-		ctx, `
-			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
-			VALUES (?, 0, 4, ?, '', 0)
-		`, fmt.Sprintf("twins-%d", random.Int()), fmt.Sprintf("twins-%d", random.Int()),
-	)
+	r5, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+		"name":             fmt.Sprintf("twins-%d", random.Int()),
+		"is_group":         0,
+		"item_type_id":     4,
+		"catname":          fmt.Sprintf("twins-%d", random.Int()),
+		"body":             "",
+		"produced_exactly": 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	twins, err := r5.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = db.ExecContext(
-		ctx, `
-			INSERT INTO item_parent (item_id, parent_id, catname, type) 
-			VALUES
-			(?, ?, ?, 0),
-			(?, ?, ?, 0),
-			(?, ?, ?, 0),
-			(?, ?, ?, 0)
-		`,
-		vehicle1, brand1, "vehicle1",
-		vehicle2, brand2, "vehicle2",
-		vehicle1, twins, "vehicle1",
-		vehicle2, twins, "vehicle2",
-	)
+	_, err = goquDB.Insert(schema.TableItemParent).
+		Cols("item_id", "parent_id", "catname", "type").
+		Vals(
+			goqu.Vals{vehicle1, brand1, "vehicle1", 0},
+			goqu.Vals{vehicle2, brand2, "vehicle2", 0},
+			goqu.Vals{vehicle1, twins, "vehicle1", 0},
+			goqu.Vals{vehicle2, twins, "vehicle2", 0},
+		).
+		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	rep, err := cnt.ItemsRepository()
@@ -135,8 +144,8 @@ func TestGetTwinsBrandsList(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -165,8 +174,8 @@ func TestTopBrandsList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -188,9 +197,8 @@ func TestTopPersonsAuthorList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -211,8 +219,8 @@ func TestTopPersonsContentList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -233,8 +241,8 @@ func TestTopFactoriesList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -254,8 +262,8 @@ func TestContentLanguages(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -274,8 +282,8 @@ func TestItemLinks(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -352,8 +360,8 @@ func TestItemVehicleTypes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -452,8 +460,8 @@ func TestItemParentLanguages(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -485,8 +493,8 @@ func TestItemLanguages(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -521,16 +529,20 @@ func TestCatalogueMenuList(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
+	goquDB := goqu.New("mysql", db)
+
 	ctx := context.Background()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := db.ExecContext(
-		ctx, `
-			INSERT INTO item (name, is_group, item_type_id, catname, body, produced_exactly)
-			VALUES (?, 0, 3, ?, '', 0)
-		`, fmt.Sprintf("category-%d", random.Int()), fmt.Sprintf("category-%d", random.Int()),
-	)
+	r1, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+		"name":             fmt.Sprintf("category-%d", random.Int()),
+		"is_group":         0,
+		"item_type_id":     3,
+		"catname":          fmt.Sprintf("category-%d", random.Int()),
+		"body":             "",
+		"produced_exactly": 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	category, err := r1.LastInsertId()
@@ -542,8 +554,8 @@ func TestCatalogueMenuList(t *testing.T) {
 	_, err = rep.RebuildCache(ctx, category)
 	require.NoError(t, err)
 
-	conn, err := grpc.DialContext(
-		ctx, "bufnet",
+	conn, err := grpc.NewClient(
+		"localhost",
 		grpc.WithContextDialer(bufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
