@@ -339,7 +339,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 				goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col("parent_id"))),
 			).
 			Join(
-				goqu.T(schema.TableItem).As(iAlias),
+				schema.ItemTable.As(iAlias),
 				goqu.On(goqu.T(ipcAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
 		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ChildItems)
@@ -358,7 +358,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 				goqu.On(aliasIDCol.Eq(goqu.T(ippAlias).Col("item_id"))),
 			).
 			Join(
-				goqu.T(schema.TableItem).As(iAlias),
+				schema.ItemTable.As(iAlias),
 				goqu.On(goqu.I(ippAlias+".parent_id").Eq(goqu.I(iAlias+".id"))),
 			)
 		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ParentItems)
@@ -381,7 +381,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		if options.DescendantItems != nil {
 			sqSelect = sqSelect.
 				Join(
-					goqu.T(schema.TableItem).As(iAlias),
+					schema.ItemTable.As(iAlias),
 					goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 				)
 			sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.DescendantItems)
@@ -410,7 +410,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 				goqu.On(aliasIDCol.Eq(goqu.T(ipcaAlias).Col("item_id"))),
 			).
 			Join(
-				goqu.T(schema.TableItem).As(iAlias),
+				schema.ItemTable.As(iAlias),
 				goqu.On(goqu.T(ipcaAlias).Col("parent_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
 		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.AncestorItems)
@@ -613,7 +613,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 			columns = append(columns, goqu.L(`
 				(
 					SELECT count(distinct product1.id)
-					FROM `+schema.TableItem+` AS product1
+					FROM `+schema.ItemTableName+` AS product1
 						JOIN `+schema.TableItemParentCache+` ON product1.id = `+schema.TableItemParentCache+`.item_id
 					WHERE `+schema.TableItemParentCache+`.parent_id = `+alias+`.id
 						AND `+schema.TableItemParentCache+`.item_id <> `+schema.TableItemParentCache+`.parent_id
@@ -626,7 +626,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 			columns = append(columns, goqu.L(`
 				(
 					SELECT count(distinct product2.id)
-					FROM `+schema.TableItem+` AS product2
+					FROM `+schema.ItemTableName+` AS product2
 						JOIN `+schema.TableItemParentCache+` ON product2.id = `+schema.TableItemParentCache+`.item_id
 					WHERE `+schema.TableItemParentCache+`.parent_id = `+alias+`.id
 						AND `+schema.TableItemParentCache+`.item_id <> `+schema.TableItemParentCache+`.parent_id
@@ -687,7 +687,7 @@ func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, erro
 		alias = options.Alias
 	}
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(goqu.T(schema.TableItem).As(alias))
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.ItemTable.As(alias))
 
 	sqSelect, err = s.applyItem(alias, sqSelect, false, &options)
 	if err != nil {
@@ -718,7 +718,7 @@ func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error
 func (s *Repository) CountDistinct(ctx context.Context, options ListOptions) (int, error) {
 	var err error
 
-	sqSelect := s.db.Select(goqu.L("COUNT(DISTINCT i.id)")).From(goqu.T(schema.TableItem).As("i"))
+	sqSelect := s.db.Select(goqu.L("COUNT(DISTINCT i.id)")).From(schema.ItemTable.As("i"))
 
 	sqSelect, err = s.applyItem("i", sqSelect, false, &options)
 	if err != nil {
@@ -773,7 +773,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 		goqu.T(alias).Col(colIsConceptInherit),
 		goqu.T(alias).Col(colSpecID),
 		goqu.T(alias).Col(colFullName),
-	).From(goqu.T(schema.TableItem).As(alias)).
+	).From(schema.ItemTable.As(alias)).
 		GroupBy(goqu.T(alias).Col(colID))
 
 	sqSelect, err = s.applyItem("i", sqSelect, true, &options)
@@ -1088,7 +1088,7 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 
 	var item row
 
-	success, err := s.db.Select(colID, "name", "item_type_id").From(schema.TableItem).
+	success, err := s.db.Select(colID, "name", "item_type_id").From(schema.ItemTable).
 		Where(goqu.I(colID).Eq(id)).ScanStructContext(ctx, item)
 	if err != nil {
 		return nil, err
@@ -1589,20 +1589,18 @@ func (s *Repository) ItemsWithPicturesCount(
 ) (int32, error) {
 	var result int32
 
-	itemTable := goqu.T(schema.TableItem)
 	pictureItemTable := goqu.T(schema.TablePictureItem)
 	pictureTable := goqu.T(schema.TablePicture)
-	itemIDCol := itemTable.Col("id")
 	pictureIDCol := pictureTable.Col("id")
 
 	const countAlias = "c"
 
 	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(
-		s.db.Select(itemIDCol, goqu.COUNT(pictureIDCol).As(countAlias)).
-			From(itemTable).
-			Join(pictureItemTable, goqu.On(itemIDCol.Eq(pictureItemTable.Col("item_id")))).
+		s.db.Select(schema.ItemTableColID, goqu.COUNT(pictureIDCol).As(countAlias)).
+			From(schema.ItemTable).
+			Join(pictureItemTable, goqu.On(schema.ItemTableColID.Eq(pictureItemTable.Col("item_id")))).
 			Join(pictureTable, goqu.On(pictureItemTable.Col("picture_id").Eq(pictureIDCol))).
-			GroupBy(itemIDCol).
+			GroupBy(schema.ItemTableColID).
 			Having(goqu.C(countAlias).Gte(nPictures)).
 			As("T1"),
 	)

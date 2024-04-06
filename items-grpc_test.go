@@ -59,7 +59,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		"name":             fmt.Sprintf("brand1-%d", random.Int()),
 		"is_group":         0,
 		"item_type_id":     5,
@@ -72,7 +72,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	brand1, err := r1.LastInsertId()
 	require.NoError(t, err)
 
-	r2, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		"name":             fmt.Sprintf("brand2-%d", random.Int()),
 		"is_group":         0,
 		"item_type_id":     5,
@@ -85,7 +85,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	brand2, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	r3, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+	r3, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		"name":             fmt.Sprintf("vehicle1-%d", random.Int()),
 		"is_group":         0,
 		"item_type_id":     1,
@@ -98,7 +98,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	vehicle1, err := r3.LastInsertId()
 	require.NoError(t, err)
 
-	r4, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+	r4, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		"name":             fmt.Sprintf("vehicle2-%d", random.Int()),
 		"is_group":         0,
 		"item_type_id":     1,
@@ -111,7 +111,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	vehicle2, err := r4.LastInsertId()
 	require.NoError(t, err)
 
-	r5, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+	r5, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		"name":             fmt.Sprintf("twins-%d", random.Int()),
 		"is_group":         0,
 		"item_type_id":     4,
@@ -535,7 +535,7 @@ func TestCatalogueMenuList(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+	r1, err := goquDB.Insert(schema.ItemTableName).Rows(goqu.Record{
 		"name":             fmt.Sprintf("category-%d", random.Int()),
 		"is_group":         0,
 		"item_type_id":     3,
@@ -577,4 +577,36 @@ func TestCatalogueMenuList(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 	require.NotEmpty(t, r.Items)
+}
+
+func TestStats(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	r, err := client.GetStats(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, r.Values)
 }

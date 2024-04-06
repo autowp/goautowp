@@ -229,3 +229,108 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, messages.Items[0].Text, "replies to you")
 }
+
+func TestVoteComment(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	r, err := client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_ARTICLES_TYPE_ID,
+			Message:            "Test",
+			ModeratorAttention: false,
+			ParentId:           0,
+			Resolve:            false,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.VoteComment(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&CommentsVoteCommentRequest{
+			CommentId: r.Id,
+			Vote:      1,
+		},
+	)
+	require.ErrorContains(t, err, "self-vote forbidden")
+
+	_, err = client.VoteComment(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsVoteCommentRequest{
+			CommentId: r.Id,
+			Vote:      1,
+		},
+	)
+	require.NoError(t, err)
+
+	// delete comment
+	_, err = client.SetDeleted(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&CommentsSetDeletedRequest{
+			CommentId: r.Id,
+			Deleted:   true,
+		},
+	)
+	require.ErrorContains(t, err, "PermissionDenied")
+
+	_, err = client.SetDeleted(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsSetDeletedRequest{
+			CommentId: r.Id,
+			Deleted:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	// restore comment
+	_, err = client.SetDeleted(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&CommentsSetDeletedRequest{
+			CommentId: r.Id,
+			Deleted:   false,
+		},
+	)
+	require.ErrorContains(t, err, "PermissionDenied")
+
+	_, err = client.SetDeleted(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsSetDeletedRequest{
+			CommentId: r.Id,
+			Deleted:   false,
+		},
+	)
+	require.NoError(t, err)
+
+	// move message
+	_, err = client.MoveComment(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsMoveCommentRequest{
+			CommentId: r.Id,
+			ItemId:    2,
+			TypeId:    CommentsType_ARTICLES_TYPE_ID,
+		},
+	)
+	require.ErrorContains(t, err, "PermissionDenied")
+}

@@ -163,17 +163,17 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 		&r.SpecsWeight, &r.Img, &r.EMail,
 	}
 
-	table := goqu.T(schema.UserTableName)
+	table := schema.UserTable
 
 	columns := []interface{}{
-		table.Col("id"), table.Col("name"), table.Col("deleted"), table.Col("identity"), table.Col("last_online"),
-		table.Col("role"), table.Col("specs_weight"), table.Col("img"), table.Col("e_mail"),
+		schema.UserTableColID, table.Col("name"), table.Col("deleted"), table.Col("identity"), table.Col("last_online"),
+		schema.UserTableColRole, table.Col("specs_weight"), table.Col("img"), table.Col("e_mail"),
 	}
 
 	sqSelect := s.autowpDB.From(table)
 
 	if options.ID != 0 {
-		sqSelect = sqSelect.Where(table.Col("id").Eq(options.ID))
+		sqSelect = sqSelect.Where(schema.UserTableColID.Eq(options.ID))
 	}
 
 	if options.InContacts != 0 {
@@ -251,9 +251,9 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error) {
 	var votesLeft int
 
-	success, err := s.db.Select("votes_left").
-		From(schema.UserTableName).
-		Where(goqu.C("id").Eq(userID)).
+	success, err := s.autowpDB.Select("votes_left").
+		From(schema.UserTable).
+		Where(schema.UserTableColID.Eq(userID)).
 		ScanValContext(ctx, &votesLeft)
 	if err != nil {
 		return 0, err
@@ -267,9 +267,9 @@ func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error
 }
 
 func (s *Repository) DecVotes(ctx context.Context, userID int64) error {
-	_, err := s.autowpDB.Update(schema.UserTableName).Set(goqu.Record{
+	_, err := s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		"votes_left": goqu.L("votes_left - 1"),
-	}).Where(goqu.C("id").Eq(userID)).Executor().ExecContext(ctx)
+	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -285,9 +285,9 @@ func (s *Repository) AfterUserCreated(ctx context.Context, userID int64) error {
 		return err
 	}
 
-	_, err = s.autowpDB.Update(schema.UserTableName).Set(goqu.Record{
+	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		"votes_left": goqu.C("votes_per_day"),
-	}).Where(goqu.C("id").Eq(userID)).Executor().ExecContext(ctx)
+	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -295,8 +295,8 @@ func (s *Repository) AfterUserCreated(ctx context.Context, userID int64) error {
 func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) error {
 	var age int
 
-	success, err := s.autowpDB.Select(goqu.L("TIMESTAMPDIFF(YEAR, reg_date, NOW())")).From(schema.UserTableName).Where(
-		goqu.C("id").Eq(userID),
+	success, err := s.autowpDB.Select(goqu.L("TIMESTAMPDIFF(YEAR, reg_date, NOW())")).From(schema.UserTable).Where(
+		schema.UserTableColID.Eq(userID),
 	).ScanValContext(ctx, &age)
 	if err != nil {
 		return err
@@ -332,9 +332,9 @@ func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) erro
 		value = 0
 	}
 
-	_, err = s.autowpDB.Update(schema.UserTableName).Set(goqu.Record{
+	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		"votes_per_day": value,
-	}).Where(goqu.C("id").Eq(userID)).Executor().ExecContext(ctx)
+	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -459,7 +459,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		Role string `db:"role"`
 	}{}
 
-	success, err := s.autowpDB.Select("id", "role").
+	success, err := s.autowpDB.Select(schema.UserTableColID, schema.UserTableColRole).
 		From(schema.UserTable).
 		Where(goqu.L("uuid = UUID_TO_BIN(?)", guid)).
 		ScanStructContext(ctx, &row)
@@ -543,7 +543,7 @@ func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID in
 		return "", err
 	}
 
-	_, err = s.autowpDB.Update(schema.UserTableName).Set(goqu.Record{
+	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		"uuid": goqu.Func("UUID_TO_BIN", userGUID),
 	}).Where(goqu.C("user_id").Eq(userID)).Executor().ExecContext(ctx)
 	if err != nil {
@@ -614,9 +614,9 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 
 	// $oldImageId = $row['img'];
 
-	_, err = s.autowpDB.Update(schema.UserTableName).Set(goqu.Record{
+	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		"deleted": 1,
-	}).Where(goqu.C("id").Eq(userID)).Executor().ExecContext(ctx)
+	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
 	// 'img'     => null,
 	if err != nil {
 		return false, err
@@ -651,7 +651,7 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 }
 
 func (s *Repository) RestoreVotes(ctx context.Context) error {
-	_, err := s.autowpDB.Update(schema.UserTableName).Set(goqu.Record{
+	_, err := s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		"votes_left": goqu.C("votes_per_day"),
 	}).Where(
 		goqu.C("votes_left").Lt(goqu.C("votes_per_day")),
@@ -723,10 +723,10 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 			return err
 		}
 
-		_, err = s.autowpDB.Update(schema.UserTableName).Set(goqu.Record{
+		_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 			"specs_volume":       count,
 			"specs_volume_valid": 1,
-		}).Where(goqu.C("id").Eq(userID)).Executor().ExecContext(ctx)
+		}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -899,8 +899,8 @@ func (s *Repository) NextMessageTime(ctx context.Context, userID int64) (time.Ti
 	}{}
 
 	success, err := s.autowpDB.Select("last_message_time", "reg_date", "messaging_interval").
-		From(schema.UserTableName).
-		Where(goqu.C("id").Eq(userID)).
+		From(schema.UserTable).
+		Where(schema.UserTableColID.Eq(userID)).
 		ScanStructContext(ctx, &st)
 	if err != nil {
 		return time.Time{}, err
@@ -971,7 +971,8 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 	}
 
 	if len(set) > 0 {
-		_, err = s.autowpDB.Update(schema.UserTable).Set(set).Where(goqu.Ex{"id": userID}).Executor().ExecContext(ctx)
+		_, err = s.autowpDB.Update(schema.UserTable).Set(set).Where(schema.UserTableColID.Eq(userID)).
+			Executor().ExecContext(ctx)
 		if err != nil {
 			return err
 		}

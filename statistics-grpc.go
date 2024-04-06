@@ -148,7 +148,7 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 	if len(greenUserRoles) > 0 {
 		err := s.db.Select("id").From(schema.UserTable).Where(
 			goqu.I("deleted").IsFalse(),
-			goqu.I("role").In(greenUserRoles),
+			schema.UserTableColRole.In(greenUserRoles),
 			goqu.L("(identity is null or identity <> ?)", "autowp"),
 			goqu.L("last_online > DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"),
 		).ScanValsContext(ctx, &contributors)
@@ -159,7 +159,7 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 
 	picturesUsers := make([]string, 0)
 
-	err := s.db.Select("id").From(schema.UserTable).
+	err := s.db.Select(schema.UserTableColID).From(schema.UserTable).
 		Where(goqu.I("deleted").IsFalse()).
 		Order(goqu.I("pictures_total").Desc()).
 		Limit(numberOfTopUploadersToShowInAboutUs).ScanValsContext(ctx, &picturesUsers)
@@ -194,7 +194,7 @@ func (s *StatisticsGRPCServer) totalItems(ctx context.Context) (int32, error) {
 	var result int32
 
 	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(schema.TableItem).
+		From(schema.ItemTable).
 		ScanValContext(ctx, &result)
 	if err != nil {
 		return 0, err
