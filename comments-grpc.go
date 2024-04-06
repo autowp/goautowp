@@ -12,7 +12,6 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -196,7 +195,7 @@ func extractMessage(
 				TypeID:       row.TypeID,
 				ParentID:     row.ID,
 				PerPage:      MaxReplies,
-				Order:        []exp.OrderedExpression{goqu.T(schema.CommentMessageTableName).Col("datetime").Desc()},
+				Order:        []exp.OrderedExpression{schema.CommentMessageTableColDatetime.Desc()},
 				FetchMessage: fields.Preview || fields.Text,
 				FetchVote:    fields.Vote,
 				FetchIP:      canViewIP,
@@ -697,7 +696,7 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 		ParentID:     in.ParentId,
 		NoParents:    in.NoParents,
 		UserID:       in.UserId,
-		Order:        []exp.OrderedExpression{goqu.T(schema.CommentMessageTableName).Col("datetime").Asc()},
+		Order:        []exp.OrderedExpression{schema.CommentMessageTableColDatetime.Asc()},
 		FetchMessage: fields.Preview || fields.Text,
 		FetchVote:    fields.Vote,
 		FetchIP:      canViewIP,
@@ -707,18 +706,18 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 	switch in.Order {
 	case GetMessagesRequest_VOTE_DESC:
 		options.Order = []exp.OrderedExpression{
-			goqu.T(schema.CommentMessageTableName).Col("vote").Desc(),
-			goqu.T(schema.CommentMessageTableName).Col("datetime").Desc(),
+			schema.CommentMessageTableColVote.Desc(),
+			schema.CommentMessageTableColDatetime.Desc(),
 		}
 	case GetMessagesRequest_VOTE_ASC:
 		options.Order = []exp.OrderedExpression{
-			goqu.T(schema.CommentMessageTableName).Col("vote").Asc(),
-			goqu.T(schema.CommentMessageTableName).Col("datetime").Desc(),
+			schema.CommentMessageTableColVote.Asc(),
+			schema.CommentMessageTableColDatetime.Desc(),
 		}
 	case GetMessagesRequest_DATE_DESC:
-		options.Order = []exp.OrderedExpression{goqu.T(schema.CommentMessageTableName).Col("datetime").Desc()}
+		options.Order = []exp.OrderedExpression{schema.CommentMessageTableColDatetime.Desc()}
 	case GetMessagesRequest_DATE_ASC, GetMessagesRequest_DEFAULT:
-		options.Order = []exp.OrderedExpression{goqu.T(schema.CommentMessageTableName).Col("datetime").Asc()}
+		options.Order = []exp.OrderedExpression{schema.CommentMessageTableColDatetime.Asc()}
 	}
 
 	if isModer {
