@@ -448,7 +448,7 @@ func (s *Repository) updateVote(ctx context.Context, commentID int64) (int32, er
 
 	err := s.db.QueryRowContext(
 		ctx,
-		"SELECT sum(vote) FROM `+schema.CommentVoteTableName+` WHERE comment_id = ?",
+		"SELECT sum(vote) FROM "+schema.CommentVoteTableName+" WHERE comment_id = ?",
 		commentID,
 	).Scan(&count)
 	if err != nil {
@@ -600,7 +600,7 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDItems:
-		success, err = s.db.Select(goqu.L("1")).From(schema.TableItem).
+		success, err = s.db.Select(goqu.L("1")).From(schema.ItemTable).
 			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDVotings:
@@ -905,7 +905,7 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 	case TypeIDItems:
 		var itemTypeID items.ItemType
 
-		success, err := s.db.Select("item_type_id").From(schema.TableItem).Where(goqu.C("id").Eq(itemID)).
+		success, err := s.db.Select("item_type_id").From(schema.ItemTable).Where(schema.ItemTableColID.Eq(itemID)).
 			ScanValContext(ctx, &itemTypeID)
 		if err != nil {
 			return nil, err
@@ -1098,11 +1098,11 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 	err = s.db.Select(schema.CommentMessageTable.Col("id")).
 		From(schema.CommentMessageTable).
 		LeftJoin(
-			goqu.T(schema.TableItem),
-			goqu.On(schema.CommentMessageTable.Col("item_id").Eq(goqu.T(schema.TableItem).Col("id"))),
+			schema.ItemTable,
+			goqu.On(schema.CommentMessageTable.Col("item_id").Eq(schema.ItemTableColID)),
 		).
 		Where(
-			goqu.T(schema.TableItem).Col("id").IsNull(),
+			schema.ItemTableColID.IsNull(),
 			schema.CommentMessageTable.Col("type_id").Eq(TypeIDItems),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {
@@ -1544,7 +1544,7 @@ func (s *Repository) MessageRowRoute(
 	case TypeIDItems:
 		var itemTypeID items.ItemType
 
-		success, err := s.db.Select("item_type_id").From(schema.TableItem).Where(goqu.I("id").Eq(itemID)).
+		success, err := s.db.Select("item_type_id").From(schema.ItemTable).Where(schema.ItemTableColID.Eq(itemID)).
 			ScanValContext(ctx, &itemTypeID)
 		if err != nil {
 			return nil, err

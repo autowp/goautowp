@@ -249,22 +249,21 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 
 func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]*BrandVehicleType, error) {
 	carTypeTable := goqu.T(schema.TableCarTypes)
-	itemTable := goqu.T(schema.TableItem)
 	itemParentCacheTable := goqu.T(schema.TableItemParentCache)
 	sqSelect := s.db.
 		Select(carTypeTable.Col("id"), carTypeTable.Col("name"), carTypeTable.Col("catname"),
-			goqu.COUNT(goqu.DISTINCT(itemTable.Col("id")))).
+			goqu.COUNT(goqu.DISTINCT(schema.ItemTableColID))).
 		From(carTypeTable).
 		Join(
 			goqu.T(schema.TableVehicleVehicleType),
 			goqu.On(carTypeTable.Col("id").Eq(goqu.T(schema.TableVehicleVehicleType).Col("vehicle_type_id"))),
 		).
-		Join(itemTable, goqu.On(goqu.T(schema.TableVehicleVehicleType).Col("vehicle_id").Eq(itemTable.Col("id")))).
-		Join(itemParentCacheTable, goqu.On(itemTable.Col("id").Eq(itemParentCacheTable.Col("item_id")))).
+		Join(schema.ItemTable, goqu.On(goqu.T(schema.TableVehicleVehicleType).Col("vehicle_id").Eq(schema.ItemTableColID))).
+		Join(itemParentCacheTable, goqu.On(schema.ItemTableColID.Eq(itemParentCacheTable.Col("item_id")))).
 		Where(
 			itemParentCacheTable.Col("parent_id").Eq(brandID),
-			goqu.L("("+schema.TableItem+".begin_year or "+schema.TableItem+".begin_model_year)"),
-			goqu.L("not "+schema.TableItem+".is_group"),
+			goqu.L("("+schema.ItemTableName+".begin_year or "+schema.ItemTableName+".begin_model_year)"),
+			goqu.L("not "+schema.ItemTableName+".is_group"),
 		).
 		GroupBy(carTypeTable.Col("id")).
 		Order(carTypeTable.Col("position").Asc())

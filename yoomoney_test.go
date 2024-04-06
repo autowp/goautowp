@@ -80,7 +80,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	//nolint:gosec
 	r1, err := db.ExecContext(
 		ctx, `
-			INSERT INTO `+schema.TableItem+` (name, is_group, item_type_id, catname, body, produced_exactly)
+			INSERT INTO `+schema.ItemTableName+` (name, is_group, item_type_id, catname, body, produced_exactly)
 			VALUES (?, 0, 5, ?, '', 0)
 		`, fmt.Sprintf("item-of-day-%d", random.Int()), fmt.Sprintf("brand1-%d", random.Int()),
 	)

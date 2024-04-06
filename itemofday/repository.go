@@ -115,8 +115,8 @@ func (s *Repository) Pick(ctx context.Context) (bool, error) {
 func (s *Repository) candidate(ctx context.Context) (int64, error) {
 	sqSelect := s.CandidateQuery().
 		Where(goqu.L(
-			schema.TableItem + ".begin_year AND " + schema.TableItem + ".end_year OR " +
-				schema.TableItem + ".begin_model_year AND " + schema.TableItem + ".end_model_year",
+			schema.ItemTableName + ".begin_year AND " + schema.ItemTableName + ".end_year OR " +
+				schema.ItemTableName + ".begin_model_year AND " + schema.ItemTableName + ".end_model_year",
 		)).
 		Order(goqu.Func("RAND").Desc()).
 		Limit(1)
@@ -137,11 +137,8 @@ func (s *Repository) candidate(ctx context.Context) (int64, error) {
 
 func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 	pTable := goqu.T(schema.TablePicture)
-	iTable := goqu.T(schema.TableItem)
 	ipcTable := goqu.T(schema.TableItemParentCache)
 	piTable := goqu.T(schema.TablePictureItem)
-
-	iIDCol := iTable.Col("id")
 
 	table := goqu.T(schema.TableOfDay)
 	tableItemIDCol := table.Col(colItemID)
@@ -149,20 +146,20 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 	const picturesCountAlias = "p_count"
 
 	sqSelect := s.db.Select(
-		iIDCol,
+		schema.ItemTableColID,
 		goqu.COUNT(goqu.DISTINCT(pTable.Col("id"))).As(picturesCountAlias),
 	).
-		From(iTable).
-		Join(ipcTable, goqu.On(iIDCol.Eq(ipcTable.Col("parent_id")))).
+		From(schema.ItemTable).
+		Join(ipcTable, goqu.On(schema.ItemTableColID.Eq(ipcTable.Col("parent_id")))).
 		Join(piTable, goqu.On(ipcTable.Col("item_id").Eq(piTable.Col("item_id")))).
 		Join(pTable, goqu.On(piTable.Col("picture_id").Eq(pTable.Col("id")))).
 		Where(
 			pTable.Col("status").Eq(pictures.StatusAccepted),
-			iIDCol.NotIn(
+			schema.ItemTableColID.NotIn(
 				s.db.Select(tableItemIDCol).From(table).Where(tableItemIDCol.IsNotNull()),
 			),
 		).
-		GroupBy(iIDCol).
+		GroupBy(schema.ItemTableColID).
 		Having(goqu.I(picturesCountAlias).Gte(s.minPictures))
 
 	return sqSelect
@@ -173,7 +170,7 @@ func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error)
 		return false, errors.New("itemID must be defined")
 	}
 
-	sqSelect := s.CandidateQuery().Where(goqu.T(schema.TableItem).Col("id").Eq(itemID))
+	sqSelect := s.CandidateQuery().Where(schema.ItemTableColID.Eq(itemID))
 
 	r := CandidateRecord{}
 

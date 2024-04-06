@@ -28,7 +28,7 @@ const (
 	ForumsTopicsTableName                        = "forums_topics"
 	TableHtmls                                   = "htmls"
 	TableImage                                   = "image"
-	TableItem                                    = "item"
+	ItemTableName                                = "item"
 	TableItemParentCache                         = "item_parent_cache"
 	TableItemLanguage                            = "item_language"
 	TableItemParent                              = "item_parent"
@@ -89,5 +89,10 @@ var (
 	ForumsTopicsTableColAddDatetime = ForumsTopicsTable.Col("add_datetime")
 	ForumsTopicsTableColAuthorID    = ForumsTopicsTable.Col("author_id")
 
-	UserTable = goqu.T(UserTableName)
+	ItemTable      = goqu.T(ItemTableName)
+	ItemTableColID = ItemTable.Col("id")
+
+	UserTable        = goqu.T(UserTableName)
+	UserTableColID   = UserTable.Col("id")
+	UserTableColRole = UserTable.Col("role")
 )

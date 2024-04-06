@@ -64,6 +64,51 @@ func TestTopBrandsListRuZh(t *testing.T) {
 	}
 }
 
+func TestListFilters(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig("../")
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+	ctx := context.Background()
+
+	repository := NewRepository(goquDB, 200)
+
+	options := ListOptions{
+		Language: "en",
+		Fields: ListFields{
+			NameOnly:                   true,
+			DescendantsCount:           true,
+			NewDescendantsCount:        true,
+			Description:                true,
+			FullText:                   true,
+			NameHTML:                   true,
+			NameText:                   true,
+			NameDefault:                true,
+			ItemsCount:                 true,
+			NewItemsCount:              true,
+			DescendantTwinsGroupsCount: true,
+		},
+		TypeID: []ItemType{BRAND},
+		ChildItems: &ListOptions{
+			TypeID:       []ItemType{VEHICLE},
+			IsConcept:    true,
+			EngineItemID: 1,
+		},
+		ParentItems: &ListOptions{
+			TypeID:    []ItemType{VEHICLE},
+			NoParents: true,
+			Catname:   "test",
+		},
+		Limit:   TopBrandsCount,
+		OrderBy: []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
+	}
+	_, _, err = repository.List(ctx, options)
+	require.NoError(t, err)
+}
+
 func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t *testing.T) {
 	t.Parallel()
 
@@ -139,7 +184,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 
 	userID := createRandomUser(ctx, t, goquDB)
 
-	res, err := goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		"item_type_id":     BRAND,
 		"name":             "",
 		"body":             "",
@@ -150,7 +195,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	brandID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	res, err = goquDB.Insert(schema.TableItem).Rows(goqu.Record{
+	res, err = goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		"item_type_id":     VEHICLE,
 		"name":             "",
 		"body":             "",
@@ -238,7 +283,7 @@ func TestPaginator(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		res, err := goquDB.ExecContext(ctx,
-			"INSERT INTO "+schema.TableItem+" (item_type_id, name, body, produced_exactly) VALUES (?, ?, '', 0)",
+			"INSERT INTO "+schema.ItemTableName+" (item_type_id, name, body, produced_exactly) VALUES (?, ?, '', 0)",
 			BRAND, name+"_"+strconv.Itoa(i),
 		)
 		require.NoError(t, err)
