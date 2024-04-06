@@ -211,8 +211,8 @@ func (s *StatisticsGRPCServer) totalComments(ctx context.Context) (int32, error)
 	var result int32
 
 	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(schema.CommentMessageTableName).
-		Where(goqu.I("deleted").IsFalse()).
+		From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableColDeleted.IsFalse()).
 		ScanValContext(ctx, &result)
 	if err != nil {
 		return 0, err
