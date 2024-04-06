@@ -1212,7 +1212,9 @@ func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error)
 		return 0, nil
 	}
 
-	res, err := s.db.Delete(schema.CommentMessageTable).Where(schema.CommentMessageTableColID.Eq(id)).Executor().ExecContext(ctx)
+	res, err := s.db.Delete(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableColID.Eq(id)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
