@@ -34,12 +34,19 @@ const (
 	DfHashTableHashColName      = "hash"
 	DfHashTablePictureIDColName = "picture_id"
 
-	TableFormattedImage        = "formated_image"
-	ForumsThemesTableName      = "forums_themes"
+	TableFormattedImage = "formated_image"
+
+	ForumsThemesTableName            = "forums_themes"
+	ForumsThemesTableTopicsColName   = "topics"
+	ForumsThemesTableMessagesColName = "messages"
+
 	ForumsThemeParentTableName = "forums_theme_parent"
-	ForumsTopicsTableName      = "forums_topics"
-	HtmlsTableName             = "htmls"
-	TableImage                 = "image"
+
+	ForumsTopicsTableName          = "forums_topics"
+	ForumsTopicsTableStatusColName = "status"
+
+	HtmlsTableName = "htmls"
+	TableImage     = "image"
 
 	ItemTableName                          = "item"
 	ItemTableNameColName                   = "name"
@@ -238,8 +245,16 @@ var (
 	DfHashTableHashCol      = DfHashTable.Col(DfHashTableHashColName)
 	DfHashTablePictureIDCol = DfHashTable.Col(DfHashTablePictureIDColName)
 
-	ForumsThemesTable      = goqu.T(ForumsThemesTableName)
-	ForumsThemesTableIDCol = ForumsThemesTable.Col("id")
+	ForumsThemesTable                 = goqu.T(ForumsThemesTableName)
+	ForumsThemesTableIDCol            = ForumsThemesTable.Col("id")
+	ForumsThemesTableNameCol          = ForumsThemesTable.Col("name")
+	ForumsThemesTableTopicsCol        = ForumsThemesTable.Col(ForumsThemesTableTopicsColName)
+	ForumsThemesTableMessagesCol      = ForumsThemesTable.Col(ForumsThemesTableMessagesColName)
+	ForumsThemesTableDisableTopicsCol = ForumsThemesTable.Col("disable_topics")
+	ForumsThemesTableDescriptionCol   = ForumsThemesTable.Col("description")
+	ForumsThemesTableIsModeratorCol   = ForumsThemesTable.Col("is_moderator")
+	ForumsThemesTablePositionCol      = ForumsThemesTable.Col("position")
+	ForumsThemesTableParentIDCol      = ForumsThemesTable.Col("parent_id")
 
 	ForumsThemeParentTable                = goqu.T(ForumsThemeParentTableName)
 	ForumsThemeParentTableParentIDCol     = ForumsThemeParentTable.Col("parent_id")
@@ -247,11 +262,13 @@ var (
 
 	ForumsTopicsTable               = goqu.T(ForumsTopicsTableName)
 	ForumsTopicsTableIDCol          = ForumsTopicsTable.Col("id")
-	ForumsTopicsTableStatusCol      = ForumsTopicsTable.Col("status")
+	ForumsTopicsTableStatusCol      = ForumsTopicsTable.Col(ForumsTopicsTableStatusColName)
 	ForumsTopicsTableThemeIDCol     = ForumsTopicsTable.Col("theme_id")
 	ForumsTopicsTableNameCol        = ForumsTopicsTable.Col("name")
 	ForumsTopicsTableAddDatetimeCol = ForumsTopicsTable.Col("add_datetime")
 	ForumsTopicsTableAuthorIDCol    = ForumsTopicsTable.Col("author_id")
+	ForumsTopicsTableAuthorIPCol    = ForumsTopicsTable.Col("author_ip")
+	ForumsTopicsTableViewsCol       = ForumsTopicsTable.Col("views")
 
 	ItemTable                  = goqu.T(ItemTableName)
 	ItemTableIDCol             = ItemTable.Col(ItemTableIDColName)

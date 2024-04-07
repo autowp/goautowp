@@ -85,3 +85,48 @@ func TestTop(t *testing.T) {
 	_, err = srv.GetTop(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 }
+
+func TestWhitelist(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	ctx := context.Background()
+
+	cnt := NewContainer(cfg)
+	defer util.Close(cnt)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	srv, err := cnt.TrafficGRPCServer()
+	require.NoError(t, err)
+
+	_, err = srv.AddToWhitelist(
+		metadata.NewIncomingContext(
+			ctx,
+			metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
+		),
+		&AddToTrafficWhitelistRequest{Ip: "192.168.0.1"},
+	)
+	require.NoError(t, err)
+
+	_, err = srv.GetTrafficWhitelist(
+		metadata.NewIncomingContext(
+			ctx,
+			metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
+		),
+		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
+
+	_, err = srv.DeleteFromWhitelist(
+		metadata.NewIncomingContext(
+			ctx,
+			metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
+		),
+		&DeleteFromTrafficWhitelistRequest{Ip: "192.168.0.1"},
+	)
+	require.NoError(t, err)
+}
