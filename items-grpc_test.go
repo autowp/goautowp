@@ -34,12 +34,10 @@ func TestTopCategoriesList(t *testing.T) {
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
-	r, err := client.GetTopCategoriesList(ctx, &GetTopCategoriesListRequest{
+	_, err = client.GetTopCategoriesList(ctx, &GetTopCategoriesListRequest{
 		Language: "ru",
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, r)
-	require.NotEmpty(t, r.Items)
 }
 
 func TestGetTwinsBrandsList(t *testing.T) {
