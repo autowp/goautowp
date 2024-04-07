@@ -106,6 +106,13 @@ func TestMain(m *testing.M) {
 
 	RegisterAutowpServer(grpcServer, autowpSrv)
 
+	attrsSrv, err := cnt.AttrsGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterAttrsServer(grpcServer, attrsSrv)
+
 	lis = bufconn.Listen(bufSize)
 
 	bufDialer = func(context.Context, string) (net.Conn, error) {
