@@ -51,10 +51,7 @@ func TestGetZones(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	_, err = client.GetZones(
-		ctx,
-		&emptypb.Empty{},
-	)
+	_, err = client.GetZones(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 }
 
@@ -73,10 +70,7 @@ func TestGetAttributeTypes(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	_, err = client.GetAttributeTypes(
-		ctx,
-		&emptypb.Empty{},
-	)
+	_, err = client.GetAttributeTypes(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 }
 
@@ -105,9 +99,7 @@ func TestGetAttributes(t *testing.T) {
 
 	_, err = client.GetAttributes(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&AttrAttributesRequest{
-			ZoneId: 1,
-		},
+		&AttrAttributesRequest{ZoneId: 1},
 	)
 	require.NoError(t, err)
 }
@@ -127,12 +119,7 @@ func TestGetZoneAttributes(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	_, err = client.GetZoneAttributes(
-		ctx,
-		&AttrZoneAttributesRequest{
-			ZoneId: 1,
-		},
-	)
+	_, err = client.GetZoneAttributes(ctx, &AttrZoneAttributesRequest{ZoneId: 1})
 	require.NoError(t, err)
 }
 
@@ -161,9 +148,7 @@ func TestGetListOptions(t *testing.T) {
 
 	_, err = client.GetListOptions(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&AttrListOptionsRequest{
-			AttributeId: 1,
-		},
+		&AttrListOptionsRequest{AttributeId: 1},
 	)
 	require.NoError(t, err)
 }

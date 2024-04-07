@@ -120,6 +120,13 @@ func TestMain(m *testing.M) {
 
 	RegisterMapServer(grpcServer, mapSrv)
 
+	pictursSrv, err := cnt.PicturesGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterPicturesServer(grpcServer, pictursSrv)
+
 	lis = bufconn.Listen(bufSize)
 
 	bufDialer = func(context.Context, string) (net.Conn, error) {
