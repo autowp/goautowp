@@ -1,6 +1,6 @@
 module github.com/autowp/goautowp
 
-go 1.21
+go 1.22
 
 require (
 	github.com/Nerzal/gocloak/v13 v13.9.0

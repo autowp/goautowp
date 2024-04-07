@@ -41,7 +41,10 @@ func getUserWithCleanHistory(
 	require.NoError(t, err)
 
 	_, err = db.Update(schema.UserTable).
-		Set(goqu.Record{"last_message_time": "2000-01-01"}).
+		Set(goqu.Record{
+			"last_message_time": "2000-01-01",
+			"votes_left":        100,
+		}).
 		Where(goqu.C("id").Eq(user.Id)).
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
