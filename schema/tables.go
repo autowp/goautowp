@@ -77,7 +77,15 @@ const (
 	OfDayTableUserIDColName  = "user_id"
 	OfDayTableDayDateColName = "day_date"
 
-	TablePersonalMessages                   = "personal_messages"
+	PersonalMessagesTableName                 = "personal_messages"
+	PersonalMessagesTableAddDatetimeColName   = "add_datetime"
+	PersonalMessagesTableContentsColName      = "contents"
+	PersonalMessagesTableDeletedByFromColName = "deleted_by_from"
+	PersonalMessagesTableDeletedByToColName   = "deleted_by_to"
+	PersonalMessagesTableFromUserIDColName    = "from_user_id"
+	PersonalMessagesTableToUserIDColName      = "to_user_id"
+	PersonalMessagesTableReadenColName        = "readen"
+
 	PerspectivesTableName                   = "perspectives"
 	PerspectivesGroupsTableName             = "perspectives_groups"
 	PerspectivesGroupsPerspectivesTableName = "perspectives_groups_perspectives"
@@ -260,6 +268,15 @@ var (
 	OfDayTable           = goqu.T(OfDayTableName)
 	OfDayTableDayDateCol = OfDayTable.Col(OfDayTableDayDateColName)
 	OfDayTableItemIDCol  = OfDayTable.Col(OfDayTableItemIDColName)
+
+	PersonalMessagesTable                 = goqu.T(PersonalMessagesTableName)
+	PersonalMessagesTableIDCol            = PersonalMessagesTable.Col("id")
+	PersonalMessagesTableAddDatetimeCol   = PersonalMessagesTable.Col(PersonalMessagesTableAddDatetimeColName)
+	PersonalMessagesTableDeletedByFromCol = PersonalMessagesTable.Col(PersonalMessagesTableDeletedByFromColName)
+	PersonalMessagesTableDeletedByToCol   = PersonalMessagesTable.Col(PersonalMessagesTableDeletedByToColName)
+	PersonalMessagesTableFromUserIDCol    = PersonalMessagesTable.Col(PersonalMessagesTableFromUserIDColName)
+	PersonalMessagesTableToUserIDCol      = PersonalMessagesTable.Col(PersonalMessagesTableToUserIDColName)
+	PersonalMessagesTableReadenCol        = PersonalMessagesTable.Col(PersonalMessagesTableReadenColName)
 
 	PerspectivesTable            = goqu.T(PerspectivesTableName)
 	PerspectivesTableIDCol       = PerspectivesTable.Col("id")
