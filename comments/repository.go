@@ -177,7 +177,7 @@ func (s *Repository) Subscribe(ctx context.Context, userID int64, commentsType C
 func (s *Repository) UnSubscribe(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
 	_, err := s.db.ExecContext(
 		ctx,
-		"DELETE FROM `+schema.CommentTopicSubscribeTableName+` WHERE type_id = ? AND item_id = ? AND user_id = ?",
+		"DELETE FROM "+schema.CommentTopicSubscribeTableName+" WHERE type_id = ? AND item_id = ? AND user_id = ?",
 		commentsType, itemID, userID,
 	)
 
