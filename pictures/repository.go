@@ -79,7 +79,7 @@ func (s *Repository) IncView(ctx context.Context, id int64) error {
 func (s *Repository) Status(ctx context.Context, id int64) (Status, error) {
 	var status Status
 
-	err := s.db.QueryRowContext(ctx, "SELECT status FROM "+schema.TablePicture+" WHERE id = ?", id).Scan(&status)
+	err := s.db.QueryRowContext(ctx, "SELECT status FROM "+schema.PictureTableName+" WHERE id = ?", id).Scan(&status)
 	if err != nil {
 		return "", err
 	}
@@ -250,7 +250,7 @@ func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, erro
 	alias := "p"
 
 	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.I(alias).Col(colID)))).
-		From(goqu.T(schema.TablePicture).As(alias))
+		From(goqu.T(schema.PictureTableName).As(alias))
 
 	sqSelect = s.applyPicture(alias, sqSelect, &options)
 
@@ -288,7 +288,7 @@ func (s *Repository) applyPicture(
 
 	if options.AncestorItemID != 0 {
 		ipcTable := goqu.T(schema.TableItemParentCache)
-		piTable := goqu.T(schema.TablePicture)
+		piTable := goqu.T(schema.PictureTableName)
 
 		sqSelect = sqSelect.
 			Join(piTable, goqu.On(aliasTable.Col(colID).Eq(piTable.Col(colPictureID)))).

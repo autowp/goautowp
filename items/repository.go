@@ -240,7 +240,7 @@ func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesO
 
 	if options.Status != "" || options.ItemPicture != nil || options.OwnerID != 0 {
 		sqSelect = sqSelect.Join(
-			goqu.T(schema.TablePicture).As(pAlias),
+			goqu.T(schema.PictureTableName).As(pAlias),
 			goqu.On(goqu.I(alias+".picture_id").Eq(goqu.I(pAlias+".id"))),
 		)
 
@@ -1574,7 +1574,7 @@ func (s *Repository) ItemsWithPicturesCount(
 	var result int32
 
 	pictureItemTable := goqu.T(schema.TablePictureItem)
-	pictureTable := goqu.T(schema.TablePicture)
+	pictureTable := goqu.T(schema.PictureTableName)
 	pictureIDCol := pictureTable.Col("id")
 
 	const countAlias = "c"

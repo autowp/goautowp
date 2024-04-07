@@ -88,7 +88,7 @@ func addPicture(t *testing.T, db *goqu.Database, filepath string) int {
 	identity := hex.EncodeToString(randBytes)
 	ctx := context.Background()
 
-	res, err := db.Insert(schema.TablePicture).Rows(goqu.Record{
+	res, err := db.Insert(schema.PictureTableName).Rows(goqu.Record{
 		"image_id": imageID,
 		"identity": identity,
 		"ip":       goqu.Func("INET6_ATON", "127.0.0.1"),

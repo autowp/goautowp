@@ -2,6 +2,9 @@ package goautowp
 
 import (
 	"context"
+	"database/sql"
+	"github.com/autowp/goautowp/schema"
+	"github.com/doug-martin/goqu/v9"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -14,10 +17,28 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+func getPictureID(t *testing.T, ctx context.Context, db *goqu.Database) int64 {
+	var pictureID int64
+	success, err := db.Select(schema.PictureTableIdCol).
+		From(schema.PictureTable).Limit(1).
+		ScanValContext(ctx, &pictureID)
+	require.NoError(t, err)
+	require.True(t, success)
+
+	return pictureID
+}
+
 func TestView(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
 	conn, err := grpc.NewClient(
 		"localhost",
 		grpc.WithContextDialer(bufDialer),
@@ -29,7 +50,7 @@ func TestView(t *testing.T) {
 
 	client := NewPicturesClient(conn)
 
-	_, err = client.View(ctx, &PicturesViewRequest{PictureId: 1})
+	_, err = client.View(ctx, &PicturesViewRequest{PictureId: getPictureID(t, ctx, goquDB)})
 	require.NoError(t, err)
 }
 
@@ -37,6 +58,12 @@ func TestVote(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
 
 	conn, err := grpc.NewClient(
 		"localhost",
@@ -46,8 +73,6 @@ func TestVote(t *testing.T) {
 	require.NoError(t, err)
 
 	defer util.Close(conn)
-
-	cfg := config.LoadConfig(".")
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -58,7 +83,7 @@ func TestVote(t *testing.T) {
 
 	_, err = client.Vote(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&PicturesVoteRequest{PictureId: 1, Value: 1},
+		&PicturesVoteRequest{PictureId: getPictureID(t, ctx, goquDB), Value: 1},
 	)
 	require.NoError(t, err)
 }

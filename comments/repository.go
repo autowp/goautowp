@@ -601,7 +601,7 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 
 	switch typeID {
 	case TypeIDPictures:
-		success, err = s.db.Select(goqu.L("1")).From(schema.TablePicture).
+		success, err = s.db.Select(goqu.L("1")).From(schema.PictureTableName).
 			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDItems:
@@ -901,7 +901,7 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 	case TypeIDPictures:
 		var identity string
 
-		success, err := s.db.Select("identity").From(schema.TablePicture).Where(goqu.C("id").Eq(itemID)).
+		success, err := s.db.Select("identity").From(schema.PictureTableName).Where(goqu.C("id").Eq(itemID)).
 			ScanValContext(ctx, &identity)
 		if err != nil {
 			return nil, err
@@ -1089,11 +1089,11 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 	err := s.db.Select(schema.CommentMessageTableIDCol).
 		From(schema.CommentMessageTable).
 		LeftJoin(
-			goqu.T(schema.TablePicture),
-			goqu.On(schema.CommentMessageTableItemIDCol.Eq(goqu.T(schema.TablePicture).Col("id"))),
+			goqu.T(schema.PictureTableName),
+			goqu.On(schema.CommentMessageTableItemIDCol.Eq(goqu.T(schema.PictureTableName).Col("id"))),
 		).
 		Where(
-			goqu.T(schema.TablePicture).Col("id").IsNull(),
+			goqu.T(schema.PictureTableName).Col("id").IsNull(),
 			schema.CommentMessageTableTypeIDCol.Eq(TypeIDPictures),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {
@@ -1379,12 +1379,12 @@ func (s *Repository) Count(
 	if itemID != 0 {
 		sqSelect = sqSelect.
 			Join(
-				goqu.T(schema.TablePicture),
-				goqu.On(schema.CommentMessageTableItemIDCol.Eq(goqu.T(schema.TablePicture).Col("id"))),
+				goqu.T(schema.PictureTableName),
+				goqu.On(schema.CommentMessageTableItemIDCol.Eq(goqu.T(schema.PictureTableName).Col("id"))),
 			).
 			Join(
 				goqu.T(schema.TablePictureItem),
-				goqu.On(goqu.T(schema.TablePicture).Col("id").Eq(goqu.T(schema.TablePictureItem).Col("picture_id"))),
+				goqu.On(goqu.T(schema.PictureTableName).Col("id").Eq(goqu.T(schema.TablePictureItem).Col("picture_id"))),
 			).
 			Join(
 				goqu.T(schema.TableItemParentCache),
@@ -1547,7 +1547,7 @@ func (s *Repository) MessageRowRoute(
 	case TypeIDPictures:
 		var identity string
 
-		success, err := s.db.Select("identity").From(schema.TablePicture).Where(goqu.C("id").Eq(itemID)).
+		success, err := s.db.Select("identity").From(schema.PictureTableName).Where(goqu.C("id").Eq(itemID)).
 			ScanValContext(ctx, &identity)
 		if err != nil {
 			return nil, err
@@ -1635,12 +1635,12 @@ func (s *Repository) Paginator(request Request) *util.Paginator {
 		tablePictureItems := goqu.T(schema.TablePictureItem)
 		sqSelect = sqSelect.
 			Join(
-				goqu.T(schema.TablePicture),
-				goqu.On(schema.CommentMessageTableItemIDCol.Eq(goqu.T(schema.TablePicture).Col("id"))),
+				goqu.T(schema.PictureTableName),
+				goqu.On(schema.CommentMessageTableItemIDCol.Eq(goqu.T(schema.PictureTableName).Col("id"))),
 			).
 			Join(
 				tablePictureItems,
-				goqu.On(goqu.T(schema.TablePicture).Col("id").Eq(tablePictureItems.Col("picture_id"))),
+				goqu.On(goqu.T(schema.PictureTableName).Col("id").Eq(tablePictureItems.Col("picture_id"))),
 			).
 			Join(
 				goqu.T(schema.TableItemParentCache),

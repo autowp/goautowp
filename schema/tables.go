@@ -73,7 +73,7 @@ const (
 	PerspectivesGroupsTableName             = "perspectives_groups"
 	PerspectivesGroupsPerspectivesTableName = "perspectives_groups_perspectives"
 	PerspectivesPagesTableName              = "perspectives_pages"
-	TablePicture                            = "pictures"
+	PictureTableName                        = "pictures"
 	TablePictureItem                        = "picture_item"
 	TableSpec                               = "spec"
 	TableTextstorageText                    = "textstorage_text"
@@ -252,6 +252,9 @@ var (
 	PerspectivesPagesTable        = goqu.T(PerspectivesPagesTableName)
 	PerspectivesPagesTableIDCol   = PerspectivesPagesTable.Col("id")
 	PerspectivesPagesTableNameCol = PerspectivesPagesTable.Col("name")
+
+	PictureTable      = goqu.T(PictureTableName)
+	PictureTableIdCol = PictureTable.Col("id")
 
 	UserTable                     = goqu.T(UserTableName)
 	UserTableIDCol                = UserTable.Col(UserTableIDColName)

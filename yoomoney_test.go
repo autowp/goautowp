@@ -100,7 +100,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
 	res, err := goquDB.ExecContext(ctx,
-		"INSERT INTO "+schema.TablePicture+" (identity, status, ip, owner_id) VALUES (?, 'accepted', '', null)",
+		"INSERT INTO "+schema.PictureTableName+" (identity, status, ip, owner_id) VALUES (?, 'accepted', '', null)",
 		identity,
 	)
 	require.NoError(t, err)

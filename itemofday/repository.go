@@ -136,7 +136,7 @@ func (s *Repository) candidate(ctx context.Context) (int64, error) {
 }
 
 func (s *Repository) CandidateQuery() *goqu.SelectDataset {
-	pTable := goqu.T(schema.TablePicture)
+	pTable := goqu.T(schema.PictureTableName)
 	ipcTable := goqu.T(schema.TableItemParentCache)
 	piTable := goqu.T(schema.TablePictureItem)
 

@@ -316,7 +316,7 @@ func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) erro
 
 	var picturesExists int
 
-	success, err = s.autowpDB.Select(goqu.COUNT(goqu.Star())).From(schema.TablePicture).Where(
+	success, err = s.autowpDB.Select(goqu.COUNT(goqu.Star())).From(schema.PictureTableName).Where(
 		goqu.C("owner_id").Eq(userID),
 		goqu.C("status").Eq("accepted"),
 	).ScanValContext(ctx, &picturesExists)

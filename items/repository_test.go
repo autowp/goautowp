@@ -224,7 +224,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
-	res, err = goquDB.Insert(schema.TablePicture).Rows(goqu.Record{
+	res, err = goquDB.Insert(schema.PictureTableName).Rows(goqu.Record{
 		"identity": identity,
 		"status":   "accepted",
 		"ip":       "",
