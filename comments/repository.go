@@ -260,8 +260,8 @@ func (s *Repository) GetCommentType(ctx context.Context, commentID int64) (Comme
 
 func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType CommentType, dstItemID int64) error {
 	st := struct {
-		srcType   CommentType
-		srcItemID int64
+		SrcType   CommentType `db:"type_id"`
+		SrcItemID int64       `db:"item_id"`
 	}{}
 
 	success, err := s.db.Select(schema.CommentMessageTableColTypeID, schema.CommentMessageTableColItemID).
@@ -275,7 +275,7 @@ func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType C
 		return sql.ErrNoRows
 	}
 
-	if st.srcItemID == dstItemID && st.srcType == dstType {
+	if st.SrcItemID == dstItemID && st.SrcType == dstType {
 		return nil
 	}
 
@@ -293,7 +293,7 @@ func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType C
 		return err
 	}
 
-	err = s.updateTopicStat(ctx, st.srcType, st.srcItemID)
+	err = s.updateTopicStat(ctx, st.SrcType, st.SrcItemID)
 	if err != nil {
 		return err
 	}

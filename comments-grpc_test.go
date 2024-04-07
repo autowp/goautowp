@@ -484,3 +484,51 @@ func TestMessagesByUserIdentity(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestMoveComment(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	r, err := client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_FORUMS_TYPE_ID,
+			Message:            "Test",
+			ModeratorAttention: false,
+			ParentId:           0,
+			Resolve:            false,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.MoveComment(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsMoveCommentRequest{
+			CommentId: r.Id,
+			ItemId:    2,
+			TypeId:    CommentsType_FORUMS_TYPE_ID,
+		},
+	)
+	require.NoError(t, err)
+}
