@@ -499,15 +499,15 @@ func (s *Repository) applyItem( //nolint:maintidx
 			ilAlias := alias + "_ild"
 
 			columns = append(columns,
-				s.db.Select(goqu.T(schema.TableTextstorageText).Col("text")).
+				s.db.Select(schema.TextstorageTextTableTextCol).
 					From(goqu.T(schema.TableItemLanguage).As(ilAlias)).
 					Join(
-						goqu.T(schema.TableTextstorageText),
-						goqu.On(goqu.T(ilAlias).Col("text_id").Eq(goqu.T(schema.TableTextstorageText).Col("id"))),
+						schema.TextstorageTextTable,
+						goqu.On(goqu.T(ilAlias).Col("text_id").Eq(schema.TextstorageTextTableIDCol)),
 					).
 					Where(
 						goqu.T(ilAlias).Col("item_id").Eq(aliasIDCol),
-						goqu.Func("length", goqu.T(schema.TableTextstorageText).Col("text")).Gt(0),
+						goqu.Func("length", schema.TextstorageTextTableTextCol).Gt(0),
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
 					Limit(1).
@@ -518,15 +518,15 @@ func (s *Repository) applyItem( //nolint:maintidx
 		if options.Fields.FullText {
 			ilAlias := alias + "_ilf"
 			columns = append(columns,
-				s.db.Select(goqu.T(schema.TableTextstorageText).Col("text")).
+				s.db.Select(schema.TextstorageTextTableTextCol).
 					From(goqu.T(schema.TableItemLanguage).As(ilAlias)).
 					Join(
-						goqu.T(schema.TableTextstorageText),
-						goqu.On(goqu.T(ilAlias).Col("full_text_id").Eq(goqu.T(schema.TableTextstorageText).Col("id"))),
+						schema.TextstorageTextTable,
+						goqu.On(goqu.T(ilAlias).Col("full_text_id").Eq(schema.TextstorageTextTableIDCol)),
 					).
 					Where(
 						goqu.T(ilAlias).Col("item_id").Eq(aliasIDCol),
-						goqu.Func("length", goqu.T(schema.TableTextstorageText).Col("text")).Gt(0),
+						goqu.Func("length", schema.TextstorageTextTableTextCol).Gt(0),
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
 					Limit(1).
@@ -1111,11 +1111,11 @@ func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehic
 }
 
 func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
-	res, err := s.db.From(schema.TableVehicleVehicleType).Delete().
+	res, err := s.db.From(schema.VehicleVehicleTypeTable).Delete().
 		Where(
-			goqu.C("vehicle_id").Eq(itemID),
-			goqu.C("vehicle_type_id").Eq(vehicleTypeID),
-			goqu.L("NOT inherited"),
+			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID),
+			schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(vehicleTypeID),
+			schema.VehicleVehicleTypeTableInheritedCol.IsFalse(),
 		).Executor().Exec()
 	if err != nil {
 		return err
@@ -1150,7 +1150,7 @@ func (s *Repository) setItemVehicleTypeRow(
 	res, err := s.db.ExecContext(
 		ctx,
 		`
-			INSERT INTO `+schema.TableVehicleVehicleType+` (vehicle_id, vehicle_type_id, inherited)
+			INSERT INTO `+schema.VehicleVehicleTypeTableName+` (vehicle_id, vehicle_type_id, inherited)
 			VALUES (?, ?, ?)
 			ON DUPLICATE KEY UPDATE inherited = VALUES(inherited)
         `,
@@ -1178,7 +1178,7 @@ func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 		// do not inherit when own value
 		res, err := s.db.ExecContext(
 			ctx,
-			"DELETE FROM "+schema.TableVehicleVehicleType+" WHERE vehicle_id = ? AND inherited",
+			"DELETE FROM "+schema.VehicleVehicleTypeTableName+" WHERE vehicle_id = ? AND inherited",
 			itemID,
 		)
 		if err != nil {
@@ -1250,13 +1250,13 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 }
 
 func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
-	sqlSelect := s.db.From(schema.TableVehicleVehicleType).Select("vehicle_type_id").Where(
-		goqu.C("vehicle_id").Eq(itemID),
-	)
+	sqlSelect := s.db.From(schema.VehicleVehicleTypeTable).
+		Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).
+		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID))
 	if inherited {
-		sqlSelect = sqlSelect.Where(goqu.L("inherited"))
+		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsTrue())
 	} else {
-		sqlSelect = sqlSelect.Where(goqu.L("NOT inherited"))
+		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsFalse())
 	}
 
 	res := make([]int64, 0)
@@ -1267,11 +1267,11 @@ func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, in
 }
 
 func (s *Repository) getItemVehicleTypeInheritedIDs(ctx context.Context, itemID int64) ([]int64, error) {
-	sqlSelect := s.db.From(schema.TableVehicleVehicleType).
-		Select("vehicle_type_id").Distinct().
+	sqlSelect := s.db.From(schema.VehicleVehicleTypeTable).
+		Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).Distinct().
 		Join(
 			goqu.T(schema.TableItemParent),
-			goqu.On(goqu.Ex{schema.TableVehicleVehicleType + ".vehicle_id": goqu.T(schema.TableItemParent).Col("parent_id")}),
+			goqu.On(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(goqu.T(schema.TableItemParent).Col("parent_id"))),
 		).
 		Where(goqu.T(schema.TableItemParent).Col("item_id").Eq(itemID))
 
@@ -1301,11 +1301,11 @@ func (s *Repository) setItemVehicleTypeRows(
 		}
 	}
 
-	sqlDelete := s.db.From(schema.TableVehicleVehicleType).Delete().
-		Where(goqu.C("vehicle_id").Eq(itemID))
+	sqlDelete := s.db.From(schema.VehicleVehicleTypeTable).Delete().
+		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID))
 
 	if len(types) > 0 {
-		sqlDelete = sqlDelete.Where(goqu.C("vehicle_type_id").NotIn(types))
+		sqlDelete = sqlDelete.Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(types))
 	}
 
 	res, err := sqlDelete.Executor().Exec()

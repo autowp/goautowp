@@ -82,9 +82,11 @@ const (
 	PictureTableOwnerIDColName  = "owner_id"
 	PictureTableStatusColName   = "status"
 
-	TablePictureItem     = "picture_item"
-	TableSpec            = "spec"
-	TableTextstorageText = "textstorage_text"
+	TablePictureItem = "picture_item"
+	TableSpec        = "spec"
+
+	TextstorageTextTableName      = "textstorage_text"
+	TextstorageTextTableIDColName = "id"
 
 	UserTableName                     = "users"
 	UserTableIDColName                = "id"
@@ -114,9 +116,9 @@ const (
 	UserTableForumsMessagesColName    = "forums_messages"
 	UserTableForumsTopicsColName      = "forums_topics"
 
-	TableUserUserPreferences = "user_user_preferences"
-	TableVehicleVehicleType  = "vehicle_vehicle_type"
-	VotingTableName          = "voting"
+	TableUserUserPreferences    = "user_user_preferences"
+	VehicleVehicleTypeTableName = "vehicle_vehicle_type"
+	VotingTableName             = "voting"
 )
 
 var (
@@ -267,6 +269,10 @@ var (
 	PictureTableOwnerIDCol  = PictureTable.Col(PictureTableOwnerIDColName)
 	PictureTableStatusCol   = PictureTable.Col(PictureTableStatusColName)
 
+	TextstorageTextTable        = goqu.T(TextstorageTextTableName)
+	TextstorageTextTableIDCol   = TextstorageTextTable.Col(TextstorageTextTableIDColName)
+	TextstorageTextTableTextCol = TextstorageTextTable.Col("text")
+
 	UserTable                     = goqu.T(UserTableName)
 	UserTableIDCol                = UserTable.Col(UserTableIDColName)
 	UserTableRoleCol              = UserTable.Col(UserTableRoleColName)
@@ -288,6 +294,11 @@ var (
 	UserTableRegDateCol           = UserTable.Col(UserTableRegDateColName)
 	UserTableLastMessageTimeCol   = UserTable.Col(UserTableLastMessageTimeColName)
 	UserTableMessagingIntervalCol = UserTable.Col(UserTableMessagingIntervalColName)
+
+	VehicleVehicleTypeTable                 = goqu.T(VehicleVehicleTypeTableName)
+	VehicleVehicleTypeTableVehicleTypeIDCol = VehicleVehicleTypeTable.Col("vehicle_type_id")
+	VehicleVehicleTypeTableVehicleIDCol     = VehicleVehicleTypeTable.Col("vehicle_id")
+	VehicleVehicleTypeTableInheritedCol     = VehicleVehicleTypeTable.Col("inherited")
 
 	VotingTable      = goqu.T(VotingTableName)
 	VotingTableIDCol = VotingTable.Col("id")
