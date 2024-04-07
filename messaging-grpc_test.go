@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -73,4 +74,34 @@ func TestMessaging(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, "Test message", r.Items[0].Text)
+
+	_, err = messagingClient.GetMessagesNewCount(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
+
+	_, err = messagingClient.GetMessagesSummary(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
+
+	_, err = messagingClient.DeleteMessage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&MessagingDeleteMessage{MessageId: r.Items[0].Id},
+	)
+	require.NoError(t, err)
+
+	_, err = messagingClient.ClearFolder(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&MessagingClearFolder{Folder: "sent"},
+	)
+	require.NoError(t, err)
+
+	_, err = messagingClient.ClearFolder(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&MessagingClearFolder{Folder: "system"},
+	)
+	require.NoError(t, err)
 }
