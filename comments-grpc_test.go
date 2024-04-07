@@ -449,3 +449,38 @@ func TestCompleteComment(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestMessagesByUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	_, err = client.GetMessages(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
+		&GetMessagesRequest{
+			ItemId:       1,
+			TypeId:       CommentsType_ITEM_TYPE_ID,
+			UserIdentity: "test",
+			Page:         2,
+		},
+	)
+	require.NoError(t, err)
+}

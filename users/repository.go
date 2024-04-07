@@ -140,7 +140,7 @@ func (s *Repository) User(ctx context.Context, options GetUsersOptions) (*DBUser
 func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int64, error) {
 	var userID int64
 
-	success, err := s.autowpDB.From(schema.UserTable).Where(goqu.I("identity").Eq(identity)).ScanValContext(ctx, userID)
+	success, err := s.autowpDB.From(schema.UserTable).Where(goqu.I("identity").Eq(identity)).ScanValContext(ctx, &userID)
 	if err != nil {
 		return 0, err
 	}
