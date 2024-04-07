@@ -22,7 +22,7 @@ const (
 
 	CommentTopicTableName               = "comment_topic"
 	CommentTopicSubscribeTableName      = "comment_topic_subscribe"
-	TableCommentTopicView               = "comment_topic_view"
+	CommentTopicViewTableName           = "comment_topic_view"
 	CommentVoteTableName                = "comment_vote"
 	TableContact                        = "contact"
 	TableDfDistance                     = "df_distance"
@@ -74,6 +74,12 @@ var (
 	CommentTopicTableColItemID     = CommentTopicTable.Col("item_id")
 	CommentTopicTableColTypeID     = CommentTopicTable.Col("type_id")
 	CommentTopicTableColLastUpdate = CommentTopicTable.Col("last_update")
+
+	CommentTopicViewTable             = goqu.T(CommentTopicViewTableName)
+	CommentTopicViewTableColUserID    = CommentTopicViewTable.Col("user_id")
+	CommentTopicViewTableColTypeID    = CommentTopicViewTable.Col("type_id")
+	CommentTopicViewTableColItemID    = CommentTopicViewTable.Col("item_id")
+	CommentTopicViewTableColTimestamp = CommentTopicViewTable.Col("timestamp")
 
 	CommentTopicSubscribeTable          = goqu.T(CommentTopicSubscribeTableName)
 	CommentTopicSubscribeTableColItemID = CommentTopicSubscribeTable.Col("item_id")

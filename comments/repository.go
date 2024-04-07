@@ -188,7 +188,7 @@ func (s *Repository) View(ctx context.Context, userID int64, commentsType Commen
 	_, err := s.db.ExecContext(
 		ctx,
 		`
-			INSERT INTO `+schema.TableCommentTopicView+` (user_id, type_id, item_id, timestamp)
+			INSERT INTO `+schema.CommentTopicViewTableName+` (user_id, type_id, item_id, timestamp)
             VALUES (?, ?, ?, NOW())
             ON DUPLICATE KEY UPDATE timestamp = values(timestamp)
         `,
@@ -580,7 +580,7 @@ func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID in
 func (s *Repository) UpdateTopicView(ctx context.Context, typeID CommentType, itemID int64, userID int64) error {
 	_, err := s.db.ExecContext(
 		ctx, `
-			INSERT INTO `+schema.TableCommentTopicView+` (user_id, type_id, item_id, timestamp)
+			INSERT INTO `+schema.CommentTopicViewTableName+` (user_id, type_id, item_id, timestamp)
 			VALUES (?, ?, ?, NOW())
 			ON DUPLICATE KEY UPDATE timestamp = VALUES(timestamp)
 		`,
@@ -1234,11 +1234,11 @@ func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error)
 
 func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 	res, err := s.db.ExecContext(ctx, `
-		DELETE `+schema.TableCommentTopicView+`
-		FROM `+schema.TableCommentTopicView+`
+		DELETE `+schema.CommentTopicViewTableName+`
+		FROM `+schema.CommentTopicViewTableName+`
 			LEFT JOIN `+schema.CommentMessageTableName+` 
-				ON `+schema.TableCommentTopicView+`.item_id = `+schema.CommentMessageTableName+`.item_id
-				AND `+schema.TableCommentTopicView+`.type_id = `+schema.CommentMessageTableName+`.type_id
+				ON `+schema.CommentTopicViewTableName+`.item_id = `+schema.CommentMessageTableName+`.item_id
+				AND `+schema.CommentTopicViewTableName+`.type_id = `+schema.CommentMessageTableName+`.type_id
 		WHERE `+schema.CommentMessageTableName+`.type_id IS NULL
     `)
 	if err != nil {
@@ -1322,12 +1322,12 @@ func (s *Repository) TopicStatForUser(
 ) (int32, int32, error) {
 	commentTopicTable := goqu.T(schema.CommentTopicTableName)
 
-	sqSelect := s.db.Select(commentTopicTable.Col("messages"), goqu.T(schema.TableCommentTopicView).Col("timestamp")).
+	sqSelect := s.db.Select(commentTopicTable.Col("messages"), schema.CommentTopicViewTableColTimestamp).
 		From(commentTopicTable).
-		LeftJoin(goqu.T(schema.TableCommentTopicView), goqu.On(
-			commentTopicTable.Col("type_id").Eq(goqu.T(schema.TableCommentTopicView).Col("type_id")),
-			commentTopicTable.Col("item_id").Eq(goqu.T(schema.TableCommentTopicView).Col("item_id")),
-			goqu.T(schema.TableCommentTopicView).Col("user_id").Eq(userID),
+		LeftJoin(schema.CommentTopicViewTable, goqu.On(
+			commentTopicTable.Col("type_id").Eq(schema.CommentTopicViewTableColTypeID),
+			commentTopicTable.Col("item_id").Eq(schema.CommentTopicViewTableColItemID),
+			schema.CommentTopicViewTableColUserID.Eq(userID),
 		)).
 		Where(
 			commentTopicTable.Col("type_id").Eq(typeID),
@@ -1516,12 +1516,12 @@ func (s *Repository) IsNewMessage(
 	var success bool
 
 	success, err := s.db.Select(goqu.Star()).
-		From(schema.TableCommentTopicView).
+		From(schema.CommentTopicViewTable).
 		Where(
-			goqu.I("type_id").Eq(typeID),
-			goqu.I("item_id").Eq(itemID),
-			goqu.I("user_id").Eq(userID),
-			goqu.I("timestamp").Gte(msgTime),
+			schema.CommentTopicViewTableColTypeID.Eq(typeID),
+			schema.CommentTopicViewTableColItemID.Eq(itemID),
+			schema.CommentTopicViewTableColUserID.Eq(userID),
+			schema.CommentTopicViewTableColTimestamp.Gte(msgTime),
 		).
 		ScanValContext(ctx, &success)
 	if err != nil {
