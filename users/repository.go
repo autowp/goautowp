@@ -426,7 +426,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 			"timezone":                  language.Timezone,
 			"last_ip":                   goqu.Func("INET6_ATON", remoteAddr),
 			"language":                  locale,
-			"role":                      role,
+			schema.UserTableRoleColName: role,
 			schema.UserTableUUIDColName: goqu.Func("UUID_TO_BIN", guid),
 		}).
 		OnConflict(goqu.DoUpdate(schema.UserTableUUIDColName, goqu.Record{
