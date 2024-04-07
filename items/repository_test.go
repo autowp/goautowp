@@ -148,20 +148,20 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 	name := "ivan"
 	r, err := db.Insert(schema.UserTable).
 		Rows(goqu.Record{
-			"login":                     nil,
-			"e_mail":                    emailAddr,
-			"password":                  nil,
-			"email_to_check":            nil,
-			"hide_e_mail":               1,
-			"email_check_code":          nil,
-			"name":                      name,
-			"reg_date":                  goqu.Func("NOW"),
-			"last_online":               goqu.Func("NOW"),
-			"timezone":                  "Europe/Moscow",
-			"last_ip":                   goqu.Func("INET6_ATON", "127.0.0.1"),
-			"language":                  "en",
-			schema.UserTableRoleColName: "user",
-			schema.UserTableUUIDColName: goqu.Func("UUID_TO_BIN", uuid.New().String()),
+			schema.UserTableLoginColName:          nil,
+			schema.UserTableEmailColName:          emailAddr,
+			schema.UserTablePasswordColName:       nil,
+			schema.UserTableEmailToCheckColName:   nil,
+			schema.UserTableHideEmailColName:      1,
+			schema.UserTableEmailCheckCodeColName: nil,
+			schema.UserTableNameColName:           name,
+			schema.UserTableRegDateColName:        goqu.Func("NOW"),
+			schema.UserTableLastOnlineColName:     goqu.Func("NOW"),
+			schema.UserTableTimezoneColName:       "Europe/Moscow",
+			schema.UserTableLastIPColName:         goqu.Func("INET6_ATON", "127.0.0.1"),
+			schema.UserTableLanguageColName:       "en",
+			schema.UserTableRoleColName:           "user",
+			schema.UserTableUUIDColName:           goqu.Func("UUID_TO_BIN", uuid.New().String()),
 		}).
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)

@@ -125,8 +125,8 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 	userRows, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{
 		InContacts: userID,
 		Order: []exp.OrderedExpression{
-			schema.UserTableColDeleted.Asc(),
-			schema.UserTableColName.Asc(),
+			schema.UserTableDeletedCol.Asc(),
+			schema.UserTableNameCol.Asc(),
 		},
 	})
 	if err != nil {

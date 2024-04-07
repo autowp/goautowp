@@ -146,20 +146,20 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 	const picturesCountAlias = "p_count"
 
 	sqSelect := s.db.Select(
-		schema.ItemTableColID,
+		schema.ItemTableIDCol,
 		goqu.COUNT(goqu.DISTINCT(pTable.Col("id"))).As(picturesCountAlias),
 	).
 		From(schema.ItemTable).
-		Join(ipcTable, goqu.On(schema.ItemTableColID.Eq(ipcTable.Col("parent_id")))).
+		Join(ipcTable, goqu.On(schema.ItemTableIDCol.Eq(ipcTable.Col("parent_id")))).
 		Join(piTable, goqu.On(ipcTable.Col("item_id").Eq(piTable.Col("item_id")))).
 		Join(pTable, goqu.On(piTable.Col("picture_id").Eq(pTable.Col("id")))).
 		Where(
 			pTable.Col("status").Eq(pictures.StatusAccepted),
-			schema.ItemTableColID.NotIn(
+			schema.ItemTableIDCol.NotIn(
 				s.db.Select(tableItemIDCol).From(table).Where(tableItemIDCol.IsNotNull()),
 			),
 		).
-		GroupBy(schema.ItemTableColID).
+		GroupBy(schema.ItemTableIDCol).
 		Having(goqu.I(picturesCountAlias).Gte(s.minPictures))
 
 	return sqSelect
@@ -170,7 +170,7 @@ func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error)
 		return false, errors.New("itemID must be defined")
 	}
 
-	sqSelect := s.CandidateQuery().Where(schema.ItemTableColID.Eq(itemID))
+	sqSelect := s.CandidateQuery().Where(schema.ItemTableIDCol.Eq(itemID))
 
 	r := CandidateRecord{}
 

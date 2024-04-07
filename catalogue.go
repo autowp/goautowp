@@ -252,14 +252,14 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 	itemParentCacheTable := goqu.T(schema.TableItemParentCache)
 	sqSelect := s.db.
 		Select(carTypeTable.Col("id"), carTypeTable.Col("name"), carTypeTable.Col("catname"),
-			goqu.COUNT(goqu.DISTINCT(schema.ItemTableColID))).
+			goqu.COUNT(goqu.DISTINCT(schema.ItemTableIDCol))).
 		From(carTypeTable).
 		Join(
 			goqu.T(schema.TableVehicleVehicleType),
 			goqu.On(carTypeTable.Col("id").Eq(goqu.T(schema.TableVehicleVehicleType).Col("vehicle_type_id"))),
 		).
-		Join(schema.ItemTable, goqu.On(goqu.T(schema.TableVehicleVehicleType).Col("vehicle_id").Eq(schema.ItemTableColID))).
-		Join(itemParentCacheTable, goqu.On(schema.ItemTableColID.Eq(itemParentCacheTable.Col("item_id")))).
+		Join(schema.ItemTable, goqu.On(goqu.T(schema.TableVehicleVehicleType).Col("vehicle_id").Eq(schema.ItemTableIDCol))).
+		Join(itemParentCacheTable, goqu.On(schema.ItemTableIDCol.Eq(itemParentCacheTable.Col("item_id")))).
 		Where(
 			itemParentCacheTable.Col("parent_id").Eq(brandID),
 			goqu.L("("+schema.ItemTableName+".begin_year or "+schema.ItemTableName+".begin_model_year)"),

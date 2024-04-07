@@ -1596,11 +1596,11 @@ func (s *Repository) ItemsWithPicturesCount(
 	const countAlias = "c"
 
 	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(
-		s.db.Select(schema.ItemTableColID, goqu.COUNT(pictureIDCol).As(countAlias)).
+		s.db.Select(schema.ItemTableIDCol, goqu.COUNT(pictureIDCol).As(countAlias)).
 			From(schema.ItemTable).
-			Join(pictureItemTable, goqu.On(schema.ItemTableColID.Eq(pictureItemTable.Col("item_id")))).
+			Join(pictureItemTable, goqu.On(schema.ItemTableIDCol.Eq(pictureItemTable.Col("item_id")))).
 			Join(pictureTable, goqu.On(pictureItemTable.Col("picture_id").Eq(pictureIDCol))).
-			GroupBy(schema.ItemTableColID).
+			GroupBy(schema.ItemTableIDCol).
 			Having(goqu.C(countAlias).Gte(nPictures)).
 			As("T1"),
 	)

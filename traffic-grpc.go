@@ -259,9 +259,11 @@ func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*users.DBUse
 	var r users.DBUser
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id, name, deleted, identity, last_online, role, specs_weight
+		SELECT `+schema.UserTableIDColName+`, `+schema.UserTableNameColName+`, `+schema.UserTableDeletedColName+`, `+
+		schema.UserTableIdentityColName+`, `+schema.UserTableLastOnlineColName+`, `+schema.UserTableRoleColName+`, `+
+		schema.UserTableSpecsWeightColName+`
 		FROM `+schema.UserTableName+`
-		WHERE id = ?
+		WHERE `+schema.UserTableIDColName+` = ?
 	`, id).Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound

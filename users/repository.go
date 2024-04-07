@@ -141,7 +141,7 @@ func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int
 	var userID int64
 
 	success, err := s.autowpDB.From(schema.UserTable).
-		Where(schema.UserTableColIdentity.Eq(identity)).
+		Where(schema.UserTableIdentityCol.Eq(identity)).
 		ScanValContext(ctx, &userID)
 	if err != nil {
 		return 0, err
@@ -165,37 +165,35 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 		&r.SpecsWeight, &r.Img, &r.EMail,
 	}
 
-	table := schema.UserTable
-
 	columns := []interface{}{
-		schema.UserTableColID, table.Col("name"), table.Col("deleted"), table.Col("identity"), table.Col("last_online"),
-		schema.UserTableColRole, table.Col("specs_weight"), table.Col("img"), table.Col("e_mail"),
+		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
+		schema.UserTableLastOnlineCol,
+		schema.UserTableRoleCol, schema.UserTableSpecsWeightCol, schema.UserTableImgCol, schema.UserTableEMailCol,
 	}
 
-	sqSelect := s.autowpDB.From(table)
+	sqSelect := s.autowpDB.From(schema.UserTable)
 
 	if options.ID != 0 {
-		sqSelect = sqSelect.Where(schema.UserTableColID.Eq(options.ID))
+		sqSelect = sqSelect.Where(schema.UserTableIDCol.Eq(options.ID))
 	}
 
 	if options.InContacts != 0 {
 		sqSelect = sqSelect.Join(
 			goqu.T(schema.TableContact),
-			goqu.On(goqu.Ex{schema.UserTableName + ".id": goqu.T(schema.TableContact).Col("contact_user_id")}),
-		).
+			goqu.On(schema.UserTableIDCol.Eq(goqu.T(schema.TableContact).Col("contact_user_id")))).
 			Where(goqu.Ex{schema.TableContact + ".user_id": options.InContacts})
 	}
 
 	if options.Deleted != nil {
 		if *options.Deleted {
-			sqSelect = sqSelect.Where(table.Col("deleted"))
+			sqSelect = sqSelect.Where(schema.UserTableDeletedCol.IsTrue())
 		} else {
-			sqSelect = sqSelect.Where(goqu.L("not " + schema.UserTableName + ".deleted"))
+			sqSelect = sqSelect.Where(schema.UserTableDeletedCol.IsFalse())
 		}
 	}
 
 	if options.IsOnline {
-		sqSelect = sqSelect.Where(table.Col("last_online").Gte(goqu.L("DATE_SUB(NOW(), INTERVAL 5 MINUTE)")))
+		sqSelect = sqSelect.Where(schema.UserTableLastOnlineCol.Gte(goqu.L("DATE_SUB(NOW(), INTERVAL 5 MINUTE)")))
 	}
 
 	if len(options.Order) > 0 {
@@ -253,9 +251,9 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error) {
 	var votesLeft int
 
-	success, err := s.autowpDB.Select(schema.UserTableColVotesLeft).
+	success, err := s.autowpDB.Select(schema.UserTableVotesLeftCol).
 		From(schema.UserTable).
-		Where(schema.UserTableColID.Eq(userID)).
+		Where(schema.UserTableIDCol.Eq(userID)).
 		ScanValContext(ctx, &votesLeft)
 	if err != nil {
 		return 0, err
@@ -271,7 +269,7 @@ func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error
 func (s *Repository) DecVotes(ctx context.Context, userID int64) error {
 	_, err := s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		schema.UserTableVotesLeftColName: goqu.L(schema.UserTableVotesLeftColName + " - 1"),
-	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
+	}).Where(schema.UserTableIDCol.Eq(userID)).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -288,8 +286,8 @@ func (s *Repository) AfterUserCreated(ctx context.Context, userID int64) error {
 	}
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		schema.UserTableVotesLeftColName: schema.UserTableColVotesPerDay,
-	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
+		schema.UserTableVotesLeftColName: schema.UserTableVotesPerDayCol,
+	}).Where(schema.UserTableIDCol.Eq(userID)).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -297,9 +295,10 @@ func (s *Repository) AfterUserCreated(ctx context.Context, userID int64) error {
 func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) error {
 	var age int
 
-	success, err := s.autowpDB.Select(goqu.L("TIMESTAMPDIFF(YEAR, reg_date, NOW())")).From(schema.UserTable).Where(
-		schema.UserTableColID.Eq(userID),
-	).ScanValContext(ctx, &age)
+	success, err := s.autowpDB.Select(goqu.L("TIMESTAMPDIFF(YEAR, "+schema.UserTableRegDateColName+", NOW())")).
+		From(schema.UserTable).
+		Where(schema.UserTableIDCol.Eq(userID)).
+		ScanValContext(ctx, &age)
 	if err != nil {
 		return err
 	}
@@ -336,7 +335,7 @@ func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) erro
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		schema.UserTableVotesPerDayColName: value,
-	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
+	}).Where(schema.UserTableIDCol.Eq(userID)).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -358,7 +357,7 @@ func (s *Repository) UserAvgVote(ctx context.Context, userID int64) (float64, er
 func (s *Repository) RefreshUserConflicts(ctx context.Context, userID int64) error {
 	_, err := s.autowpDB.ExecContext(ctx, `
 		UPDATE `+schema.UserTableName+` 
-		SET `+schema.UserTableName+`.specs_weight = (1.5 * ((1 + IFNULL((
+		SET `+schema.UserTableName+`.`+schema.UserTableSpecsWeightColName+` = (1.5 * ((1 + IFNULL((
 		    SELECT sum(weight) FROM `+schema.AttrsUserValuesTableName+` 
 			WHERE user_id = `+schema.UserTableName+`.id AND weight > 0
 		), 0)) / (1 + IFNULL((
@@ -414,25 +413,25 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 	r, err := s.autowpDB.Insert(schema.UserTable).
 		Rows(goqu.Record{
-			"login":                     nil,
-			"e_mail":                    emailAddr,
-			"password":                  nil,
-			"email_to_check":            nil,
-			"hide_e_mail":               1,
-			"email_check_code":          nil,
-			"name":                      name,
-			"reg_date":                  goqu.Func("NOW"),
-			"last_online":               goqu.Func("NOW"),
-			"timezone":                  language.Timezone,
-			"last_ip":                   goqu.Func("INET6_ATON", remoteAddr),
-			"language":                  locale,
-			schema.UserTableRoleColName: role,
-			schema.UserTableUUIDColName: goqu.Func("UUID_TO_BIN", guid),
+			schema.UserTableLoginColName:          nil,
+			schema.UserTableEmailColName:          emailAddr,
+			schema.UserTablePasswordColName:       nil,
+			schema.UserTableEmailToCheckColName:   nil,
+			schema.UserTableHideEmailColName:      1,
+			schema.UserTableEmailCheckCodeColName: nil,
+			schema.UserTableNameColName:           name,
+			schema.UserTableRegDateColName:        goqu.Func("NOW"),
+			schema.UserTableLastOnlineColName:     goqu.Func("NOW"),
+			schema.UserTableTimezoneColName:       language.Timezone,
+			schema.UserTableLastIPColName:         goqu.Func("INET6_ATON", remoteAddr),
+			schema.UserTableLanguageColName:       locale,
+			schema.UserTableRoleColName:           role,
+			schema.UserTableUUIDColName:           goqu.Func("UUID_TO_BIN", guid),
 		}).
 		OnConflict(goqu.DoUpdate(schema.UserTableUUIDColName, goqu.Record{
-			"e_mail":  goqu.L("values(e_mail)"),
-			"name":    goqu.L("values(name)"),
-			"last_ip": goqu.L("values(last_ip)"),
+			schema.UserTableEmailColName:  goqu.Func("values", goqu.I(schema.UserTableEmailColName)),
+			schema.UserTableNameColName:   goqu.Func("values", goqu.I(schema.UserTableNameColName)),
+			schema.UserTableLastIPColName: goqu.Func("values", goqu.I(schema.UserTableLastIPColName)),
 		})).
 		Executor().Exec()
 	if err != nil {
@@ -461,9 +460,9 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		Role string `db:"role"`
 	}{}
 
-	success, err := s.autowpDB.Select(schema.UserTableColID, schema.UserTableColRole).
+	success, err := s.autowpDB.Select(schema.UserTableIDCol, schema.UserTableRoleCol).
 		From(schema.UserTable).
-		Where(schema.UserTableColUUID.Eq(goqu.Func("UUID_TO_BIN", guid))).
+		Where(schema.UserTableUUIDCol.Eq(goqu.Func("UUID_TO_BIN", guid))).
 		ScanStructContext(ctx, &row)
 	if err != nil {
 		return 0, "", err
@@ -492,8 +491,10 @@ func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID in
 		QueryRowContext(
 			ctx,
 			`
-				SELECT deleted, e_mail, email_to_check, login, name, IFNULL(BIN_TO_UUID(uuid), '')
-				FROM `+schema.UserTableName+` WHERE id = ?
+				SELECT `+schema.UserTableDeletedColName+`, `+schema.UserTableEmailColName+`, `+
+				schema.UserTableEmailToCheckColName+`, `+schema.UserTableLoginColName+`, `+
+				schema.UserTableNameColName+`, IFNULL(BIN_TO_UUID(`+schema.UserTableUUIDColName+`), '')
+				FROM `+schema.UserTableName+` WHERE `+schema.UserTableIDColName+` = ?
 			`,
 			userID,
 		).Scan(&deleted, &userEmail, &emailToCheck, &login, &name, &userGUID)
@@ -559,7 +560,7 @@ func (s *Repository) PasswordMatch(ctx context.Context, userID int64, password s
 	var exists bool
 	err := s.autowpDB.QueryRowContext(ctx, `
 		SELECT 1 FROM `+schema.UserTableName+` 
-		WHERE password = MD5(CONCAT(?, ?)) AND id = ? AND NOT deleted
+		WHERE `+schema.UserTablePasswordColName+` = MD5(CONCAT(?, ?)) AND id = ? AND NOT `+schema.UserTableDeletedColName+`
 	`, s.usersSalt, password, userID).Scan(&exists)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -618,7 +619,7 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 		"deleted": 1,
-	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
+	}).Where(schema.UserTableIDCol.Eq(userID)).Executor().ExecContext(ctx)
 	// 'img'     => null,
 	if err != nil {
 		return false, err
@@ -654,10 +655,10 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 
 func (s *Repository) RestoreVotes(ctx context.Context) error {
 	_, err := s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		schema.UserTableVotesLeftColName: schema.UserTableColVotesPerDay,
+		schema.UserTableVotesLeftColName: schema.UserTableVotesPerDayCol,
 	}).Where(
-		schema.UserTableColVotesLeft.Lt(schema.UserTableColVotesPerDay),
-		goqu.L("not deleted"),
+		schema.UserTableVotesLeftCol.Lt(schema.UserTableVotesPerDayCol),
+		schema.UserTableDeletedCol.IsFalse(),
 	).Executor().ExecContext(ctx)
 
 	return err
@@ -666,7 +667,9 @@ func (s *Repository) RestoreVotes(ctx context.Context) error {
 func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
 	rows, err := s.autowpDB.QueryContext(
 		ctx,
-		"SELECT id FROM "+schema.UserTableName+" WHERE NOT deleted AND last_online > DATE_SUB(NOW(), INTERVAL 3 MONTH)",
+		"SELECT "+schema.UserTableIDColName+" FROM "+schema.UserTableName+
+			" WHERE NOT "+schema.UserTableDeletedColName+" AND "+
+			schema.UserTableLastOnlineColName+" > DATE_SUB(NOW(), INTERVAL 3 MONTH)",
 	)
 	if err != nil {
 		return 0, err
@@ -705,14 +708,14 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 		Count  int64 `db:"count"`
 	}
 
-	err := s.autowpDB.Select(schema.UserTableColID, goqu.COUNT(schema.AttrsUserValuesTableColUserID).As("count")).
+	err := s.autowpDB.Select(schema.UserTableIDCol, goqu.COUNT(schema.AttrsUserValuesTableUserIDCol).As("count")).
 		From(schema.UserTable).
-		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.AttrsUserValuesTableColUserID.Eq(schema.UserTableColID))).
+		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.AttrsUserValuesTableUserIDCol.Eq(schema.UserTableIDCol))).
 		Where(
-			schema.UserTableColSpecsVolumeValid.IsFalse(),
-			schema.UserTableColDeleted.IsFalse(),
+			schema.UserTableSpecsVolumeValidCol.IsFalse(),
+			schema.UserTableDeletedCol.IsFalse(),
 		).
-		GroupBy(schema.UserTableColID).
+		GroupBy(schema.UserTableIDCol).
 		ScanStructsContext(ctx, &sts)
 	if err != nil {
 		return err
@@ -722,7 +725,7 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 		_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
 			schema.UserTableSpecsVolumeColName:      st.Count,
 			schema.UserTableSpecsVolumeValidColName: 1,
-		}).Where(schema.UserTableColID.Eq(st.UserID)).Executor().ExecContext(ctx)
+		}).Where(schema.UserTableIDCol.Eq(st.UserID)).Executor().ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -733,10 +736,11 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 
 func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {
 	rows, err := s.autowpDB.QueryContext(ctx, `
-		SELECT id 
+		SELECT `+schema.UserTableIDColName+` 
 		FROM `+schema.UserTableName+` 
-		WHERE LENGTH(login) > 0 OR LENGTH(e_mail) > 0 OR LENGTH(email_to_check) > 0 
-		ORDER BY id DESC
+		WHERE LENGTH(`+schema.UserTableLoginColName+`) > 0 OR LENGTH(`+schema.UserTableEmailColName+`) > 0 OR LENGTH(`+
+		schema.UserTableEmailToCheckColName+`) > 0 
+		ORDER BY `+schema.UserTableIDColName+` DESC
 	`)
 	if err != nil {
 		return err
@@ -825,38 +829,47 @@ func (s *Repository) SetupPrivateRouter(_ context.Context, r *gin.Engine) {
 	})
 }
 
+func (s *Repository) incForumTopicsRecord() goqu.Record {
+	r := s.incForumMessagesRecord()
+	r[schema.UserTableForumsTopicsColName] = goqu.L(schema.UserTableForumsTopicsColName + " + 1")
+
+	return r
+}
+
 func (s *Repository) IncForumTopics(ctx context.Context, userID int64) error {
-	_, err := s.autowpDB.ExecContext(
-		ctx,
-		`
-			UPDATE `+schema.UserTableName+` 
-			SET forums_topics = forums_topics + 1, 
-			    forums_messages = forums_messages + 1, 
-			    last_message_time = NOW() 
-			WHERE id = ?
-		`,
-		userID,
-	)
+	_, err := s.autowpDB.Update(schema.UserTable).
+		Set(s.incForumTopicsRecord()).
+		Where(schema.UserTableIDCol.Eq(userID)).
+		Executor().ExecContext(ctx)
 
 	return err
+}
+
+func (s *Repository) incForumMessagesRecord() goqu.Record {
+	r := s.touchLastMessageRecord()
+	r[schema.UserTableForumsMessagesColName] = goqu.L(schema.UserTableForumsMessagesColName + " + 1")
+
+	return r
 }
 
 func (s *Repository) IncForumMessages(ctx context.Context, userID int64) error {
-	_, err := s.autowpDB.ExecContext(
-		ctx,
-		"UPDATE "+schema.UserTableName+" SET forums_messages = forums_messages + 1, last_message_time = NOW() WHERE id = ?",
-		userID,
-	)
+	_, err := s.autowpDB.Update(schema.UserTable).
+		Set(s.incForumMessagesRecord()).
+		Where(schema.UserTableIDCol.Eq(userID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }
 
+func (s *Repository) touchLastMessageRecord() goqu.Record {
+	return goqu.Record{schema.UserTableLastMessageTimeColName: goqu.Func("NOW")}
+}
+
 func (s *Repository) TouchLastMessage(ctx context.Context, userID int64) error {
-	_, err := s.autowpDB.ExecContext(
-		ctx,
-		"UPDATE "+schema.UserTableName+" SET last_message_time = NOW() WHERE id = ?",
-		userID,
-	)
+	_, err := s.autowpDB.Update(schema.UserTable).
+		Set(s.touchLastMessageRecord()).
+		Where(schema.UserTableIDCol.Eq(userID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }
@@ -894,9 +907,11 @@ func (s *Repository) NextMessageTime(ctx context.Context, userID int64) (time.Ti
 		MessagingInterval int64        `db:"messaging_interval"`
 	}{}
 
-	success, err := s.autowpDB.Select("last_message_time", "reg_date", "messaging_interval").
+	success, err := s.autowpDB.Select(
+		schema.UserTableLastMessageTimeCol, schema.UserTableRegDateCol, schema.UserTableMessagingIntervalCol,
+	).
 		From(schema.UserTable).
-		Where(schema.UserTableColID.Eq(userID)).
+		Where(schema.UserTableIDCol.Eq(userID)).
 		ScanStructContext(ctx, &st)
 	if err != nil {
 		return time.Time{}, err
@@ -926,7 +941,8 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 
 	err := s.autowpDB.QueryRowContext(
 		ctx,
-		"SELECT last_online, last_ip FROM "+schema.UserTableName+" WHERE id = ?",
+		"SELECT "+schema.UserTableLastOnlineColName+", "+schema.UserTableLastIPColName+
+			" FROM "+schema.UserTableName+" WHERE id = ?",
 		userID,
 	).
 		Scan(&lastOnline, &lastIP)
@@ -942,7 +958,7 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 	set := goqu.Record{}
 
 	if !lastOnline.Valid || lastOnline.Time.Add(lastOnlineUpdateThreshold).Before(time.Now()) {
-		set["last_online"] = goqu.Func("NOW")
+		set[schema.UserTableLastOnlineColName] = goqu.Func("NOW")
 	}
 
 	remoteAddr := "127.0.0.1"
@@ -963,11 +979,11 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 	ip := net.ParseIP(remoteAddr)
 
 	if ip != nil && (lastIP == nil || !lastIP.Equal(ip)) {
-		set["last_ip"] = goqu.Func("INET6_ATON", remoteAddr)
+		set[schema.UserTableLastIPColName] = goqu.Func("INET6_ATON", remoteAddr)
 	}
 
 	if len(set) > 0 {
-		_, err = s.autowpDB.Update(schema.UserTable).Set(set).Where(schema.UserTableColID.Eq(userID)).
+		_, err = s.autowpDB.Update(schema.UserTable).Set(set).Where(schema.UserTableIDCol.Eq(userID)).
 			Executor().ExecContext(ctx)
 		if err != nil {
 			return err

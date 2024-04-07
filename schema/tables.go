@@ -3,7 +3,7 @@ package schema
 import "github.com/doug-martin/goqu/v9"
 
 const (
-	TableArticles         = "articles"
+	ArticlesTableName     = "articles"
 	TableAttrsAttributes  = "attrs_attributes"
 	TableAttrsListOptions = "attrs_list_options"
 	TableAttrsTypes       = "attrs_types"
@@ -34,7 +34,7 @@ const (
 	ForumsThemesTableName               = "forums_themes"
 	ForumsThemeParentTableName          = "forums_theme_parent"
 	ForumsTopicsTableName               = "forums_topics"
-	TableHtmls                          = "htmls"
+	HtmlsTableName                      = "htmls"
 	TableImage                          = "image"
 	ItemTableName                       = "item"
 	TableItemParentCache                = "item_parent_cache"
@@ -54,15 +54,33 @@ const (
 	TableSpec                           = "spec"
 	TableTextstorageText                = "textstorage_text"
 
-	UserTableName                    = "users"
-	UserTableSpecsVolumeColName      = "specs_volume"
-	UserTableSpecsVolumeValidColName = "specs_volume_valid"
-	UserTableVotesLeftColName        = "votes_left"
-	UserTableVotesPerDayColName      = "votes_per_day"
-	UserTableLanguageColName         = "language"
-	UserTableRoleColName             = "role"
-	UserTableDeletedColName          = "deleted"
-	UserTableUUIDColName             = "uuid"
+	UserTableName                     = "users"
+	UserTableIDColName                = "id"
+	UserTableSpecsVolumeColName       = "specs_volume"
+	UserTableSpecsVolumeValidColName  = "specs_volume_valid"
+	UserTableVotesLeftColName         = "votes_left"
+	UserTableVotesPerDayColName       = "votes_per_day"
+	UserTableLanguageColName          = "language"
+	UserTableRoleColName              = "role"
+	UserTableDeletedColName           = "deleted"
+	UserTableUUIDColName              = "uuid"
+	UserTableEmailColName             = "e_mail"
+	UserTableEmailToCheckColName      = "email_to_check"
+	UserTableHideEmailColName         = "hide_e_mail"
+	UserTablePasswordColName          = "password"
+	UserTableEmailCheckCodeColName    = "email_check_code"
+	UserTableLastOnlineColName        = "last_online"
+	UserTableTimezoneColName          = "timezone"
+	UserTableLastIPColName            = "last_ip"
+	UserTableRegDateColName           = "reg_date"
+	UserTableLastMessageTimeColName   = "last_message_time"
+	UserTableMessagingIntervalColName = "messaging_interval"
+	UserTableIdentityColName          = "identity"
+	UserTableNameColName              = "name"
+	UserTableSpecsWeightColName       = "specs_weight"
+	UserTableLoginColName             = "login"
+	UserTableForumsMessagesColName    = "forums_messages"
+	UserTableForumsTopicsColName      = "forums_topics"
 
 	TableUserUserPreferences = "user_user_preferences"
 	TableVehicleVehicleType  = "vehicle_vehicle_type"
@@ -70,74 +88,97 @@ const (
 )
 
 var (
+	ArticlesTable                   = goqu.T(ArticlesTableName)
+	ArticlesTableIDCol              = ArticlesTable.Col("id")
+	ArticlesTableNameCol            = ArticlesTable.Col("name")
+	ArticlesTableCatnameCol         = ArticlesTable.Col("catname")
+	ArticlesTableAuthorIDCol        = ArticlesTable.Col("author_id")
+	ArticlesTableEnabledCol         = ArticlesTable.Col("enabled")
+	ArticlesTableAddDateCol         = ArticlesTable.Col("add_date")
+	ArticlesTablePreviewFilenameCol = ArticlesTable.Col("preview_filename")
+	ArticlesTableDescriptionCol     = ArticlesTable.Col("description")
+	ArticlesTableHTMLIDCol          = ArticlesTable.Col("html_id")
+
 	AttrsUserValuesTable          = goqu.T(AttrsUserValuesTableName)
-	AttrsUserValuesTableColUserID = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
+	AttrsUserValuesTableUserIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
 
 	CommentMessageTable                      = goqu.T(CommentMessageTableName)
-	CommentMessageTableColID                 = CommentMessageTable.Col("id")
-	CommentMessageTableColTypeID             = CommentMessageTable.Col("type_id")
-	CommentMessageTableColItemID             = CommentMessageTable.Col("item_id")
-	CommentMessageTableColAuthorID           = CommentMessageTable.Col("author_id")
-	CommentMessageTableColDatetime           = CommentMessageTable.Col("datetime")
-	CommentMessageTableColVote               = CommentMessageTable.Col("vote")
-	CommentMessageTableColParentID           = CommentMessageTable.Col("parent_id")
-	CommentMessageTableColMessage            = CommentMessageTable.Col("message")
-	CommentMessageTableColIP                 = CommentMessageTable.Col("ip")
-	CommentMessageTableColDeleted            = CommentMessageTable.Col(CommentMessageTableDeletedColName)
-	CommentMessageTableColModeratorAttention = CommentMessageTable.Col(CommentMessageTableModeratorAttentionColName)
+	CommentMessageTableIDCol                 = CommentMessageTable.Col("id")
+	CommentMessageTableTypeIDCol             = CommentMessageTable.Col("type_id")
+	CommentMessageTableItemIDCol             = CommentMessageTable.Col("item_id")
+	CommentMessageTableAuthorIDCol           = CommentMessageTable.Col("author_id")
+	CommentMessageTableDatetimeCol           = CommentMessageTable.Col("datetime")
+	CommentMessageTableVoteCol               = CommentMessageTable.Col("vote")
+	CommentMessageTableParentIDCol           = CommentMessageTable.Col("parent_id")
+	CommentMessageTableMessageCol            = CommentMessageTable.Col("message")
+	CommentMessageTableIPCol                 = CommentMessageTable.Col("ip")
+	CommentMessageTableDeletedCol            = CommentMessageTable.Col(CommentMessageTableDeletedColName)
+	CommentMessageTableModeratorAttentionCol = CommentMessageTable.Col(CommentMessageTableModeratorAttentionColName)
 
 	CommentTopicTable              = goqu.T(CommentTopicTableName)
-	CommentTopicTableColItemID     = CommentTopicTable.Col("item_id")
-	CommentTopicTableColTypeID     = CommentTopicTable.Col("type_id")
-	CommentTopicTableColLastUpdate = CommentTopicTable.Col("last_update")
+	CommentTopicTableItemIDCol     = CommentTopicTable.Col("item_id")
+	CommentTopicTableTypeIDCol     = CommentTopicTable.Col("type_id")
+	CommentTopicTableLastUpdateCol = CommentTopicTable.Col("last_update")
 
 	CommentTopicViewTable             = goqu.T(CommentTopicViewTableName)
-	CommentTopicViewTableColUserID    = CommentTopicViewTable.Col("user_id")
-	CommentTopicViewTableColTypeID    = CommentTopicViewTable.Col("type_id")
-	CommentTopicViewTableColItemID    = CommentTopicViewTable.Col("item_id")
-	CommentTopicViewTableColTimestamp = CommentTopicViewTable.Col("timestamp")
+	CommentTopicViewTableUserIDCol    = CommentTopicViewTable.Col("user_id")
+	CommentTopicViewTableTypeIDCol    = CommentTopicViewTable.Col("type_id")
+	CommentTopicViewTableItemIDCol    = CommentTopicViewTable.Col("item_id")
+	CommentTopicViewTableTimestampCol = CommentTopicViewTable.Col("timestamp")
 
 	CommentTopicSubscribeTable          = goqu.T(CommentTopicSubscribeTableName)
-	CommentTopicSubscribeTableColItemID = CommentTopicSubscribeTable.Col("item_id")
-	CommentTopicSubscribeTableColTypeID = CommentTopicSubscribeTable.Col("type_id")
-	CommentTopicSubscribeTableColUserID = CommentTopicSubscribeTable.Col("user_id")
+	CommentTopicSubscribeTableItemIDCol = CommentTopicSubscribeTable.Col("item_id")
+	CommentTopicSubscribeTableTypeIDCol = CommentTopicSubscribeTable.Col("type_id")
+	CommentTopicSubscribeTableUserIDCol = CommentTopicSubscribeTable.Col("user_id")
 
 	CommentVoteTable = goqu.T(CommentVoteTableName)
 
 	DfHashTable = goqu.T(DfHashTableName)
 
 	ForumsThemesTable      = goqu.T(ForumsThemesTableName)
-	ForumsThemesTableColID = ForumsThemesTable.Col("id")
+	ForumsThemesTableIDCol = ForumsThemesTable.Col("id")
 
 	ForumsThemeParentTable                = goqu.T(ForumsThemeParentTableName)
-	ForumsThemeParentTableColParentID     = ForumsThemeParentTable.Col("parent_id")
-	ForumsThemeParentTableColForumThemeID = ForumsThemeParentTable.Col("forum_theme_id")
+	ForumsThemeParentTableParentIDCol     = ForumsThemeParentTable.Col("parent_id")
+	ForumsThemeParentTableForumThemeIDCol = ForumsThemeParentTable.Col("forum_theme_id")
 
 	ForumsTopicsTable               = goqu.T(ForumsTopicsTableName)
-	ForumsTopicsTableColID          = ForumsTopicsTable.Col("id")
-	ForumsTopicsTableColStatus      = ForumsTopicsTable.Col("status")
-	ForumsTopicsTableColThemeID     = ForumsTopicsTable.Col("theme_id")
-	ForumsTopicsTableColName        = ForumsTopicsTable.Col("name")
-	ForumsTopicsTableColAddDatetime = ForumsTopicsTable.Col("add_datetime")
-	ForumsTopicsTableColAuthorID    = ForumsTopicsTable.Col("author_id")
+	ForumsTopicsTableIDCol          = ForumsTopicsTable.Col("id")
+	ForumsTopicsTableStatusCol      = ForumsTopicsTable.Col("status")
+	ForumsTopicsTableThemeIDCol     = ForumsTopicsTable.Col("theme_id")
+	ForumsTopicsTableNameCol        = ForumsTopicsTable.Col("name")
+	ForumsTopicsTableAddDatetimeCol = ForumsTopicsTable.Col("add_datetime")
+	ForumsTopicsTableAuthorIDCol    = ForumsTopicsTable.Col("author_id")
 
 	ItemTable      = goqu.T(ItemTableName)
-	ItemTableColID = ItemTable.Col("id")
+	ItemTableIDCol = ItemTable.Col("id")
 
-	UserTable                    = goqu.T(UserTableName)
-	UserTableColID               = UserTable.Col("id")
-	UserTableColRole             = UserTable.Col(UserTableRoleColName)
-	UserTableColDeleted          = UserTable.Col(UserTableDeletedColName)
-	UserTableColName             = UserTable.Col("name")
-	UserTableColIdentity         = UserTable.Col("identity")
-	UserTableColLanguage         = UserTable.Col(UserTableLanguageColName)
-	UserTableColPicturesTotal    = UserTable.Col("pictures_total")
-	UserTableColSpecsVolume      = UserTable.Col(UserTableSpecsVolumeColName)
-	UserTableColSpecsVolumeValid = UserTable.Col(UserTableSpecsVolumeValidColName)
-	UserTableColVotesLeft        = UserTable.Col(UserTableVotesLeftColName)
-	UserTableColVotesPerDay      = UserTable.Col(UserTableVotesPerDayColName)
-	UserTableColUUID             = UserTable.Col(UserTableUUIDColName)
+	HtmlsTable        = goqu.T(HtmlsTableName)
+	HtmlsTableIDCol   = HtmlsTable.Col("id")
+	HtmlsTableHTMLCol = HtmlsTable.Col("html")
+
+	UserTable                     = goqu.T(UserTableName)
+	UserTableIDCol                = UserTable.Col(UserTableIDColName)
+	UserTableRoleCol              = UserTable.Col(UserTableRoleColName)
+	UserTableDeletedCol           = UserTable.Col(UserTableDeletedColName)
+	UserTableNameCol              = UserTable.Col(UserTableNameColName)
+	UserTableIdentityCol          = UserTable.Col(UserTableIdentityColName)
+	UserTableLanguageCol          = UserTable.Col(UserTableLanguageColName)
+	UserTablePicturesTotalCol     = UserTable.Col("pictures_total")
+	UserTableSpecsVolumeCol       = UserTable.Col(UserTableSpecsVolumeColName)
+	UserTableSpecsVolumeValidCol  = UserTable.Col(UserTableSpecsVolumeValidColName)
+	UserTableVotesLeftCol         = UserTable.Col(UserTableVotesLeftColName)
+	UserTableVotesPerDayCol       = UserTable.Col(UserTableVotesPerDayColName)
+	UserTableUUIDCol              = UserTable.Col(UserTableUUIDColName)
+	UserTableLastOnlineCol        = UserTable.Col(UserTableLastOnlineColName)
+	UserTableSpecsWeightCol       = UserTable.Col(UserTableSpecsWeightColName)
+	UserTableImgCol               = UserTable.Col("img")
+	UserTableEMailCol             = UserTable.Col(UserTableEmailColName)
+	UserTableEMailToCheckCol      = UserTable.Col(UserTableEmailToCheckColName)
+	UserTableRegDateCol           = UserTable.Col(UserTableRegDateColName)
+	UserTableLastMessageTimeCol   = UserTable.Col(UserTableLastMessageTimeColName)
+	UserTableMessagingIntervalCol = UserTable.Col(UserTableMessagingIntervalColName)
 
 	VotingTable      = goqu.T(VotingTableName)
-	VotingTableColID = VotingTable.Col("id")
+	VotingTableIDCol = VotingTable.Col("id")
 )
