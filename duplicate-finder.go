@@ -145,9 +145,9 @@ func (s *DuplicateFinder) Index(ctx context.Context, id int, url string) error {
 	}
 
 	_, err = s.db.Insert(schema.DfHashTable).Rows(goqu.Record{
-		"picture_id": id,
+		schema.DfHashTablePictureIDColName: id,
 		// can't use uint64 directly because of mysql driver issue
-		"hash": goqu.L(strconv.FormatUint(hash, 10)),
+		schema.DfHashTableHashColName: goqu.L(strconv.FormatUint(hash, 10)),
 	}).Executor().Exec()
 	if err != nil {
 		return err
@@ -177,8 +177,8 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 
 	var hash uint64
 
-	success, err := s.db.Select(schema.DfHashTable.Col("hash")).From(schema.DfHashTable).
-		Where(schema.DfHashTable.Col("picture_id").Eq(id)).
+	success, err := s.db.Select(schema.DfHashTableHashCol).From(schema.DfHashTable).
+		Where(schema.DfHashTablePictureIDCol.Eq(id)).
 		ScanValContext(ctx, &hash)
 	if err != nil {
 		return err

@@ -618,7 +618,7 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 
 	case TypeIDForums:
 		success, err = s.db.Select(goqu.L("1")).From(schema.ForumsTopicsTable).
-			Where(schema.ForumsTopicsTable.Col("id").Eq(itemID)).ScanValContext(ctx, &val)
+			Where(schema.ForumsTopicsTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
 	default:
 		return errors.New("invalid type")
@@ -1185,10 +1185,10 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		From(schema.CommentMessageTable).
 		LeftJoin(
 			schema.ForumsTopicsTable,
-			goqu.On(schema.CommentMessageTableItemIDCol.Eq(schema.ForumsTopicsTable.Col("id"))),
+			goqu.On(schema.CommentMessageTableItemIDCol.Eq(schema.ForumsTopicsTableIDCol)),
 		).
 		Where(
-			schema.ForumsTopicsTable.Col("id").IsNull(),
+			schema.ForumsTopicsTableIDCol.IsNull(),
 			schema.CommentMessageTableTypeIDCol.Eq(TypeIDForums),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {

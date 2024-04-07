@@ -29,13 +29,17 @@ const (
 	CommentVoteTableName           = "comment_vote"
 	TableContact                   = "contact"
 	TableDfDistance                = "df_distance"
-	DfHashTableName                = "df_hash"
-	TableFormattedImage            = "formated_image"
-	ForumsThemesTableName          = "forums_themes"
-	ForumsThemeParentTableName     = "forums_theme_parent"
-	ForumsTopicsTableName          = "forums_topics"
-	HtmlsTableName                 = "htmls"
-	TableImage                     = "image"
+
+	DfHashTableName             = "df_hash"
+	DfHashTableHashColName      = "hash"
+	DfHashTablePictureIDColName = "picture_id"
+
+	TableFormattedImage        = "formated_image"
+	ForumsThemesTableName      = "forums_themes"
+	ForumsThemeParentTableName = "forums_theme_parent"
+	ForumsTopicsTableName      = "forums_topics"
+	HtmlsTableName             = "htmls"
+	TableImage                 = "image"
 
 	ItemTableName                          = "item"
 	ItemTableNameColName                   = "name"
@@ -61,13 +65,18 @@ const (
 	ItemTableIsGroupColName                = "is_group"
 	ItemTableProducedExactlyColName        = "produced_exactly"
 
-	TableItemParentCache                    = "item_parent_cache"
-	TableItemLanguage                       = "item_language"
-	TableItemParent                         = "item_parent"
-	TableItemParentLanguage                 = "item_parent_language"
-	TableLogEvents                          = "log_events"
-	TableLogEventsUser                      = "log_events_user"
-	TableOfDay                              = "of_day"
+	TableItemParentCache    = "item_parent_cache"
+	TableItemLanguage       = "item_language"
+	TableItemParent         = "item_parent"
+	TableItemParentLanguage = "item_parent_language"
+	TableLogEvents          = "log_events"
+	TableLogEventsUser      = "log_events_user"
+
+	OfDayTableName           = "of_day"
+	OfDayTableItemIDColName  = "item_id"
+	OfDayTableUserIDColName  = "user_id"
+	OfDayTableDayDateColName = "day_date"
+
 	TablePersonalMessages                   = "personal_messages"
 	PerspectivesTableName                   = "perspectives"
 	PerspectivesGroupsTableName             = "perspectives_groups"
@@ -85,8 +94,11 @@ const (
 	TablePictureItem = "picture_item"
 	TableSpec        = "spec"
 
-	TextstorageTextTableName      = "textstorage_text"
-	TextstorageTextTableIDColName = "id"
+	TextstorageTextTableName               = "textstorage_text"
+	TextstorageTextTableIDColName          = "id"
+	TextstorageTextTableTextColName        = "text"
+	TextstorageTextTableLastUpdatedColName = "last_updated"
+	TextstorageTextTableRevisionColName    = "revision"
 
 	UserTableName                     = "users"
 	UserTableIDColName                = "id"
@@ -214,7 +226,9 @@ var (
 	CommentVoteTableCommentIDCol = CommentVoteTable.Col("comment_id")
 	CommentVoteTableVoteCol      = CommentVoteTable.Col("vote")
 
-	DfHashTable = goqu.T(DfHashTableName)
+	DfHashTable             = goqu.T(DfHashTableName)
+	DfHashTableHashCol      = DfHashTable.Col(DfHashTableHashColName)
+	DfHashTablePictureIDCol = DfHashTable.Col(DfHashTablePictureIDColName)
 
 	ForumsThemesTable      = goqu.T(ForumsThemesTableName)
 	ForumsThemesTableIDCol = ForumsThemesTable.Col("id")
@@ -242,6 +256,10 @@ var (
 	HtmlsTable        = goqu.T(HtmlsTableName)
 	HtmlsTableIDCol   = HtmlsTable.Col("id")
 	HtmlsTableHTMLCol = HtmlsTable.Col("html")
+
+	OfDayTable           = goqu.T(OfDayTableName)
+	OfDayTableDayDateCol = OfDayTable.Col(OfDayTableDayDateColName)
+	OfDayTableItemIDCol  = OfDayTable.Col(OfDayTableItemIDColName)
 
 	PerspectivesTable            = goqu.T(PerspectivesTableName)
 	PerspectivesTableIDCol       = PerspectivesTable.Col("id")
@@ -271,7 +289,7 @@ var (
 
 	TextstorageTextTable        = goqu.T(TextstorageTextTableName)
 	TextstorageTextTableIDCol   = TextstorageTextTable.Col(TextstorageTextTableIDColName)
-	TextstorageTextTableTextCol = TextstorageTextTable.Col("text")
+	TextstorageTextTableTextCol = TextstorageTextTable.Col(TextstorageTextTableTextColName)
 
 	UserTable                     = goqu.T(UserTableName)
 	UserTableIDCol                = UserTable.Col(UserTableIDColName)

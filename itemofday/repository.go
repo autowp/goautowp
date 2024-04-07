@@ -13,9 +13,6 @@ import (
 )
 
 const (
-	colItemID               = "item_id"
-	colUserID               = "user_id"
-	colDayDate              = "day_date"
 	defaultMinPictures      = 3
 	YoomoneyLabelDateFormat = time.DateOnly
 )
@@ -59,9 +56,9 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 	for i := 0; i < 10; i++ {
 		found := false
 
-		_, err := s.db.Select(goqu.L("1")).From(schema.TableOfDay).Where(
-			goqu.C(colDayDate).Eq(now.Format(time.DateOnly)),
-			goqu.C(colItemID).IsNotNull(),
+		_, err := s.db.Select(goqu.L("1")).From(schema.OfDayTable).Where(
+			schema.OfDayTableDayDateCol.Eq(now.Format(time.DateOnly)),
+			schema.OfDayTableItemIDCol.IsNotNull(),
 		).ScanValContext(ctx, &found)
 		if err != nil {
 			return nil, err
@@ -139,9 +136,6 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 	ipcTable := goqu.T(schema.TableItemParentCache)
 	piTable := goqu.T(schema.TablePictureItem)
 
-	table := goqu.T(schema.TableOfDay)
-	tableItemIDCol := table.Col(colItemID)
-
 	const picturesCountAlias = "p_count"
 
 	sqSelect := s.db.Select(
@@ -155,7 +149,9 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 		Where(
 			schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
 			schema.ItemTableIDCol.NotIn(
-				s.db.Select(tableItemIDCol).From(table).Where(tableItemIDCol.IsNotNull()),
+				s.db.Select(schema.OfDayTableItemIDCol).
+					From(schema.OfDayTable).
+					Where(schema.OfDayTableItemIDCol.IsNotNull()),
 			),
 		).
 		GroupBy(schema.ItemTableIDCol).
@@ -195,12 +191,10 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 		return false, nil
 	}
 
-	table := goqu.T(schema.TableOfDay)
-
 	dateStr := dateTime.Format(time.DateOnly)
-	dateExpr := goqu.C(colDayDate).Eq(dateStr)
+	dateExpr := schema.OfDayTableDayDateCol.Eq(dateStr)
 
-	sqSelect := s.db.Select(goqu.L(colItemID)).From(table).Where(dateExpr)
+	sqSelect := s.db.Select(schema.OfDayTableItemIDCol).From(schema.OfDayTable).Where(dateExpr)
 
 	var exists int64
 
@@ -219,12 +213,16 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 	}
 
 	if success {
-		_, err = s.db.Update(table).Set(
-			goqu.Record{colItemID: itemID, colUserID: userIDVal},
+		_, err = s.db.Update(schema.OfDayTable).Set(
+			goqu.Record{schema.OfDayTableItemIDColName: itemID, schema.OfDayTableUserIDColName: userIDVal},
 		).Where(dateExpr).Executor().Exec()
 	} else {
-		_, err = s.db.Insert(table).Rows(
-			goqu.Record{colItemID: itemID, colUserID: userIDVal, colDayDate: dateStr},
+		_, err = s.db.Insert(schema.OfDayTable).Rows(
+			goqu.Record{
+				schema.OfDayTableItemIDColName:  itemID,
+				schema.OfDayTableUserIDColName:  userIDVal,
+				schema.OfDayTableDayDateColName: dateStr,
+			},
 		).Executor().Exec()
 	}
 
