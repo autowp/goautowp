@@ -75,10 +75,12 @@ const (
 	PerspectivesPagesTableName              = "perspectives_pages"
 
 	PictureTableName            = "pictures"
-	PictureTableColImageIDName  = "image_id"
-	PictureTableColIdentityName = "identity"
-	PictureTableColIPName       = "ip"
-	PictureTableColOwnerIDName  = "owner_id"
+	PictureTableIDColName       = "id"
+	PictureTableImageIDColName  = "image_id"
+	PictureTableIdentityColName = "identity"
+	PictureTableIPColName       = "ip"
+	PictureTableOwnerIDColName  = "owner_id"
+	PictureTableStatusColName   = "status"
 
 	TablePictureItem     = "picture_item"
 	TableSpec            = "spec"
@@ -260,10 +262,10 @@ var (
 	PerspectivesPagesTableNameCol = PerspectivesPagesTable.Col("name")
 
 	PictureTable            = goqu.T(PictureTableName)
-	PictureTableIDCol       = PictureTable.Col("id")
-	PictureTableIdentityCol = PictureTable.Col("identity")
-	PictureTableOwnerIDCol  = PictureTable.Col("owner_id")
-	PictureTableStatusCol   = PictureTable.Col("status")
+	PictureTableIDCol       = PictureTable.Col(PictureTableIDColName)
+	PictureTableIdentityCol = PictureTable.Col(PictureTableIdentityColName)
+	PictureTableOwnerIDCol  = PictureTable.Col(PictureTableOwnerIDColName)
+	PictureTableStatusCol   = PictureTable.Col(PictureTableStatusColName)
 
 	UserTable                     = goqu.T(UserTableName)
 	UserTableIDCol                = UserTable.Col(UserTableIDColName)
