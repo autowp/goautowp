@@ -2,18 +2,60 @@ package goautowp
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
+	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+func createItemWithPoint(ctx context.Context, t *testing.T) {
+	t.Helper()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	r, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      ItemType_ITEM_TYPE_VEHICLE,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := r.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = goquDB.Insert(schema.ItemPointTable).Rows(goqu.Record{
+		schema.ItemPointTableItemIDColName: itemID,
+		schema.ItemPointTablePointColName:  goqu.Func("point", 30, 30),
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+}
+
 func TestGetPoints(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+
+	createItemWithPoint(ctx, t)
+
 	conn, err := grpc.NewClient(
 		"localhost",
 		grpc.WithContextDialer(bufDialer),
@@ -39,6 +81,9 @@ func TestGetPointsOnly(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+
+	createItemWithPoint(ctx, t)
+
 	conn, err := grpc.NewClient(
 		"localhost",
 		grpc.WithContextDialer(bufDialer),

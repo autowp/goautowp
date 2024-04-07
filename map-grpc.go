@@ -187,7 +187,8 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 
 			const decimal = 10
 
-			switch itemTypeID { //nolint:exhaustive
+			//nolint:exhaustive
+			switch itemTypeID {
 			case items.FACTORY:
 				mapPoint.Url = []string{"/factories", strconv.FormatInt(id, decimal)}
 			case items.MUSEUM:

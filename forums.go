@@ -96,7 +96,9 @@ func (s *Forums) AddTopic(
 ) (int64, error) {
 	var disableTopics bool
 
-	success, err := s.db.Select("disable_topics").From(schema.ForumsThemesTable).Where(goqu.C("id").Eq(themeID)).
+	success, err := s.db.Select(schema.ForumsThemesTableDisableTopicsCol).
+		From(schema.ForumsThemesTable).
+		Where(schema.ForumsThemesTableIDCol.Eq(themeID)).
 		ScanValContext(ctx, &disableTopics)
 	if err != nil {
 		return 0, err
@@ -110,8 +112,10 @@ func (s *Forums) AddTopic(
 		return 0, errors.New("topics in this theme is disabled")
 	}
 
-	res, err := s.db.Insert(schema.ForumsTopicsTableName).
-		Cols("theme_id", "name", "author_id", "author_ip", "add_datetime", "views", "status").
+	res, err := s.db.Insert(schema.ForumsTopicsTable).
+		Cols(schema.ForumsTopicsTableThemeIDCol, schema.ForumsTopicsTableNameCol, schema.ForumsTopicsTableAuthorIDCol,
+			schema.ForumsTopicsTableAuthorIPCol, schema.ForumsTopicsTableAddDatetimeCol,
+			schema.ForumsTopicsTableViewsCol, schema.ForumsTopicsTableStatusCol).
 		Vals(goqu.Vals{
 			themeID,
 			name,
@@ -158,8 +162,8 @@ func (s *Forums) updateThemeStat(ctx context.Context, themeID int64) error {
 		Where(schema.CommentMessageTableTypeIDCol.Eq(comments.TypeIDForums))
 
 	_, err := s.db.Update(schema.ForumsThemesTable).Set(goqu.Record{
-		"topics":   topicsSelect,
-		"messages": messagesSelect,
+		schema.ForumsThemesTableTopicsColName:   topicsSelect,
+		schema.ForumsThemesTableMessagesColName: messagesSelect,
 	}).
 		Where(schema.ForumsThemesTableIDCol.Eq(themeID)).
 		Executor().ExecContext(ctx)
@@ -168,9 +172,9 @@ func (s *Forums) updateThemeStat(ctx context.Context, themeID int64) error {
 }
 
 func (s *Forums) setStatus(ctx context.Context, id int64, status string) error {
-	_, err := s.db.Update(schema.ForumsTopicsTableName).
-		Set(goqu.Record{"status": status}).
-		Where(goqu.C("id").Eq(id)).
+	_, err := s.db.Update(schema.ForumsTopicsTable).
+		Set(goqu.Record{schema.ForumsTopicsTableStatusColName: status}).
+		Where(schema.ForumsTopicsTableIDCol.Eq(id)).
 		Executor().ExecContext(ctx)
 
 	return err
@@ -257,11 +261,15 @@ func (s *Forums) MoveTopic(ctx context.Context, id int64, themeID int64) error {
 }
 
 func (s *Forums) Theme(ctx context.Context, themeID int64, isModerator bool) (*ForumsTheme, error) {
-	sqSelect := s.db.Select("id", "name", "topics", "messages", "disable_topics", "description").
-		From(schema.ForumsThemesTable).Where(goqu.C("id").Eq(themeID))
+	sqSelect := s.db.Select(
+		schema.ForumsThemesTableIDCol, schema.ForumsThemesTableNameCol, schema.ForumsThemesTableTopicsCol,
+		schema.ForumsThemesTableMessagesCol, schema.ForumsThemesTableDisableTopicsCol,
+		schema.ForumsThemesTableDescriptionCol).
+		From(schema.ForumsThemesTable).
+		Where(schema.ForumsThemesTableIDCol.Eq(themeID))
 
 	if !isModerator {
-		sqSelect = sqSelect.Where(goqu.L("NOT is_moderator"))
+		sqSelect = sqSelect.Where(schema.ForumsThemesTableIsModeratorCol.IsFalse())
 	}
 
 	var row ForumsTheme
@@ -279,17 +287,20 @@ func (s *Forums) Theme(ctx context.Context, themeID int64, isModerator bool) (*F
 }
 
 func (s *Forums) Themes(ctx context.Context, themeID int64, isModerator bool) ([]*ForumsTheme, error) {
-	sqSelect := s.db.Select("id", "name", "topics", "messages", "disable_topics", "description").
-		From(schema.ForumsThemesTable).Order(goqu.C("position").Asc())
+	sqSelect := s.db.Select(
+		schema.ForumsThemesTableIDCol, schema.ForumsThemesTableNameCol, schema.ForumsThemesTableTopicsCol,
+		schema.ForumsThemesTableMessagesCol, schema.ForumsThemesTableDisableTopicsCol,
+		schema.ForumsThemesTableDescriptionCol).
+		From(schema.ForumsThemesTable).Order(schema.ForumsThemesTablePositionCol.Asc())
 
 	if themeID > 0 {
-		sqSelect = sqSelect.Where(goqu.C("parent_id").Eq(themeID))
+		sqSelect = sqSelect.Where(schema.ForumsThemesTableParentIDCol.Eq(themeID))
 	} else {
-		sqSelect = sqSelect.Where(goqu.C("parent_id").IsNull())
+		sqSelect = sqSelect.Where(schema.ForumsThemesTableParentIDCol.IsNull())
 	}
 
 	if !isModerator {
-		sqSelect = sqSelect.Where(goqu.L("NOT is_moderator"))
+		sqSelect = sqSelect.Where(schema.ForumsThemesTableIsModeratorCol.IsFalse())
 	}
 
 	rows := make([]*ForumsTheme, 0)
@@ -345,7 +356,7 @@ func (s *Forums) topicsSelect(isModerator bool) *goqu.SelectDataset {
 	if !isModerator {
 		sqSelect = sqSelect.
 			Join(schema.ForumsThemesTable, goqu.On(schema.ForumsTopicsTableThemeIDCol.Eq(schema.ForumsThemesTableIDCol))).
-			Where(goqu.L("NOT " + schema.ForumsThemesTableName + ".is_moderator"))
+			Where(schema.ForumsThemesTableIsModeratorCol.IsFalse())
 	}
 
 	return sqSelect
@@ -431,7 +442,7 @@ func (s *Forums) LastMessage(ctx context.Context, topicID int64, isModerator boo
 				schema.ForumsThemesTable,
 				goqu.On(schema.ForumsThemeParentTableParentIDCol.Eq(schema.ForumsThemesTableIDCol)),
 			).
-			Where(goqu.L("NOT " + schema.ForumsThemesTableName + ".is_moderator"))
+			Where(schema.ForumsThemesTableIsModeratorCol.IsFalse())
 	}
 
 	cm := CommentMessage{}

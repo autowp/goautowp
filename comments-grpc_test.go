@@ -349,6 +349,16 @@ func TestVoteComment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// vote negative
+	_, err = client.VoteComment(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsVoteCommentRequest{
+			CommentId: r.Id,
+			Vote:      -1,
+		},
+	)
+	require.NoError(t, err)
+
 	// delete comment
 	_, err = client.SetDeleted(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
@@ -517,6 +527,19 @@ func TestMoveComment(t *testing.T) {
 			Message:            "Test",
 			ModeratorAttention: false,
 			ParentId:           0,
+			Resolve:            false,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_FORUMS_TYPE_ID,
+			Message:            "Test",
+			ModeratorAttention: false,
+			ParentId:           r.Id,
 			Resolve:            false,
 		},
 	)
