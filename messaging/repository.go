@@ -59,7 +59,7 @@ func NewRepository(db *goqu.Database, telegramService *telegram.Service) *Reposi
 
 func (s *Repository) GetUserNewMessagesCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getReceivedSelect(userID).Where(goqu.C("readen").IsNotTrue()),
+		SQLSelect: s.getReceivedSelect(userID).Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
@@ -75,7 +75,7 @@ func (s *Repository) GetInboxCount(ctx context.Context, userID int64) (int32, er
 
 func (s *Repository) GetInboxNewCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getInboxSelect(userID).Where(goqu.C("readen").IsNotTrue()),
+		SQLSelect: s.getInboxSelect(userID).Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
@@ -99,7 +99,7 @@ func (s *Repository) GetSystemCount(ctx context.Context, userID int64) (int32, e
 
 func (s *Repository) GetSystemNewCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getSystemSelect(userID).Where(goqu.C("readen").IsNotTrue()),
+		SQLSelect: s.getSystemSelect(userID).Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
@@ -114,26 +114,32 @@ func (s *Repository) GetDialogCount(ctx context.Context, userID int64, withUserI
 }
 
 func (s *Repository) DeleteMessage(ctx context.Context, userID int64, messageID int64) error {
-	_, err := s.db.Update(schema.TablePersonalMessages).
-		Set(goqu.Record{"deleted_by_from": 1}).
-		Where(goqu.C("from_user_id").Eq(userID), goqu.C("id").Eq(messageID)).
+	_, err := s.db.Update(schema.PersonalMessagesTable).
+		Set(goqu.Record{schema.PersonalMessagesTableDeletedByFromColName: 1}).
+		Where(
+			schema.PersonalMessagesTableFromUserIDCol.Eq(userID),
+			schema.PersonalMessagesTableIDCol.Eq(messageID),
+		).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.db.Update(schema.TablePersonalMessages).
-		Set(goqu.Record{"deleted_by_to": 1}).
-		Where(goqu.C("to_user_id").Eq(userID), goqu.C("id").Eq(messageID)).
+	_, err = s.db.Update(schema.PersonalMessagesTable).
+		Set(goqu.Record{schema.PersonalMessagesTableDeletedByToColName: 1}).
+		Where(
+			schema.PersonalMessagesTableToUserIDCol.Eq(userID),
+			schema.PersonalMessagesTableIDCol.Eq(messageID),
+		).
 		Executor().ExecContext(ctx)
 
 	return err
 }
 
 func (s *Repository) ClearSent(ctx context.Context, userID int64) error {
-	_, err := s.db.Update(schema.TablePersonalMessages).
-		Set(goqu.Record{"deleted_by_from": 1}).
-		Where(goqu.C("from_user_id").Eq(userID)).
+	_, err := s.db.Update(schema.PersonalMessagesTable).
+		Set(goqu.Record{schema.PersonalMessagesTableDeletedByFromColName: 1}).
+		Where(schema.PersonalMessagesTableFromUserIDCol.Eq(userID)).
 		Executor().ExecContext(ctx)
 
 	return err
@@ -141,7 +147,9 @@ func (s *Repository) ClearSent(ctx context.Context, userID int64) error {
 
 func (s *Repository) ClearSystem(ctx context.Context, userID int64) error {
 	_, err := s.db.ExecContext(ctx, `
-		DELETE FROM `+schema.TablePersonalMessages+` WHERE to_user_id = ? AND from_user_id IS NULL
+		DELETE FROM `+schema.PersonalMessagesTableName+` 
+		WHERE `+schema.PersonalMessagesTableToUserIDColName+` = ? 
+			AND `+schema.PersonalMessagesTableFromUserIDColName+` IS NULL
     `, userID)
 
 	return err
@@ -161,13 +169,13 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 
 	nullableFromUserID := sql.NullInt64{Int64: fromUserID, Valid: fromUserID != 0}
 
-	_, err := s.db.Insert(schema.TablePersonalMessages).Rows(
+	_, err := s.db.Insert(schema.PersonalMessagesTable).Rows(
 		goqu.Record{
-			"from_user_id": nullableFromUserID,
-			"to_user_id":   toUserID,
-			"contents":     text,
-			"add_datetime": goqu.Func("NOW"),
-			"readen":       false,
+			schema.PersonalMessagesTableFromUserIDColName:  nullableFromUserID,
+			schema.PersonalMessagesTableToUserIDColName:    toUserID,
+			schema.PersonalMessagesTableContentsColName:    text,
+			schema.PersonalMessagesTableAddDatetimeColName: goqu.Func("NOW"),
+			schema.PersonalMessagesTableReadenColName:      false,
 		},
 	).Executor().ExecContext(ctx)
 	if err != nil {
@@ -185,11 +193,9 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 func (s *Repository) markReaden(ids []int64) error {
 	var err error
 	if len(ids) > 0 {
-		_, err = s.db.Update(schema.TablePersonalMessages).
-			Set(goqu.Record{"readen": true}).
-			Where(
-				goqu.C("id").In(ids),
-			).
+		_, err = s.db.Update(schema.PersonalMessagesTable).
+			Set(goqu.Record{schema.PersonalMessagesTableReadenColName: true}).
+			Where(schema.PersonalMessagesTableIDCol.In(ids)).
 			Executor().Exec()
 	}
 
@@ -292,48 +298,48 @@ func (s *Repository) GetDialogbox(
 }
 
 func (s *Repository) getReceivedSelect(userID int64) *goqu.SelectDataset {
-	return s.db.From(schema.TablePersonalMessages).
+	return s.db.From(schema.PersonalMessagesTable).
 		Where(
-			goqu.C("to_user_id").Eq(userID),
-			goqu.C("deleted_by_to").IsFalse(),
+			schema.PersonalMessagesTableToUserIDCol.Eq(userID),
+			schema.PersonalMessagesTableDeletedByToCol.IsFalse(),
 		).
-		Order(goqu.C("add_datetime").Desc())
+		Order(schema.PersonalMessagesTableAddDatetimeCol.Desc())
 }
 
 func (s *Repository) getSystemSelect(userID int64) *goqu.SelectDataset {
-	return s.getReceivedSelect(userID).Where(goqu.C("from_user_id").IsNull())
+	return s.getReceivedSelect(userID).Where(schema.PersonalMessagesTableFromUserIDCol.IsNull())
 }
 
 func (s *Repository) getInboxSelect(userID int64) *goqu.SelectDataset {
-	return s.getReceivedSelect(userID).Where(goqu.C("from_user_id").IsNotNull())
+	return s.getReceivedSelect(userID).Where(schema.PersonalMessagesTableFromUserIDCol.IsNotNull())
 }
 
 func (s *Repository) getSentSelect(userID int64) *goqu.SelectDataset {
-	return s.db.From(schema.TablePersonalMessages).
+	return s.db.From(schema.PersonalMessagesTable).
 		Where(
-			goqu.C("from_user_id").Eq(userID),
-			goqu.C("deleted_by_from").IsNotTrue(),
+			schema.PersonalMessagesTableFromUserIDCol.Eq(userID),
+			schema.PersonalMessagesTableDeletedByFromCol.IsNotTrue(),
 		).
-		Order(goqu.C("add_datetime").Desc())
+		Order(schema.PersonalMessagesTableAddDatetimeCol.Desc())
 }
 
 func (s *Repository) getDialogSelect(userID int64, withUserID int64) *goqu.SelectDataset {
-	return s.db.From(schema.TablePersonalMessages).
+	return s.db.From(schema.PersonalMessagesTable).
 		Where(
 			goqu.Or(
 				goqu.And(
-					goqu.C("from_user_id").Eq(userID),
-					goqu.C("to_user_id").Eq(withUserID),
-					goqu.C("deleted_by_from").IsNotTrue(),
+					schema.PersonalMessagesTableFromUserIDCol.Eq(userID),
+					schema.PersonalMessagesTableToUserIDCol.Eq(withUserID),
+					schema.PersonalMessagesTableDeletedByFromCol.IsNotTrue(),
 				),
 				goqu.And(
-					goqu.C("from_user_id").Eq(withUserID),
-					goqu.C("to_user_id").Eq(userID),
-					goqu.C("deleted_by_to").IsNotTrue(),
+					schema.PersonalMessagesTableFromUserIDCol.Eq(withUserID),
+					schema.PersonalMessagesTableToUserIDCol.Eq(userID),
+					schema.PersonalMessagesTableDeletedByToCol.IsNotTrue(),
 				),
 			),
 		).
-		Order(goqu.C("add_datetime").Desc())
+		Order(schema.PersonalMessagesTableAddDatetimeCol.Desc())
 }
 
 func (s *Repository) prepareList(

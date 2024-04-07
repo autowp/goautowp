@@ -2,7 +2,6 @@ package goautowp
 
 import (
 	"context"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -12,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestMessaging(t *testing.T) {
