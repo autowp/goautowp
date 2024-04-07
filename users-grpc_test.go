@@ -277,3 +277,23 @@ func TestGetOnlineUsers(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, r.Items)
 }
+
+func TestGetUsersPagination(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewUsersClient(conn)
+
+	_, err = client.GetUsers(ctx, &APIUsersRequest{Page: 1, Limit: 10})
+	require.NoError(t, err)
+}
