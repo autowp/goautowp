@@ -111,7 +111,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 			},
 			TypeID:     []items.ItemType{items.BRAND},
 			Limit:      items.TopBrandsCount,
-			OrderBy:    []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
+			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 			SortByName: true,
 		}
 
@@ -321,7 +321,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 			NoParents: true,
 			TypeID:    []items.ItemType{items.CATEGORY},
 			Limit:     items.TopCategoriesCount,
-			OrderBy:   []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
+			OrderBy:   []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -395,7 +395,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 			},
 			TypeID:  []items.ItemType{items.BRAND},
 			Limit:   items.TopTwinsBrandsCount,
-			OrderBy: []exp.OrderedExpression{goqu.I("items_count").Desc()},
+			OrderBy: []exp.OrderedExpression{goqu.C("items_count").Desc()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -929,11 +929,11 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 	)
 
 	if in.ItemId != 0 {
-		sqlSelect = sqlSelect.Where(goqu.I("vehicle_id").Eq(in.ItemId))
+		sqlSelect = sqlSelect.Where(goqu.C("vehicle_id").Eq(in.ItemId))
 	}
 
 	if in.VehicleTypeId != 0 {
-		sqlSelect = sqlSelect.Where(goqu.I("vehicle_type_id").Eq(in.VehicleTypeId))
+		sqlSelect = sqlSelect.Where(goqu.C("vehicle_type_id").Eq(in.VehicleTypeId))
 	}
 
 	rows, err := sqlSelect.Executor().QueryContext(ctx)
@@ -984,8 +984,8 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 
 	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From(schema.TableVehicleVehicleType).Where(
 		goqu.L("NOT inherited"),
-		goqu.I("vehicle_id").Eq(in.ItemId),
-		goqu.I("vehicle_type_id").Eq(in.VehicleTypeId),
+		goqu.C("vehicle_id").Eq(in.ItemId),
+		goqu.C("vehicle_type_id").Eq(in.VehicleTypeId),
 	)
 
 	var i APIItemVehicleType

@@ -1545,7 +1545,7 @@ func (s *Repository) MessageRowRoute(
 	case TypeIDPictures:
 		var identity string
 
-		success, err := s.db.Select("identity").From(schema.TablePicture).Where(goqu.I("id").Eq(itemID)).
+		success, err := s.db.Select("identity").From(schema.TablePicture).Where(goqu.C("id").Eq(itemID)).
 			ScanValContext(ctx, &identity)
 		if err != nil {
 			return nil, err
@@ -1585,7 +1585,7 @@ func (s *Repository) MessageRowRoute(
 	case TypeIDArticles:
 		var catname string
 
-		success, err := s.db.Select("catname").From(schema.TableArticles).Where(goqu.I("id").Eq(itemID)).
+		success, err := s.db.Select("catname").From(schema.TableArticles).Where(goqu.C("id").Eq(itemID)).
 			ScanValContext(ctx, &catname)
 		if err != nil {
 			return nil, err

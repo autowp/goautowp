@@ -60,8 +60,8 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 		found := false
 
 		_, err := s.db.Select(goqu.L("1")).From(schema.TableOfDay).Where(
-			goqu.I(colDayDate).Eq(now.Format(time.DateOnly)),
-			goqu.I(colItemID).IsNotNull(),
+			goqu.C(colDayDate).Eq(now.Format(time.DateOnly)),
+			goqu.C(colItemID).IsNotNull(),
 		).ScanValContext(ctx, &found)
 		if err != nil {
 			return nil, err
@@ -199,7 +199,7 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 	table := goqu.T(schema.TableOfDay)
 
 	dateStr := dateTime.Format(time.DateOnly)
-	dateExpr := goqu.I(colDayDate).Eq(dateStr)
+	dateExpr := goqu.C(colDayDate).Eq(dateStr)
 
 	sqSelect := s.db.Select(goqu.L(colItemID)).From(table).Where(dateExpr)
 

@@ -62,6 +62,7 @@ const (
 	UserTableLanguageColName         = "language"
 	UserTableRoleColName             = "role"
 	UserTableDeletedColName          = "deleted"
+	UserTableUUIDColName             = "uuid"
 
 	TableUserUserPreferences = "user_user_preferences"
 	TableVehicleVehicleType  = "vehicle_vehicle_type"
@@ -135,6 +136,7 @@ var (
 	UserTableColSpecsVolumeValid = UserTable.Col(UserTableSpecsVolumeValidColName)
 	UserTableColVotesLeft        = UserTable.Col(UserTableVotesLeftColName)
 	UserTableColVotesPerDay      = UserTable.Col(UserTableVotesPerDayColName)
+	UserTableColUUID             = UserTable.Col(UserTableUUIDColName)
 
 	VotingTable      = goqu.T(VotingTableName)
 	VotingTableColID = VotingTable.Col("id")

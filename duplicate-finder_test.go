@@ -91,7 +91,7 @@ func addPicture(t *testing.T, db *goqu.Database, filepath string) int {
 	res, err := db.Insert(schema.TablePicture).Rows(goqu.Record{
 		"image_id": imageID,
 		"identity": identity,
-		"ip":       goqu.L(`INET6_ATON("127.0.0.1")`),
+		"ip":       goqu.Func("INET6_ATON", "127.0.0.1"),
 		"owner_id": nil,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)

@@ -119,7 +119,7 @@ func (s *Repository) Attribute(ctx context.Context, id int64) (bool, Attribute, 
 		attrAttributesTable.Col("precision"), attrAttributesTable.Col("parent_id"),
 	).
 		From(attrAttributesTable).
-		Order(goqu.I("position").Asc()).Where(attrAttributesTable.Col("id").Eq(id))
+		Order(goqu.C("position").Asc()).Where(attrAttributesTable.Col("id").Eq(id))
 
 	r := Attribute{}
 	success, err := sqSelect.ScanStructContext(ctx, &r)
@@ -168,10 +168,10 @@ func (s *Repository) AttributeTypes(ctx context.Context) ([]AttributeType, error
 
 func (s *Repository) ListOptions(ctx context.Context, attributeID int64) ([]ListOption, error) {
 	sqSelect := s.db.Select("id", "name", "attribute_id", "parent_id").
-		From(schema.TableAttrsListOptions).Order(goqu.I("position").Asc())
+		From(schema.TableAttrsListOptions).Order(goqu.C("position").Asc())
 
 	if attributeID > 0 {
-		sqSelect = sqSelect.Where(goqu.I("attribute_id").Eq(attributeID))
+		sqSelect = sqSelect.Where(goqu.C("attribute_id").Eq(attributeID))
 	}
 
 	r := make([]ListOption, 0)

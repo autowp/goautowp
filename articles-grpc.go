@@ -40,8 +40,8 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 	paginator := util.Paginator{
 		SQLSelect: s.db.Select("id", "name", "author_id", "catname", "add_date", "preview_filename", "description").
 			From(schema.TableArticles).
-			Where(goqu.L("enabled")).
-			Order(goqu.I("add_date").Desc()),
+			Where(goqu.C("enabled")).
+			Order(goqu.C("add_date").Desc()),
 		CurrentPageNumber: int32(in.Page),
 	}
 
@@ -124,7 +124,7 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 			goqu.T(schema.TableHtmls),
 			goqu.On(goqu.Ex{schema.TableArticles + ".html_id": goqu.T(schema.TableHtmls).Col("id")}),
 		).
-		Where(goqu.L("enabled"), goqu.I("catname").Eq(in.Catname)).
+		Where(goqu.C("enabled"), goqu.C("catname").Eq(in.Catname)).
 		ScanStructContext(ctx, &article)
 	if err != nil {
 		return nil, err

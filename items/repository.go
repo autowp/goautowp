@@ -1089,7 +1089,7 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 	var item row
 
 	success, err := s.db.Select(colID, "name", "item_type_id").From(schema.ItemTable).
-		Where(goqu.I(colID).Eq(id)).ScanStructContext(ctx, item)
+		Where(goqu.C(colID).Eq(id)).ScanStructContext(ctx, item)
 	if err != nil {
 		return nil, err
 	}
@@ -1129,8 +1129,8 @@ func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehic
 func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
 	res, err := s.db.From(schema.TableVehicleVehicleType).Delete().
 		Where(
-			goqu.I("vehicle_id").Eq(itemID),
-			goqu.I("vehicle_type_id").Eq(vehicleTypeID),
+			goqu.C("vehicle_id").Eq(itemID),
+			goqu.C("vehicle_type_id").Eq(vehicleTypeID),
 			goqu.L("NOT inherited"),
 		).Executor().Exec()
 	if err != nil {
@@ -1267,7 +1267,7 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 
 func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
 	sqlSelect := s.db.From(schema.TableVehicleVehicleType).Select("vehicle_type_id").Where(
-		goqu.I("vehicle_id").Eq(itemID),
+		goqu.C("vehicle_id").Eq(itemID),
 	)
 	if inherited {
 		sqlSelect = sqlSelect.Where(goqu.L("inherited"))
@@ -1318,10 +1318,10 @@ func (s *Repository) setItemVehicleTypeRows(
 	}
 
 	sqlDelete := s.db.From(schema.TableVehicleVehicleType).Delete().
-		Where(goqu.I("vehicle_id").Eq(itemID))
+		Where(goqu.C("vehicle_id").Eq(itemID))
 
 	if len(types) > 0 {
-		sqlDelete = sqlDelete.Where(goqu.I("vehicle_type_id").NotIn(types))
+		sqlDelete = sqlDelete.Where(goqu.C("vehicle_type_id").NotIn(types))
 	}
 
 	res, err := sqlDelete.Executor().Exec()
@@ -1499,8 +1499,8 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLanguage, error) {
 	sqSelect := s.db.Select("item_id", "language", "name", "text_id", "full_text_id").
 		From(goqu.T(schema.TableItemLanguage)).Where(
-		goqu.I("item_id").Eq(itemID),
-		goqu.I("language").Neq("xx"),
+		goqu.C("item_id").Eq(itemID),
+		goqu.C("language").Neq("xx"),
 	)
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
@@ -1554,8 +1554,8 @@ func (s *Repository) ParentLanguageList(
 ) ([]ItemParentLanguage, error) {
 	sqSelect := s.db.Select("item_id", "parent_id", "language", "name").
 		From(goqu.T(schema.TableItemParentLanguage)).Where(
-		goqu.I("item_id").Eq(itemID),
-		goqu.I("parent_id").Eq(parentID),
+		goqu.C("item_id").Eq(itemID),
+		goqu.C("parent_id").Eq(parentID),
 	)
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck

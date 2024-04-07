@@ -59,7 +59,7 @@ func NewRepository(db *goqu.Database, telegramService *telegram.Service) *Reposi
 
 func (s *Repository) GetUserNewMessagesCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getReceivedSelect(userID).Where(goqu.I("readen").IsNotTrue()),
+		SQLSelect: s.getReceivedSelect(userID).Where(goqu.C("readen").IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
@@ -75,7 +75,7 @@ func (s *Repository) GetInboxCount(ctx context.Context, userID int64) (int32, er
 
 func (s *Repository) GetInboxNewCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getInboxSelect(userID).Where(goqu.I("readen").IsNotTrue()),
+		SQLSelect: s.getInboxSelect(userID).Where(goqu.C("readen").IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
@@ -99,7 +99,7 @@ func (s *Repository) GetSystemCount(ctx context.Context, userID int64) (int32, e
 
 func (s *Repository) GetSystemNewCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getSystemSelect(userID).Where(goqu.I("readen").IsNotTrue()),
+		SQLSelect: s.getSystemSelect(userID).Where(goqu.C("readen").IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
@@ -166,7 +166,7 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 			"from_user_id": nullableFromUserID,
 			"to_user_id":   toUserID,
 			"contents":     text,
-			"add_datetime": goqu.L("NOW()"),
+			"add_datetime": goqu.Func("NOW"),
 			"readen":       false,
 		},
 	).Executor().ExecContext(ctx)
@@ -188,7 +188,7 @@ func (s *Repository) markReaden(ids []int64) error {
 		_, err = s.db.Update(schema.TablePersonalMessages).
 			Set(goqu.Record{"readen": true}).
 			Where(
-				goqu.I("id").In(ids),
+				goqu.C("id").In(ids),
 			).
 			Executor().Exec()
 	}
@@ -294,27 +294,27 @@ func (s *Repository) GetDialogbox(
 func (s *Repository) getReceivedSelect(userID int64) *goqu.SelectDataset {
 	return s.db.From(schema.TablePersonalMessages).
 		Where(
-			goqu.I("to_user_id").Eq(userID),
-			goqu.I("deleted_by_to").IsFalse(),
+			goqu.C("to_user_id").Eq(userID),
+			goqu.C("deleted_by_to").IsFalse(),
 		).
-		Order(goqu.I("add_datetime").Desc())
+		Order(goqu.C("add_datetime").Desc())
 }
 
 func (s *Repository) getSystemSelect(userID int64) *goqu.SelectDataset {
-	return s.getReceivedSelect(userID).Where(goqu.I("from_user_id").IsNull())
+	return s.getReceivedSelect(userID).Where(goqu.C("from_user_id").IsNull())
 }
 
 func (s *Repository) getInboxSelect(userID int64) *goqu.SelectDataset {
-	return s.getReceivedSelect(userID).Where(goqu.I("from_user_id").IsNotNull())
+	return s.getReceivedSelect(userID).Where(goqu.C("from_user_id").IsNotNull())
 }
 
 func (s *Repository) getSentSelect(userID int64) *goqu.SelectDataset {
 	return s.db.From(schema.TablePersonalMessages).
 		Where(
-			goqu.I("from_user_id").Eq(userID),
-			goqu.I("deleted_by_from").IsNotTrue(),
+			goqu.C("from_user_id").Eq(userID),
+			goqu.C("deleted_by_from").IsNotTrue(),
 		).
-		Order(goqu.I("add_datetime").Desc())
+		Order(goqu.C("add_datetime").Desc())
 }
 
 func (s *Repository) getDialogSelect(userID int64, withUserID int64) *goqu.SelectDataset {
@@ -322,18 +322,18 @@ func (s *Repository) getDialogSelect(userID int64, withUserID int64) *goqu.Selec
 		Where(
 			goqu.Or(
 				goqu.And(
-					goqu.I("from_user_id").Eq(userID),
-					goqu.I("to_user_id").Eq(withUserID),
-					goqu.I("deleted_by_from").IsNotTrue(),
+					goqu.C("from_user_id").Eq(userID),
+					goqu.C("to_user_id").Eq(withUserID),
+					goqu.C("deleted_by_from").IsNotTrue(),
 				),
 				goqu.And(
-					goqu.I("from_user_id").Eq(withUserID),
-					goqu.I("to_user_id").Eq(userID),
-					goqu.I("deleted_by_to").IsNotTrue(),
+					goqu.C("from_user_id").Eq(withUserID),
+					goqu.C("to_user_id").Eq(userID),
+					goqu.C("deleted_by_to").IsNotTrue(),
 				),
 			),
 		).
-		Order(goqu.I("add_datetime").Desc())
+		Order(goqu.C("add_datetime").Desc())
 }
 
 func (s *Repository) prepareList(

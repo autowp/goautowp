@@ -161,13 +161,13 @@ func createRandomUser(t *testing.T, s *Repository) int64 {
 			"hide_e_mail":                   1,
 			"email_check_code":              nil,
 			"name":                          name,
-			"reg_date":                      goqu.L("NOW()"),
-			"last_online":                   goqu.L("NOW()"),
+			"reg_date":                      goqu.Func("NOW"),
+			"last_online":                   goqu.Func("NOW"),
 			"timezone":                      "Europe/Moscow",
-			"last_ip":                       goqu.L("INET6_ATON('127.0.0.1')"),
+			"last_ip":                       goqu.Func("INET6_ATON", "127.0.0.1"),
 			schema.UserTableLanguageColName: "en",
 			schema.UserTableRoleColName:     "user",
-			"uuid":                          goqu.L("UUID_TO_BIN(?)", uuid.New().String()),
+			schema.UserTableUUIDColName:     goqu.Func("UUID_TO_BIN", uuid.New().String()),
 		}).
 		Executor().Exec()
 	require.NoError(t, err)

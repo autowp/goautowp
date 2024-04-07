@@ -258,7 +258,7 @@ func (s *Forums) MoveTopic(ctx context.Context, id int64, themeID int64) error {
 
 func (s *Forums) Theme(ctx context.Context, themeID int64, isModerator bool) (*ForumsTheme, error) {
 	sqSelect := s.db.Select("id", "name", "topics", "messages", "disable_topics", "description").
-		From(schema.ForumsThemesTable).Where(goqu.I("id").Eq(themeID))
+		From(schema.ForumsThemesTable).Where(goqu.C("id").Eq(themeID))
 
 	if !isModerator {
 		sqSelect = sqSelect.Where(goqu.L("NOT is_moderator"))
@@ -280,12 +280,12 @@ func (s *Forums) Theme(ctx context.Context, themeID int64, isModerator bool) (*F
 
 func (s *Forums) Themes(ctx context.Context, themeID int64, isModerator bool) ([]*ForumsTheme, error) {
 	sqSelect := s.db.Select("id", "name", "topics", "messages", "disable_topics", "description").
-		From(schema.ForumsThemesTable).Order(goqu.I("position").Asc())
+		From(schema.ForumsThemesTable).Order(goqu.C("position").Asc())
 
 	if themeID > 0 {
-		sqSelect = sqSelect.Where(goqu.I("parent_id").Eq(themeID))
+		sqSelect = sqSelect.Where(goqu.C("parent_id").Eq(themeID))
 	} else {
-		sqSelect = sqSelect.Where(goqu.I("parent_id").IsNull())
+		sqSelect = sqSelect.Where(goqu.C("parent_id").IsNull())
 	}
 
 	if !isModerator {

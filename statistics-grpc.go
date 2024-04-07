@@ -349,10 +349,10 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 		goqu.L("count(1)").As("value"),
 	).From(schema.TableLogEvents).
 		Where(
-			goqu.I("add_datetime").Gte(from),
-			goqu.I("add_datetime").Lt(to),
+			goqu.C("add_datetime").Gte(from),
+			goqu.C("add_datetime").Lt(to),
 		).
-		GroupBy(goqu.I("user_id"), goqu.I("date")).ScanStructsContext(ctx, &rows)
+		GroupBy(goqu.C("user_id"), goqu.C("date")).ScanStructsContext(ctx, &rows)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

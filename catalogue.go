@@ -27,12 +27,12 @@ func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 }
 
 func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]*VehicleType, error) {
-	sqSelect := s.db.Select("id", "name").From(schema.TableCarTypes).Order(goqu.I("position").Asc())
+	sqSelect := s.db.Select("id", "name").From(schema.TableCarTypes).Order(goqu.C("position").Asc())
 
 	if parentID != 0 {
-		sqSelect = sqSelect.Where(goqu.I("parent_id").Eq(parentID))
+		sqSelect = sqSelect.Where(goqu.C("parent_id").Eq(parentID))
 	} else {
-		sqSelect = sqSelect.Where(goqu.I("parent_id").IsNull())
+		sqSelect = sqSelect.Where(goqu.C("parent_id").IsNull())
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
@@ -68,12 +68,12 @@ func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]
 }
 
 func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, error) {
-	sqSelect := s.db.Select("id", "name", "short_name").From(schema.TableSpec).Order(goqu.I("name").Asc())
+	sqSelect := s.db.Select("id", "name", "short_name").From(schema.TableSpec).Order(goqu.C("name").Asc())
 
 	if parentID != 0 {
-		sqSelect = sqSelect.Where(goqu.I("parent_id").Eq(parentID))
+		sqSelect = sqSelect.Where(goqu.C("parent_id").Eq(parentID))
 	} else {
-		sqSelect = sqSelect.Where(goqu.I("parent_id").IsNull())
+		sqSelect = sqSelect.Where(goqu.C("parent_id").IsNull())
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
@@ -111,7 +111,7 @@ func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, erro
 func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*PerspectiveGroup, error) {
 	sqSelect := s.db.Select("id", "name").
 		From(schema.TablePerspectivesGroups).
-		Where(goqu.Ex{"page_id": pageID}).Order(goqu.I("position").Asc())
+		Where(goqu.Ex{"page_id": pageID}).Order(goqu.C("position").Asc())
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*
 }
 
 func (s *Catalogue) getPerspectivePages(ctx context.Context) ([]*PerspectivePage, error) {
-	sqSelect := s.db.Select("id", "name").From(schema.TablePerspectivesPages).Order(goqu.I("id").Asc())
+	sqSelect := s.db.Select("id", "name").From(schema.TablePerspectivesPages).Order(goqu.C("id").Asc())
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
 	if err != nil {

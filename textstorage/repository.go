@@ -30,7 +30,7 @@ func New(
 func (s *Repository) Text(ctx context.Context, id int64) (string, error) {
 	sqlSelect := s.db.From(schema.TableTextstorageText).
 		Select(colText).
-		Where(goqu.I(colID).Eq(id))
+		Where(goqu.C(colID).Eq(id))
 
 	result := ""
 

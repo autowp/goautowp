@@ -23,7 +23,7 @@ func NewEvents(db *goqu.Database) *Events {
 
 func (s *Events) Add(event Event) error {
 	res, err := s.db.Insert(schema.TableLogEvents).Cols("description", "user_id", "add_datetime").
-		Vals(goqu.Vals{event.Message, event.UserID, goqu.L("NOW()")}).Executor().Exec()
+		Vals(goqu.Vals{event.Message, event.UserID, goqu.Func("NOW")}).Executor().Exec()
 	if err != nil {
 		return err
 	}

@@ -414,22 +414,22 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 	r, err := s.autowpDB.Insert(schema.UserTable).
 		Rows(goqu.Record{
-			"login":            nil,
-			"e_mail":           emailAddr,
-			"password":         nil,
-			"email_to_check":   nil,
-			"hide_e_mail":      1,
-			"email_check_code": nil,
-			"name":             name,
-			"reg_date":         goqu.L("NOW()"),
-			"last_online":      goqu.L("NOW()"),
-			"timezone":         language.Timezone,
-			"last_ip":          goqu.L("INET6_ATON(?)", remoteAddr),
-			"language":         locale,
-			"role":             role,
-			"uuid":             goqu.L("UUID_TO_BIN(?)", guid),
+			"login":                     nil,
+			"e_mail":                    emailAddr,
+			"password":                  nil,
+			"email_to_check":            nil,
+			"hide_e_mail":               1,
+			"email_check_code":          nil,
+			"name":                      name,
+			"reg_date":                  goqu.Func("NOW"),
+			"last_online":               goqu.Func("NOW"),
+			"timezone":                  language.Timezone,
+			"last_ip":                   goqu.Func("INET6_ATON", remoteAddr),
+			"language":                  locale,
+			"role":                      role,
+			schema.UserTableUUIDColName: goqu.Func("UUID_TO_BIN", guid),
 		}).
-		OnConflict(goqu.DoUpdate("uuid", goqu.Record{
+		OnConflict(goqu.DoUpdate(schema.UserTableUUIDColName, goqu.Record{
 			"e_mail":  goqu.L("values(e_mail)"),
 			"name":    goqu.L("values(name)"),
 			"last_ip": goqu.L("values(last_ip)"),
@@ -463,7 +463,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 	success, err := s.autowpDB.Select(schema.UserTableColID, schema.UserTableColRole).
 		From(schema.UserTable).
-		Where(goqu.L("uuid = UUID_TO_BIN(?)", guid)).
+		Where(schema.UserTableColUUID.Eq(goqu.Func("UUID_TO_BIN", guid))).
 		ScanStructContext(ctx, &row)
 	if err != nil {
 		return 0, "", err
@@ -546,7 +546,7 @@ func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID in
 	}
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		"uuid": goqu.Func("UUID_TO_BIN", userGUID),
+		schema.UserTableUUIDColName: goqu.Func("UUID_TO_BIN", userGUID),
 	}).Where(goqu.C("user_id").Eq(userID)).Executor().ExecContext(ctx)
 	if err != nil {
 		return "", err
@@ -791,8 +791,8 @@ func (s *Repository) UserPreferences(ctx context.Context, userID int64, toUserID
 	_, err := s.db.Select("disable_comments_notifications").
 		From(schema.TableUserUserPreferences).
 		Where(
-			goqu.I("user_id").Eq(userID),
-			goqu.I("to_user_id").Eq(toUserID),
+			goqu.C("user_id").Eq(userID),
+			goqu.C("to_user_id").Eq(toUserID),
 		).ScanStructContext(ctx, &row)
 
 	return &row, err
@@ -942,7 +942,7 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 	set := goqu.Record{}
 
 	if !lastOnline.Valid || lastOnline.Time.Add(lastOnlineUpdateThreshold).Before(time.Now()) {
-		set["last_online"] = goqu.L("NOW()")
+		set["last_online"] = goqu.Func("NOW")
 	}
 
 	remoteAddr := "127.0.0.1"
@@ -963,7 +963,7 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 	ip := net.ParseIP(remoteAddr)
 
 	if ip != nil && (lastIP == nil || !lastIP.Equal(ip)) {
-		set["last_ip"] = goqu.L("INET6_ATON(?)", remoteAddr)
+		set["last_ip"] = goqu.Func("INET6_ATON", remoteAddr)
 	}
 
 	if len(set) > 0 {
