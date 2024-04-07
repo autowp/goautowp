@@ -2,16 +2,16 @@ package goautowp
 
 import (
 	"context"
-	"github.com/Nerzal/gocloak/v13"
-	"github.com/autowp/goautowp/config"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"testing"
 
+	"github.com/Nerzal/gocloak/v13"
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestView(t *testing.T) {
