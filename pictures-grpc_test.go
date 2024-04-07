@@ -3,13 +3,13 @@ package goautowp
 import (
 	"context"
 	"database/sql"
-	"github.com/autowp/goautowp/schema"
-	"github.com/doug-martin/goqu/v9"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,9 +17,11 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func getPictureID(t *testing.T, ctx context.Context, db *goqu.Database) int64 {
+func getPictureID(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
+	t.Helper()
+
 	var pictureID int64
-	success, err := db.Select(schema.PictureTableIdCol).
+	success, err := db.Select(schema.PictureTableIDCol).
 		From(schema.PictureTable).Limit(1).
 		ScanValContext(ctx, &pictureID)
 	require.NoError(t, err)
@@ -50,7 +52,7 @@ func TestView(t *testing.T) {
 
 	client := NewPicturesClient(conn)
 
-	_, err = client.View(ctx, &PicturesViewRequest{PictureId: getPictureID(t, ctx, goquDB)})
+	_, err = client.View(ctx, &PicturesViewRequest{PictureId: getPictureID(ctx, t, goquDB)})
 	require.NoError(t, err)
 }
 
@@ -83,7 +85,7 @@ func TestVote(t *testing.T) {
 
 	_, err = client.Vote(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&PicturesVoteRequest{PictureId: getPictureID(t, ctx, goquDB), Value: 1},
+		&PicturesVoteRequest{PictureId: getPictureID(ctx, t, goquDB), Value: 1},
 	)
 	require.NoError(t, err)
 }

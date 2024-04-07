@@ -250,7 +250,7 @@ func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, erro
 	alias := "p"
 
 	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.I(alias).Col(colID)))).
-		From(goqu.T(schema.PictureTableName).As(alias))
+		From(schema.PictureTable.As(alias))
 
 	sqSelect = s.applyPicture(alias, sqSelect, &options)
 
@@ -288,7 +288,7 @@ func (s *Repository) applyPicture(
 
 	if options.AncestorItemID != 0 {
 		ipcTable := goqu.T(schema.TableItemParentCache)
-		piTable := goqu.T(schema.PictureTableName)
+		piTable := goqu.T(schema.TablePictureItem)
 
 		sqSelect = sqSelect.
 			Join(piTable, goqu.On(aliasTable.Col(colID).Eq(piTable.Col(colPictureID)))).

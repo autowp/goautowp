@@ -198,7 +198,8 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			err = s.db.QueryRowContext(ctx, `
 				SELECT `+schema.PictureTableName+`.image_id
 				FROM `+schema.PictureTableName+` 
-				    INNER JOIN `+schema.TablePictureItem+` ON `+schema.PictureTableName+`.id = `+schema.TablePictureItem+`.picture_id
+				    INNER JOIN `+schema.TablePictureItem+
+				` ON `+schema.PictureTableName+`.id = `+schema.TablePictureItem+`.picture_id
 				WHERE `+schema.PictureTableName+`.status = ? AND `+schema.TablePictureItem+`.item_id = ?
 			`, pictures.StatusAccepted, id).Scan(&imageID)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {

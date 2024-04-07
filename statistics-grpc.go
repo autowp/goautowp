@@ -180,7 +180,7 @@ func (s *StatisticsGRPCServer) picturesStat(ctx context.Context) (int32, int32, 
 		goqu.COUNT(goqu.Star()).As("count"),
 		goqu.L("SUM(filesize) / 1024 / 1024").As("size"),
 	).
-		From(schema.PictureTableName).
+		From(schema.PictureTable).
 		ScanStructContext(ctx, &picsStat)
 	if err != nil {
 		return 0, 0, err

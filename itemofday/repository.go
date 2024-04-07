@@ -136,7 +136,6 @@ func (s *Repository) candidate(ctx context.Context) (int64, error) {
 }
 
 func (s *Repository) CandidateQuery() *goqu.SelectDataset {
-	pTable := goqu.T(schema.PictureTableName)
 	ipcTable := goqu.T(schema.TableItemParentCache)
 	piTable := goqu.T(schema.TablePictureItem)
 
@@ -147,14 +146,14 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 
 	sqSelect := s.db.Select(
 		schema.ItemTableIDCol,
-		goqu.COUNT(goqu.DISTINCT(pTable.Col("id"))).As(picturesCountAlias),
+		goqu.COUNT(goqu.DISTINCT(schema.PictureTableIDCol)).As(picturesCountAlias),
 	).
 		From(schema.ItemTable).
 		Join(ipcTable, goqu.On(schema.ItemTableIDCol.Eq(ipcTable.Col("parent_id")))).
 		Join(piTable, goqu.On(ipcTable.Col("item_id").Eq(piTable.Col("item_id")))).
-		Join(pTable, goqu.On(piTable.Col("picture_id").Eq(pTable.Col("id")))).
+		Join(schema.PictureTable, goqu.On(piTable.Col("picture_id").Eq(schema.PictureTableIDCol))).
 		Where(
-			pTable.Col("status").Eq(pictures.StatusAccepted),
+			schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
 			schema.ItemTableIDCol.NotIn(
 				s.db.Select(tableItemIDCol).From(table).Where(tableItemIDCol.IsNotNull()),
 			),
