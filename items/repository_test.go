@@ -185,10 +185,10 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	userID := createRandomUser(ctx, t, goquDB)
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"item_type_id":     BRAND,
-		"name":             "",
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableItemTypeIDColName:      BRAND,
+		schema.ItemTableNameColName:            "",
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -196,10 +196,10 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err = goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"item_type_id":     VEHICLE,
-		"name":             "",
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableItemTypeIDColName:      VEHICLE,
+		schema.ItemTableNameColName:            "",
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -283,7 +283,9 @@ func TestPaginator(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		res, err := goquDB.ExecContext(ctx,
-			"INSERT INTO "+schema.ItemTableName+" (item_type_id, name, body, produced_exactly) VALUES (?, ?, '', 0)",
+			"INSERT INTO "+schema.ItemTableName+" ("+
+				schema.ItemTableItemTypeIDColName+", name, body, "+
+				schema.ItemTableProducedExactlyColName+") VALUES (?, ?, '', 0)",
 			BRAND, name+"_"+strconv.Itoa(i),
 		)
 		require.NoError(t, err)

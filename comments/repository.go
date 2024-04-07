@@ -113,11 +113,12 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 	rows, err := s.db.Select(
 		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
 		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol,
-		schema.CommentVoteTable.Col("vote"),
+		schema.CommentVoteTableVoteCol,
 	).
 		From(schema.CommentVoteTable).
-		Join(schema.UserTable, goqu.On(schema.CommentVoteTable.Col("user_id").Eq(schema.UserTableIDCol))).
-		Where(schema.CommentVoteTable.Col("comment_id").Eq(id)).Executor().QueryContext(ctx)
+		Join(schema.UserTable, goqu.On(schema.CommentVoteTableUserIDCol.Eq(schema.UserTableIDCol))).
+		Where(schema.CommentVoteTableCommentIDCol.Eq(id)).
+		Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -356,8 +357,8 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 
 	if messagesCount <= 0 {
 		_, err = s.db.Delete(schema.CommentTopicTable).Where(
-			schema.CommentTopicTable.Col("type_id").Eq(commentType),
-			schema.CommentTopicTable.Col("item_id").Eq(itemID),
+			schema.CommentTopicTableTypeIDCol.Eq(commentType),
+			schema.CommentTopicTableItemIDCol.Eq(itemID),
 		).Executor().ExecContext(ctx)
 
 		return err
@@ -915,7 +916,9 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 	case TypeIDItems:
 		var itemTypeID items.ItemType
 
-		success, err := s.db.Select("item_type_id").From(schema.ItemTable).Where(schema.ItemTableIDCol.Eq(itemID)).
+		success, err := s.db.Select(schema.ItemTableItemTypeIDCol).
+			From(schema.ItemTable).
+			Where(schema.ItemTableIDCol.Eq(itemID)).
 			ScanValContext(ctx, &itemTypeID)
 		if err != nil {
 			return nil, err
@@ -1278,7 +1281,8 @@ func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 }
 
 func (s *Repository) TopicStat(ctx context.Context, typeID CommentType, itemID int64) (int32, error) {
-	sqSelect := s.db.Select("messages").From(schema.CommentTopicTable).
+	sqSelect := s.db.Select(schema.CommentTopicTableMessagesCol).
+		From(schema.CommentTopicTable).
 		Where(
 			schema.CommentTopicTableTypeIDCol.Eq(typeID),
 			schema.CommentTopicTableItemIDCol.Eq(itemID),
@@ -1325,18 +1329,16 @@ func (s *Repository) MessagesCountFromTimestamp(
 func (s *Repository) TopicStatForUser(
 	ctx context.Context, typeID CommentType, itemID int64, userID int64,
 ) (int32, int32, error) {
-	commentTopicTable := goqu.T(schema.CommentTopicTableName)
-
-	sqSelect := s.db.Select(commentTopicTable.Col("messages"), schema.CommentTopicViewTableTimestampCol).
-		From(commentTopicTable).
+	sqSelect := s.db.Select(schema.CommentTopicTableMessagesCol, schema.CommentTopicViewTableTimestampCol).
+		From(schema.CommentTopicTable).
 		LeftJoin(schema.CommentTopicViewTable, goqu.On(
-			commentTopicTable.Col("type_id").Eq(schema.CommentTopicViewTableTypeIDCol),
-			commentTopicTable.Col("item_id").Eq(schema.CommentTopicViewTableItemIDCol),
+			schema.CommentTopicTableTypeIDCol.Eq(schema.CommentTopicViewTableTypeIDCol),
+			schema.CommentTopicTableItemIDCol.Eq(schema.CommentTopicViewTableItemIDCol),
 			schema.CommentTopicViewTableUserIDCol.Eq(userID),
 		)).
 		Where(
-			commentTopicTable.Col("type_id").Eq(typeID),
-			commentTopicTable.Col("item_id").Eq(itemID),
+			schema.CommentTopicTableTypeIDCol.Eq(typeID),
+			schema.CommentTopicTableItemIDCol.Eq(itemID),
 		)
 
 	var messages struct {
@@ -1560,7 +1562,9 @@ func (s *Repository) MessageRowRoute(
 	case TypeIDItems:
 		var itemTypeID items.ItemType
 
-		success, err := s.db.Select("item_type_id").From(schema.ItemTable).Where(schema.ItemTableIDCol.Eq(itemID)).
+		success, err := s.db.Select(schema.ItemTableItemTypeIDCol).
+			From(schema.ItemTable).
+			Where(schema.ItemTableIDCol.Eq(itemID)).
 			ScanValContext(ctx, &itemTypeID)
 		if err != nil {
 			return nil, err

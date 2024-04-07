@@ -123,7 +123,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			ctx,
 			`
 				SELECT ST_AsBinary(item_point.point), item.id, item.name, item.begin_year, item.end_year,
-                    item.item_type_id, item.today
+                    item.`+schema.ItemTableItemTypeIDColName+`, item.today
 				FROM item
 					INNER JOIN item_point ON item.id = item_point.item_id
 				WHERE ST_Contains(ST_GeomFromText(?), item_point.point)

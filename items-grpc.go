@@ -1025,7 +1025,7 @@ func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItem
 
 	err = s.db.QueryRowContext(
 		ctx,
-		"SELECT 1 FROM item WHERE id = ? AND item_type_id IN (?, ?)",
+		"SELECT 1 FROM item WHERE id = ? AND "+schema.ItemTableItemTypeIDColName+" IN (?, ?)",
 		in.ItemId, items.VEHICLE, items.TWINS,
 	).Scan(&found)
 	if err != nil {
