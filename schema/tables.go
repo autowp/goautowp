@@ -3,12 +3,15 @@ package schema
 import "github.com/doug-martin/goqu/v9"
 
 const (
-	TableArticles            = "articles"
-	TableAttrsAttributes     = "attrs_attributes"
-	TableAttrsListOptions    = "attrs_list_options"
-	TableAttrsTypes          = "attrs_types"
-	TableAttrsUnits          = "attrs_units"
-	TableAttrsUserValues     = "attrs_user_values"
+	TableArticles         = "articles"
+	TableAttrsAttributes  = "attrs_attributes"
+	TableAttrsListOptions = "attrs_list_options"
+	TableAttrsTypes       = "attrs_types"
+	TableAttrsUnits       = "attrs_units"
+
+	AttrsUserValuesTableName          = "attrs_user_values"
+	AttrsUserValuesTableUserIDColName = "user_id"
+
 	TableAttrsValues         = "attrs_values"
 	TableAttrsZones          = "attrs_zones"
 	TableAttrsZoneAttributes = "attrs_zone_attributes"
@@ -50,13 +53,25 @@ const (
 	TablePictureItem                    = "picture_item"
 	TableSpec                           = "spec"
 	TableTextstorageText                = "textstorage_text"
-	UserTableName                       = "users"
-	TableUserUserPreferences            = "user_user_preferences"
-	TableVehicleVehicleType             = "vehicle_vehicle_type"
-	TableVoting                         = "voting"
+
+	UserTableName                    = "users"
+	UserTableSpecsVolumeColName      = "specs_volume"
+	UserTableSpecsVolumeValidColName = "specs_volume_valid"
+	UserTableVotesLeftColName        = "votes_left"
+	UserTableVotesPerDayColName      = "votes_per_day"
+	UserTableLanguageColName         = "language"
+	UserTableRoleColName             = "role"
+	UserTableDeletedColName          = "deleted"
+
+	TableUserUserPreferences = "user_user_preferences"
+	TableVehicleVehicleType  = "vehicle_vehicle_type"
+	VotingTableName          = "voting"
 )
 
 var (
+	AttrsUserValuesTable          = goqu.T(AttrsUserValuesTableName)
+	AttrsUserValuesTableColUserID = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
+
 	CommentMessageTable                      = goqu.T(CommentMessageTableName)
 	CommentMessageTableColID                 = CommentMessageTable.Col("id")
 	CommentMessageTableColTypeID             = CommentMessageTable.Col("type_id")
@@ -108,7 +123,19 @@ var (
 	ItemTable      = goqu.T(ItemTableName)
 	ItemTableColID = ItemTable.Col("id")
 
-	UserTable        = goqu.T(UserTableName)
-	UserTableColID   = UserTable.Col("id")
-	UserTableColRole = UserTable.Col("role")
+	UserTable                    = goqu.T(UserTableName)
+	UserTableColID               = UserTable.Col("id")
+	UserTableColRole             = UserTable.Col(UserTableRoleColName)
+	UserTableColDeleted          = UserTable.Col(UserTableDeletedColName)
+	UserTableColName             = UserTable.Col("name")
+	UserTableColIdentity         = UserTable.Col("identity")
+	UserTableColLanguage         = UserTable.Col(UserTableLanguageColName)
+	UserTableColPicturesTotal    = UserTable.Col("pictures_total")
+	UserTableColSpecsVolume      = UserTable.Col(UserTableSpecsVolumeColName)
+	UserTableColSpecsVolumeValid = UserTable.Col(UserTableSpecsVolumeValidColName)
+	UserTableColVotesLeft        = UserTable.Col(UserTableVotesLeftColName)
+	UserTableColVotesPerDay      = UserTable.Col(UserTableVotesPerDayColName)
+
+	VotingTable      = goqu.T(VotingTableName)
+	VotingTableColID = VotingTable.Col("id")
 )

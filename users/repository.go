@@ -140,7 +140,9 @@ func (s *Repository) User(ctx context.Context, options GetUsersOptions) (*DBUser
 func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int64, error) {
 	var userID int64
 
-	success, err := s.autowpDB.From(schema.UserTable).Where(goqu.I("identity").Eq(identity)).ScanValContext(ctx, &userID)
+	success, err := s.autowpDB.From(schema.UserTable).
+		Where(schema.UserTableColIdentity.Eq(identity)).
+		ScanValContext(ctx, &userID)
 	if err != nil {
 		return 0, err
 	}
@@ -251,7 +253,7 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error) {
 	var votesLeft int
 
-	success, err := s.autowpDB.Select("votes_left").
+	success, err := s.autowpDB.Select(schema.UserTableColVotesLeft).
 		From(schema.UserTable).
 		Where(schema.UserTableColID.Eq(userID)).
 		ScanValContext(ctx, &votesLeft)
@@ -268,7 +270,7 @@ func (s *Repository) GetVotesLeft(ctx context.Context, userID int64) (int, error
 
 func (s *Repository) DecVotes(ctx context.Context, userID int64) error {
 	_, err := s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		"votes_left": goqu.L("votes_left - 1"),
+		schema.UserTableVotesLeftColName: goqu.L(schema.UserTableVotesLeftColName + " - 1"),
 	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
 
 	return err
@@ -286,7 +288,7 @@ func (s *Repository) AfterUserCreated(ctx context.Context, userID int64) error {
 	}
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		"votes_left": goqu.C("votes_per_day"),
+		schema.UserTableVotesLeftColName: schema.UserTableColVotesPerDay,
 	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
 
 	return err
@@ -333,7 +335,7 @@ func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) erro
 	}
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		"votes_per_day": value,
+		schema.UserTableVotesPerDayColName: value,
 	}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
@@ -357,10 +359,10 @@ func (s *Repository) RefreshUserConflicts(ctx context.Context, userID int64) err
 	_, err := s.autowpDB.ExecContext(ctx, `
 		UPDATE `+schema.UserTableName+` 
 		SET `+schema.UserTableName+`.specs_weight = (1.5 * ((1 + IFNULL((
-		    SELECT sum(weight) FROM `+schema.TableAttrsUserValues+` 
+		    SELECT sum(weight) FROM `+schema.AttrsUserValuesTableName+` 
 			WHERE user_id = `+schema.UserTableName+`.id AND weight > 0
 		), 0)) / (1 + IFNULL((
-			SELECT abs(sum(weight)) FROM `+schema.TableAttrsUserValues+` 
+			SELECT abs(sum(weight)) FROM `+schema.AttrsUserValuesTableName+` 
 			WHERE user_id = `+schema.UserTableName+`.id AND weight < 0
 		), 0))))
 		WHERE `+schema.UserTableName+`.id = ?
@@ -652,9 +654,9 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 
 func (s *Repository) RestoreVotes(ctx context.Context) error {
 	_, err := s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		"votes_left": goqu.C("votes_per_day"),
+		schema.UserTableVotesLeftColName: schema.UserTableColVotesPerDay,
 	}).Where(
-		goqu.C("votes_left").Lt(goqu.C("votes_per_day")),
+		schema.UserTableColVotesLeft.Lt(schema.UserTableColVotesPerDay),
 		goqu.L("not deleted"),
 	).Executor().ExecContext(ctx)
 
@@ -698,41 +700,35 @@ func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
 }
 
 func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
-	rows, err := s.autowpDB.QueryContext(ctx, `
-		SELECT id, count(`+schema.TableAttrsUserValues+`.user_id)
-		FROM `+schema.UserTableName+`
-			LEFT JOIN `+schema.TableAttrsUserValues+` ON `+schema.TableAttrsUserValues+`.user_id = `+schema.UserTableName+`.id
-		WHERE NOT not `+schema.UserTableName+`.specs_volume_valid AND NOT `+schema.UserTableName+`.deleted
-		GROUP BY `+schema.UserTableName+`.id
-	`)
+	var sts []struct {
+		UserID int64 `db:"id"`
+		Count  int64 `db:"count"`
+	}
+
+	err := s.autowpDB.Select(schema.UserTableColID, goqu.COUNT(schema.AttrsUserValuesTableColUserID).As("count")).
+		From(schema.UserTable).
+		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.AttrsUserValuesTableColUserID.Eq(schema.UserTableColID))).
+		Where(
+			schema.UserTableColSpecsVolumeValid.IsFalse(),
+			schema.UserTableColDeleted.IsFalse(),
+		).
+		GroupBy(schema.UserTableColID).
+		ScanStructsContext(ctx, &sts)
 	if err != nil {
 		return err
 	}
 
-	defer util.Close(rows)
-
-	for rows.Next() {
-		var (
-			userID int64
-			count  int
-		)
-
-		err = rows.Scan(&userID, &count)
-
-		if err != nil {
-			return err
-		}
-
+	for _, st := range sts {
 		_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-			"specs_volume":       count,
-			"specs_volume_valid": 1,
-		}).Where(schema.UserTableColID.Eq(userID)).Executor().ExecContext(ctx)
+			schema.UserTableSpecsVolumeColName:      st.Count,
+			schema.UserTableSpecsVolumeValidColName: 1,
+		}).Where(schema.UserTableColID.Eq(st.UserID)).Executor().ExecContext(ctx)
 		if err != nil {
 			return err
 		}
 	}
 
-	return rows.Err()
+	return nil
 }
 
 func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {

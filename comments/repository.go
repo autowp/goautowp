@@ -607,8 +607,8 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDVotings:
-		success, err = s.db.Select(goqu.L("1")).From(schema.TableVoting).
-			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
+		success, err = s.db.Select(goqu.L("1")).From(schema.VotingTable).
+			Where(schema.VotingTableColID.Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDArticles:
 		success, err = s.db.Select(goqu.L("1")).From(schema.TableArticles).
@@ -716,7 +716,9 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		return nil
 	}
 
-	success, err = s.db.Select("identity").From(schema.UserTable).Where(goqu.C("id").Eq(st.AuthorID.Int64)).
+	success, err = s.db.Select(schema.UserTableColIdentity).
+		From(schema.UserTable).
+		Where(schema.UserTableColID.Eq(st.AuthorID.Int64)).
 		ScanValContext(ctx, &authorIdentity)
 	if err != nil {
 		return err
@@ -753,10 +755,13 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		return nil
 	}
 
-	subscribers, err := s.db.From(schema.UserTable).Select("id", "language").Where(
-		schema.UserTable.Col("id").In(filteredIDs),
-		schema.UserTable.Col("id").Neq(st.AuthorID.Int64),
-	).Executor().QueryContext(ctx)
+	subscribers, err := s.db.Select(schema.UserTableColID, schema.UserTableColLanguage).
+		From(schema.UserTable).
+		Where(
+			schema.UserTableColID.In(filteredIDs),
+			schema.UserTableColID.Neq(st.AuthorID.Int64),
+		).
+		Executor().QueryContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -1126,11 +1131,11 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 	err = s.db.Select(schema.CommentMessageTableColID).
 		From(schema.CommentMessageTable).
 		LeftJoin(
-			goqu.T(schema.TableVoting),
-			goqu.On(schema.CommentMessageTableColItemID.Eq(goqu.T(schema.TableVoting).Col("id"))),
+			schema.VotingTable,
+			goqu.On(schema.CommentMessageTableColItemID.Eq(schema.VotingTableColID)),
 		).
 		Where(
-			goqu.T(schema.TableVoting).Col("id").IsNull(),
+			schema.VotingTableColID.IsNull(),
 			schema.CommentMessageTableColTypeID.Eq(TypeIDArticles),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {

@@ -59,7 +59,9 @@ func NewForums(db *goqu.Database, commentsRepository *comments.Repository) *Foru
 }
 
 func (s *Forums) GetUserSummary(ctx context.Context, userID int64) (int, error) {
-	rows, err := s.db.Select(goqu.Star()).
+	result := 0
+
+	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
 		From(schema.ForumsTopicsTable).
 		Join(
 			schema.CommentTopicSubscribeTable,
@@ -73,27 +75,13 @@ func (s *Forums) GetUserSummary(ctx context.Context, userID int64) (int, error) 
 			schema.CommentTopicSubscribeTableColUserID.Eq(userID),
 			schema.CommentTopicTableColTypeID.Eq(comments.TypeIDForums),
 			schema.CommentTopicSubscribeTableColTypeID.Eq(comments.TypeIDForums),
-		).Executor().QueryContext(ctx)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, nil
-	}
-
+		).ScanValContext(ctx, &result)
 	if err != nil {
 		return 0, err
 	}
 
-	defer util.Close(rows)
-
-	result := 0
-	if rows.Next() {
-		err = rows.Scan(&result)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	if err = rows.Err(); err != nil {
-		return 0, err
+	if !success {
+		return 0, sql.ErrNoRows
 	}
 
 	return result, nil

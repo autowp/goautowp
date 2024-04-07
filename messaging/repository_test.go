@@ -154,20 +154,20 @@ func createRandomUser(t *testing.T, s *Repository) int64 {
 	name := "ivan"
 	r, err := s.db.Insert(schema.UserTable).
 		Rows(goqu.Record{
-			"login":            nil,
-			"e_mail":           emailAddr,
-			"password":         nil,
-			"email_to_check":   nil,
-			"hide_e_mail":      1,
-			"email_check_code": nil,
-			"name":             name,
-			"reg_date":         goqu.L("NOW()"),
-			"last_online":      goqu.L("NOW()"),
-			"timezone":         "Europe/Moscow",
-			"last_ip":          goqu.L("INET6_ATON('127.0.0.1')"),
-			"language":         "en",
-			"role":             "user",
-			"uuid":             goqu.L("UUID_TO_BIN(?)", uuid.New().String()),
+			"login":                         nil,
+			"e_mail":                        emailAddr,
+			"password":                      nil,
+			"email_to_check":                nil,
+			"hide_e_mail":                   1,
+			"email_check_code":              nil,
+			"name":                          name,
+			"reg_date":                      goqu.L("NOW()"),
+			"last_online":                   goqu.L("NOW()"),
+			"timezone":                      "Europe/Moscow",
+			"last_ip":                       goqu.L("INET6_ATON('127.0.0.1')"),
+			schema.UserTableLanguageColName: "en",
+			schema.UserTableRoleColName:     "user",
+			"uuid":                          goqu.L("UUID_TO_BIN(?)", uuid.New().String()),
 		}).
 		Executor().Exec()
 	require.NoError(t, err)

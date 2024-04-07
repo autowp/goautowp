@@ -146,8 +146,8 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 	contributors := make([]string, 0)
 
 	if len(greenUserRoles) > 0 {
-		err := s.db.Select("id").From(schema.UserTable).Where(
-			goqu.I("deleted").IsFalse(),
+		err := s.db.Select(schema.UserTableColID).From(schema.UserTable).Where(
+			schema.UserTableColDeleted.IsFalse(),
 			schema.UserTableColRole.In(greenUserRoles),
 			goqu.L("(identity is null or identity <> ?)", "autowp"),
 			goqu.L("last_online > DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"),
@@ -160,8 +160,8 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 	picturesUsers := make([]string, 0)
 
 	err := s.db.Select(schema.UserTableColID).From(schema.UserTable).
-		Where(goqu.I("deleted").IsFalse()).
-		Order(goqu.I("pictures_total").Desc()).
+		Where(schema.UserTableColDeleted.IsFalse()).
+		Order(schema.UserTableColPicturesTotal.Desc()).
 		Limit(numberOfTopUploadersToShowInAboutUs).ScanValsContext(ctx, &picturesUsers)
 	if err != nil {
 		return nil, err
