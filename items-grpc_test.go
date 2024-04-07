@@ -20,7 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-/*func TestTopCategoriesList(t *testing.T) {
+func TestTopCategoriesList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -40,7 +40,7 @@ import (
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 	require.NotEmpty(t, r.Items)
-}*/
+}
 
 func TestGetTwinsBrandsList(t *testing.T) {
 	t.Parallel()

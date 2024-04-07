@@ -34,3 +34,29 @@ func TestGetPoints(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestGetPointsOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewMapClient(conn)
+
+	_, err = client.GetPoints(
+		ctx,
+		&MapGetPointsRequest{
+			Bounds:     "0,0,60,60",
+			Language:   "en",
+			PointsOnly: true,
+		},
+	)
+	require.NoError(t, err)
+}
