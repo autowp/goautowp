@@ -113,6 +113,13 @@ func TestMain(m *testing.M) {
 
 	RegisterAttrsServer(grpcServer, attrsSrv)
 
+	mapSrv, err := cnt.MapGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterMapServer(grpcServer, mapSrv)
+
 	lis = bufconn.Listen(bufSize)
 
 	bufDialer = func(context.Context, string) (net.Conn, error) {
