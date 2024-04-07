@@ -2,16 +2,15 @@ package goautowp
 
 import (
 	"context"
+	"testing"
+
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
-	"google.golang.org/grpc/metadata"
-	"testing"
-	"time"
-
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -86,9 +85,6 @@ func TestGetAttributes(t *testing.T) {
 
 	ctx := context.Background()
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
-	defer cancel()
-
 	conn, err := grpc.NewClient(
 		"localhost",
 		grpc.WithContextDialer(bufDialer),
@@ -101,14 +97,14 @@ func TestGetAttributes(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
-	token, err := kc.Login(ctxTimeout, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
 	client := NewAttrsClient(conn)
 
 	_, err = client.GetAttributes(
-		metadata.AppendToOutgoingContext(ctxTimeout, authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrAttributesRequest{
 			ZoneId: 1,
 		},
@@ -145,9 +141,6 @@ func TestGetListOptions(t *testing.T) {
 
 	ctx := context.Background()
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
-	defer cancel()
-
 	conn, err := grpc.NewClient(
 		"localhost",
 		grpc.WithContextDialer(bufDialer),
@@ -160,14 +153,14 @@ func TestGetListOptions(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
-	token, err := kc.Login(ctxTimeout, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
 	client := NewAttrsClient(conn)
 
 	_, err = client.GetListOptions(
-		metadata.AppendToOutgoingContext(ctxTimeout, authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrListOptionsRequest{
 			AttributeId: 1,
 		},
