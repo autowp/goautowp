@@ -42,10 +42,10 @@ func getUserWithCleanHistory(
 
 	_, err = db.Update(schema.UserTable).
 		Set(goqu.Record{
-			"last_message_time": "2000-01-01",
-			"votes_left":        100,
+			schema.UserTableLastMessageTimeColName: "2000-01-01",
+			schema.UserTableVotesLeftColName:       100,
 		}).
-		Where(goqu.C("id").Eq(user.Id)).
+		Where(schema.UserTableIDCol.Eq(user.Id)).
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -167,6 +167,15 @@ func TestAddComment(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, r3.Items)
+
+	_, err = client.View(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
+		&CommentsViewRequest{
+			ItemId: 1,
+			TypeId: CommentsType_ARTICLES_TYPE_ID,
+		},
+	)
+	require.NoError(t, err)
 }
 
 func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
@@ -233,6 +242,48 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 	require.Contains(t, messages.Items[0].Text, "replies to you")
 }
 
+func TestSubscribeComment(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+
+	_, err = client.Subscribe(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&CommentsSubscribeRequest{
+			ItemId: 1,
+			TypeId: CommentsType_ARTICLES_TYPE_ID,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.UnSubscribe(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&CommentsUnSubscribeRequest{
+			ItemId: 1,
+			TypeId: CommentsType_ARTICLES_TYPE_ID,
+		},
+	)
+	require.NoError(t, err)
+}
+
 func TestVoteComment(t *testing.T) {
 	t.Parallel()
 
@@ -270,6 +321,7 @@ func TestVoteComment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// vote comment
 	_, err = client.VoteComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&CommentsVoteCommentRequest{
@@ -284,6 +336,15 @@ func TestVoteComment(t *testing.T) {
 		&CommentsVoteCommentRequest{
 			CommentId: r.Id,
 			Vote:      1,
+		},
+	)
+	require.NoError(t, err)
+
+	// get comment votes
+	_, err = client.GetCommentVotes(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&GetCommentVotesRequest{
+			CommentId: r.Id,
 		},
 	)
 	require.NoError(t, err)
@@ -336,4 +397,138 @@ func TestVoteComment(t *testing.T) {
 		},
 	)
 	require.ErrorContains(t, err, "PermissionDenied")
+}
+
+func TestCompleteComment(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	r, err := client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_ARTICLES_TYPE_ID,
+			Message:            "Test",
+			ModeratorAttention: true,
+			ParentId:           0,
+			Resolve:            false,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_ARTICLES_TYPE_ID,
+			Message:            "Test",
+			ModeratorAttention: true,
+			Resolve:            true,
+			ParentId:           r.Id,
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestMessagesByUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	_, err = client.GetMessages(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
+		&GetMessagesRequest{
+			ItemId:       1,
+			TypeId:       CommentsType_ITEM_TYPE_ID,
+			UserIdentity: "test",
+			Page:         2,
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestMoveComment(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	r, err := client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_FORUMS_TYPE_ID,
+			Message:            "Test",
+			ModeratorAttention: false,
+			ParentId:           0,
+			Resolve:            false,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.MoveComment(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsMoveCommentRequest{
+			CommentId: r.Id,
+			ItemId:    2,
+			TypeId:    CommentsType_FORUMS_TYPE_ID,
+		},
+	)
+	require.NoError(t, err)
 }

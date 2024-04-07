@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetThemes(t *testing.T) {
@@ -134,4 +135,34 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, topics.Items)
+}
+
+func TestGetUserSummary(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewForumsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+
+	_, err = client.GetUserSummary(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
+		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
 }

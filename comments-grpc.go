@@ -195,7 +195,7 @@ func extractMessage(
 				TypeID:       row.TypeID,
 				ParentID:     row.ID,
 				PerPage:      MaxReplies,
-				Order:        []exp.OrderedExpression{schema.CommentMessageTableColDatetime.Desc()},
+				Order:        []exp.OrderedExpression{schema.CommentMessageTableDatetimeCol.Desc()},
 				FetchMessage: fields.Preview || fields.Text,
 				FetchVote:    fields.Vote,
 				FetchIP:      canViewIP,
@@ -696,7 +696,7 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 		ParentID:     in.ParentId,
 		NoParents:    in.NoParents,
 		UserID:       in.UserId,
-		Order:        []exp.OrderedExpression{schema.CommentMessageTableColDatetime.Asc()},
+		Order:        []exp.OrderedExpression{schema.CommentMessageTableDatetimeCol.Asc()},
 		FetchMessage: fields.Preview || fields.Text,
 		FetchVote:    fields.Vote,
 		FetchIP:      canViewIP,
@@ -706,18 +706,18 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 	switch in.Order {
 	case GetMessagesRequest_VOTE_DESC:
 		options.Order = []exp.OrderedExpression{
-			schema.CommentMessageTableColVote.Desc(),
-			schema.CommentMessageTableColDatetime.Desc(),
+			schema.CommentMessageTableVoteCol.Desc(),
+			schema.CommentMessageTableDatetimeCol.Desc(),
 		}
 	case GetMessagesRequest_VOTE_ASC:
 		options.Order = []exp.OrderedExpression{
-			schema.CommentMessageTableColVote.Asc(),
-			schema.CommentMessageTableColDatetime.Desc(),
+			schema.CommentMessageTableVoteCol.Asc(),
+			schema.CommentMessageTableDatetimeCol.Desc(),
 		}
 	case GetMessagesRequest_DATE_DESC:
-		options.Order = []exp.OrderedExpression{schema.CommentMessageTableColDatetime.Desc()}
+		options.Order = []exp.OrderedExpression{schema.CommentMessageTableDatetimeCol.Desc()}
 	case GetMessagesRequest_DATE_ASC, GetMessagesRequest_DEFAULT:
-		options.Order = []exp.OrderedExpression{schema.CommentMessageTableColDatetime.Asc()}
+		options.Order = []exp.OrderedExpression{schema.CommentMessageTableDatetimeCol.Asc()}
 	}
 
 	if isModer {

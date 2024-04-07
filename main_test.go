@@ -99,6 +99,34 @@ func TestMain(m *testing.M) {
 
 	RegisterStatisticsServer(grpcServer, statsSrv)
 
+	autowpSrv, err := cnt.GRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterAutowpServer(grpcServer, autowpSrv)
+
+	attrsSrv, err := cnt.AttrsGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterAttrsServer(grpcServer, attrsSrv)
+
+	mapSrv, err := cnt.MapGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterMapServer(grpcServer, mapSrv)
+
+	pictursSrv, err := cnt.PicturesGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterPicturesServer(grpcServer, pictursSrv)
+
 	lis = bufconn.Listen(bufSize)
 
 	bufDialer = func(context.Context, string) (net.Conn, error) {

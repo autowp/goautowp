@@ -8,11 +8,6 @@ import (
 	"github.com/doug-martin/goqu/v9"
 )
 
-const (
-	colID   = "id"
-	colText = "text"
-)
-
 // Repository Main Object.
 type Repository struct {
 	db *goqu.Database
@@ -28,9 +23,9 @@ func New(
 }
 
 func (s *Repository) Text(ctx context.Context, id int64) (string, error) {
-	sqlSelect := s.db.From(schema.TableTextstorageText).
-		Select(colText).
-		Where(goqu.I(colID).Eq(id))
+	sqlSelect := s.db.From(schema.TextstorageTextTable).
+		Select(schema.TextstorageTextTableTextCol).
+		Where(schema.TextstorageTextTableIDCol.Eq(id))
 
 	result := ""
 
@@ -51,20 +46,18 @@ func (s *Repository) FirstText(ctx context.Context, ids []int64) (string, error)
 		return "", nil
 	}
 
-	args := append([]interface{}{colID}, ids)
-
-	sqlSelect := s.db.From(schema.TableTextstorageText).
-		Select(colText).
-		Where(
-			goqu.C(colID).In(ids),
-			goqu.Func("length", goqu.C(colText)).Gt(0),
-		).
-		Order(goqu.Func("field", args...).Asc()).
-		Limit(1)
-
+	args := append([]interface{}{schema.TextstorageTextTableIDColName}, ids)
 	result := ""
 
-	success, err := sqlSelect.Executor().ScanValContext(ctx, &result)
+	success, err := s.db.From(schema.TextstorageTextTable).
+		Select(schema.TextstorageTextTableTextCol).
+		Where(
+			schema.TextstorageTextTableIDCol.In(ids),
+			goqu.Func("length", schema.TextstorageTextTableTextCol).Gt(0),
+		).
+		Order(goqu.Func("field", args...).Asc()).
+		Limit(1).
+		ScanValContext(ctx, &result)
 	if err != nil {
 		return "", err
 	}

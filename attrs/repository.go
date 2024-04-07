@@ -111,15 +111,14 @@ func NewRepository(
 }
 
 func (s *Repository) Attribute(ctx context.Context, id int64) (bool, Attribute, error) {
-	attrAttributesTable := goqu.T(schema.TableAttrsAttributes)
-
 	sqSelect := s.db.Select(
-		attrAttributesTable.Col("id"), attrAttributesTable.Col("name"), attrAttributesTable.Col("description"),
-		attrAttributesTable.Col("type_id"), attrAttributesTable.Col("unit_id"), attrAttributesTable.Col("multiple"),
-		attrAttributesTable.Col("precision"), attrAttributesTable.Col("parent_id"),
+		schema.AttrsAttributesTableIDCol, schema.AttrsAttributesTableNameCol, schema.AttrsAttributesTableDescriptionCol,
+		schema.AttrsAttributesTableTypeIDCol, schema.AttrsAttributesTableUnitIDCol, schema.AttrsAttributesTableMultipleCol,
+		schema.AttrsAttributesTablePrecisionCol, schema.AttrsAttributesTableParentIDCol,
 	).
-		From(attrAttributesTable).
-		Order(goqu.I("position").Asc()).Where(attrAttributesTable.Col("id").Eq(id))
+		From(schema.AttrsAttributesTable).
+		Order(schema.AttrsAttributesTablePositionCol.Asc()).
+		Where(schema.AttrsAttributesTableIDCol.Eq(id))
 
 	r := Attribute{}
 	success, err := sqSelect.ScanStructContext(ctx, &r)
@@ -128,29 +127,26 @@ func (s *Repository) Attribute(ctx context.Context, id int64) (bool, Attribute, 
 }
 
 func (s *Repository) Attributes(ctx context.Context, zoneID int64, parentID int64) ([]Attribute, error) {
-	attrAttributesTable := goqu.T(schema.TableAttrsAttributes)
-	attrZoneAttributesTable := goqu.T(schema.TableAttrsZoneAttributes)
-
 	sqSelect := s.db.Select(
-		attrAttributesTable.Col("id"), attrAttributesTable.Col("name"), attrAttributesTable.Col("description"),
-		attrAttributesTable.Col("type_id"), attrAttributesTable.Col("unit_id"), attrAttributesTable.Col("multiple"),
-		attrAttributesTable.Col("precision"), attrAttributesTable.Col("parent_id"),
+		schema.AttrsAttributesTableIDCol, schema.AttrsAttributesTableNameCol, schema.AttrsAttributesTableDescriptionCol,
+		schema.AttrsAttributesTableTypeIDCol, schema.AttrsAttributesTableUnitIDCol, schema.AttrsAttributesTableMultipleCol,
+		schema.AttrsAttributesTablePrecisionCol, schema.AttrsAttributesTableParentIDCol,
 	).
-		From(attrAttributesTable)
+		From(schema.AttrsAttributesTable)
 
 	if zoneID > 0 {
 		sqSelect = sqSelect.Join(
-			attrZoneAttributesTable,
-			goqu.On(attrAttributesTable.Col("id").Eq(attrZoneAttributesTable.Col("attribute_id"))),
+			schema.AttrsZoneAttributesTable,
+			goqu.On(schema.AttrsAttributesTableIDCol.Eq(schema.AttrsZoneAttributesTableAttributeIDCol)),
 		).
-			Where(attrZoneAttributesTable.Col("zone_id").Eq(zoneID)).
-			Order(attrZoneAttributesTable.Col("position").Asc())
+			Where(schema.AttrsZoneAttributesTableZoneIDCol.Eq(zoneID)).
+			Order(schema.AttrsZoneAttributesTablePositionCol.Asc())
 	} else {
-		sqSelect = sqSelect.Order(attrAttributesTable.Col("position").Asc())
+		sqSelect = sqSelect.Order(schema.AttrsAttributesTablePositionCol.Asc())
 	}
 
 	if parentID > 0 {
-		sqSelect = sqSelect.Where(attrAttributesTable.Col("parent_id").Eq(parentID))
+		sqSelect = sqSelect.Where(schema.AttrsAttributesTableParentIDCol.Eq(parentID))
 	}
 
 	r := make([]Attribute, 0)
@@ -161,17 +157,21 @@ func (s *Repository) Attributes(ctx context.Context, zoneID int64, parentID int6
 
 func (s *Repository) AttributeTypes(ctx context.Context) ([]AttributeType, error) {
 	r := make([]AttributeType, 0)
-	err := s.db.Select("id", "name").From(schema.TableAttrsTypes).ScanStructsContext(ctx, &r)
+	err := s.db.Select(schema.AttrsTypesTableIDCol, schema.AttrsTypesTableNameCol).
+		From(schema.AttrsTypesTable).
+		ScanStructsContext(ctx, &r)
 
 	return r, err
 }
 
 func (s *Repository) ListOptions(ctx context.Context, attributeID int64) ([]ListOption, error) {
-	sqSelect := s.db.Select("id", "name", "attribute_id", "parent_id").
-		From(schema.TableAttrsListOptions).Order(goqu.I("position").Asc())
+	sqSelect := s.db.Select(schema.AttrsListOptionsTableIDCol, schema.AttrsListOptionsTableNameCol,
+		schema.AttrsListOptionsTableAttributeIDCol, schema.AttrsListOptionsTableParentIDCol).
+		From(schema.AttrsListOptionsTable).
+		Order(schema.AttrsListOptionsTablePositionCol.Asc())
 
 	if attributeID > 0 {
-		sqSelect = sqSelect.Where(goqu.I("attribute_id").Eq(attributeID))
+		sqSelect = sqSelect.Where(schema.AttrsListOptionsTableAttributeIDCol.Eq(attributeID))
 	}
 
 	r := make([]ListOption, 0)
@@ -182,16 +182,18 @@ func (s *Repository) ListOptions(ctx context.Context, attributeID int64) ([]List
 
 func (s *Repository) Units(ctx context.Context) ([]Unit, error) {
 	r := make([]Unit, 0)
-	err := s.db.Select("id", "name", "abbr").From(schema.TableAttrsUnits).ScanStructsContext(ctx, &r)
+	err := s.db.Select(schema.AttrsUnitsTableIDCol, schema.AttrsUnitsTableNameCol, schema.AttrsUnitsTableAbbrCol).
+		From(schema.AttrsUnitsTable).
+		ScanStructsContext(ctx, &r)
 
 	return r, err
 }
 
 func (s *Repository) ZoneAttributes(ctx context.Context, zoneID int64) ([]ZoneAttribute, error) {
 	r := make([]ZoneAttribute, 0)
-	err := s.db.Select("zone_id", "attribute_id").
-		From(schema.TableAttrsZoneAttributes).
-		Where(goqu.C("zone_id").Eq(zoneID)).
+	err := s.db.Select(schema.AttrsZoneAttributesTableZoneIDCol, schema.AttrsZoneAttributesTableAttributeIDCol).
+		From(schema.AttrsZoneAttributesTable).
+		Where(schema.AttrsZoneAttributesTableZoneIDCol.Eq(zoneID)).
 		ScanStructsContext(ctx, &r)
 
 	return r, err
@@ -199,7 +201,9 @@ func (s *Repository) ZoneAttributes(ctx context.Context, zoneID int64) ([]ZoneAt
 
 func (s *Repository) Zones(ctx context.Context) ([]Zone, error) {
 	r := make([]Zone, 0)
-	err := s.db.Select("id", "name").From(schema.TableAttrsZones).ScanStructsContext(ctx, &r)
+	err := s.db.Select(schema.AttrsZonesTableIDCol, schema.AttrsZonesTableNameCol).
+		From(schema.AttrsZonesTable).
+		ScanStructsContext(ctx, &r)
 
 	return r, err
 }
@@ -224,15 +228,12 @@ func (s *Repository) TotalValues(ctx context.Context) (int32, error) {
 func (s *Repository) TotalZoneAttrs(ctx context.Context, zoneID int64) (int32, error) {
 	var result int32
 
-	attrAttributesTable := goqu.T(schema.TableAttrsAttributes)
-	attrZoneAttributesTable := goqu.T(schema.TableAttrsZoneAttributes)
-
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(attrAttributesTable).
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.AttrsAttributesTable).
 		Join(
-			attrZoneAttributesTable,
-			goqu.On(attrAttributesTable.Col("id").Eq(attrZoneAttributesTable.Col("attribute_id"))),
+			schema.AttrsZoneAttributesTable,
+			goqu.On(schema.AttrsAttributesTableIDCol.Eq(schema.AttrsZoneAttributesTableAttributeIDCol)),
 		).
-		Where(attrZoneAttributesTable.Col("zone_id").Eq(zoneID))
+		Where(schema.AttrsZoneAttributesTableZoneIDCol.Eq(zoneID))
 
 	success, err := sqSelect.ScanValContext(ctx, &result)
 	if err != nil {

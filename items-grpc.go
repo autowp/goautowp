@@ -111,7 +111,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 			},
 			TypeID:     []items.ItemType{items.BRAND},
 			Limit:      items.TopBrandsCount,
-			OrderBy:    []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
+			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 			SortByName: true,
 		}
 
@@ -321,7 +321,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 			NoParents: true,
 			TypeID:    []items.ItemType{items.CATEGORY},
 			Limit:     items.TopCategoriesCount,
-			OrderBy:   []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
+			OrderBy:   []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -395,7 +395,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 			},
 			TypeID:  []items.ItemType{items.BRAND},
 			Limit:   items.TopTwinsBrandsCount,
-			OrderBy: []exp.OrderedExpression{goqu.I("items_count").Desc()},
+			OrderBy: []exp.OrderedExpression{goqu.C("items_count").Desc()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -924,16 +924,16 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From(schema.TableVehicleVehicleType).Where(
-		goqu.L("NOT inherited"),
-	)
+	sqlSelect := s.db.Select(schema.VehicleVehicleTypeTableVehicleIDCol, schema.VehicleVehicleTypeTableVehicleTypeIDCol).
+		From(schema.VehicleVehicleTypeTable).
+		Where(schema.VehicleVehicleTypeTableInheritedCol.IsFalse())
 
 	if in.ItemId != 0 {
-		sqlSelect = sqlSelect.Where(goqu.I("vehicle_id").Eq(in.ItemId))
+		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(in.ItemId))
 	}
 
 	if in.VehicleTypeId != 0 {
-		sqlSelect = sqlSelect.Where(goqu.I("vehicle_type_id").Eq(in.VehicleTypeId))
+		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(in.VehicleTypeId))
 	}
 
 	rows, err := sqlSelect.Executor().QueryContext(ctx)
@@ -982,11 +982,13 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	sqlSelect := s.db.Select("vehicle_id", "vehicle_type_id").From(schema.TableVehicleVehicleType).Where(
-		goqu.L("NOT inherited"),
-		goqu.I("vehicle_id").Eq(in.ItemId),
-		goqu.I("vehicle_type_id").Eq(in.VehicleTypeId),
-	)
+	sqlSelect := s.db.Select(schema.VehicleVehicleTypeTableVehicleIDCol, schema.VehicleVehicleTypeTableVehicleTypeIDCol).
+		From(schema.VehicleVehicleTypeTable).
+		Where(
+			schema.VehicleVehicleTypeTableInheritedCol.IsFalse(),
+			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(in.ItemId),
+			schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(in.VehicleTypeId),
+		)
 
 	var i APIItemVehicleType
 
@@ -1025,7 +1027,7 @@ func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItem
 
 	err = s.db.QueryRowContext(
 		ctx,
-		"SELECT 1 FROM item WHERE id = ? AND item_type_id IN (?, ?)",
+		"SELECT 1 FROM item WHERE id = ? AND "+schema.ItemTableItemTypeIDColName+" IN (?, ?)",
 		in.ItemId, items.VEHICLE, items.TWINS,
 	).Scan(&found)
 	if err != nil {

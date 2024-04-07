@@ -2,6 +2,7 @@ package pictures
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -13,8 +14,6 @@ import (
 type Status string
 
 const (
-	colID        = "id"
-	colStatus    = "status"
 	colPictureID = "picture_id"
 	colItemID    = "item_id"
 	colParentID  = "parent_id"
@@ -79,9 +78,16 @@ func (s *Repository) IncView(ctx context.Context, id int64) error {
 func (s *Repository) Status(ctx context.Context, id int64) (Status, error) {
 	var status Status
 
-	err := s.db.QueryRowContext(ctx, "SELECT status FROM "+schema.TablePicture+" WHERE id = ?", id).Scan(&status)
+	success, err := s.db.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).
+		Where(schema.PictureTableIDCol.Eq(id)).
+		ScanValContext(ctx, &status)
 	if err != nil {
 		return "", err
+	}
+
+	if !success {
+		return "", sql.ErrNoRows
 	}
 
 	return status, nil
@@ -249,8 +255,8 @@ func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation,
 func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, error) {
 	alias := "p"
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.I(alias).Col(colID)))).
-		From(goqu.T(schema.TablePicture).As(alias))
+	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.I(alias).Col("id")))).
+		From(schema.PictureTable.As(alias))
 
 	sqSelect = s.applyPicture(alias, sqSelect, &options)
 
@@ -283,15 +289,15 @@ func (s *Repository) applyPicture(
 	aliasTable := goqu.T(alias)
 
 	if options.Status != "" {
-		sqSelect = sqSelect.Where(aliasTable.Col(colStatus).Eq(options.Status))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableStatusColName).Eq(options.Status))
 	}
 
 	if options.AncestorItemID != 0 {
 		ipcTable := goqu.T(schema.TableItemParentCache)
-		piTable := goqu.T(schema.TablePicture)
+		piTable := goqu.T(schema.TablePictureItem)
 
 		sqSelect = sqSelect.
-			Join(piTable, goqu.On(aliasTable.Col(colID).Eq(piTable.Col(colPictureID)))).
+			Join(piTable, goqu.On(aliasTable.Col("id").Eq(piTable.Col(colPictureID)))).
 			Join(ipcTable, goqu.On(piTable.Col(colItemID).Eq(ipcTable.Col(colItemID)))).
 			Where(ipcTable.Col(colParentID).Eq(options.AncestorItemID))
 	}

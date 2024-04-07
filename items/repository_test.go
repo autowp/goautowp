@@ -148,20 +148,20 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 	name := "ivan"
 	r, err := db.Insert(schema.UserTable).
 		Rows(goqu.Record{
-			"login":            nil,
-			"e_mail":           emailAddr,
-			"password":         nil,
-			"email_to_check":   nil,
-			"hide_e_mail":      1,
-			"email_check_code": nil,
-			"name":             name,
-			"reg_date":         goqu.L("NOW()"),
-			"last_online":      goqu.L("NOW()"),
-			"timezone":         "Europe/Moscow",
-			"last_ip":          goqu.L("INET6_ATON('127.0.0.1')"),
-			"language":         "en",
-			"role":             "user",
-			"uuid":             goqu.L("UUID_TO_BIN(?)", uuid.New().String()),
+			schema.UserTableLoginColName:          nil,
+			schema.UserTableEmailColName:          emailAddr,
+			schema.UserTablePasswordColName:       nil,
+			schema.UserTableEmailToCheckColName:   nil,
+			schema.UserTableHideEmailColName:      1,
+			schema.UserTableEmailCheckCodeColName: nil,
+			schema.UserTableNameColName:           name,
+			schema.UserTableRegDateColName:        goqu.Func("NOW"),
+			schema.UserTableLastOnlineColName:     goqu.Func("NOW"),
+			schema.UserTableTimezoneColName:       "Europe/Moscow",
+			schema.UserTableLastIPColName:         goqu.Func("INET6_ATON", "127.0.0.1"),
+			schema.UserTableLanguageColName:       "en",
+			schema.UserTableRoleColName:           "user",
+			schema.UserTableUUIDColName:           goqu.Func("UUID_TO_BIN", uuid.New().String()),
 		}).
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
@@ -185,10 +185,10 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	userID := createRandomUser(ctx, t, goquDB)
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"item_type_id":     BRAND,
-		"name":             "",
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableItemTypeIDColName:      BRAND,
+		schema.ItemTableNameColName:            "",
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -196,10 +196,10 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err = goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"item_type_id":     VEHICLE,
-		"name":             "",
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableItemTypeIDColName:      VEHICLE,
+		schema.ItemTableNameColName:            "",
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -224,7 +224,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
-	res, err = goquDB.Insert(schema.TablePicture).Rows(goqu.Record{
+	res, err = goquDB.Insert(schema.PictureTableName).Rows(goqu.Record{
 		"identity": identity,
 		"status":   "accepted",
 		"ip":       "",
@@ -283,7 +283,9 @@ func TestPaginator(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		res, err := goquDB.ExecContext(ctx,
-			"INSERT INTO "+schema.ItemTableName+" (item_type_id, name, body, produced_exactly) VALUES (?, ?, '', 0)",
+			"INSERT INTO "+schema.ItemTableName+" ("+
+				schema.ItemTableItemTypeIDColName+", name, body, "+
+				schema.ItemTableProducedExactlyColName+") VALUES (?, ?, '', 0)",
 			BRAND, name+"_"+strconv.Itoa(i),
 		)
 		require.NoError(t, err)

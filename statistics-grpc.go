@@ -109,7 +109,7 @@ func (s *StatisticsGRPCServer) totalUsers(ctx context.Context) (int32, error) {
 
 	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
 		From(schema.UserTable).
-		Where(goqu.L("NOT deleted")).
+		Where(schema.UserTableDeletedCol.IsFalse()).
 		ScanValContext(ctx, &result)
 	if err != nil {
 		return 0, err
@@ -146,11 +146,14 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 	contributors := make([]string, 0)
 
 	if len(greenUserRoles) > 0 {
-		err := s.db.Select("id").From(schema.UserTable).Where(
-			goqu.I("deleted").IsFalse(),
-			schema.UserTableColRole.In(greenUserRoles),
-			goqu.L("(identity is null or identity <> ?)", "autowp"),
-			goqu.L("last_online > DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"),
+		err := s.db.Select(schema.UserTableIDCol).From(schema.UserTable).Where(
+			schema.UserTableDeletedCol.IsFalse(),
+			schema.UserTableRoleCol.In(greenUserRoles),
+			goqu.Or(
+				schema.UserTableIdentityCol.IsNull(),
+				schema.UserTableIdentityCol.Eq("autowp"),
+			),
+			schema.UserTableLastOnlineCol.Gt(goqu.L("DATE_SUB(CURDATE(), INTERVAL 6 MONTH)")),
 		).ScanValsContext(ctx, &contributors)
 		if err != nil {
 			return nil, err
@@ -159,9 +162,9 @@ func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, erro
 
 	picturesUsers := make([]string, 0)
 
-	err := s.db.Select(schema.UserTableColID).From(schema.UserTable).
-		Where(goqu.I("deleted").IsFalse()).
-		Order(goqu.I("pictures_total").Desc()).
+	err := s.db.Select(schema.UserTableIDCol).From(schema.UserTable).
+		Where(schema.UserTableDeletedCol.IsFalse()).
+		Order(schema.UserTablePicturesTotalCol.Desc()).
 		Limit(numberOfTopUploadersToShowInAboutUs).ScanValsContext(ctx, &picturesUsers)
 	if err != nil {
 		return nil, err
@@ -177,7 +180,7 @@ func (s *StatisticsGRPCServer) picturesStat(ctx context.Context) (int32, int32, 
 		goqu.COUNT(goqu.Star()).As("count"),
 		goqu.L("SUM(filesize) / 1024 / 1024").As("size"),
 	).
-		From(schema.TablePicture).
+		From(schema.PictureTable).
 		ScanStructContext(ctx, &picsStat)
 	if err != nil {
 		return 0, 0, err
@@ -212,7 +215,7 @@ func (s *StatisticsGRPCServer) totalComments(ctx context.Context) (int32, error)
 
 	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
 		From(schema.CommentMessageTable).
-		Where(schema.CommentMessageTableColDeleted.IsFalse()).
+		Where(schema.CommentMessageTableDeletedCol.IsFalse()).
 		ScanValContext(ctx, &result)
 	if err != nil {
 		return 0, err
@@ -349,10 +352,10 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 		goqu.L("count(1)").As("value"),
 	).From(schema.TableLogEvents).
 		Where(
-			goqu.I("add_datetime").Gte(from),
-			goqu.I("add_datetime").Lt(to),
+			goqu.C("add_datetime").Gte(from),
+			goqu.C("add_datetime").Lt(to),
 		).
-		GroupBy(goqu.I("user_id"), goqu.I("date")).ScanStructsContext(ctx, &rows)
+		GroupBy(goqu.C("user_id"), goqu.C("date")).ScanStructsContext(ctx, &rows)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

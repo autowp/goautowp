@@ -123,7 +123,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			ctx,
 			`
 				SELECT ST_AsBinary(item_point.point), item.id, item.name, item.begin_year, item.end_year,
-                    item.item_type_id, item.today
+                    item.`+schema.ItemTableItemTypeIDColName+`, item.today
 				FROM item
 					INNER JOIN item_point ON item.id = item_point.item_id
 				WHERE ST_Contains(ST_GeomFromText(?), item_point.point)
@@ -196,10 +196,11 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 
 			var imageID sql.NullInt64
 			err = s.db.QueryRowContext(ctx, `
-				SELECT `+schema.TablePicture+`.image_id
-				FROM `+schema.TablePicture+` 
-				    INNER JOIN `+schema.TablePictureItem+` ON `+schema.TablePicture+`.id = `+schema.TablePictureItem+`.picture_id
-				WHERE `+schema.TablePicture+`.status = ? AND `+schema.TablePictureItem+`.item_id = ?
+				SELECT `+schema.PictureTableName+`.image_id
+				FROM `+schema.PictureTableName+` 
+				    INNER JOIN `+schema.TablePictureItem+
+				` ON `+schema.PictureTableName+`.id = `+schema.TablePictureItem+`.picture_id
+				WHERE `+schema.PictureTableName+`.status = ? AND `+schema.TablePictureItem+`.item_id = ?
 			`, pictures.StatusAccepted, id).Scan(&imageID)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return nil, status.Error(codes.Internal, err.Error())

@@ -20,7 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-/*func TestTopCategoriesList(t *testing.T) {
+func TestTopCategoriesList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -40,7 +40,7 @@ import (
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 	require.NotEmpty(t, r.Items)
-}*/
+}
 
 func TestGetTwinsBrandsList(t *testing.T) {
 	t.Parallel()
@@ -60,12 +60,12 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"name":             fmt.Sprintf("brand1-%d", random.Int()),
-		"is_group":         0,
-		"item_type_id":     5,
-		"catname":          fmt.Sprintf("brand1-%d", random.Int()),
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableNameColName:            fmt.Sprintf("brand1-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      5,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("brand1-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -73,12 +73,12 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	require.NoError(t, err)
 
 	r2, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"name":             fmt.Sprintf("brand2-%d", random.Int()),
-		"is_group":         0,
-		"item_type_id":     5,
-		"catname":          fmt.Sprintf("brand2-%d", random.Int()),
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableNameColName:            fmt.Sprintf("brand2-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      5,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("brand2-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -86,12 +86,12 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	require.NoError(t, err)
 
 	r3, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"name":             fmt.Sprintf("vehicle1-%d", random.Int()),
-		"is_group":         0,
-		"item_type_id":     1,
-		"catname":          fmt.Sprintf("vehicle1-%d", random.Int()),
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableNameColName:            fmt.Sprintf("vehicle1-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      1,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle1-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -99,12 +99,12 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	require.NoError(t, err)
 
 	r4, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"name":             fmt.Sprintf("vehicle2-%d", random.Int()),
-		"is_group":         0,
-		"item_type_id":     1,
-		"catname":          fmt.Sprintf("vehicle2-%d", random.Int()),
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableNameColName:            fmt.Sprintf("vehicle2-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      1,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle2-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -112,12 +112,12 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	require.NoError(t, err)
 
 	r5, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		"name":             fmt.Sprintf("twins-%d", random.Int()),
-		"is_group":         0,
-		"item_type_id":     4,
-		"catname":          fmt.Sprintf("twins-%d", random.Int()),
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableNameColName:            fmt.Sprintf("twins-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      4,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("twins-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -536,12 +536,12 @@ func TestCatalogueMenuList(t *testing.T) {
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	r1, err := goquDB.Insert(schema.ItemTableName).Rows(goqu.Record{
-		"name":             fmt.Sprintf("category-%d", random.Int()),
-		"is_group":         0,
-		"item_type_id":     3,
-		"catname":          fmt.Sprintf("category-%d", random.Int()),
-		"body":             "",
-		"produced_exactly": 0,
+		schema.ItemTableNameColName:            fmt.Sprintf("category-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      3,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("category-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 

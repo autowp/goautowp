@@ -38,10 +38,12 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 	rows := make([]row, 0)
 
 	paginator := util.Paginator{
-		SQLSelect: s.db.Select("id", "name", "author_id", "catname", "add_date", "preview_filename", "description").
-			From(schema.TableArticles).
-			Where(goqu.L("enabled")).
-			Order(goqu.I("add_date").Desc()),
+		SQLSelect: s.db.Select(schema.ArticlesTableIDCol, schema.ArticlesTableNameCol, schema.ArticlesTableAuthorIDCol,
+			schema.ArticlesTableCatnameCol, schema.ArticlesTableAddDateCol, schema.ArticlesTablePreviewFilenameCol,
+			schema.ArticlesTableDescriptionCol).
+			From(schema.ArticlesTable).
+			Where(schema.ArticlesTableEnabledCol).
+			Order(schema.ArticlesTableAddDateCol.Desc()),
 		CurrentPageNumber: int32(in.Page),
 	}
 
@@ -114,17 +116,13 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 	article := row{}
 
 	success, err := s.db.Select(
-		goqu.T(schema.TableArticles).Col("id"), goqu.T(schema.TableArticles).Col("name"),
-		goqu.T(schema.TableArticles).Col("author_id"), goqu.T(schema.TableArticles).Col("catname"),
-		goqu.T(schema.TableArticles).Col("add_date"), goqu.T(schema.TableArticles).Col("preview_filename"),
-		goqu.T(schema.TableHtmls).Col("html"),
+		schema.ArticlesTableIDCol, schema.ArticlesTableNameCol, schema.ArticlesTableAuthorIDCol,
+		schema.ArticlesTableCatnameCol, schema.ArticlesTableAddDateCol, schema.ArticlesTablePreviewFilenameCol,
+		schema.HtmlsTableHTMLCol,
 	).
-		From(schema.TableArticles).
-		LeftJoin(
-			goqu.T(schema.TableHtmls),
-			goqu.On(goqu.Ex{schema.TableArticles + ".html_id": goqu.T(schema.TableHtmls).Col("id")}),
-		).
-		Where(goqu.L("enabled"), goqu.I("catname").Eq(in.Catname)).
+		From(schema.ArticlesTable).
+		LeftJoin(schema.HtmlsTable, goqu.On(schema.ArticlesTableHTMLIDCol.Eq(schema.HtmlsTableIDCol))).
+		Where(schema.ArticlesTableEnabledCol, schema.ArticlesTableCatnameCol.Eq(in.Catname)).
 		ScanStructContext(ctx, &article)
 	if err != nil {
 		return nil, err

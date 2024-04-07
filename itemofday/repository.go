@@ -13,9 +13,6 @@ import (
 )
 
 const (
-	colItemID               = "item_id"
-	colUserID               = "user_id"
-	colDayDate              = "day_date"
 	defaultMinPictures      = 3
 	YoomoneyLabelDateFormat = time.DateOnly
 )
@@ -59,9 +56,9 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 	for i := 0; i < 10; i++ {
 		found := false
 
-		_, err := s.db.Select(goqu.L("1")).From(schema.TableOfDay).Where(
-			goqu.I(colDayDate).Eq(now.Format(time.DateOnly)),
-			goqu.I(colItemID).IsNotNull(),
+		_, err := s.db.Select(goqu.L("1")).From(schema.OfDayTable).Where(
+			schema.OfDayTableDayDateCol.Eq(now.Format(time.DateOnly)),
+			schema.OfDayTableItemIDCol.IsNotNull(),
 		).ScanValContext(ctx, &found)
 		if err != nil {
 			return nil, err
@@ -136,30 +133,28 @@ func (s *Repository) candidate(ctx context.Context) (int64, error) {
 }
 
 func (s *Repository) CandidateQuery() *goqu.SelectDataset {
-	pTable := goqu.T(schema.TablePicture)
 	ipcTable := goqu.T(schema.TableItemParentCache)
 	piTable := goqu.T(schema.TablePictureItem)
-
-	table := goqu.T(schema.TableOfDay)
-	tableItemIDCol := table.Col(colItemID)
 
 	const picturesCountAlias = "p_count"
 
 	sqSelect := s.db.Select(
-		schema.ItemTableColID,
-		goqu.COUNT(goqu.DISTINCT(pTable.Col("id"))).As(picturesCountAlias),
+		schema.ItemTableIDCol,
+		goqu.COUNT(goqu.DISTINCT(schema.PictureTableIDCol)).As(picturesCountAlias),
 	).
 		From(schema.ItemTable).
-		Join(ipcTable, goqu.On(schema.ItemTableColID.Eq(ipcTable.Col("parent_id")))).
+		Join(ipcTable, goqu.On(schema.ItemTableIDCol.Eq(ipcTable.Col("parent_id")))).
 		Join(piTable, goqu.On(ipcTable.Col("item_id").Eq(piTable.Col("item_id")))).
-		Join(pTable, goqu.On(piTable.Col("picture_id").Eq(pTable.Col("id")))).
+		Join(schema.PictureTable, goqu.On(piTable.Col("picture_id").Eq(schema.PictureTableIDCol))).
 		Where(
-			pTable.Col("status").Eq(pictures.StatusAccepted),
-			schema.ItemTableColID.NotIn(
-				s.db.Select(tableItemIDCol).From(table).Where(tableItemIDCol.IsNotNull()),
+			schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
+			schema.ItemTableIDCol.NotIn(
+				s.db.Select(schema.OfDayTableItemIDCol).
+					From(schema.OfDayTable).
+					Where(schema.OfDayTableItemIDCol.IsNotNull()),
 			),
 		).
-		GroupBy(schema.ItemTableColID).
+		GroupBy(schema.ItemTableIDCol).
 		Having(goqu.I(picturesCountAlias).Gte(s.minPictures))
 
 	return sqSelect
@@ -170,7 +165,7 @@ func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error)
 		return false, errors.New("itemID must be defined")
 	}
 
-	sqSelect := s.CandidateQuery().Where(schema.ItemTableColID.Eq(itemID))
+	sqSelect := s.CandidateQuery().Where(schema.ItemTableIDCol.Eq(itemID))
 
 	r := CandidateRecord{}
 
@@ -196,12 +191,10 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 		return false, nil
 	}
 
-	table := goqu.T(schema.TableOfDay)
-
 	dateStr := dateTime.Format(time.DateOnly)
-	dateExpr := goqu.I(colDayDate).Eq(dateStr)
+	dateExpr := schema.OfDayTableDayDateCol.Eq(dateStr)
 
-	sqSelect := s.db.Select(goqu.L(colItemID)).From(table).Where(dateExpr)
+	sqSelect := s.db.Select(schema.OfDayTableItemIDCol).From(schema.OfDayTable).Where(dateExpr)
 
 	var exists int64
 
@@ -220,12 +213,16 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 	}
 
 	if success {
-		_, err = s.db.Update(table).Set(
-			goqu.Record{colItemID: itemID, colUserID: userIDVal},
+		_, err = s.db.Update(schema.OfDayTable).Set(
+			goqu.Record{schema.OfDayTableItemIDColName: itemID, schema.OfDayTableUserIDColName: userIDVal},
 		).Where(dateExpr).Executor().Exec()
 	} else {
-		_, err = s.db.Insert(table).Rows(
-			goqu.Record{colItemID: itemID, colUserID: userIDVal, colDayDate: dateStr},
+		_, err = s.db.Insert(schema.OfDayTable).Rows(
+			goqu.Record{
+				schema.OfDayTableItemIDColName:  itemID,
+				schema.OfDayTableUserIDColName:  userIDVal,
+				schema.OfDayTableDayDateColName: dateStr,
+			},
 		).Executor().Exec()
 	}
 

@@ -72,7 +72,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	dateStr := time.Now().Format(itemofday.YoomoneyLabelDateFormat)
 
 	// prepare test data
-	_, err = goquDB.Delete("of_day").Where(goqu.C("day_date").Eq(dateStr)).Executor().Exec()
+	_, err = goquDB.Delete(schema.OfDayTable).Where(schema.OfDayTableDayDateCol.Eq(dateStr)).Executor().Exec()
 	require.NoError(t, err)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -80,7 +80,8 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	//nolint:gosec
 	r1, err := db.ExecContext(
 		ctx, `
-			INSERT INTO `+schema.ItemTableName+` (name, is_group, item_type_id, catname, body, produced_exactly)
+			INSERT INTO `+schema.ItemTableName+` (name, `+schema.ItemTableIsGroupColName+`, `+
+			schema.ItemTableItemTypeIDColName+`, catname, body, `+schema.ItemTableProducedExactlyColName+`)
 			VALUES (?, 0, 5, ?, '', 0)
 		`, fmt.Sprintf("item-of-day-%d", random.Int()), fmt.Sprintf("brand1-%d", random.Int()),
 	)
@@ -99,7 +100,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
 	res, err := goquDB.ExecContext(ctx,
-		"INSERT INTO "+schema.TablePicture+" (identity, status, ip, owner_id) VALUES (?, 'accepted', '', null)",
+		"INSERT INTO "+schema.PictureTableName+" (identity, status, ip, owner_id) VALUES (?, 'accepted', '', null)",
 		identity,
 	)
 	require.NoError(t, err)

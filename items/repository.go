@@ -31,25 +31,6 @@ const (
 
 const (
 	colNameOnly                   = "name_only"
-	colCatname                    = "catname"
-	colEngineItemID               = "engine_item_id"
-	colItemTypeID                 = "item_type_id"
-	colIsConcept                  = "is_concept"
-	colIsConceptInherit           = "is_concept_inherit"
-	colSpecID                     = "spec_id"
-	colID                         = "id"
-	colFullName                   = "full_name"
-	colLogoID                     = "logo_id"
-	colBeginYear                  = "begin_year"
-	colEndYear                    = "end_year"
-	colBeginMonth                 = "begin_month"
-	colEndMonth                   = "end_month"
-	colBeginModelYear             = "begin_model_year"
-	colEndModelYear               = "end_model_year"
-	colBeginModelYearFraction     = "begin_model_year_fraction"
-	colEndModelYearFraction       = "end_model_year_fraction"
-	colToday                      = "today"
-	colBody                       = "body"
 	colSpecName                   = "spec_name"
 	colSpecShortName              = "spec_short_name"
 	colDescription                = "description"
@@ -259,7 +240,7 @@ func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesO
 
 	if options.Status != "" || options.ItemPicture != nil || options.OwnerID != 0 {
 		sqSelect = sqSelect.Join(
-			goqu.T(schema.TablePicture).As(pAlias),
+			schema.PictureTable.As(pAlias),
 			goqu.On(goqu.I(alias+".picture_id").Eq(goqu.I(pAlias+".id"))),
 		)
 
@@ -315,7 +296,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 	var err error
 
 	aliasTable := goqu.T(alias)
-	aliasIDCol := aliasTable.Col(colID)
+	aliasIDCol := aliasTable.Col(schema.ItemTableIDColName)
 
 	if options.ItemID > 0 {
 		sqSelect = sqSelect.Where(aliasIDCol.Eq(options.ItemID))
@@ -326,7 +307,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 	}
 
 	if options.TypeID != nil && len(options.TypeID) > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col("item_type_id").Eq(options.TypeID))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableItemTypeIDColName).Eq(options.TypeID))
 	}
 
 	ipcAlias := alias + "_ipc"
@@ -431,15 +412,15 @@ func (s *Repository) applyItem( //nolint:maintidx
 	}
 
 	if len(options.Catname) > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(colCatname).Eq(options.Catname))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableCatnameColName).Eq(options.Catname))
 	}
 
 	if options.IsConcept {
-		sqSelect = sqSelect.Where(aliasTable.Col("is_concept"))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableIsConceptColName))
 	}
 
 	if options.EngineItemID > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col("engine_item_id").Eq(options.EngineItemID))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableEngineItemIDColName).Eq(options.EngineItemID))
 	}
 
 	if len(options.Name) > 0 {
@@ -482,23 +463,24 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 	if fields {
 		if options.Fields.FullName {
-			columns = append(columns, aliasTable.Col(colFullName))
+			columns = append(columns, aliasTable.Col(schema.ItemTableFullNameColName))
 		}
 
 		if options.Fields.Logo {
-			columns = append(columns, aliasTable.Col(colLogoID))
+			columns = append(columns, aliasTable.Col(schema.ItemTableLogoIDColName))
 		}
 
 		if options.Fields.NameText || options.Fields.NameHTML {
 			isAlias := alias + "_is"
 
 			columns = append(columns,
-				aliasTable.Col(colBeginYear), aliasTable.Col(colEndYear),
-				aliasTable.Col(colBeginMonth), aliasTable.Col(colEndMonth),
-				aliasTable.Col(colBeginModelYear), aliasTable.Col(colEndModelYear),
-				aliasTable.Col(colBeginModelYearFraction), aliasTable.Col(colEndModelYearFraction),
-				aliasTable.Col(colToday),
-				aliasTable.Col(colBody),
+				aliasTable.Col(schema.ItemTableBeginYearColName), aliasTable.Col(schema.ItemTableEndYearColName),
+				aliasTable.Col(schema.ItemTableBeginMonthColName), aliasTable.Col(schema.ItemTableEndMonthColName),
+				aliasTable.Col(schema.ItemTableBeginModelYearColName), aliasTable.Col(schema.ItemTableEndModelYearColName),
+				aliasTable.Col(schema.ItemTableBeginModelYearFractionColName),
+				aliasTable.Col(schema.ItemTableEndModelYearFractionColName),
+				aliasTable.Col(schema.ItemTableTodayColName),
+				aliasTable.Col(schema.ItemTableBodyColName),
 				goqu.T(isAlias).Col("short_name").As(colSpecShortName),
 			)
 
@@ -509,7 +491,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 			sqSelect = sqSelect.
 				LeftJoin(
 					goqu.T(schema.TableSpec).As(isAlias),
-					goqu.On(aliasTable.Col(colSpecID).Eq(goqu.T(isAlias).Col("id"))),
+					goqu.On(aliasTable.Col(schema.ItemTableSpecIDColName).Eq(goqu.T(isAlias).Col("id"))),
 				)
 		}
 
@@ -517,15 +499,15 @@ func (s *Repository) applyItem( //nolint:maintidx
 			ilAlias := alias + "_ild"
 
 			columns = append(columns,
-				s.db.Select(goqu.T(schema.TableTextstorageText).Col("text")).
+				s.db.Select(schema.TextstorageTextTableTextCol).
 					From(goqu.T(schema.TableItemLanguage).As(ilAlias)).
 					Join(
-						goqu.T(schema.TableTextstorageText),
-						goqu.On(goqu.T(ilAlias).Col("text_id").Eq(goqu.T(schema.TableTextstorageText).Col("id"))),
+						schema.TextstorageTextTable,
+						goqu.On(goqu.T(ilAlias).Col("text_id").Eq(schema.TextstorageTextTableIDCol)),
 					).
 					Where(
 						goqu.T(ilAlias).Col("item_id").Eq(aliasIDCol),
-						goqu.Func("length", goqu.T(schema.TableTextstorageText).Col("text")).Gt(0),
+						goqu.Func("length", schema.TextstorageTextTableTextCol).Gt(0),
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
 					Limit(1).
@@ -536,15 +518,15 @@ func (s *Repository) applyItem( //nolint:maintidx
 		if options.Fields.FullText {
 			ilAlias := alias + "_ilf"
 			columns = append(columns,
-				s.db.Select(goqu.T(schema.TableTextstorageText).Col("text")).
+				s.db.Select(schema.TextstorageTextTableTextCol).
 					From(goqu.T(schema.TableItemLanguage).As(ilAlias)).
 					Join(
-						goqu.T(schema.TableTextstorageText),
-						goqu.On(goqu.T(ilAlias).Col("full_text_id").Eq(goqu.T(schema.TableTextstorageText).Col("id"))),
+						schema.TextstorageTextTable,
+						goqu.On(goqu.T(ilAlias).Col("full_text_id").Eq(schema.TextstorageTextTableIDCol)),
 					).
 					Where(
 						goqu.T(ilAlias).Col("item_id").Eq(aliasIDCol),
-						goqu.Func("length", goqu.T(schema.TableTextstorageText).Col("text")).Gt(0),
+						goqu.Func("length", schema.TextstorageTextTableTextCol).Gt(0),
 					).
 					Order(goqu.L(ilAlias+".language = ?", options.Language).Desc()).
 					Limit(1).
@@ -604,7 +586,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 				columns,
 				subSelect.Select(goqu.COUNT(goqu.Star())).
 					From(schema.TableItemParent).
-					Where(goqu.T(schema.TableItemParent).Col("parent_id").Eq(goqu.T(alias).Col(colID))).
+					Where(goqu.T(schema.TableItemParent).Col("parent_id").Eq(goqu.T(alias).Col(schema.ItemTableIDColName))).
 					As(colChildsCount),
 			)
 		}
@@ -641,7 +623,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 				TypeID: []ItemType{TWINS},
 				DescendantItems: &ListOptions{
 					AncestorItems: &ListOptions{
-						ItemIDExpr: goqu.T(alias).Col(colID),
+						ItemIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 					},
 				},
 			})
@@ -660,7 +642,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 				Alias:  alias + "ipc",
 				TypeID: []ItemType{TWINS},
 				AncestorItems: &ListOptions{
-					ItemIDExpr: goqu.T(alias).Col(colID),
+					ItemIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 				},
 			})
 			if err != nil {
@@ -765,16 +747,16 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 	alias := "i"
 
 	sqSelect := s.db.Select(
-		goqu.T(alias).Col(colID),
-		goqu.T(alias).Col(colCatname),
-		goqu.T(alias).Col(colEngineItemID),
-		goqu.T(alias).Col(colItemTypeID),
-		goqu.T(alias).Col(colIsConcept),
-		goqu.T(alias).Col(colIsConceptInherit),
-		goqu.T(alias).Col(colSpecID),
-		goqu.T(alias).Col(colFullName),
+		goqu.T(alias).Col(schema.ItemTableIDColName),
+		goqu.T(alias).Col(schema.ItemTableCatnameColName),
+		goqu.T(alias).Col(schema.ItemTableEngineItemIDColName),
+		goqu.T(alias).Col(schema.ItemTableItemTypeIDColName),
+		goqu.T(alias).Col(schema.ItemTableIsConceptColName),
+		goqu.T(alias).Col(schema.ItemTableIsConceptInheritColName),
+		goqu.T(alias).Col(schema.ItemTableSpecIDColName),
+		goqu.T(alias).Col(schema.ItemTableFullNameColName),
 	).From(schema.ItemTable.As(alias)).
-		GroupBy(goqu.T(alias).Col(colID))
+		GroupBy(goqu.T(alias).Col(schema.ItemTableIDColName))
 
 	sqSelect, err = s.applyItem("i", sqSelect, true, &options)
 	if err != nil {
@@ -846,23 +828,23 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 
 		for i, colName := range columnNames {
 			switch colName {
-			case colID:
+			case schema.ItemTableIDColName:
 				pointers[i] = &r.ID
 			case colNameOnly:
 				pointers[i] = &r.NameOnly
-			case colCatname:
+			case schema.ItemTableCatnameColName:
 				pointers[i] = &catname
-			case colFullName:
+			case schema.ItemTableFullNameColName:
 				pointers[i] = &fullName
-			case colEngineItemID:
+			case schema.ItemTableEngineItemIDColName:
 				pointers[i] = &engineItemID
-			case colItemTypeID:
+			case schema.ItemTableItemTypeIDColName:
 				pointers[i] = &r.ItemTypeID
-			case colIsConcept:
+			case schema.ItemTableIsConceptColName:
 				pointers[i] = &r.IsConcept
-			case colIsConceptInherit:
+			case schema.ItemTableIsConceptInheritColName:
 				pointers[i] = &r.IsConceptInherit
-			case colSpecID:
+			case schema.ItemTableSpecIDColName:
 				pointers[i] = &specID
 			case colDescription:
 				pointers[i] = &description
@@ -880,25 +862,25 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 				pointers[i] = &r.ChildItemsCount
 			case colNewChildItemsCount:
 				pointers[i] = &r.NewChildItemsCount
-			case colBeginYear:
+			case schema.ItemTableBeginYearColName:
 				pointers[i] = &beginYear
-			case colEndYear:
+			case schema.ItemTableEndYearColName:
 				pointers[i] = &endYear
-			case colBeginMonth:
+			case schema.ItemTableBeginMonthColName:
 				pointers[i] = &beginMonth
-			case colEndMonth:
+			case schema.ItemTableEndMonthColName:
 				pointers[i] = &endMonth
-			case colBeginModelYear:
+			case schema.ItemTableBeginModelYearColName:
 				pointers[i] = &beginModelYear
-			case colEndModelYear:
+			case schema.ItemTableEndModelYearColName:
 				pointers[i] = &endModelYear
-			case colBeginModelYearFraction:
+			case schema.ItemTableBeginModelYearFractionColName:
 				pointers[i] = &beginModelYearFraction
-			case colEndModelYearFraction:
+			case schema.ItemTableEndModelYearFractionColName:
 				pointers[i] = &endModelYearFraction
-			case colToday:
+			case schema.ItemTableTodayColName:
 				pointers[i] = &today
-			case colBody:
+			case schema.ItemTableBodyColName:
 				pointers[i] = &r.Body
 			case colSpecName:
 				pointers[i] = &specName
@@ -912,7 +894,7 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 				pointers[i] = &r.DescendantTwinsGroupsCount
 			case colInboxPicturesCount:
 				pointers[i] = &r.InboxPicturesCount
-			case colLogoID:
+			case schema.ItemTableLogoIDColName:
 				pointers[i] = &logoID
 			default:
 				pointers[i] = nil
@@ -1088,8 +1070,10 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 
 	var item row
 
-	success, err := s.db.Select(colID, "name", "item_type_id").From(schema.ItemTable).
-		Where(goqu.I(colID).Eq(id)).ScanStructContext(ctx, item)
+	success, err := s.db.Select(schema.ItemTableIDCol, schema.ItemTableNameCol, schema.ItemTableItemTypeIDCol).
+		From(schema.ItemTable).
+		Where(schema.ItemTableIDCol.Eq(id)).
+		ScanStructContext(ctx, item)
 	if err != nil {
 		return nil, err
 	}
@@ -1127,11 +1111,11 @@ func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehic
 }
 
 func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
-	res, err := s.db.From(schema.TableVehicleVehicleType).Delete().
+	res, err := s.db.From(schema.VehicleVehicleTypeTable).Delete().
 		Where(
-			goqu.I("vehicle_id").Eq(itemID),
-			goqu.I("vehicle_type_id").Eq(vehicleTypeID),
-			goqu.L("NOT inherited"),
+			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID),
+			schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(vehicleTypeID),
+			schema.VehicleVehicleTypeTableInheritedCol.IsFalse(),
 		).Executor().Exec()
 	if err != nil {
 		return err
@@ -1166,7 +1150,7 @@ func (s *Repository) setItemVehicleTypeRow(
 	res, err := s.db.ExecContext(
 		ctx,
 		`
-			INSERT INTO `+schema.TableVehicleVehicleType+` (vehicle_id, vehicle_type_id, inherited)
+			INSERT INTO `+schema.VehicleVehicleTypeTableName+` (vehicle_id, vehicle_type_id, inherited)
 			VALUES (?, ?, ?)
 			ON DUPLICATE KEY UPDATE inherited = VALUES(inherited)
         `,
@@ -1194,7 +1178,7 @@ func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 		// do not inherit when own value
 		res, err := s.db.ExecContext(
 			ctx,
-			"DELETE FROM "+schema.TableVehicleVehicleType+" WHERE vehicle_id = ? AND inherited",
+			"DELETE FROM "+schema.VehicleVehicleTypeTableName+" WHERE vehicle_id = ? AND inherited",
 			itemID,
 		)
 		if err != nil {
@@ -1266,13 +1250,13 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 }
 
 func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
-	sqlSelect := s.db.From(schema.TableVehicleVehicleType).Select("vehicle_type_id").Where(
-		goqu.I("vehicle_id").Eq(itemID),
-	)
+	sqlSelect := s.db.From(schema.VehicleVehicleTypeTable).
+		Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).
+		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID))
 	if inherited {
-		sqlSelect = sqlSelect.Where(goqu.L("inherited"))
+		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsTrue())
 	} else {
-		sqlSelect = sqlSelect.Where(goqu.L("NOT inherited"))
+		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsFalse())
 	}
 
 	res := make([]int64, 0)
@@ -1283,11 +1267,11 @@ func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, in
 }
 
 func (s *Repository) getItemVehicleTypeInheritedIDs(ctx context.Context, itemID int64) ([]int64, error) {
-	sqlSelect := s.db.From(schema.TableVehicleVehicleType).
-		Select("vehicle_type_id").Distinct().
+	sqlSelect := s.db.From(schema.VehicleVehicleTypeTable).
+		Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).Distinct().
 		Join(
 			goqu.T(schema.TableItemParent),
-			goqu.On(goqu.Ex{schema.TableVehicleVehicleType + ".vehicle_id": goqu.T(schema.TableItemParent).Col("parent_id")}),
+			goqu.On(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(goqu.T(schema.TableItemParent).Col("parent_id"))),
 		).
 		Where(goqu.T(schema.TableItemParent).Col("item_id").Eq(itemID))
 
@@ -1317,11 +1301,11 @@ func (s *Repository) setItemVehicleTypeRows(
 		}
 	}
 
-	sqlDelete := s.db.From(schema.TableVehicleVehicleType).Delete().
-		Where(goqu.I("vehicle_id").Eq(itemID))
+	sqlDelete := s.db.From(schema.VehicleVehicleTypeTable).Delete().
+		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID))
 
 	if len(types) > 0 {
-		sqlDelete = sqlDelete.Where(goqu.I("vehicle_type_id").NotIn(types))
+		sqlDelete = sqlDelete.Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(types))
 	}
 
 	res, err := sqlDelete.Executor().Exec()
@@ -1499,8 +1483,8 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLanguage, error) {
 	sqSelect := s.db.Select("item_id", "language", "name", "text_id", "full_text_id").
 		From(goqu.T(schema.TableItemLanguage)).Where(
-		goqu.I("item_id").Eq(itemID),
-		goqu.I("language").Neq("xx"),
+		goqu.C("item_id").Eq(itemID),
+		goqu.C("language").Neq("xx"),
 	)
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
@@ -1554,8 +1538,8 @@ func (s *Repository) ParentLanguageList(
 ) ([]ItemParentLanguage, error) {
 	sqSelect := s.db.Select("item_id", "parent_id", "language", "name").
 		From(goqu.T(schema.TableItemParentLanguage)).Where(
-		goqu.I("item_id").Eq(itemID),
-		goqu.I("parent_id").Eq(parentID),
+		goqu.C("item_id").Eq(itemID),
+		goqu.C("parent_id").Eq(parentID),
 	)
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
@@ -1590,17 +1574,15 @@ func (s *Repository) ItemsWithPicturesCount(
 	var result int32
 
 	pictureItemTable := goqu.T(schema.TablePictureItem)
-	pictureTable := goqu.T(schema.TablePicture)
-	pictureIDCol := pictureTable.Col("id")
 
 	const countAlias = "c"
 
 	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(
-		s.db.Select(schema.ItemTableColID, goqu.COUNT(pictureIDCol).As(countAlias)).
+		s.db.Select(schema.ItemTableIDCol, goqu.COUNT(schema.PictureTableIDCol).As(countAlias)).
 			From(schema.ItemTable).
-			Join(pictureItemTable, goqu.On(schema.ItemTableColID.Eq(pictureItemTable.Col("item_id")))).
-			Join(pictureTable, goqu.On(pictureItemTable.Col("picture_id").Eq(pictureIDCol))).
-			GroupBy(schema.ItemTableColID).
+			Join(pictureItemTable, goqu.On(schema.ItemTableIDCol.Eq(pictureItemTable.Col("item_id")))).
+			Join(schema.PictureTable, goqu.On(pictureItemTable.Col("picture_id").Eq(schema.PictureTableIDCol))).
+			GroupBy(schema.ItemTableIDCol).
 			Having(goqu.C(countAlias).Gte(nPictures)).
 			As("T1"),
 	)
