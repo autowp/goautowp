@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -163,6 +164,73 @@ func TestGetUserSummary(t *testing.T) {
 	_, err = client.GetUserSummary(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
+}
+
+func TestCloseTopic(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewForumsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	topic, err := client.CreateTopic(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
+		&APICreateTopicRequest{
+			ThemeId:            2,
+			Name:               "Topic name",
+			Message:            "Test message",
+			ModeratorAttention: false,
+			Subscription:       true,
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, topic)
+
+	_, err = client.CloseTopic(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&APISetTopicStatusRequest{
+			Id: topic.Id,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.OpenTopic(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&APISetTopicStatusRequest{
+			Id: topic.Id,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.DeleteTopic(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&APISetTopicStatusRequest{
+			Id: topic.Id,
+		},
 	)
 	require.NoError(t, err)
 }
