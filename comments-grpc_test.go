@@ -652,7 +652,7 @@ func TestAddCommentToDeletedOrNotExistentParent(t *testing.T) {
 	require.NoError(t, err)
 
 	// reply to deleted comment
-	response, err = client.Add(
+	_, err = client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&AddCommentRequest{
 			ItemId:             1,
@@ -666,7 +666,7 @@ func TestAddCommentToDeletedOrNotExistentParent(t *testing.T) {
 	require.Error(t, err)
 
 	// reply to non-existent comment
-	response, err = client.Add(
+	_, err = client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&AddCommentRequest{
 			ItemId:             1,
