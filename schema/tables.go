@@ -72,6 +72,10 @@ const (
 	ItemTableIsGroupColName                = "is_group"
 	ItemTableProducedExactlyColName        = "produced_exactly"
 
+	ItemPointTableName          = "item_point"
+	ItemPointTableItemIDColName = "item_id"
+	ItemPointTablePointColName  = "point"
+
 	TableItemParentCache    = "item_parent_cache"
 	TableItemLanguage       = "item_language"
 	TableItemParent         = "item_parent"
@@ -269,6 +273,8 @@ var (
 	ForumsTopicsTableAuthorIDCol    = ForumsTopicsTable.Col("author_id")
 	ForumsTopicsTableAuthorIPCol    = ForumsTopicsTable.Col("author_ip")
 	ForumsTopicsTableViewsCol       = ForumsTopicsTable.Col("views")
+
+	ItemPointTable = goqu.T(ItemPointTableName)
 
 	ItemTable                  = goqu.T(ItemTableName)
 	ItemTableIDCol             = ItemTable.Col(ItemTableIDColName)
