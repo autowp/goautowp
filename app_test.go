@@ -75,6 +75,8 @@ func TestServeGRPC(t *testing.T) {
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
 
+	cfg.GRPC.Listen = ":9093"
+
 	done := make(chan bool)
 	go func() {
 		time.Sleep(5 * time.Second)
@@ -92,6 +94,8 @@ func TestServePublic(t *testing.T) {
 	app := NewApplication(cfg)
 	ctx := context.Background()
 
+	cfg.PublicRest.Listen = ":9090"
+
 	done := make(chan bool)
 	go func() {
 		time.Sleep(5 * time.Second)
@@ -108,6 +112,8 @@ func TestServePrivate(t *testing.T) {
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
 	ctx := context.Background()
+
+	cfg.PrivateRest.Listen = ":9091"
 
 	done := make(chan bool)
 	go func() {
