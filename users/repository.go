@@ -784,7 +784,7 @@ func (s *Repository) SetDisableUserCommentsNotifications(
 			goqu.DoUpdate(
 				schema.UserUserPreferencesTableUserIDColName+", "+schema.UserUserPreferencesTableToUserIDColName,
 				goqu.Record{
-					schema.UserUserPreferencesTableDCNColName: goqu.I("EXCLUDED." + schema.UserUserPreferencesTableDCNColName),
+					schema.UserUserPreferencesTableDCNColName: goqu.L("EXCLUDED." + schema.UserUserPreferencesTableDCNColName),
 				},
 			),
 		)

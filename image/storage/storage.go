@@ -49,6 +49,8 @@ const (
 	gifExtension     = "gif"
 )
 
+const dirNotDefinedMessage = "dir '%s' not defined"
+
 var ErrImageNotFound = errors.New("image not found")
 
 var publicRead = "public-read"
@@ -148,7 +150,7 @@ func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
 func (s *Storage) populateSrc(r *Image) error {
 	dir := s.dir(r.dir)
 	if dir == nil {
-		return fmt.Errorf("dir '%s' not defined", r.dir)
+		return fmt.Errorf(dirNotDefinedMessage, r.dir)
 	}
 
 	bucket := dir.Bucket()
@@ -274,7 +276,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 
 	dir := s.dir(iRow.Dir)
 	if dir == nil {
-		return 0, fmt.Errorf("dir '%s' not defined", iRow.Dir)
+		return 0, fmt.Errorf(dirNotDefinedMessage, iRow.Dir)
 	}
 
 	bucket := dir.Bucket()
@@ -493,7 +495,7 @@ func (s *Storage) addImageFromImagick(
 
 	dir := s.dir(dirName)
 	if dir == nil {
-		return 0, fmt.Errorf("dir '%v' not defined", dirName)
+		return 0, fmt.Errorf(dirNotDefinedMessage, dirName)
 	}
 
 	blob := mw.GetImagesBlob()
@@ -652,7 +654,7 @@ func indexByAttempt(attempt int) int {
 func (s *Storage) createImagePath(ctx context.Context, dirName string, options GenerateOptions) (string, error) {
 	dir := s.dir(dirName)
 	if dir == nil {
-		return "", fmt.Errorf("dir '%v' not defined", dirName)
+		return "", fmt.Errorf(dirNotDefinedMessage, dirName)
 	}
 
 	namingStrategy := dir.NamingStrategy()
@@ -715,7 +717,7 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 
 	dir := s.dir(r.Dir())
 	if dir == nil {
-		return fmt.Errorf("dir '%s' not defined", r.Dir())
+		return fmt.Errorf(dirNotDefinedMessage, r.Dir())
 	}
 
 	s3c := s.s3Client()
@@ -801,7 +803,7 @@ func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options Gene
 
 	dir := s.dir(r.Dir())
 	if dir == nil {
-		return fmt.Errorf("dir '%v' not defined", r.Dir())
+		return fmt.Errorf(dirNotDefinedMessage, r.Dir())
 	}
 
 	if len(options.Extension) == 0 {
@@ -901,7 +903,7 @@ func (s *Storage) AddImageFromFile(
 
 	dir := s.dir(dirName)
 	if dir == nil {
-		return 0, fmt.Errorf("dir '%v' not defined", dirName)
+		return 0, fmt.Errorf(dirNotDefinedMessage, dirName)
 	}
 
 	id, err := s.generateLockWrite(
@@ -1001,7 +1003,7 @@ func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback 
 
 	dir := s.dir(r.Dir())
 	if dir == nil {
-		return fmt.Errorf("dir '%v' not defined", r.Dir())
+		return fmt.Errorf(dirNotDefinedMessage, r.Dir())
 	}
 
 	mw := imagick.NewMagickWand()
