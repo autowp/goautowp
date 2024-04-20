@@ -565,3 +565,117 @@ func TestMoveComment(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestAddCommentOfUnexpectedItemType(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+
+	_, err = client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             6,
+			Message:            "Test",
+			ModeratorAttention: false,
+			ParentId:           0,
+			Resolve:            false,
+		},
+	)
+	require.Error(t, err)
+}
+
+func TestAddCommentToDeletedOrNotExistentParent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	client := NewCommentsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	response, err := client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_ARTICLES_TYPE_ID,
+			Message:            "Root comment",
+			ModeratorAttention: false,
+			ParentId:           0,
+			Resolve:            false,
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, response.Id)
+
+	// delete comment
+	_, err = client.SetDeleted(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsSetDeletedRequest{
+			CommentId: response.Id,
+			Deleted:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	// reply to deleted comment
+	response, err = client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_ARTICLES_TYPE_ID,
+			Message:            "Reply comment",
+			ModeratorAttention: false,
+			ParentId:           response.Id,
+			Resolve:            false,
+		},
+	)
+	require.Error(t, err)
+
+	// reply to non-existent comment
+	response, err = client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_ARTICLES_TYPE_ID,
+			Message:            "Reply comment",
+			ModeratorAttention: false,
+			ParentId:           9999999999,
+			Resolve:            false,
+		},
+	)
+	require.Error(t, err)
+}
