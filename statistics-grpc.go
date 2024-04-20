@@ -325,7 +325,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 		to = time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location())
 		subPeriodMonth = 1
 		format = "2006-01"
-		dateExpr = "DATE_FORMAT(add_datetime, '%Y-%m')"
+		dateExpr = "%Y-%m"
 
 	case PulseRequest_MONTH:
 		from = time.Now().AddDate(0, -1, 0)
@@ -333,7 +333,7 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 		to = time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
 		subPeriodDay = 1
 		format = "2006-01-02"
-		dateExpr = "DATE_FORMAT(add_datetime, '%Y-%m-%d')"
+		dateExpr = "%Y-%m-%d"
 
 	default:
 		from = time.Now().AddDate(0, 0, -1)
@@ -341,21 +341,23 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 		to = time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, now.Location())
 		subPeriodTime = time.Hour
 		format = "2006-01-02 15"
-		dateExpr = "DATE_FORMAT(add_datetime, '%Y-%m-%d %H')"
+		dateExpr = "%Y-%m-%d %H"
 	}
 
 	var rows []scanRow
 
+	const dateAlias = "date"
+
 	err := s.db.Select(
-		goqu.L("user_id").As("user_id"),
-		goqu.L(dateExpr).As("date"),
-		goqu.L("count(1)").As("value"),
-	).From(schema.TableLogEvents).
+		schema.LogEventsTableUserIDCol.As("user_id"),
+		goqu.Func("DATE_FORMAT", schema.LogEventsTableAddDatetimeCol, dateExpr).As(dateAlias),
+		goqu.COUNT(goqu.Star()).As("value"),
+	).From(schema.LogEventsTable).
 		Where(
-			goqu.C("add_datetime").Gte(from),
-			goqu.C("add_datetime").Lt(to),
+			schema.LogEventsTableAddDatetimeCol.Gte(from),
+			schema.LogEventsTableAddDatetimeCol.Lt(to),
 		).
-		GroupBy(goqu.C("user_id"), goqu.C("date")).ScanStructsContext(ctx, &rows)
+		GroupBy(schema.LogEventsTableUserIDCol, goqu.C(dateAlias)).ScanStructsContext(ctx, &rows)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

@@ -122,7 +122,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	twins, err := r5.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.TableItemParent).
+	_, err = goquDB.Insert(schema.ItemParentTable).
 		Cols("item_id", "parent_id", "catname", "type").
 		Vals(
 			goqu.Vals{vehicle1, brand1, "vehicle1", 0},

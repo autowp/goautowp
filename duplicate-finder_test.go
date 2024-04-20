@@ -60,7 +60,7 @@ func addImage(t *testing.T, db *goqu.Database, filepath string) int {
 	require.NoError(t, err)
 
 	stmt, err := db.Prepare(`
-		INSERT INTO ` + schema.TableImage + ` (filepath, filesize, width, height, dir)
+		INSERT INTO ` + schema.ImageTableName + ` (filepath, filesize, width, height, dir)
 		VALUES (?, 1, 1, 1, "picture")
 	`)
 	require.NoError(t, err)

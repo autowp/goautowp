@@ -70,12 +70,14 @@ func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]
 }
 
 func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, error) {
-	sqSelect := s.db.Select("id", "name", "short_name").From(schema.TableSpec).Order(goqu.C("name").Asc())
+	sqSelect := s.db.Select(schema.SpecTableIDCol, schema.SpecTableNameCol, schema.SpecTableShortNameCol).
+		From(schema.SpecTable).
+		Order(schema.SpecTableNameCol.Asc())
 
 	if parentID != 0 {
-		sqSelect = sqSelect.Where(goqu.C("parent_id").Eq(parentID))
+		sqSelect = sqSelect.Where(schema.SpecTableParentIDCol.Eq(parentID))
 	} else {
-		sqSelect = sqSelect.Where(goqu.C("parent_id").IsNull())
+		sqSelect = sqSelect.Where(schema.SpecTableParentIDCol.IsNull())
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
@@ -250,7 +252,6 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 }
 
 func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]*BrandVehicleType, error) {
-	itemParentCacheTable := goqu.T(schema.TableItemParentCache)
 	sqSelect := s.db.
 		Select(schema.CarTypesTableIDCol, schema.CarTypesTableNameCol, schema.CarTypesTableCatnameCol,
 			goqu.COUNT(goqu.DISTINCT(schema.ItemTableIDCol))).
@@ -260,9 +261,9 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 			goqu.On(schema.CarTypesTableIDCol.Eq(schema.VehicleVehicleTypeTableVehicleTypeIDCol)),
 		).
 		Join(schema.ItemTable, goqu.On(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(schema.ItemTableIDCol))).
-		Join(itemParentCacheTable, goqu.On(schema.ItemTableIDCol.Eq(itemParentCacheTable.Col("item_id")))).
+		Join(schema.ItemParentCacheTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentCacheTableItemIDCol))).
 		Where(
-			itemParentCacheTable.Col("parent_id").Eq(brandID),
+			schema.ItemParentCacheTableParentIDCol.Eq(brandID),
 			goqu.Or(schema.ItemTableBeginYearCol, schema.ItemTableBeginModelYearCol),
 			schema.ItemTableIsGroupCol.IsFalse(),
 		).

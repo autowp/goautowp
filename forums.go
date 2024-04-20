@@ -191,35 +191,32 @@ func (s *Forums) Open(ctx context.Context, id int64) error {
 func (s *Forums) Delete(ctx context.Context, id int64) error {
 	var themeID int64
 
-	err := s.db.QueryRowContext(
-		ctx,
-		`SELECT theme_id FROM `+schema.ForumsTopicsTableName+` WHERE id = ?`,
-		id,
-	).Scan(&themeID)
+	success, err := s.db.Select(schema.ForumsTopicsTableThemeIDCol).
+		From(schema.ForumsTopicsTable).
+		Where(schema.ForumsTopicsTableIDCol.Eq(id)).
+		ScanValContext(ctx, &themeID)
 	if err != nil {
 		return err
+	}
+
+	if !success {
+		return sql.ErrNoRows
 	}
 
 	var needAttention bool
 
-	err = s.db.QueryRowContext(
-		ctx,
-		`
-			SELECT 1 FROM `+schema.CommentMessageTableName+` 
-			WHERE item_id = ? AND type_id = ? AND `+schema.CommentMessageTableModeratorAttentionColName+` = ? LIMIT 1
-		`,
-		id, comments.TypeIDForums, comments.ModeratorAttentionRequired,
-	).Scan(&needAttention)
-	if errors.Is(err, sql.ErrNoRows) {
-		err = nil
-		needAttention = false
-	}
-
+	success, err = s.db.Select(goqu.L("1")).
+		From(schema.CommentMessageTable).
+		Where(
+			schema.CommentMessageTableItemIDCol.Eq(id),
+			schema.CommentMessageTableTypeIDCol.Eq(comments.TypeIDForums),
+			schema.CommentMessageTableModeratorAttentionCol.Eq(comments.ModeratorAttentionRequired),
+		).ScanValContext(ctx, &needAttention)
 	if err != nil {
 		return err
 	}
 
-	if needAttention {
+	if !success {
 		return errors.New("cannot delete topic with moderator attention requirement")
 	}
 
@@ -234,13 +231,16 @@ func (s *Forums) Delete(ctx context.Context, id int64) error {
 func (s *Forums) MoveTopic(ctx context.Context, id int64, themeID int64) error {
 	var oldThemeID int64
 
-	err := s.db.QueryRowContext(
-		ctx,
-		`SELECT theme_id FROM `+schema.ForumsTopicsTableName+` WHERE id = ?`,
-		id,
-	).Scan(&oldThemeID)
+	success, err := s.db.Select(schema.ForumsTopicsTableThemeIDCol).
+		From(schema.ForumsTopicsTable).
+		Where(schema.ForumsTopicsTableIDCol.Eq(id)).
+		ScanValContext(ctx, &oldThemeID)
 	if err != nil {
 		return err
+	}
+
+	if !success {
+		return sql.ErrNoRows
 	}
 
 	_, err = s.db.ExecContext(

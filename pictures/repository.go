@@ -14,12 +14,6 @@ import (
 type Status string
 
 const (
-	colPictureID = "picture_id"
-	colItemID    = "item_id"
-	colParentID  = "parent_id"
-)
-
-const (
 	StatusAccepted Status = "accepted"
 	StatusRemoving Status = "removing"
 	StatusRemoved  Status = "removed"
@@ -255,7 +249,7 @@ func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation,
 func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, error) {
 	alias := "p"
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.I(alias).Col("id")))).
+	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.T(alias).Col("id")))).
 		From(schema.PictureTable.As(alias))
 
 	sqSelect = s.applyPicture(alias, sqSelect, &options)
@@ -293,13 +287,13 @@ func (s *Repository) applyPicture(
 	}
 
 	if options.AncestorItemID != 0 {
-		ipcTable := goqu.T(schema.TableItemParentCache)
-		piTable := goqu.T(schema.TablePictureItem)
-
 		sqSelect = sqSelect.
-			Join(piTable, goqu.On(aliasTable.Col("id").Eq(piTable.Col(colPictureID)))).
-			Join(ipcTable, goqu.On(piTable.Col(colItemID).Eq(ipcTable.Col(colItemID)))).
-			Where(ipcTable.Col(colParentID).Eq(options.AncestorItemID))
+			Join(schema.PictureItemTable, goqu.On(aliasTable.Col("id").Eq(schema.PictureItemTablePictureIDCol))).
+			Join(
+				schema.ItemParentCacheTable,
+				goqu.On(schema.PictureItemTableItemIDCol.Eq(schema.ItemParentCacheTableItemIDCol)),
+			).
+			Where(schema.ItemParentCacheTableParentIDCol.Eq(options.AncestorItemID))
 	}
 
 	if options.HasCopyrights {

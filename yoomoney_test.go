@@ -90,7 +90,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	itemID, err := r1.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.TableItemParentCache).Rows(goqu.Record{
+	_, err = goquDB.Insert(schema.ItemParentCacheTable).Rows(goqu.Record{
 		"item_id":   itemID,
 		"parent_id": itemID,
 		"diff":      0,
@@ -109,7 +109,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = goquDB.ExecContext(ctx,
-		"INSERT INTO "+schema.TablePictureItem+" (picture_id, item_id) VALUES (?, ?)",
+		"INSERT INTO "+schema.PictureItemTableName+" (picture_id, item_id) VALUES (?, ?)",
 		pictureID, itemID,
 	)
 	require.NoError(t, err)

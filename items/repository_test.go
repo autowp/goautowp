@@ -51,7 +51,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 			},
 			TypeID:     []ItemType{BRAND},
 			Limit:      TopBrandsCount,
-			OrderBy:    []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
+			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 			SortByName: true,
 		}
 		r, _, err := repository.List(ctx, options)
@@ -103,7 +103,7 @@ func TestListFilters(t *testing.T) {
 			Catname:   "test",
 		},
 		Limit:   TopBrandsCount,
-		OrderBy: []exp.OrderedExpression{goqu.I("descendants_count").Desc()},
+		OrderBy: []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 	}
 	_, _, err = repository.List(ctx, options)
 	require.NoError(t, err)
@@ -201,14 +201,14 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	vehicleID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.TableItemParent).Rows(goqu.Record{
+	_, err = goquDB.Insert(schema.ItemParentTableName).Rows(goqu.Record{
 		"item_id":   vehicleID,
 		"parent_id": brandID,
 		"catname":   "",
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.TableItemParentCache).Cols("item_id", "parent_id", "diff").Vals(
+	_, err = goquDB.Insert(schema.ItemParentCacheTableName).Cols("item_id", "parent_id", "diff").Vals(
 		goqu.Vals{brandID, brandID, 0},
 		goqu.Vals{vehicleID, vehicleID, 0},
 		goqu.Vals{vehicleID, brandID, 1},
@@ -230,7 +230,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	pictureID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.TablePictureItem).Rows(goqu.Record{
+	_, err = goquDB.Insert(schema.PictureItemTableName).Rows(goqu.Record{
 		"picture_id": pictureID,
 		"item_id":    vehicleID,
 	}).Executor().ExecContext(ctx)
@@ -289,7 +289,7 @@ func TestPaginator(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = goquDB.ExecContext(ctx,
-			"INSERT INTO "+schema.TableItemLanguage+" (item_id, language, name) VALUES (?, ?, ?)",
+			"INSERT INTO "+schema.ItemLanguageTableName+" (item_id, language, name) VALUES (?, ?, ?)",
 			itemID, "en", name+"_"+strconv.Itoa(i),
 		)
 		require.NoError(t, err)

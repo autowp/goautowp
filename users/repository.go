@@ -179,9 +179,9 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 
 	if options.InContacts != 0 {
 		sqSelect = sqSelect.Join(
-			goqu.T(schema.TableContact),
-			goqu.On(schema.UserTableIDCol.Eq(goqu.T(schema.TableContact).Col("contact_user_id")))).
-			Where(goqu.Ex{schema.TableContact + ".user_id": options.InContacts})
+			schema.ContactTable,
+			goqu.On(schema.UserTableIDCol.Eq(schema.ContactTable.Col("contact_user_id")))).
+			Where(schema.ContactTable.Col("user_id").Eq(options.InContacts))
 	}
 
 	if options.Deleted != nil {
@@ -429,9 +429,9 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 			schema.UserTableUUIDColName:           goqu.Func("UUID_TO_BIN", guid),
 		}).
 		OnConflict(goqu.DoUpdate(schema.UserTableUUIDColName, goqu.Record{
-			schema.UserTableEmailColName:  goqu.Func("values", goqu.I(schema.UserTableEmailColName)),
-			schema.UserTableNameColName:   goqu.Func("values", goqu.I(schema.UserTableNameColName)),
-			schema.UserTableLastIPColName: goqu.Func("values", goqu.I(schema.UserTableLastIPColName)),
+			schema.UserTableEmailColName:  goqu.Func("values", goqu.C(schema.UserTableEmailColName)),
+			schema.UserTableNameColName:   goqu.Func("values", goqu.C(schema.UserTableNameColName)),
+			schema.UserTableLastIPColName: goqu.Func("values", goqu.C(schema.UserTableLastIPColName)),
 		})).
 		Executor().Exec()
 	if err != nil {
@@ -774,15 +774,20 @@ func (s *Repository) SetDisableUserCommentsNotifications(
 	toUserID int64,
 	disabled bool,
 ) error {
-	query := s.db.Insert(schema.TableUserUserPreferences).
+	query := s.db.Insert(schema.UserUserPreferencesTable).
 		Rows(goqu.Record{
-			"user_id":                        userID,
-			"to_user_id":                     toUserID,
-			"disable_comments_notifications": disabled,
+			schema.UserUserPreferencesTableUserIDColName:   userID,
+			schema.UserUserPreferencesTableToUserIDColName: toUserID,
+			schema.UserUserPreferencesTableDCNColName:      disabled,
 		}).
-		OnConflict(goqu.DoUpdate("user_id, to_user_id", goqu.Record{
-			"disable_comments_notifications": goqu.L("EXCLUDED.disable_comments_notifications"),
-		}))
+		OnConflict(
+			goqu.DoUpdate(
+				schema.UserUserPreferencesTableUserIDColName+", "+schema.UserUserPreferencesTableToUserIDColName,
+				goqu.Record{
+					schema.UserUserPreferencesTableDCNColName: goqu.L("EXCLUDED." + schema.UserUserPreferencesTableDCNColName),
+				},
+			),
+		)
 
 	_, err := query.Executor().ExecContext(ctx)
 
@@ -792,11 +797,11 @@ func (s *Repository) SetDisableUserCommentsNotifications(
 func (s *Repository) UserPreferences(ctx context.Context, userID int64, toUserID int64) (*UserPreferences, error) {
 	var row UserPreferences
 
-	_, err := s.db.Select("disable_comments_notifications").
-		From(schema.TableUserUserPreferences).
+	_, err := s.db.Select(schema.UserUserPreferencesTableDCNCol).
+		From(schema.UserUserPreferencesTable).
 		Where(
-			goqu.C("user_id").Eq(userID),
-			goqu.C("to_user_id").Eq(toUserID),
+			schema.UserUserPreferencesTableUserIDCol.Eq(userID),
+			schema.UserUserPreferencesTableToUserIDCol.Eq(toUserID),
 		).ScanStructContext(ctx, &row)
 
 	return &row, err
