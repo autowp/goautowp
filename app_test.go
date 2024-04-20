@@ -73,9 +73,8 @@ func TestServeGRPC(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
-	app := NewApplication(cfg)
-
 	cfg.GRPC.Listen = ":9093"
+	app := NewApplication(cfg)
 
 	done := make(chan bool)
 	go func() {
@@ -91,10 +90,9 @@ func TestServePublic(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
+	cfg.PublicRest.Listen = ":9090"
 	app := NewApplication(cfg)
 	ctx := context.Background()
-
-	cfg.PublicRest.Listen = ":9090"
 
 	done := make(chan bool)
 	go func() {
@@ -110,10 +108,9 @@ func TestServePrivate(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
+	cfg.PrivateRest.Listen = ":9091"
 	app := NewApplication(cfg)
 	ctx := context.Background()
-
-	cfg.PrivateRest.Listen = ":9091"
 
 	done := make(chan bool)
 	go func() {
