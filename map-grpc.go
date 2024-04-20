@@ -85,16 +85,12 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 		latLo,
 	)
 
+	sqSelect := s.db.Select(goqu.Func("ST_AsBinary", schema.ItemPointTablePointCol)).
+		From(schema.ItemPointTable).
+		Where(goqu.Func("ST_Contains", goqu.Func("ST_GeomFromText", polygon), schema.ItemPointTablePointCol))
+
 	if pointsOnly {
-		rows, err := s.db.QueryContext(
-			ctx,
-			`
-				SELECT ST_AsBinary(point)
-				FROM item_point
-				WHERE ST_Contains(ST_GeomFromText(?), point)
-			`,
-			polygon,
-		)
+		rows, err := sqSelect.Executor().QueryContext(ctx)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -119,17 +115,13 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			return nil, err
 		}
 	} else {
-		rows, err := s.db.QueryContext(
-			ctx,
-			`
-				SELECT ST_AsBinary(item_point.point), item.id, item.name, item.begin_year, item.end_year,
-                    item.`+schema.ItemTableItemTypeIDColName+`, item.today
-				FROM item
-					INNER JOIN item_point ON item.id = item_point.item_id
-				WHERE ST_Contains(ST_GeomFromText(?), item_point.point)
-			`,
-			polygon,
-		)
+		rows, err := sqSelect.
+			SelectAppend(
+				schema.ItemTableIDCol, schema.ItemTableNameCol, schema.ItemTableBeginYearCol, schema.ItemTableEndYearCol,
+				schema.ItemTableItemTypeIDCol, schema.ItemTableTodayCol,
+			).
+			Join(schema.ItemTable, goqu.On(schema.ItemPointTableItemIDCol.Eq(schema.ItemTableIDCol))).
+			Executor().QueryContext(ctx)
 
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -199,9 +191,9 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			err = s.db.QueryRowContext(ctx, `
 				SELECT `+schema.PictureTableName+`.image_id
 				FROM `+schema.PictureTableName+` 
-				    INNER JOIN `+schema.TablePictureItem+
-				` ON `+schema.PictureTableName+`.id = `+schema.TablePictureItem+`.picture_id
-				WHERE `+schema.PictureTableName+`.status = ? AND `+schema.TablePictureItem+`.item_id = ?
+				    INNER JOIN `+schema.PictureItemTableName+
+				` ON `+schema.PictureTableName+`.id = `+schema.PictureItemTableName+`.picture_id
+				WHERE `+schema.PictureTableName+`.status = ? AND `+schema.PictureItemTableName+`.item_id = ?
 			`, pictures.StatusAccepted, id).Scan(&imageID)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return nil, status.Error(codes.Internal, err.Error())

@@ -133,9 +133,6 @@ func (s *Repository) candidate(ctx context.Context) (int64, error) {
 }
 
 func (s *Repository) CandidateQuery() *goqu.SelectDataset {
-	ipcTable := goqu.T(schema.TableItemParentCache)
-	piTable := goqu.T(schema.TablePictureItem)
-
 	const picturesCountAlias = "p_count"
 
 	sqSelect := s.db.Select(
@@ -143,9 +140,9 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 		goqu.COUNT(goqu.DISTINCT(schema.PictureTableIDCol)).As(picturesCountAlias),
 	).
 		From(schema.ItemTable).
-		Join(ipcTable, goqu.On(schema.ItemTableIDCol.Eq(ipcTable.Col("parent_id")))).
-		Join(piTable, goqu.On(ipcTable.Col("item_id").Eq(piTable.Col("item_id")))).
-		Join(schema.PictureTable, goqu.On(piTable.Col("picture_id").Eq(schema.PictureTableIDCol))).
+		Join(schema.ItemParentCacheTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentCacheTableParentIDCol))).
+		Join(schema.PictureItemTable, goqu.On(schema.ItemParentCacheTableItemIDCol.Eq(schema.PictureItemTableItemIDCol))).
+		Join(schema.PictureTable, goqu.On(schema.PictureItemTablePictureIDCol.Eq(schema.PictureTableIDCol))).
 		Where(
 			schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
 			schema.ItemTableIDCol.NotIn(
@@ -155,7 +152,7 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 			),
 		).
 		GroupBy(schema.ItemTableIDCol).
-		Having(goqu.I(picturesCountAlias).Gte(s.minPictures))
+		Having(goqu.C(picturesCountAlias).Gte(s.minPictures))
 
 	return sqSelect
 }

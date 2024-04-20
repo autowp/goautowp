@@ -211,7 +211,7 @@ func (s *Repository) Zones(ctx context.Context) ([]Zone, error) {
 func (s *Repository) TotalValues(ctx context.Context) (int32, error) {
 	var result int32
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(goqu.T(schema.TableAttrsValues))
+	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.AttrsValuesTable)
 
 	success, err := sqSelect.ScanValContext(ctx, &result)
 	if err != nil {

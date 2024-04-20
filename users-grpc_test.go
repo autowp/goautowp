@@ -92,7 +92,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	_, err = db.Update(schema.UserTable).
 		Set(goqu.Record{"img": imageID}).
-		Where(goqu.C("id").Eq(me.Id)).
+		Where(schema.UserTableIDCol.Eq(me.Id)).
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 

@@ -224,7 +224,7 @@ func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, by
 			"deleted_by":  byUserID,
 			"delete_date": goqu.Func("NOW"),
 		}).
-		Where(goqu.C("id").Eq(commentID)).
+		Where(schema.CommentMessageTableIDCol.Eq(commentID)).
 		Executor().ExecContext(ctx)
 
 	return err
@@ -318,26 +318,24 @@ func (s *Repository) moveMessageRecursive(
 		return err
 	}
 
-	rows, err := s.db.QueryContext(ctx, "SELECT id FROM "+schema.CommentMessageTableName+" WHERE parent_id = ?", parentID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	var ids []int64
+
+	err = s.db.Select(schema.CommentMessageTableIDCol).
+		From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableParentIDCol.Eq(parentID)).
+		ScanValsContext(ctx, &ids)
+	if err != nil {
 		return err
 	}
 
-	for rows.Next() {
-		var id int64
-		err = rows.Scan(&id)
-
-		if err != nil {
-			return err
-		}
-
+	for _, id := range ids {
 		err = s.moveMessageRecursive(ctx, id, dstType, dstItemID)
 		if err != nil {
 			return err
 		}
 	}
 
-	return rows.Err()
+	return nil
 }
 
 func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentType, itemID int64) error {
@@ -449,18 +447,21 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 func (s *Repository) updateVote(ctx context.Context, commentID int64) (int32, error) {
 	var count int32
 
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT sum(vote) FROM "+schema.CommentVoteTableName+" WHERE comment_id = ?",
-		commentID,
-	).Scan(&count)
+	success, err := s.db.Select(goqu.SUM(schema.CommentVoteTableVoteCol)).
+		From(schema.CommentVoteTable).
+		Where(schema.CommentVoteTableCommentIDCol.Eq(commentID)).
+		Executor().ScanValContext(ctx, &count)
 	if err != nil {
 		return 0, err
 	}
 
-	_, err = s.db.Update(schema.CommentMessageTableName).
-		Set(goqu.Record{"vote": count}).
-		Where(goqu.C("id").Eq(commentID)).
+	if !success {
+		return 0, sql.ErrNoRows
+	}
+
+	_, err = s.db.Update(schema.CommentMessageTable).
+		Set(goqu.Record{schema.CommentMessageTableVoteColName: count}).
+		Where(schema.CommentMessageTableIDCol.Eq(commentID)).
 		Executor().ExecContext(ctx)
 
 	return count, err
@@ -606,7 +607,7 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 
 	case TypeIDItems:
 		success, err = s.db.Select(goqu.L("1")).From(schema.ItemTable).
-			Where(goqu.C("id").Eq(itemID)).ScanValContext(ctx, &val)
+			Where(schema.ItemTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
 	case TypeIDVotings:
 		success, err = s.db.Select(goqu.L("1")).From(schema.VotingTable).
@@ -971,15 +972,23 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 }
 
 func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
-	query := `
-		SELECT cm1.id, cm1.item_id, cm1.type_id
-		FROM ` + schema.CommentMessageTableName + ` AS cm1
-			LEFT JOIN ` + schema.CommentMessageTableName + ` AS cm2 ON cm1.id = cm2.parent_id
-		WHERE cm2.parent_id IS NULL
-		  AND cm1.delete_date < DATE_SUB(NOW(), INTERVAL ? DAY)
-    `
+	cm1 := schema.CommentMessageTable.As("cm1")
+	cm2 := schema.CommentMessageTable.As("cm2")
+	cm1ID := cm1.Col(schema.CommentMessageTableIDColName)
+	cm2ParentID := cm2.Col(schema.CommentMessageTableParentIDColName)
 
-	rows, err := s.db.QueryContext(ctx, query, deleteTTLDays)
+	rows, err := s.db.Select(
+		cm1ID,
+		cm1.Col(schema.CommentMessageTableItemIDColName),
+		cm1.Col(schema.CommentMessageTableTypeIDColName),
+	).
+		From(cm1).
+		LeftJoin(cm2, goqu.On(cm1ID.Eq(cm2ParentID))).
+		Where(
+			cm2.Col(schema.CommentMessageTableParentIDColName).IsNull(),
+			cm2ParentID.Lt(goqu.L("DATE_SUB(NOW(), INTERVAL ? DAY)", deleteTTLDays)),
+		).
+		Executor().QueryContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -1385,14 +1394,14 @@ func (s *Repository) Count(
 				goqu.On(schema.CommentMessageTableItemIDCol.Eq(schema.PictureTableIDCol)),
 			).
 			Join(
-				goqu.T(schema.TablePictureItem),
-				goqu.On(schema.PictureTableIDCol.Eq(goqu.T(schema.TablePictureItem).Col("picture_id"))),
+				schema.PictureItemTable,
+				goqu.On(schema.PictureTableIDCol.Eq(schema.PictureItemTablePictureIDCol)),
 			).
 			Join(
-				goqu.T(schema.TableItemParentCache),
-				goqu.On(goqu.T(schema.TablePictureItem).Col("item_id").Eq(goqu.T(schema.TableItemParentCache).Col("item_id"))),
+				schema.ItemParentCacheTable,
+				goqu.On(schema.PictureItemTableItemIDCol.Eq(schema.ItemParentCacheTableItemIDCol)),
 			).
-			Where(goqu.T(schema.TableItemParentCache).Col("parent_id").Eq(itemID))
+			Where(schema.ItemParentCacheTableParentIDCol.Eq(itemID))
 	}
 
 	var cnt int32
@@ -1635,21 +1644,20 @@ func (s *Repository) Paginator(request Request) *util.Paginator {
 	}
 
 	if request.PicturesOfItemID > 0 {
-		tablePictureItems := goqu.T(schema.TablePictureItem)
 		sqSelect = sqSelect.
 			Join(
 				schema.PictureTable,
 				goqu.On(schema.CommentMessageTableItemIDCol.Eq(schema.PictureTableIDCol)),
 			).
 			Join(
-				tablePictureItems,
-				goqu.On(schema.PictureTableIDCol.Eq(tablePictureItems.Col("picture_id"))),
+				schema.PictureItemTable,
+				goqu.On(schema.PictureTableIDCol.Eq(schema.PictureItemTablePictureIDCol)),
 			).
 			Join(
-				goqu.T(schema.TableItemParentCache),
-				goqu.On(tablePictureItems.Col("item_id").Eq(goqu.T(schema.TableItemParentCache).Col("item_id"))),
+				schema.ItemParentCacheTable,
+				goqu.On(schema.PictureItemTableItemIDCol.Eq(schema.ItemParentCacheTableItemIDCol)),
 			).
-			Where(goqu.T(schema.TableItemParentCache).Col("parent_id").Eq(request.PicturesOfItemID)).
+			Where(schema.ItemParentCacheTableParentIDCol.Eq(request.PicturesOfItemID)).
 			Where(schema.CommentMessageTableTypeIDCol.Eq(TypeIDPictures))
 	}
 

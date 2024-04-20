@@ -641,11 +641,11 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		Page:     in.Page,
 		Fields:   convertFields(in.Fields),
 		OrderBy: []exp.OrderedExpression{
-			goqu.I("i.name").Asc(),
-			goqu.I("i.body").Asc(),
-			goqu.I("i.spec_id").Asc(),
-			goqu.I("i.begin_order_cache").Asc(),
-			goqu.I("i.end_order_cache").Asc(),
+			goqu.T("i").Col("name").Asc(),
+			goqu.T("i").Col("body").Asc(),
+			goqu.T("i").Col("spec_id").Asc(),
+			goqu.T("i").Col("begin_order_cache").Asc(),
+			goqu.T("i").Col("end_order_cache").Asc(),
 		},
 	}
 
@@ -1025,13 +1025,16 @@ func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItem
 
 	var found bool
 
-	err = s.db.QueryRowContext(
-		ctx,
-		"SELECT 1 FROM item WHERE id = ? AND "+schema.ItemTableItemTypeIDColName+" IN (?, ?)",
-		in.ItemId, items.VEHICLE, items.TWINS,
-	).Scan(&found)
+	success, err := s.db.Select(goqu.L("1")).From(schema.ItemTable).Where(
+		schema.ItemTableIDCol.Eq(in.ItemId),
+		schema.ItemTableItemTypeIDCol.In([]items.ItemType{items.VEHICLE, items.TWINS}),
+	).ScanValContext(ctx, &found)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !success {
+		return nil, status.Error(codes.NotFound, sql.ErrNoRows.Error())
 	}
 
 	err = s.repository.AddItemVehicleType(ctx, in.ItemId, in.VehicleTypeId)
