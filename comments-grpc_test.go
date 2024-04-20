@@ -349,6 +349,16 @@ func TestVoteComment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// vote negative
+	_, err = client.VoteComment(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CommentsVoteCommentRequest{
+			CommentId: r.Id,
+			Vote:      -1,
+		},
+	)
+	require.NoError(t, err)
+
 	// delete comment
 	_, err = client.SetDeleted(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
