@@ -273,7 +273,9 @@ var (
 	CommentVoteTableCommentIDCol = CommentVoteTable.Col("comment_id")
 	CommentVoteTableVoteCol      = CommentVoteTable.Col(CommentVoteTableVoteColName)
 
-	ContactTable = goqu.T(ContactTableName)
+	ContactTable                 = goqu.T(ContactTableName)
+	ContactTableUserIDCol        = ContactTable.Col("user_id")
+	ContactTableContactUserIDCol = ContactTable.Col("contact_user_id")
 
 	DfHashTable             = goqu.T(DfHashTableName)
 	DfHashTableHashCol      = DfHashTable.Col(DfHashTableHashColName)

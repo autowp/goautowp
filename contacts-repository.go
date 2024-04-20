@@ -2,9 +2,8 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 )
 
@@ -22,21 +21,11 @@ func NewContactsRepository(db *goqu.Database) *ContactsRepository {
 
 func (s *ContactsRepository) isExists(ctx context.Context, id int64, contactID int64) (bool, error) {
 	v := 0
-	err := s.autowpDB.QueryRowContext(
-		ctx,
-		"SELECT 1 FROM contact WHERE user_id = ? and contact_user_id = ?",
-		id, contactID,
-	).Scan(&v)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return s.autowpDB.Select(goqu.L("1")).
+		From(schema.ContactTable).
+		Where(schema.ContactTableUserIDCol.Eq(id), schema.ContactTableContactUserIDCol.Eq(contactID)).
+		ScanValContext(ctx, &v)
 }
 
 func (s *ContactsRepository) create(ctx context.Context, id int64, contactID int64) error {

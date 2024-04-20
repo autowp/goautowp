@@ -160,9 +160,14 @@ func (s *Repository) IsSubscribed(
 	ctx context.Context, userID int64, commentsType CommentType, itemID int64,
 ) (bool, error) {
 	var result bool
-	success, err := s.db.ScanValContext(ctx, &result, `
-		SELECT 1 FROM `+schema.CommentTopicSubscribeTableName+` WHERE type_id = ? AND item_id = ? AND user_id = ?
-    `, commentsType, itemID, userID)
+
+	success, err := s.db.Select(goqu.L("1")).
+		From(schema.CommentTopicSubscribeTable).
+		Where(
+			schema.CommentTopicSubscribeTableTypeIDCol.Eq(commentsType),
+			schema.CommentTopicSubscribeTableItemIDCol.Eq(itemID),
+			schema.CommentTopicSubscribeTableUserIDCol.Eq(userID),
+		).ScanValContext(ctx, &result)
 
 	return success && result, err
 }
@@ -379,11 +384,16 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 
 func (s *Repository) UserVote(ctx context.Context, userID int64, commentID int64) (int32, error) {
 	var vote int32
-	err := s.db.QueryRowContext(
-		ctx, "SELECT vote FROM "+schema.CommentVoteTableName+" WHERE comment_id = ? AND user_id = ?", commentID, userID,
-	).Scan(&vote)
 
-	if errors.Is(err, sql.ErrNoRows) {
+	success, err := s.db.Select(schema.CommentVoteTableVoteCol).
+		From(schema.CommentVoteTable).
+		Where(schema.CommentVoteTableCommentIDCol.Eq(commentID), schema.CommentVoteTableUserIDCol.Eq(userID)).
+		ScanValContext(ctx, &vote)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
 		return 0, nil
 	}
 
@@ -491,16 +501,21 @@ func (s *Repository) Add(
 ) (int64, error) {
 	if parentID > 0 {
 		deleted := false
-		err := s.db.QueryRowContext(
-			ctx,
-			"SELECT deleted FROM "+schema.CommentMessageTableName+" WHERE type_id = ? AND item_id = ? AND id = ?",
-			typeID, itemID, parentID,
-		).Scan(&deleted)
 
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, errors.New("message not found")
-		} else if err != nil {
+		success, err := s.db.Select(schema.CommentMessageTableDeletedCol).
+			From(schema.CommentMessageTable).
+			Where(
+				schema.CommentMessageTableTypeIDCol.Eq(typeID),
+				schema.CommentMessageTableItemIDCol.Eq(itemID),
+				schema.CommentMessageTableIDCol.Eq(parentID),
+			).
+			ScanValContext(ctx, &deleted)
+		if err != nil {
 			return 0, err
+		}
+
+		if !success {
+			return 0, errors.New("message not found")
 		}
 
 		if deleted {
