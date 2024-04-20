@@ -402,7 +402,7 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 	var authorID int64
 
 	success, err := s.db.Select(schema.CommentMessageTableAuthorIDCol).From(schema.CommentMessageTable).
-		Where(schema.CommentMessageTableIDCol.Eq(commentID)).
+		Where(schema.CommentMessageTableIDCol.Eq(commentID), schema.CommentMessageTableDeletedCol.IsFalse()).
 		ScanValContext(ctx, &authorID)
 	if err != nil {
 		return 0, err
