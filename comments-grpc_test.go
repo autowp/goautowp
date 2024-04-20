@@ -522,6 +522,19 @@ func TestMoveComment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	_, err = client.Add(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&AddCommentRequest{
+			ItemId:             1,
+			TypeId:             CommentsType_FORUMS_TYPE_ID,
+			Message:            "Test",
+			ModeratorAttention: false,
+			ParentId:           r.Id,
+			Resolve:            false,
+		},
+	)
+	require.NoError(t, err)
+
 	_, err = client.MoveComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsMoveCommentRequest{
