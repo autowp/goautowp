@@ -518,6 +518,7 @@ func TestMoveComment(t *testing.T) {
 	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
+	forumsClient := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
 
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -528,10 +529,23 @@ func TestMoveComment(t *testing.T) {
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
+	topic, err := forumsClient.CreateTopic(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&APICreateTopicRequest{
+			ThemeId:            2,
+			Name:               "Topic name",
+			Message:            "Test message",
+			ModeratorAttention: false,
+			Subscription:       true,
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, topic)
+
 	r, err := client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&AddCommentRequest{
-			ItemId:             1,
+			ItemId:             topic.Id,
 			TypeId:             CommentsType_FORUMS_TYPE_ID,
 			Message:            "Test",
 			ModeratorAttention: false,
@@ -544,7 +558,7 @@ func TestMoveComment(t *testing.T) {
 	_, err = client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&AddCommentRequest{
-			ItemId:             1,
+			ItemId:             topic.Id,
 			TypeId:             CommentsType_FORUMS_TYPE_ID,
 			Message:            "Test",
 			ModeratorAttention: false,
@@ -554,11 +568,24 @@ func TestMoveComment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	topic2, err := forumsClient.CreateTopic(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
+		&APICreateTopicRequest{
+			ThemeId:            2,
+			Name:               "Topic 2 name",
+			Message:            "Test 2 message",
+			ModeratorAttention: false,
+			Subscription:       true,
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, topic)
+
 	_, err = client.MoveComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsMoveCommentRequest{
 			CommentId: r.Id,
-			ItemId:    2,
+			ItemId:    topic2.Id,
 			TypeId:    CommentsType_FORUMS_TYPE_ID,
 		},
 	)
