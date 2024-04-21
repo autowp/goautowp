@@ -1556,7 +1556,7 @@ func (s *Repository) IsNewMessage(
 ) (bool, error) {
 	var success bool
 
-	success, err := s.db.Select(goqu.Star()).
+	success, err := s.db.Select(goqu.L("1")).
 		From(schema.CommentTopicViewTable).
 		Where(
 			schema.CommentTopicViewTableTypeIDCol.Eq(typeID),
