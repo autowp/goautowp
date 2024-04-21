@@ -216,7 +216,7 @@ func (s *Forums) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	if !success {
+	if success {
 		return errors.New("cannot delete topic with moderator attention requirement")
 	}
 
