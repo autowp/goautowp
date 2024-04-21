@@ -917,6 +917,16 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			return nil, err
 		}
 
+		commentsRepository, err := s.CommentsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		picturesRepository, err := s.PicturesRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		events, err := s.Events()
 		if err != nil {
 			return nil, err
@@ -937,6 +947,8 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			s.Enforcer(),
 			contactsRepository,
 			userRepository,
+			commentsRepository,
+			picturesRepository,
 			events,
 			cfg.Languages,
 			cfg.Captcha,
