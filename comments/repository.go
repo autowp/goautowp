@@ -578,13 +578,16 @@ func (s *Repository) Add(
 func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID int64) error {
 	var count int64
 
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT count(1) FROM "+schema.CommentMessageTableName+" WHERE parent_id = ?",
-		messageID,
-	).Scan(&count)
+	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
+		From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableParentIDCol.Eq(messageID)).
+		ScanValContext(ctx, &count)
 	if err != nil {
 		return err
+	}
+
+	if !success {
+		return sql.ErrNoRows
 	}
 
 	_, err = s.db.Update(schema.CommentMessageTable).
