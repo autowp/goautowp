@@ -505,9 +505,8 @@ func TestMessagesByUserIdentity(t *testing.T) {
 	require.NoError(t, err)
 }
 
+//nolint:paralleltest
 func TestMoveComment(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
 		"localhost",
