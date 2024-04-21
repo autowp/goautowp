@@ -83,6 +83,11 @@ type Request struct {
 	Page               int32
 }
 
+type RatingUser struct {
+	AuthorID int64 `db:"author_id"`
+	Volume   int64 `db:"volume"`
+}
+
 // Repository Main Object.
 type Repository struct {
 	db                *goqu.Database
@@ -1698,4 +1703,18 @@ func (s *Repository) Paginator(request Request) *util.Paginator {
 		ItemCountPerPage:  request.PerPage,
 		CurrentPageNumber: request.Page,
 	}
+}
+
+func (s *Repository) TopAuthors(ctx context.Context, limit uint) ([]RatingUser, error) {
+	rows := make([]RatingUser, 0)
+
+	const volumeAlias = "volume"
+	err := s.db.Select(schema.CommentMessageTableAuthorIDCol, goqu.SUM(schema.CommentMessageTableVoteCol).As(volumeAlias)).
+		From(schema.CommentMessageTable).
+		GroupBy(schema.CommentMessageTableAuthorIDCol).
+		Order(goqu.C(volumeAlias).Desc()).
+		Limit(limit).
+		ScanStructsContext(ctx, &rows)
+
+	return rows, err
 }

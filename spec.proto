@@ -66,6 +66,7 @@ service Users {
   rpc DisableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
   rpc EnableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
   rpc GetUsers(APIUsersRequest) returns (APIUsersResponse) {}
+  rpc GetUsersRating(APIUsersRatingRequest) returns (APIUsersRatingResponse) {}
 }
 
 service Items {
@@ -1020,6 +1021,32 @@ message APIUsersRequest {
 message APIUsersResponse {
   repeated APIUser items = 1;
   Pages paginator = 2;
+}
+
+message APIUsersRatingRequest {
+  string rating = 1;
+}
+
+message APIUsersRatingUserBrand {
+  string name = 1;
+  repeated string route = 2;
+}
+
+message APIUsersRatingUserFan {
+  int64 user_id = 1;
+  int64 volume = 2;
+}
+
+message APIUsersRatingUser {
+  int64 user_id = 1;
+  int64 volume = 2;
+  double weight = 3;
+  repeated APIUsersRatingUserBrand brands = 4;
+  repeated APIUsersRatingUserFan fans = 5;
+}
+
+message APIUsersRatingResponse {
+  repeated APIUsersRatingUser users = 1;
 }
 
 message ArticlesRequest {

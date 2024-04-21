@@ -129,6 +129,10 @@ const (
 
 	PictureItemTableName = "picture_item"
 
+	PictureVoteTableName = "picture_vote"
+
+	PictureVoteSummaryTableName = "picture_vote_summary"
+
 	SpecTableName             = "spec"
 	SpecTableIDColName        = "id"
 	SpecTableNameColName      = "name"
@@ -406,6 +410,11 @@ var (
 	PictureItemTable             = goqu.T(PictureItemTableName)
 	PictureItemTablePictureIDCol = PictureItemTable.Col("picture_id")
 	PictureItemTableItemIDCol    = PictureItemTable.Col("item_id")
+
+	PictureVoteTable             = goqu.T(PictureVoteTableName)
+	PictureVoteTablePictureIDCol = PictureVoteTable.Col("picture_id")
+	PictureVoteTableUserIDCol    = PictureVoteTable.Col("user_id")
+	PictureVoteTableValueCol     = PictureVoteTable.Col("value")
 
 	SpecTable             = goqu.T(SpecTableName)
 	SpecTableIDCol        = SpecTable.Col(SpecTableIDColName)

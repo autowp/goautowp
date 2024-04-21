@@ -49,6 +49,16 @@ type ListOptions struct {
 	HasCopyrights  bool
 }
 
+type RatingUser struct {
+	OwnerID int64 `db:"owner_id"`
+	Volume  int64 `db:"volume"`
+}
+
+type RatingFan struct {
+	UserID int64 `db:"user_id"`
+	Volume int64 `db:"volume"`
+}
+
 type Repository struct {
 	db *goqu.Database
 }
@@ -92,7 +102,7 @@ func (s *Repository) GetVote(ctx context.Context, id int64, userID int64) (*Vote
 	if userID > 0 {
 		err := s.db.QueryRowContext(
 			ctx,
-			"SELECT value FROM picture_vote WHERE picture_id = ? AND user_id = ?",
+			"SELECT value FROM "+schema.PictureVoteTableName+" WHERE picture_id = ? AND user_id = ?",
 			id, userID,
 		).Scan(&value)
 		if err != nil {
@@ -102,7 +112,7 @@ func (s *Repository) GetVote(ctx context.Context, id int64, userID int64) (*Vote
 
 	err := s.db.QueryRowContext(
 		ctx,
-		"SELECT positive, negative FROM picture_vote_summary WHERE picture_id = ?",
+		"SELECT positive, negative FROM "+schema.PictureVoteSummaryTableName+" WHERE picture_id = ?",
 		id,
 	).Scan(&positive, &negative)
 	if err != nil {
@@ -123,7 +133,7 @@ func (s *Repository) Vote(ctx context.Context, id int64, value int32, userID int
 	}
 
 	_, err := s.db.ExecContext(ctx, `
-        INSERT INTO picture_vote (picture_id, user_id, value, timestamp)
+        INSERT INTO `+schema.PictureVoteTableName+` (picture_id, user_id, value, timestamp)
 		VALUES (?, ?, ?, now())
 		ON DUPLICATE KEY UPDATE value = VALUES(value),
 		timestamp = VALUES(timestamp)
@@ -201,11 +211,11 @@ func (s *Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mod
 
 func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
 	_, err := s.db.ExecContext(ctx, `
-        insert into picture_vote_summary (picture_id, positive, negative)
+        insert into `+schema.PictureVoteSummaryTableName+` (picture_id, positive, negative)
 		values (
 			?,
-			(select count(1) from picture_vote where picture_id = ? and value > 0),
-			(select count(1) from picture_vote where picture_id = ? and value < 0)
+			(select count(1) from `+schema.PictureVoteTableName+` where picture_id = ? and value > 0),
+			(select count(1) from `+schema.PictureVoteTableName+` where picture_id = ? and value < 0)
 		)
 		on duplicate key update
 			positive = VALUES(positive),
@@ -301,4 +311,36 @@ func (s *Repository) applyPicture(
 	}
 
 	return sqSelect
+}
+
+func (s *Repository) TopLikes(ctx context.Context, limit uint) ([]RatingUser, error) {
+	rows := make([]RatingUser, 0)
+
+	const volumeAlias = "volume"
+	err := s.db.Select(schema.PictureTableOwnerIDCol, goqu.SUM(schema.PictureVoteTableValueCol).As(volumeAlias)).
+		From(schema.PictureTable).
+		Join(schema.PictureVoteTable, goqu.On(schema.PictureTableIDCol.Eq(schema.PictureVoteTablePictureIDCol))).
+		Where(schema.PictureTableOwnerIDCol.Neq(schema.PictureVoteTableUserIDCol)).
+		GroupBy(schema.PictureTableOwnerIDCol).
+		Order(goqu.C(volumeAlias).Desc()).
+		Limit(limit).
+		ScanStructsContext(ctx, &rows)
+
+	return rows, err
+}
+
+func (s *Repository) TopOwnerFans(ctx context.Context, userID int64, limit uint) ([]RatingFan, error) {
+	rows := make([]RatingFan, 0)
+
+	const volumeAlias = "volume"
+	err := s.db.Select(schema.PictureVoteTableUserIDCol, goqu.COUNT(goqu.Star()).As(volumeAlias)).
+		From(schema.PictureTable).
+		Join(schema.PictureVoteTable, goqu.On(schema.PictureTableIDCol.Eq(schema.PictureVoteTablePictureIDCol))).
+		Where(schema.PictureTableOwnerIDCol.Eq(userID)).
+		GroupBy(schema.PictureVoteTableUserIDCol).
+		Order(goqu.C(volumeAlias).Desc()).
+		Limit(limit).
+		ScanStructsContext(ctx, &rows)
+
+	return rows, err
 }
