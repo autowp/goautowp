@@ -80,9 +80,8 @@ func TestGetTheme(t *testing.T) {
 	require.NotEmpty(t, theme.Name)
 }
 
+//nolint:paralleltest
 func TestGetLastTopicAndLastMessage(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
 		"localhost",
