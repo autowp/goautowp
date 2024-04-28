@@ -54,7 +54,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 			SortByName: true,
 		}
-		r, _, err := repository.List(ctx, options)
+		r, _, err := repository.List(ctx, options, true)
 		require.NoError(t, err)
 		require.NotEmpty(t, r)
 
@@ -105,7 +105,7 @@ func TestListFilters(t *testing.T) {
 		Limit:   TopBrandsCount,
 		OrderBy: []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 	}
-	_, _, err = repository.List(ctx, options)
+	_, _, err = repository.List(ctx, options, true)
 	require.NoError(t, err)
 }
 
@@ -130,7 +130,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 		TypeID: []ItemType{BRAND},
 		Limit:  10,
 	}
-	_, _, err = repository.List(ctx, options)
+	_, _, err = repository.List(ctx, options, true)
 	require.NoError(t, err)
 }
 
@@ -254,7 +254,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 		Limit:      10,
 		SortByName: true,
 	}
-	r, _, err := repository.List(ctx, options)
+	r, _, err := repository.List(ctx, options, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 
@@ -302,7 +302,7 @@ func TestPaginator(t *testing.T) {
 		Page:     2,
 		Name:     name + "%",
 	}
-	r, pages, err := repository.List(ctx, options)
+	r, pages, err := repository.List(ctx, options, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 	require.Equal(t, 2, len(r))

@@ -115,7 +115,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 			SortByName: true,
 		}
 
-		list, _, err := s.repository.List(ctx, options)
+		list, _, err := s.repository.List(ctx, options, false)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -200,7 +200,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 			},
 			Limit:   items.TopPersonsCount,
 			OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},
-		})
+		}, false)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -261,7 +261,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 			},
 			Limit:   items.TopFactoriesCount,
 			OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},
-		})
+		}, false)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -322,7 +322,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 			TypeID:    []items.ItemType{items.CATEGORY},
 			Limit:     items.TopCategoriesCount,
 			OrderBy:   []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
-		})
+		}, false)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -396,7 +396,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 			TypeID:  []items.ItemType{items.BRAND},
 			Limit:   items.TopTwinsBrandsCount,
 			OrderBy: []exp.OrderedExpression{goqu.C("items_count").Desc()},
-		})
+		}, false)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -466,7 +466,7 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 		},
 		TypeID:     []items.ItemType{items.BRAND},
 		SortByName: true,
-	})
+	}, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -654,7 +654,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	res, pages, err := s.repository.List(ctx, options)
+	res, pages, err := s.repository.List(ctx, options, true)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

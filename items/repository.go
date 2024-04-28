@@ -724,7 +724,7 @@ func (s *Repository) Item(ctx context.Context, id int64, language string, fields
 		Language: language,
 	}
 
-	res, _, err := s.List(ctx, options)
+	res, _, err := s.List(ctx, options, false)
 	if err != nil {
 		return Item{}, err
 	}
@@ -736,7 +736,9 @@ func (s *Repository) Item(ctx context.Context, id int64, language string, fields
 	return res[0], nil
 }
 
-func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *util.Pages, error) { //nolint:maintidx
+func (s *Repository) List( //nolint:maintidx
+	ctx context.Context, options ListOptions, pagination bool,
+) ([]Item, *util.Pages, error) {
 	/*langPriority, ok := languagePriority[options.Language]
 	if !ok {
 		return nil, fmt.Errorf("language `%s` not found", options.Language)
@@ -775,9 +777,11 @@ func (s *Repository) List(ctx context.Context, options ListOptions) ([]Item, *ut
 			CurrentPageNumber: int32(options.Page),
 		}
 
-		pages, err = paginator.GetPages(ctx)
-		if err != nil {
-			return nil, nil, err
+		if pagination {
+			pages, err = paginator.GetPages(ctx)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		sqSelect, err = paginator.GetCurrentItems(ctx)

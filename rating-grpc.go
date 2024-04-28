@@ -89,9 +89,10 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 		OrderBy: []exp.OrderedExpression{goqu.COUNT(goqu.DISTINCT(goqu.T("i_ipcd_pi_p").Col("id"))).Desc()},
 		Limit:   numOfItemsInDetails,
 		Fields: items.ListFields{
+			NameOnly:             true,
 			CurrentPicturesCount: true,
 		},
-	})
+	}, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
