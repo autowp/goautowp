@@ -139,7 +139,10 @@ func TestPicturesRating(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, item := range r.Users {
-		_, err = client.GetUserPicturesRatingBrands(ctx, &UserRatingDetailsRequest{UserId: item.UserId})
+		_, err = client.GetUserPicturesRatingBrands(ctx, &UserRatingDetailsRequest{
+			UserId:   item.UserId,
+			Language: "en",
+		})
 		require.NoError(t, err)
 	}
 }
