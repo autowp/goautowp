@@ -52,26 +52,30 @@ type AutowpResourceAccess struct {
 const KeycloakExternalAccountID = "keycloak"
 
 type GetUsersOptions struct {
-	ID         int64
-	InContacts int64
-	Order      []exp.OrderedExpression
-	Deleted    *bool
-	IsOnline   bool
-	Limit      uint64
-	Page       uint64
+	ID          int64
+	InContacts  int64
+	Order       []exp.OrderedExpression
+	Deleted     *bool
+	HasSpecs    *bool
+	IsOnline    bool
+	HasPictures *bool
+	Limit       uint64
+	Page        uint64
 }
 
 // DBUser DBUser.
 type DBUser struct {
-	ID          int64
-	Name        string
-	Deleted     bool
-	Identity    *string
-	LastOnline  *time.Time
-	Role        string
-	EMail       *string
-	Img         *int
-	SpecsWeight float64
+	ID            int64
+	Name          string
+	Deleted       bool
+	Identity      *string
+	LastOnline    *time.Time
+	Role          string
+	EMail         *string
+	Img           *int
+	SpecsWeight   float64
+	SpecsVolume   int64
+	PicturesTotal int64
 }
 
 // CreateUserOptions CreateUserOptions.
@@ -162,13 +166,13 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 	var r DBUser
 	valuePtrs := []interface{}{
 		&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role,
-		&r.SpecsWeight, &r.Img, &r.EMail,
+		&r.SpecsWeight, &r.Img, &r.EMail, &r.PicturesTotal, &r.SpecsVolume,
 	}
 
 	columns := []interface{}{
 		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
-		schema.UserTableLastOnlineCol,
-		schema.UserTableRoleCol, schema.UserTableSpecsWeightCol, schema.UserTableImgCol, schema.UserTableEMailCol,
+		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol, schema.UserTableImgCol,
+		schema.UserTableEMailCol, schema.UserTablePicturesTotalCol, schema.UserTableSpecsVolumeCol,
 	}
 
 	sqSelect := s.autowpDB.From(schema.UserTable)
@@ -189,6 +193,14 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 			sqSelect = sqSelect.Where(schema.UserTableDeletedCol.IsTrue())
 		} else {
 			sqSelect = sqSelect.Where(schema.UserTableDeletedCol.IsFalse())
+		}
+	}
+
+	if options.HasSpecs != nil {
+		if *options.HasSpecs {
+			sqSelect = sqSelect.Where(schema.UserTableSpecsVolumeCol.Gt(0))
+		} else {
+			sqSelect = sqSelect.Where(schema.UserTableSpecsVolumeCol.Eq(0))
 		}
 	}
 
@@ -219,6 +231,8 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 		if err != nil {
 			return nil, nil, err
 		}
+	} else if options.Limit > 0 {
+		sqSelect = sqSelect.Limit(uint(options.Limit))
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
