@@ -92,6 +92,7 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 			NameOnly:             true,
 			CurrentPicturesCount: true,
 		},
+		Language: in.Language,
 	}, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

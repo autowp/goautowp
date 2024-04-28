@@ -255,7 +255,9 @@ func (s *Repository) TotalZoneAttrs(ctx context.Context, zoneID int64) (int32, e
 	return result, nil
 }
 
-func (s *Repository) TopUserBrands(ctx context.Context, userID int64, limit uint) ([]TopUserBrand, error) {
+func (s *Repository) TopUserBrands(
+	ctx context.Context, userID int64, limit uint,
+) ([]TopUserBrand, error) {
 	rows := make([]TopUserBrand, 0)
 
 	const volumeAlias = "volume"

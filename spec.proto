@@ -1056,6 +1056,7 @@ message APIUsersRatingResponse {
 
 message UserRatingDetailsRequest {
   int64 user_id = 1;
+  string language = 2;
 }
 
 message UserRatingBrandsResponse {
