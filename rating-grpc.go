@@ -80,15 +80,13 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 ) (*UserRatingBrandsResponse, error) {
 	brands, _, err := s.itemsRepository.List(ctx, items.ListOptions{
 		TypeID: []items.ItemType{items.BRAND},
-		DescendantItems: &items.ListOptions{
-			DescendantPictures: &items.ItemPicturesOptions{
-				Pictures: &items.PicturesOptions{
-					OwnerID: in.UserId,
-					Status:  pictures.StatusAccepted,
-				},
+		DescendantPictures: &items.ItemPicturesOptions{
+			Pictures: &items.PicturesOptions{
+				OwnerID: in.UserId,
+				Status:  pictures.StatusAccepted,
 			},
 		},
-		OrderBy: []exp.OrderedExpression{goqu.COUNT(goqu.DISTINCT(goqu.T("i_id_ipcd_pi_p").Col("id"))).Desc()},
+		OrderBy: []exp.OrderedExpression{goqu.COUNT(goqu.DISTINCT(goqu.T("i_ipcd_pi_p").Col("id"))).Desc()},
 		Limit:   numOfItemsInDetails,
 		Fields: items.ListFields{
 			CurrentPicturesCount: true,
