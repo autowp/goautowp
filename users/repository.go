@@ -231,6 +231,8 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 		if err != nil {
 			return nil, nil, err
 		}
+	} else if options.Limit > 0 {
+		sqSelect = sqSelect.Limit(uint(options.Limit))
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx)
