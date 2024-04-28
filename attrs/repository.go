@@ -273,6 +273,7 @@ func (s *Repository) TopUserBrands(ctx context.Context, userID int64, limit uint
 			schema.ItemTableItemTypeIDCol.Eq(items.BRAND),
 			schema.AttrsUserValuesTableUserIDCol.Eq(userID),
 		).
+		GroupBy(schema.ItemTableIDCol).
 		Order(goqu.C(volumeAlias).Desc()).
 		Limit(limit).
 		ScanStructsContext(ctx, &rows)
