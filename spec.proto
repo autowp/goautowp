@@ -66,7 +66,17 @@ service Users {
   rpc DisableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
   rpc EnableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
   rpc GetUsers(APIUsersRequest) returns (APIUsersResponse) {}
-  rpc GetUsersRating(APIUsersRatingRequest) returns (APIUsersRatingResponse) {}
+}
+
+service Rating {
+  rpc GetUserPicturesRating(google.protobuf.Empty) returns (APIUsersRatingResponse) {}
+  rpc GetUserPicturesRatingBrands(UserRatingDetailsRequest) returns (UserRatingBrandsResponse) {}
+  rpc GetUserCommentsRating(google.protobuf.Empty) returns (APIUsersRatingResponse) {}
+  rpc GetUserCommentsRatingFans(UserRatingDetailsRequest) returns (GetUserRatingFansResponse) {}
+  rpc GetUserPictureLikesRating(google.protobuf.Empty) returns (APIUsersRatingResponse) {}
+  rpc GetUserPictureLikesRatingFans(UserRatingDetailsRequest) returns (GetUserRatingFansResponse) {}
+  rpc GetUserSpecsRating(google.protobuf.Empty) returns (APIUsersRatingResponse) {}
+  rpc GetUserSpecsRatingBrands(UserRatingDetailsRequest) returns (UserRatingBrandsResponse) {}
 }
 
 service Items {
@@ -1023,10 +1033,6 @@ message APIUsersResponse {
   Pages paginator = 2;
 }
 
-message APIUsersRatingRequest {
-  string rating = 1;
-}
-
 message APIUsersRatingUserBrand {
   string name = 1;
   repeated string route = 2;
@@ -1041,12 +1047,22 @@ message APIUsersRatingUser {
   int64 user_id = 1;
   int64 volume = 2;
   double weight = 3;
-  repeated APIUsersRatingUserBrand brands = 4;
-  repeated APIUsersRatingUserFan fans = 5;
 }
 
 message APIUsersRatingResponse {
   repeated APIUsersRatingUser users = 1;
+}
+
+message UserRatingDetailsRequest {
+  int64 user_id = 1;
+}
+
+message UserRatingBrandsResponse {
+  repeated APIUsersRatingUserBrand brands = 1;
+}
+
+message GetUserRatingFansResponse {
+  repeated APIUsersRatingUserFan fans = 1;
 }
 
 message ArticlesRequest {

@@ -48,6 +48,11 @@ const (
 
 const MaxMessageLength = 16 * 1024
 
+type RatingFan struct {
+	UserID int64 `db:"user_id"`
+	Volume int64 `db:"volume"`
+}
+
 type GetVotesResult struct {
 	PositiveVotes []users.DBUser
 	NegativeVotes []users.DBUser
@@ -1712,6 +1717,22 @@ func (s *Repository) TopAuthors(ctx context.Context, limit uint) ([]RatingUser, 
 	err := s.db.Select(schema.CommentMessageTableAuthorIDCol, goqu.SUM(schema.CommentMessageTableVoteCol).As(volumeAlias)).
 		From(schema.CommentMessageTable).
 		GroupBy(schema.CommentMessageTableAuthorIDCol).
+		Order(goqu.C(volumeAlias).Desc()).
+		Limit(limit).
+		ScanStructsContext(ctx, &rows)
+
+	return rows, err
+}
+
+func (s *Repository) AuthorsFans(ctx context.Context, userID int64, limit uint) ([]RatingFan, error) {
+	rows := make([]RatingFan, 0)
+
+	const volumeAlias = "volume"
+	err := s.db.Select(schema.CommentVoteTableUserIDCol, goqu.COUNT(goqu.Star()).As(volumeAlias)).
+		From(schema.CommentVoteTable).
+		Join(schema.CommentMessageTable, goqu.On(schema.CommentVoteTableCommentIDCol.Eq(schema.CommentMessageTableIDCol))).
+		Where(schema.CommentMessageTableAuthorIDCol.Eq(userID)).
+		GroupBy(schema.CommentVoteTableUserIDCol).
 		Order(goqu.C(volumeAlias).Desc()).
 		Limit(limit).
 		ScanStructsContext(ctx, &rows)

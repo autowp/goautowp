@@ -223,6 +223,7 @@ var (
 
 	AttrsUserValuesTable          = goqu.T(AttrsUserValuesTableName)
 	AttrsUserValuesTableUserIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
+	AttrsUserValuesTableItemIDCol = AttrsUserValuesTable.Col("item_id")
 
 	AttrsValuesTable = goqu.T(AttrsValuesTableName)
 
@@ -352,6 +353,7 @@ var (
 
 	ItemTable                  = goqu.T(ItemTableName)
 	ItemTableIDCol             = ItemTable.Col(ItemTableIDColName)
+	ItemTableCatnameCol        = ItemTable.Col(ItemTableCatnameColName)
 	ItemTableNameCol           = ItemTable.Col(ItemTableNameColName)
 	ItemTableBeginYearCol      = ItemTable.Col(ItemTableBeginYearColName)
 	ItemTableEndYearCol        = ItemTable.Col(ItemTableEndYearColName)

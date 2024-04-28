@@ -65,6 +65,7 @@ type Container struct {
 	i18n                   *i18nbundle.I18n
 	itemOfDayRepository    *itemofday.Repository
 	itemsGrpcServer        *ItemsGRPCServer
+	ratingGrpcServer       *RatingGRPCServer
 	itemsRepository        *items.Repository
 	keyCloak               *gocloak.GoCloak
 	location               *time.Location
@@ -605,6 +606,11 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
+	ratingSrv, err := s.RatingGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	logrusLogger := logrus.New()
 	logrusEntry := logrus.NewEntry(logrusLogger)
 
@@ -635,6 +641,7 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 	RegisterTextServer(grpcServer, textSrv)
 	RegisterTrafficServer(grpcServer, trafficSrv)
 	RegisterUsersServer(grpcServer, usersSrv)
+	RegisterRatingServer(grpcServer, ratingSrv)
 
 	reflection.Register(grpcServer)
 
@@ -917,16 +924,6 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			return nil, err
 		}
 
-		commentsRepository, err := s.CommentsRepository()
-		if err != nil {
-			return nil, err
-		}
-
-		picturesRepository, err := s.PicturesRepository()
-		if err != nil {
-			return nil, err
-		}
-
 		events, err := s.Events()
 		if err != nil {
 			return nil, err
@@ -947,8 +944,6 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 			s.Enforcer(),
 			contactsRepository,
 			userRepository,
-			commentsRepository,
-			picturesRepository,
 			events,
 			cfg.Languages,
 			cfg.Captcha,
@@ -957,6 +952,45 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 	}
 
 	return s.usersGrpcServer, nil
+}
+
+func (s *Container) RatingGRPCServer() (*RatingGRPCServer, error) {
+	if s.ratingGrpcServer == nil {
+		commentsRepository, err := s.CommentsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		itemsRepository, err := s.ItemsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		userRepository, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		picturesRepository, err := s.PicturesRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		attrsRepository, err := s.AttrsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.ratingGrpcServer = NewRatingGRPCServer(
+			picturesRepository,
+			userRepository,
+			itemsRepository,
+			commentsRepository,
+			attrsRepository,
+		)
+	}
+
+	return s.ratingGrpcServer, nil
 }
 
 func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {

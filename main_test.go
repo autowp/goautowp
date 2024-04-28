@@ -120,12 +120,19 @@ func TestMain(m *testing.M) {
 
 	RegisterMapServer(grpcServer, mapSrv)
 
-	pictursSrv, err := cnt.PicturesGRPCServer()
+	picturesSrv, err := cnt.PicturesGRPCServer()
 	if err != nil {
 		panic(err)
 	}
 
-	RegisterPicturesServer(grpcServer, pictursSrv)
+	RegisterPicturesServer(grpcServer, picturesSrv)
+
+	ratingSrv, err := cnt.RatingGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterRatingServer(grpcServer, ratingSrv)
 
 	lis = bufconn.Listen(bufSize)
 

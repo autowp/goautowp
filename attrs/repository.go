@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"errors"
 
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 )
@@ -22,6 +23,13 @@ const (
 	TypeList    AttributeTypeID = 6
 	TypeTree    AttributeTypeID = 7
 )
+
+type TopUserBrand struct {
+	ID      int64  `db:"id"`
+	Name    string `db:"name"`
+	Catname string `db:"catname"`
+	Volume  int64  `db:"volume"`
+}
 
 type NullAttributeTypeID struct {
 	AttributeTypeID AttributeTypeID
@@ -245,4 +253,29 @@ func (s *Repository) TotalZoneAttrs(ctx context.Context, zoneID int64) (int32, e
 	}
 
 	return result, nil
+}
+
+func (s *Repository) TopUserBrands(ctx context.Context, userID int64, limit uint) ([]TopUserBrand, error) {
+	rows := make([]TopUserBrand, 0)
+
+	const volumeAlias = "volume"
+	err := s.db.Select(
+		schema.ItemTableIDCol, schema.ItemTableNameCol, schema.ItemTableCatnameCol,
+		goqu.COUNT(goqu.Star()).As(volumeAlias),
+	).
+		From(schema.ItemTable).
+		Join(schema.ItemParentCacheTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentCacheTableParentIDCol))).
+		Join(
+			schema.AttrsUserValuesTable,
+			goqu.On(schema.ItemParentCacheTableItemIDCol.Eq(schema.AttrsUserValuesTableItemIDCol)),
+		).
+		Where(
+			schema.ItemTableItemTypeIDCol.Eq(items.BRAND),
+			schema.AttrsUserValuesTableUserIDCol.Eq(userID),
+		).
+		Order(goqu.C(volumeAlias).Desc()).
+		Limit(limit).
+		ScanStructsContext(ctx, &rows)
+
+	return rows, err
 }

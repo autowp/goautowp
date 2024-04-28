@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -21,8 +19,6 @@ type UsersGRPCServer struct {
 	enforcer           *casbin.Enforcer
 	contactsRepository *ContactsRepository
 	userRepository     *users.Repository
-	commentsRepository *comments.Repository
-	picturesRepository *pictures.Repository
 	events             *Events
 	languages          map[string]config.LanguageConfig
 	captcha            bool
@@ -34,8 +30,6 @@ func NewUsersGRPCServer(
 	enforcer *casbin.Enforcer,
 	contactsRepository *ContactsRepository,
 	userRepository *users.Repository,
-	commentsRepository *comments.Repository,
-	picturesRepository *pictures.Repository,
 	events *Events,
 	languages map[string]config.LanguageConfig,
 	captcha bool,
@@ -46,8 +40,6 @@ func NewUsersGRPCServer(
 		enforcer:           enforcer,
 		contactsRepository: contactsRepository,
 		userRepository:     userRepository,
-		commentsRepository: commentsRepository,
-		picturesRepository: picturesRepository,
 		events:             events,
 		languages:          languages,
 		captcha:            captcha,
@@ -225,7 +217,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	items := make([]*APIUser, 0)
+	result := make([]*APIUser, 0)
 
 	for idx := range rows {
 		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx])
@@ -233,7 +225,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		items = append(items, apiUser)
+		result = append(result, apiUser)
 	}
 
 	var paginator *Pages
@@ -250,75 +242,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 	}
 
 	return &APIUsersResponse{
-		Items:     items,
+		Items:     result,
 		Paginator: paginator,
 	}, nil
-}
-
-func (s *UsersGRPCServer) GetUsersRating(
-	ctx context.Context, in *APIUsersRatingRequest,
-) (*APIUsersRatingResponse, error) {
-	const (
-		usersRatingLimit          = 30
-		detailedRatingForFirstNum = 10
-	)
-
-	switch in.Rating {
-	case "likes":
-		ratingUsers, err := s.commentsRepository.TopAuthors(ctx, usersRatingLimit)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		result := make([]*APIUsersRatingUser, 0)
-		for _, ratingUser := range ratingUsers {
-			result = append(result, &APIUsersRatingUser{
-				UserId: ratingUser.AuthorID,
-				Volume: ratingUser.Volume,
-				Brands: nil,
-			})
-		}
-
-		return &APIUsersRatingResponse{
-			Users: result,
-		}, nil
-	case "picture-likes":
-		ratingUsers, err := s.picturesRepository.TopLikes(ctx, usersRatingLimit)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		result := make([]*APIUsersRatingUser, 0)
-
-		for idx, ratingUser := range ratingUsers {
-			fansResult := make([]*APIUsersRatingUserFan, 0)
-
-			if idx < detailedRatingForFirstNum {
-				fans, err := s.picturesRepository.TopOwnerFans(ctx, ratingUser.OwnerID, 2)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-
-				for _, fan := range fans {
-					fansResult = append(fansResult, &APIUsersRatingUserFan{
-						UserId: fan.UserID,
-						Volume: fan.Volume,
-					})
-				}
-			}
-
-			result = append(result, &APIUsersRatingUser{
-				UserId: ratingUser.OwnerID,
-				Volume: ratingUser.Volume,
-				Brands: nil,
-				Fans:   fansResult,
-			})
-		}
-
-		return &APIUsersRatingResponse{
-			Users: result,
-		}, nil
-	}
-
-	return nil, status.Error(codes.NotFound, "")
 }

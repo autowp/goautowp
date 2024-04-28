@@ -1504,7 +1504,6 @@ type UsersClient interface {
 	DisableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	EnableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUsers(ctx context.Context, in *APIUsersRequest, opts ...grpc.CallOption) (*APIUsersResponse, error)
-	GetUsersRating(ctx context.Context, in *APIUsersRatingRequest, opts ...grpc.CallOption) (*APIUsersRatingResponse, error)
 }
 
 type usersClient struct {
@@ -1578,15 +1577,6 @@ func (c *usersClient) GetUsers(ctx context.Context, in *APIUsersRequest, opts ..
 	return out, nil
 }
 
-func (c *usersClient) GetUsersRating(ctx context.Context, in *APIUsersRatingRequest, opts ...grpc.CallOption) (*APIUsersRatingResponse, error) {
-	out := new(APIUsersRatingResponse)
-	err := c.cc.Invoke(ctx, "/goautowp.Users/GetUsersRating", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // UsersServer is the server API for Users service.
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
@@ -1598,7 +1588,6 @@ type UsersServer interface {
 	DisableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
 	EnableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
 	GetUsers(context.Context, *APIUsersRequest) (*APIUsersResponse, error)
-	GetUsersRating(context.Context, *APIUsersRatingRequest) (*APIUsersRatingResponse, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -1626,9 +1615,6 @@ func (UnimplementedUsersServer) EnableUserCommentsNotifications(context.Context,
 }
 func (UnimplementedUsersServer) GetUsers(context.Context, *APIUsersRequest) (*APIUsersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUsers not implemented")
-}
-func (UnimplementedUsersServer) GetUsersRating(context.Context, *APIUsersRatingRequest) (*APIUsersRatingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUsersRating not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -1769,24 +1755,6 @@ func _Users_GetUsers_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Users_GetUsersRating_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIUsersRatingRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UsersServer).GetUsersRating(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/goautowp.Users/GetUsersRating",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).GetUsersRating(ctx, req.(*APIUsersRatingRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Users_ServiceDesc is the grpc.ServiceDesc for Users service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1822,9 +1790,343 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetUsers",
 			Handler:    _Users_GetUsers_Handler,
 		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+// RatingClient is the client API for Rating service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type RatingClient interface {
+	GetUserPicturesRating(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIUsersRatingResponse, error)
+	GetUserPicturesRatingBrands(ctx context.Context, in *UserRatingDetailsRequest, opts ...grpc.CallOption) (*UserRatingBrandsResponse, error)
+	GetUserCommentsRating(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIUsersRatingResponse, error)
+	GetUserCommentsRatingFans(ctx context.Context, in *UserRatingDetailsRequest, opts ...grpc.CallOption) (*GetUserRatingFansResponse, error)
+	GetUserPictureLikesRating(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIUsersRatingResponse, error)
+	GetUserPictureLikesRatingFans(ctx context.Context, in *UserRatingDetailsRequest, opts ...grpc.CallOption) (*GetUserRatingFansResponse, error)
+	GetUserSpecsRating(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIUsersRatingResponse, error)
+	GetUserSpecsRatingBrands(ctx context.Context, in *UserRatingDetailsRequest, opts ...grpc.CallOption) (*UserRatingBrandsResponse, error)
+}
+
+type ratingClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewRatingClient(cc grpc.ClientConnInterface) RatingClient {
+	return &ratingClient{cc}
+}
+
+func (c *ratingClient) GetUserPicturesRating(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIUsersRatingResponse, error) {
+	out := new(APIUsersRatingResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Rating/GetUserPicturesRating", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ratingClient) GetUserPicturesRatingBrands(ctx context.Context, in *UserRatingDetailsRequest, opts ...grpc.CallOption) (*UserRatingBrandsResponse, error) {
+	out := new(UserRatingBrandsResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Rating/GetUserPicturesRatingBrands", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ratingClient) GetUserCommentsRating(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIUsersRatingResponse, error) {
+	out := new(APIUsersRatingResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Rating/GetUserCommentsRating", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ratingClient) GetUserCommentsRatingFans(ctx context.Context, in *UserRatingDetailsRequest, opts ...grpc.CallOption) (*GetUserRatingFansResponse, error) {
+	out := new(GetUserRatingFansResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Rating/GetUserCommentsRatingFans", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ratingClient) GetUserPictureLikesRating(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIUsersRatingResponse, error) {
+	out := new(APIUsersRatingResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Rating/GetUserPictureLikesRating", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ratingClient) GetUserPictureLikesRatingFans(ctx context.Context, in *UserRatingDetailsRequest, opts ...grpc.CallOption) (*GetUserRatingFansResponse, error) {
+	out := new(GetUserRatingFansResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Rating/GetUserPictureLikesRatingFans", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ratingClient) GetUserSpecsRating(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIUsersRatingResponse, error) {
+	out := new(APIUsersRatingResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Rating/GetUserSpecsRating", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ratingClient) GetUserSpecsRatingBrands(ctx context.Context, in *UserRatingDetailsRequest, opts ...grpc.CallOption) (*UserRatingBrandsResponse, error) {
+	out := new(UserRatingBrandsResponse)
+	err := c.cc.Invoke(ctx, "/goautowp.Rating/GetUserSpecsRatingBrands", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RatingServer is the server API for Rating service.
+// All implementations must embed UnimplementedRatingServer
+// for forward compatibility
+type RatingServer interface {
+	GetUserPicturesRating(context.Context, *emptypb.Empty) (*APIUsersRatingResponse, error)
+	GetUserPicturesRatingBrands(context.Context, *UserRatingDetailsRequest) (*UserRatingBrandsResponse, error)
+	GetUserCommentsRating(context.Context, *emptypb.Empty) (*APIUsersRatingResponse, error)
+	GetUserCommentsRatingFans(context.Context, *UserRatingDetailsRequest) (*GetUserRatingFansResponse, error)
+	GetUserPictureLikesRating(context.Context, *emptypb.Empty) (*APIUsersRatingResponse, error)
+	GetUserPictureLikesRatingFans(context.Context, *UserRatingDetailsRequest) (*GetUserRatingFansResponse, error)
+	GetUserSpecsRating(context.Context, *emptypb.Empty) (*APIUsersRatingResponse, error)
+	GetUserSpecsRatingBrands(context.Context, *UserRatingDetailsRequest) (*UserRatingBrandsResponse, error)
+	mustEmbedUnimplementedRatingServer()
+}
+
+// UnimplementedRatingServer must be embedded to have forward compatible implementations.
+type UnimplementedRatingServer struct {
+}
+
+func (UnimplementedRatingServer) GetUserPicturesRating(context.Context, *emptypb.Empty) (*APIUsersRatingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserPicturesRating not implemented")
+}
+func (UnimplementedRatingServer) GetUserPicturesRatingBrands(context.Context, *UserRatingDetailsRequest) (*UserRatingBrandsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserPicturesRatingBrands not implemented")
+}
+func (UnimplementedRatingServer) GetUserCommentsRating(context.Context, *emptypb.Empty) (*APIUsersRatingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserCommentsRating not implemented")
+}
+func (UnimplementedRatingServer) GetUserCommentsRatingFans(context.Context, *UserRatingDetailsRequest) (*GetUserRatingFansResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserCommentsRatingFans not implemented")
+}
+func (UnimplementedRatingServer) GetUserPictureLikesRating(context.Context, *emptypb.Empty) (*APIUsersRatingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserPictureLikesRating not implemented")
+}
+func (UnimplementedRatingServer) GetUserPictureLikesRatingFans(context.Context, *UserRatingDetailsRequest) (*GetUserRatingFansResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserPictureLikesRatingFans not implemented")
+}
+func (UnimplementedRatingServer) GetUserSpecsRating(context.Context, *emptypb.Empty) (*APIUsersRatingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserSpecsRating not implemented")
+}
+func (UnimplementedRatingServer) GetUserSpecsRatingBrands(context.Context, *UserRatingDetailsRequest) (*UserRatingBrandsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserSpecsRatingBrands not implemented")
+}
+func (UnimplementedRatingServer) mustEmbedUnimplementedRatingServer() {}
+
+// UnsafeRatingServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to RatingServer will
+// result in compilation errors.
+type UnsafeRatingServer interface {
+	mustEmbedUnimplementedRatingServer()
+}
+
+func RegisterRatingServer(s grpc.ServiceRegistrar, srv RatingServer) {
+	s.RegisterService(&Rating_ServiceDesc, srv)
+}
+
+func _Rating_GetUserPicturesRating_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RatingServer).GetUserPicturesRating(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Rating/GetUserPicturesRating",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RatingServer).GetUserPicturesRating(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rating_GetUserPicturesRatingBrands_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserRatingDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RatingServer).GetUserPicturesRatingBrands(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Rating/GetUserPicturesRatingBrands",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RatingServer).GetUserPicturesRatingBrands(ctx, req.(*UserRatingDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rating_GetUserCommentsRating_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RatingServer).GetUserCommentsRating(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Rating/GetUserCommentsRating",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RatingServer).GetUserCommentsRating(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rating_GetUserCommentsRatingFans_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserRatingDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RatingServer).GetUserCommentsRatingFans(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Rating/GetUserCommentsRatingFans",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RatingServer).GetUserCommentsRatingFans(ctx, req.(*UserRatingDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rating_GetUserPictureLikesRating_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RatingServer).GetUserPictureLikesRating(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Rating/GetUserPictureLikesRating",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RatingServer).GetUserPictureLikesRating(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rating_GetUserPictureLikesRatingFans_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserRatingDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RatingServer).GetUserPictureLikesRatingFans(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Rating/GetUserPictureLikesRatingFans",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RatingServer).GetUserPictureLikesRatingFans(ctx, req.(*UserRatingDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rating_GetUserSpecsRating_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RatingServer).GetUserSpecsRating(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Rating/GetUserSpecsRating",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RatingServer).GetUserSpecsRating(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rating_GetUserSpecsRatingBrands_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserRatingDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RatingServer).GetUserSpecsRatingBrands(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/goautowp.Rating/GetUserSpecsRatingBrands",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RatingServer).GetUserSpecsRatingBrands(ctx, req.(*UserRatingDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Rating_ServiceDesc is the grpc.ServiceDesc for Rating service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Rating_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Rating",
+	HandlerType: (*RatingServer)(nil),
+	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetUsersRating",
-			Handler:    _Users_GetUsersRating_Handler,
+			MethodName: "GetUserPicturesRating",
+			Handler:    _Rating_GetUserPicturesRating_Handler,
+		},
+		{
+			MethodName: "GetUserPicturesRatingBrands",
+			Handler:    _Rating_GetUserPicturesRatingBrands_Handler,
+		},
+		{
+			MethodName: "GetUserCommentsRating",
+			Handler:    _Rating_GetUserCommentsRating_Handler,
+		},
+		{
+			MethodName: "GetUserCommentsRatingFans",
+			Handler:    _Rating_GetUserCommentsRatingFans_Handler,
+		},
+		{
+			MethodName: "GetUserPictureLikesRating",
+			Handler:    _Rating_GetUserPictureLikesRating_Handler,
+		},
+		{
+			MethodName: "GetUserPictureLikesRatingFans",
+			Handler:    _Rating_GetUserPictureLikesRatingFans_Handler,
+		},
+		{
+			MethodName: "GetUserSpecsRating",
+			Handler:    _Rating_GetUserSpecsRating_Handler,
+		},
+		{
+			MethodName: "GetUserSpecsRatingBrands",
+			Handler:    _Rating_GetUserSpecsRatingBrands_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
