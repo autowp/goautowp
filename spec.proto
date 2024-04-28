@@ -1036,6 +1036,7 @@ message APIUsersResponse {
 message APIUsersRatingUserBrand {
   string name = 1;
   repeated string route = 2;
+  int64 volume = 3;
 }
 
 message APIUsersRatingUserFan {

@@ -90,6 +90,9 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 		},
 		OrderBy: []exp.OrderedExpression{goqu.COUNT(goqu.DISTINCT(goqu.T("i_id_ipcd_pi_p").Col("id"))).Desc()},
 		Limit:   numOfItemsInDetails,
+		Fields: items.ListFields{
+			CurrentPicturesCount: true,
+		},
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -98,8 +101,9 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 	result := make([]*APIUsersRatingUserBrand, len(brands))
 	for idx, brand := range brands {
 		result[idx] = &APIUsersRatingUserBrand{
-			Name:  brand.NameOnly,
-			Route: []string{"/", brand.Catname},
+			Name:   brand.NameOnly,
+			Route:  []string{"/", brand.Catname},
+			Volume: int64(brand.CurrentPicturesCount),
 		}
 	}
 
@@ -233,8 +237,9 @@ func (s *RatingGRPCServer) GetUserSpecsRatingBrands(
 	result := make([]*APIUsersRatingUserBrand, len(brands))
 	for idx, brand := range brands {
 		result[idx] = &APIUsersRatingUserBrand{
-			Name:  brand.Name,
-			Route: []string{"/", brand.Catname},
+			Name:   brand.Name,
+			Route:  []string{"/", brand.Catname},
+			Volume: brand.Volume,
 		}
 	}
 
