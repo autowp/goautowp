@@ -3,8 +3,8 @@ package goautowp
 import (
 	"context"
 	"database/sql"
-	"errors"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,50 +27,65 @@ func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*A
 	var (
 		lastRevision    int64
 		currentRevision = in.Revision
-		currentText     string
-		currentUserID   int64
 		prevRevision    int64
-		prevText        string
-		prevUserID      int64
 		nextRevision    int64
 	)
 
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT revision FROM textstorage_text WHERE id = ?",
-		in.Id,
-	).Scan(&lastRevision)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, status.Error(codes.NotFound, "NotFound")
-	}
-
+	success, err := s.db.Select(schema.TextstorageTextTableRevisionCol).
+		From(schema.TextstorageTextTable).
+		Where(schema.TextstorageTextTableIDCol.Eq(in.Id)).
+		ScanValContext(ctx, &lastRevision)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !success {
+		return nil, status.Error(codes.NotFound, "NotFound")
 	}
 
 	if currentRevision == 0 {
 		currentRevision = lastRevision
 	}
 
-	err = s.db.QueryRowContext(
-		ctx,
-		"SELECT text, user_id FROM textstorage_revision WHERE text_id = ? AND revision = ?",
-		in.Id, currentRevision,
-	).Scan(&currentText, &currentUserID)
+	stCurrent := struct {
+		Text   string `db:"text"`
+		UserID int64  `db:"user_id"`
+	}{}
+
+	success, err = s.db.Select(schema.TextstorageRevisionTableTextCol, schema.TextstorageRevisionTableUserIDCol).
+		From(schema.TextstorageRevisionTable).
+		Where(
+			schema.TextstorageRevisionTableTextIDCol.Eq(in.Id),
+			schema.TextstorageRevisionTableRevisionCol.Eq(currentRevision),
+		).ScanStructContext(ctx, &stCurrent)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	if !success {
+		return nil, sql.ErrNoRows
+	}
+
+	stPrevious := struct {
+		Text   string `db:"text"`
+		UserID int64  `db:"user_id"`
+	}{}
+
 	if currentRevision-1 > 0 {
 		prevRevision = currentRevision - 1
 
-		err = s.db.QueryRowContext(
-			ctx,
-			"SELECT text, user_id FROM textstorage_revision WHERE text_id = ? AND revision = ?",
-			in.Id, prevRevision,
-		).Scan(&prevText, &prevUserID)
+		success, err = s.db.Select(schema.TextstorageRevisionTableTextCol, schema.TextstorageRevisionTableUserIDCol).
+			From(schema.TextstorageRevisionTable).
+			Where(
+				schema.TextstorageRevisionTableTextIDCol.Eq(in.Id),
+				schema.TextstorageRevisionTableRevisionCol.Eq(prevRevision),
+			).ScanStructContext(ctx, &stPrevious)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		if !success {
+			return nil, sql.ErrNoRows
 		}
 	}
 
@@ -80,14 +95,14 @@ func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*A
 
 	return &APIGetTextResponse{
 		Current: &TextRevision{
-			Text:     currentText,
+			Text:     stCurrent.Text,
 			Revision: currentRevision,
-			UserId:   currentUserID,
+			UserId:   stCurrent.UserID,
 		},
 		Prev: &TextRevision{
-			Text:     prevText,
+			Text:     stPrevious.Text,
 			Revision: prevRevision,
-			UserId:   prevUserID,
+			UserId:   stPrevious.UserID,
 		},
 		Next: &TextRevision{
 			Revision: nextRevision,

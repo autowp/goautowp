@@ -2,7 +2,6 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -258,19 +257,19 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*users.DBUser, error) {
 	var r users.DBUser
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT `+schema.UserTableIDColName+`, `+schema.UserTableNameColName+`, `+schema.UserTableDeletedColName+`, `+
-		schema.UserTableIdentityColName+`, `+schema.UserTableLastOnlineColName+`, `+schema.UserTableRoleColName+`, `+
-		schema.UserTableSpecsWeightColName+`
-		FROM `+schema.UserTableName+`
-		WHERE `+schema.UserTableIDColName+` = ?
-	`, id).Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
-	}
-
+	success, err := s.db.Select(
+		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
+		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol,
+	).
+		From(schema.UserTable).
+		Where(schema.UserTableIDCol.Eq(id)).
+		ScanStructContext(ctx, &r)
 	if err != nil {
 		return nil, err
+	}
+
+	if !success {
+		return nil, ErrUserNotFound
 	}
 
 	return &r, nil

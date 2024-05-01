@@ -11,6 +11,8 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/itemofday"
+	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -77,41 +79,43 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	//nolint:gosec
-	r1, err := db.ExecContext(
-		ctx, `
-			INSERT INTO `+schema.ItemTableName+` (name, `+schema.ItemTableIsGroupColName+`, `+
-			schema.ItemTableItemTypeIDColName+`, catname, body, `+schema.ItemTableProducedExactlyColName+`)
-			VALUES (?, 0, 5, ?, '', 0)
-		`, fmt.Sprintf("item-of-day-%d", random.Int()), fmt.Sprintf("brand1-%d", random.Int()),
-	)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+		schema.ItemTableNameColName:            fmt.Sprintf("item-of-day-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      items.BRAND,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("brand1-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	itemID, err := r1.LastInsertId()
 	require.NoError(t, err)
 
 	_, err = goquDB.Insert(schema.ItemParentCacheTable).Rows(goqu.Record{
-		"item_id":   itemID,
-		"parent_id": itemID,
-		"diff":      0,
+		schema.ItemParentCacheTableItemIDColName:   itemID,
+		schema.ItemParentCacheTableParentIDColName: itemID,
+		schema.ItemParentCacheTableDiffColName:     0,
 	}).Executor().Exec()
 	require.NoError(t, err)
 
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
-	res, err := goquDB.ExecContext(ctx,
-		"INSERT INTO "+schema.PictureTableName+" (identity, status, ip, owner_id) VALUES (?, 'accepted', '', null)",
-		identity,
-	)
+	res, err := goquDB.Insert(schema.PictureTable).Rows(goqu.Record{
+		schema.PictureTableIdentityColName: identity,
+		schema.PictureTableStatusColName:   pictures.StatusAccepted,
+		schema.PictureTableIPColName:       "",
+		schema.PictureTableOwnerIDColName:  nil,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	pictureID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.ExecContext(ctx,
-		"INSERT INTO "+schema.PictureItemTableName+" (picture_id, item_id) VALUES (?, ?)",
-		pictureID, itemID,
-	)
+	_, err = goquDB.Insert(schema.PictureItemTable).Rows(goqu.Record{
+		schema.PictureItemTablePictureIDColName: pictureID,
+		schema.PictureItemTableItemIDColName:    itemID,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	// check prepared item passes candidate checks

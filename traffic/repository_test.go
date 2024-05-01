@@ -9,6 +9,7 @@ import (
 
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
@@ -58,7 +59,7 @@ func TestAutoWhitelist(t *testing.T) { //nolint:paralleltest
 	err = s.Monitoring.Add(ctx, ip, time.Now())
 	require.NoError(t, err)
 
-	exists, err = s.Monitoring.ExistsIP(ip)
+	exists, err = s.Monitoring.ExistsIP(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 
@@ -69,7 +70,7 @@ func TestAutoWhitelist(t *testing.T) { //nolint:paralleltest
 	require.NoError(t, err)
 	require.False(t, exists)
 
-	exists, err = s.Monitoring.ExistsIP(ip)
+	exists, err = s.Monitoring.ExistsIP(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 
@@ -86,8 +87,10 @@ func TestAutoBanByProfile(t *testing.T) { //nolint:paralleltest
 	profile := AutobanProfile{
 		Limit:  3,
 		Reason: "Test",
-		Group:  []string{"hour", "tenminute", "minute"},
-		Time:   time.Hour,
+		Group: []interface{}{
+			schema.IPMonitoringTableHourCol, schema.IPMonitoringTableTenminuteCol, schema.IPMonitoringTableMinuteCol,
+		},
+		Time: time.Hour,
 	}
 
 	ip1 := net.IPv4(127, 0, 0, 11)
@@ -133,8 +136,12 @@ func TestWhitelistedNotBanned(t *testing.T) {
 	profile := AutobanProfile{
 		Limit:  3,
 		Reason: "TestWhitelistedNotBanned",
-		Group:  []string{"hour", "tenminute", "minute"},
-		Time:   time.Hour,
+		Group: []interface{}{
+			schema.IPMonitoringTableHourCol,
+			schema.IPMonitoringTableTenminuteCol,
+			schema.IPMonitoringTableMinuteCol,
+		},
+		Time: time.Hour,
 	}
 
 	ip := net.IPv4(178, 154, 244, 21)

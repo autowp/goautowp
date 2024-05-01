@@ -2,13 +2,13 @@ package ban
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jackc/pgtype"
 	"github.com/sirupsen/logrus"
@@ -47,11 +47,16 @@ func (s *Repository) Add(ctx context.Context, ip net.IP, duration time.Duration,
 	reason = strings.TrimSpace(reason)
 	upTo := time.Now().Add(duration)
 
-	ct, err := s.db.ExecContext(ctx, `
-		INSERT INTO ip_ban (ip, until, by_user_id, reason)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT(ip) DO UPDATE SET until = EXCLUDED.until, by_user_id = EXCLUDED.by_user_id, reason = EXCLUDED.reason
-	`, ip.String(), upTo, byUserID, reason)
+	ct, err := s.db.Insert(schema.IPBanTable).Rows(goqu.Record{
+		schema.IPBanTableIPColName:       ip.String(),
+		schema.IPBanTableUntilColName:    upTo,
+		schema.IPBanTableByUserIDColName: byUserID,
+		schema.IPBanTableReasonColName:   reason,
+	}).OnConflict(goqu.DoUpdate(schema.IPBanTableIPColName, goqu.Record{
+		schema.IPBanTableUntilColName:    schema.Excluded(schema.IPBanTableUntilColName),
+		schema.IPBanTableByUserIDColName: schema.Excluded(schema.IPBanTableByUserIDColName),
+		schema.IPBanTableReasonColName:   schema.Excluded(schema.IPBanTableReasonColName),
+	})).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -71,7 +76,7 @@ func (s *Repository) Add(ctx context.Context, ip net.IP, duration time.Duration,
 // Remove IP from list of banned.
 func (s *Repository) Remove(ctx context.Context, ip net.IP) error {
 	logrus.Info(ip.String() + ": unban")
-	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_ban WHERE ip = $1", ip.String())
+	_, err := s.db.Delete(schema.IPBanTable).Where(schema.IPBanTableIPCol.Eq(ip.String())).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -79,41 +84,51 @@ func (s *Repository) Remove(ctx context.Context, ip net.IP) error {
 // Exists ban list already contains IP.
 func (s *Repository) Exists(ctx context.Context, ip net.IP) (bool, error) {
 	var exists bool
-	err := s.db.QueryRowContext(ctx, `
-		SELECT true
-		FROM ip_ban
-		WHERE ip = $1 AND until >= NOW()
-	`, ip.String()).Scan(&exists)
 
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	success, err := s.db.Select(goqu.V(true)).
+		From(schema.IPBanTable).
+		Where(
+			schema.IPBanTableIPCol.Eq(ip.String()),
+			schema.IPBanTableUntilCol.Gte(goqu.Func("NOW")),
+		).
+		ScanValContext(ctx, &exists)
+	if err != nil {
 		return false, err
 	}
 
-	return !errors.Is(err, sql.ErrNoRows), nil
+	return success && exists, nil
 }
 
 // Get ban info.
 func (s *Repository) Get(ctx context.Context, ip net.IP) (*Item, error) {
-	var (
-		item   Item
-		pgInet pgtype.Inet
-	)
+	var item Item
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT ip, until, reason, by_user_id
-		FROM ip_ban
-		WHERE ip = $1 AND until >= NOW()
-	`, ip.String()).Scan(&pgInet, &item.Until, &item.Reason, &item.ByUserID)
+	st := struct {
+		PgInet   pgtype.Inet `db:"ip"`
+		Until    time.Time   `db:"until"`
+		Reason   string      `db:"reason"`
+		ByUserID int64       `db:"by_user_id"`
+	}{}
+
+	success, err := s.db.Select(schema.IPBanTableIPCol, schema.IPBanTableUntilCol, schema.IPBanTableReasonCol,
+		schema.IPBanTableByUserIDCol).
+		From(schema.IPBanTable).
+		Where(schema.IPBanTableIPCol.Eq(ip.String()), schema.IPBanTableUntilCol.Gte(goqu.Func("NOW"))).
+		Limit(1).Executor().ScanStructContext(ctx, &st)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrBanItemNotFound
-		}
-
 		return nil, err
 	}
 
-	if pgInet.IPNet != nil {
-		item.IP = pgInet.IPNet.IP
+	if !success {
+		return nil, ErrBanItemNotFound
+	}
+
+	item.Until = st.Until
+	item.Reason = st.Reason
+	item.ByUserID = st.ByUserID
+
+	if st.PgInet.IPNet != nil {
+		item.IP = st.PgInet.IPNet.IP
 	}
 
 	return &item, nil
@@ -121,7 +136,9 @@ func (s *Repository) Get(ctx context.Context, ip net.IP) (*Item, error) {
 
 // GC Garbage Collect.
 func (s *Repository) GC(ctx context.Context) (int64, error) {
-	ct, err := s.db.ExecContext(ctx, "DELETE FROM ip_ban WHERE until < NOW()")
+	ct, err := s.db.Delete(schema.IPBanTable).
+		Where(schema.IPBanTableUntilCol.Lt(goqu.Func("NOW"))).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -136,7 +153,7 @@ func (s *Repository) GC(ctx context.Context) (int64, error) {
 
 // Clear removes all collected data.
 func (s *Repository) Clear(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_ban")
+	_, err := s.db.Delete(schema.IPBanTable).Executor().ExecContext(ctx)
 
 	return err
 }

@@ -1150,15 +1150,19 @@ func (s *Repository) setItemVehicleTypeRow(
 	vehicleTypeID int64,
 	inherited bool,
 ) (bool, error) {
-	res, err := s.db.ExecContext(
-		ctx,
-		`
-			INSERT INTO `+schema.VehicleVehicleTypeTableName+` (vehicle_id, vehicle_type_id, inherited)
-			VALUES (?, ?, ?)
-			ON DUPLICATE KEY UPDATE inherited = VALUES(inherited)
-        `,
-		itemID, vehicleTypeID, inherited,
-	)
+	res, err := s.db.Insert(schema.VehicleVehicleTypeTable).Rows(goqu.Record{
+		schema.VehicleVehicleTypeTableVehicleIDColName:     itemID,
+		schema.VehicleVehicleTypeTableVehicleTypeIDColName: vehicleTypeID,
+		schema.VehicleVehicleTypeTableInheritedColName:     inherited,
+	}).OnConflict(goqu.DoUpdate(
+		schema.VehicleVehicleTypeTableVehicleIDColName+","+schema.VehicleVehicleTypeTableVehicleTypeIDColName,
+		goqu.Record{
+			schema.VehicleVehicleTypeTableInheritedColName: goqu.Func(
+				"VALUES",
+				goqu.C(schema.VehicleVehicleTypeTableInheritedColName),
+			),
+		},
+	)).Executor().ExecContext(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -1179,11 +1183,10 @@ func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 
 	if len(typeIds) > 0 {
 		// do not inherit when own value
-		res, err := s.db.ExecContext(
-			ctx,
-			"DELETE FROM "+schema.VehicleVehicleTypeTableName+" WHERE vehicle_id = ? AND inherited",
-			itemID,
-		)
+		res, err := s.db.Delete(schema.VehicleVehicleTypeTable).Where(
+			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID),
+			schema.VehicleVehicleTypeTableInheritedCol.IsTrue(),
+		).Executor().ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -1224,32 +1227,24 @@ func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 }
 
 func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, itemID int64) error {
-	rows, err := s.db.QueryContext(
-		ctx,
-		"SELECT item_id FROM "+schema.ItemParentTableName+" WHERE parent_id = ?",
-		itemID,
-	)
+	var ids []int64
+
+	err := s.db.Select(schema.ItemParentTableItemIDCol).
+		From(schema.ItemParentTable).
+		Where(schema.ItemParentTableParentIDCol.Eq(itemID)).
+		ScanValsContext(ctx, &ids)
 	if err != nil {
 		return err
 	}
 
-	defer util.Close(rows)
-
-	for rows.Next() {
-		var childID int64
-
-		err = rows.Scan(&childID)
-		if err != nil {
-			return err
-		}
-
+	for _, childID := range ids {
 		err = s.refreshItemVehicleTypeInheritanceFromParents(ctx, childID)
 		if err != nil {
 			return err
 		}
 	}
 
-	return rows.Err()
+	return nil
 }
 
 func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
@@ -1418,36 +1413,47 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 		Design: false,
 	}
 
-	var updates int64
+	var (
+		updates int64
+		records = make([]goqu.Record, len(parentInfos))
+		idx     = 0
+	)
 
-	//nolint: sqlclosecheck
-	stmt, err := s.db.PrepareContext(ctx, `
-   		INSERT INTO `+schema.ItemParentCacheTableName+` (item_id, parent_id, diff, tuning, sport, design)
-		VALUES (?, ?, ?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE
-			diff = VALUES(diff),
-			tuning = VALUES(tuning),
-			sport = VALUES(sport),
-			design = VALUES(design)
-	`)
+	for parentID, info := range parentInfos {
+		records[idx] = goqu.Record{
+			schema.ItemParentCacheTableItemIDColName:   itemID,
+			schema.ItemParentCacheTableParentIDColName: parentID,
+			schema.ItemParentCacheTableDiffColName:     info.Diff,
+			schema.ItemParentCacheTableTuningColName:   info.Tuning,
+			schema.ItemParentCacheTableSportColName:    info.Sport,
+			schema.ItemParentCacheTableDesignColName:   info.Design,
+		}
+		idx++
+	}
+
+	result, err := s.db.Insert(schema.ItemParentCacheTable).
+		Rows(records).
+		OnConflict(
+			goqu.DoUpdate(schema.ItemParentCacheTableItemIDColName+","+schema.ItemParentCacheTableParentIDColName,
+				goqu.Record{
+					schema.ItemParentCacheTableDiffColName:   goqu.Func("VALUES", goqu.C(schema.ItemParentCacheTableDiffColName)),
+					schema.ItemParentCacheTableTuningColName: goqu.Func("VALUES", goqu.C(schema.ItemParentCacheTableTuningColName)),
+					schema.ItemParentCacheTableSportColName:  goqu.Func("VALUES", goqu.C(schema.ItemParentCacheTableSportColName)),
+					schema.ItemParentCacheTableDesignColName: goqu.Func("VALUES", goqu.C(schema.ItemParentCacheTableDesignColName)),
+				},
+			),
+		).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
-	defer util.Close(stmt)
 
-	for parentID, info := range parentInfos {
-		result, err := stmt.ExecContext(ctx, itemID, parentID, info.Diff, info.Tuning, info.Sport, info.Design)
-		if err != nil {
-			return 0, err
-		}
-
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return 0, err
-		}
-
-		updates += affected
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
 	}
+
+	updates += affected
 
 	keys := make([]int64, len(parentInfos))
 
@@ -1472,7 +1478,7 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 	}
 
 	for _, child := range childs {
-		affected, err := s.RebuildCache(ctx, child)
+		affected, err = s.RebuildCache(ctx, child)
 		if err != nil {
 			return 0, err
 		}

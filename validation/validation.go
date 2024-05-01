@@ -1,8 +1,6 @@
 package validation
 
 import (
-	"database/sql"
-	"errors"
 	"fmt"
 	"net/mail"
 	"net/url"
@@ -11,6 +9,7 @@ import (
 
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/dpapathanasiou/go-recaptcha"
 )
 
@@ -55,7 +54,7 @@ type Recaptcha struct {
 
 // EmailNotExists validator.
 type EmailNotExists struct {
-	DB *sql.DB
+	DB *goqu.Database
 }
 
 // IdenticalStrings validator.
@@ -135,14 +134,17 @@ func (s *Recaptcha) IsValidString(value string) ([]string, error) {
 // IsValidString IsValidString.
 func (s *EmailNotExists) IsValidString(value string) ([]string, error) {
 	var exists bool
-	err := s.DB.QueryRow("SELECT 1 FROM "+schema.UserTableName+" WHERE e_mail = ?", value).Scan(&exists)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return []string{}, nil
-	}
-
+	success, err := s.DB.Select(goqu.V(1)).
+		From(schema.UserTable).
+		Where(schema.UserTableEmailCol.Eq(value)).
+		ScanVal(&exists)
 	if err != nil {
 		return nil, err
+	}
+
+	if !success {
+		return []string{}, nil
 	}
 
 	return []string{EmailNotExistsExists}, nil

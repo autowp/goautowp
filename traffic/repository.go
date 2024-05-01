@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/ban"
+	"github.com/autowp/goautowp/schema"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
@@ -40,7 +41,7 @@ type Traffic struct {
 type AutobanProfile struct {
 	Limit  int
 	Reason string
-	Group  []string
+	Group  []interface{}
 	Time   time.Duration
 }
 
@@ -49,26 +50,30 @@ var AutobanProfiles = []AutobanProfile{
 	{
 		Limit:  dailyLimit,
 		Reason: "daily limit",
-		Group:  []string{},
+		Group:  []interface{}{},
 		Time:   dailyLimitDuration,
 	},
 	{
 		Limit:  hourlyLimit,
 		Reason: "hourly limit",
-		Group:  []string{"hour"},
+		Group:  []interface{}{schema.IPMonitoringTableHourCol},
 		Time:   hourlyLimitDuration,
 	},
 	{
 		Limit:  tenMinsLimit,
 		Reason: "ten min limit",
-		Group:  []string{"hour", "tenminute"},
+		Group:  []interface{}{schema.IPMonitoringTableHourCol, schema.IPMonitoringTableTenminuteCol},
 		Time:   time.Hour * hoursInDay,
 	},
 	{
 		Limit:  oneMinLimit,
 		Reason: "min limit",
-		Group:  []string{"hour", "tenminute", "minute"},
-		Time:   halfDay,
+		Group: []interface{}{
+			schema.IPMonitoringTableHourCol,
+			schema.IPMonitoringTableTenminuteCol,
+			schema.IPMonitoringTableMinuteCol,
+		},
+		Time: halfDay,
 	},
 }
 

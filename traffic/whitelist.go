@@ -2,16 +2,13 @@ package traffic
 
 import (
 	"context"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"net"
 	"strings"
 
-	"github.com/autowp/goautowp/util"
-
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
-
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,8 +21,8 @@ type Whitelist struct {
 
 // WhitelistItem WhitelistItem.
 type WhitelistItem struct {
-	IP          net.IP `json:"ip"`
-	Description string `json:"description"`
+	IP          net.IP `json:"ip"          db:"ip"`
+	Description string `json:"description" db:"description"`
 }
 
 // NewWhitelist constructor.
@@ -79,11 +76,12 @@ func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
 
 // Add IP to whitelist.
 func (s *Whitelist) Add(ctx context.Context, ip net.IP, desc string) error {
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO ip_whitelist (ip, description)
-		VALUES ($1, $2)
-		ON CONFLICT (ip) DO UPDATE SET description=EXCLUDED.description
-	`, ip.String(), desc)
+	_, err := s.db.Insert(schema.IPWhitelistTable).Rows(goqu.Record{
+		schema.IPWhitelistTableIPColName:          ip.String(),
+		schema.IPWhitelistTableDescriptionColName: desc,
+	}).OnConflict(goqu.DoUpdate(schema.IPWhitelistTableIPColName, goqu.Record{
+		schema.IPWhitelistTableDescriptionColName: schema.Excluded(schema.IPWhitelistTableDescriptionColName),
+	})).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -92,17 +90,15 @@ func (s *Whitelist) Add(ctx context.Context, ip net.IP, desc string) error {
 func (s *Whitelist) Get(ctx context.Context, ip net.IP) (*WhitelistItem, error) {
 	var item WhitelistItem
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT ip, description
-		FROM ip_whitelist
-		WHERE ip = $1
-	`, ip.String()).Scan(&item.IP, item.Description)
+	success, err := s.db.Select(schema.IPWhitelistTableIPCol, schema.IPWhitelistTableDescriptionCol).
+		From(schema.IPWhitelistTable).
+		Where(schema.IPWhitelistTableIPCol.Eq(ip.String())).Executor().ScanStructContext(ctx, &item)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrWhitelistItemNotFound
-		}
-
 		return nil, err
+	}
+
+	if !success {
+		return nil, ErrWhitelistItemNotFound
 	}
 
 	return &item, nil
@@ -112,54 +108,32 @@ func (s *Whitelist) Get(ctx context.Context, ip net.IP) (*WhitelistItem, error) 
 func (s *Whitelist) List(ctx context.Context) ([]*WhitelistItem, error) {
 	result := make([]*WhitelistItem, 0)
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT ip, description
-		FROM ip_whitelist
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer util.Close(rows)
+	err := s.db.Select(schema.IPWhitelistTableIPCol, schema.IPWhitelistTableDescriptionCol).
+		From(schema.IPWhitelistTable).ScanStructsContext(ctx, &result)
 
-	for rows.Next() {
-		var item WhitelistItem
-		if err := rows.Scan(&item.IP, &item.Description); err != nil {
-			return nil, err
-		}
-
-		result = append(result, &item)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return result, err
 }
 
 // Exists whitelist already contains IP.
 func (s *Whitelist) Exists(ctx context.Context, ip net.IP) (bool, error) {
 	var exists bool
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT true
-		FROM ip_whitelist
-		WHERE ip = $1
-	`, ip.String()).Scan(&exists)
+	success, err := s.db.Select(goqu.V(true)).
+		From(schema.IPWhitelistTable).
+		Where(schema.IPWhitelistTableIPCol.Eq(ip.String())).
+		ScanValContext(ctx, &exists)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, nil
-		}
-
 		return false, err
 	}
 
-	return true, nil
+	return success && exists, nil
 }
 
 // Remove IP from whitelist.
 func (s *Whitelist) Remove(ctx context.Context, ip net.IP) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_whitelist WHERE ip = $1", ip.String())
+	_, err := s.db.Delete(schema.IPWhitelistTable).
+		Where(schema.IPWhitelistTableIPCol.Eq(ip.String())).
+		Executor().ExecContext(ctx)
 
 	return err
 }

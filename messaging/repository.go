@@ -146,11 +146,12 @@ func (s *Repository) ClearSent(ctx context.Context, userID int64) error {
 }
 
 func (s *Repository) ClearSystem(ctx context.Context, userID int64) error {
-	_, err := s.db.ExecContext(ctx, `
-		DELETE FROM `+schema.PersonalMessagesTableName+` 
-		WHERE `+schema.PersonalMessagesTableToUserIDColName+` = ? 
-			AND `+schema.PersonalMessagesTableFromUserIDColName+` IS NULL
-    `, userID)
+	_, err := s.db.Delete(schema.PersonalMessagesTable).
+		Where(
+			schema.PersonalMessagesTableToUserIDCol.Eq(userID),
+			schema.PersonalMessagesTableFromUserIDCol.IsNull(),
+		).
+		Executor().ExecContext(ctx)
 
 	return err
 }
