@@ -714,11 +714,13 @@ func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *APIItemLinkReques
 }
 
 func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest) (*APIItemLinksResponse, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, name, url, type, item_id
-		FROM links
-		WHERE item_id = ?
-	`, in.ItemId)
+	rows, err := s.db.Select(
+		schema.LinksTableIDCol, schema.LinksTableNameCol, schema.LinksTableURLCol, schema.LinksTableTypeCol,
+		schema.LinksTableItemIDCol,
+	).
+		From(schema.LinksTable).
+		Where(schema.LinksTableItemIDCol.Eq(in.ItemId)).
+		Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

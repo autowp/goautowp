@@ -60,6 +60,14 @@ const (
 
 	ImageTableName = "image"
 
+	IPMonitoringTableName             = "ip_monitoring"
+	IPMonitoringTableIPColName        = "ip"
+	IPMonitoringTableCountColName     = "count"
+	IPMonitoringTableDayDateColName   = "day_date"
+	IPMonitoringTableMinuteColName    = "minute"
+	IPMonitoringTableTenminuteColName = "tenminute"
+	IPMonitoringTableHourColName      = "hour"
+
 	ItemTableName                          = "item"
 	ItemTableNameColName                   = "name"
 	ItemTableCatnameColName                = "catname"
@@ -95,6 +103,8 @@ const (
 	ItemParentTableName = "item_parent"
 
 	ItemParentLanguageTableName = "item_parent_language"
+
+	LinksTableName = "links"
 
 	LogEventsTableName = "log_events"
 
@@ -138,6 +148,10 @@ const (
 	SpecTableNameColName      = "name"
 	SpecTableShortNameColName = "short_name"
 	SpecTableParentIDColName  = "parent_id"
+
+	TelegramBrandTableName = "telegram_brand"
+
+	TelegramChatTableName = "telegram_chat"
 
 	TextstorageTextTableName               = "textstorage_text"
 	TextstorageTextTableIDColName          = "id"
@@ -325,6 +339,14 @@ var (
 	ImageTableFilepathCol = ImageTable.Col("filepath")
 	ImageTableDirCol      = ImageTable.Col("dir")
 
+	IPMonitoringTable             = goqu.T(IPMonitoringTableName)
+	IPMonitoringTableIPCol        = IPMonitoringTable.Col(IPMonitoringTableIPColName)
+	IPMonitoringTableCountCol     = IPMonitoringTable.Col(IPMonitoringTableCountColName)
+	IPMonitoringTableDayDateCol   = IPMonitoringTable.Col(IPMonitoringTableDayDateColName)
+	IPMonitoringTableMinuteCol    = IPMonitoringTable.Col(IPMonitoringTableMinuteColName)
+	IPMonitoringTableTenminuteCol = IPMonitoringTable.Col(IPMonitoringTableTenminuteColName)
+	IPMonitoringTableHourCol      = IPMonitoringTable.Col(IPMonitoringTableHourColName)
+
 	ItemLanguageTable              = goqu.T(ItemLanguageTableName)
 	ItemLanguageTableItemIDCol     = ItemLanguageTable.Col("item_id")
 	ItemLanguageTableLanguageCol   = ItemLanguageTable.Col("language")
@@ -361,6 +383,13 @@ var (
 	ItemTableIsGroupCol        = ItemTable.Col(ItemTableIsGroupColName)
 	ItemTableItemTypeIDCol     = ItemTable.Col(ItemTableItemTypeIDColName)
 	ItemTableTodayCol          = ItemTable.Col(ItemTableTodayColName)
+
+	LinksTable          = goqu.T(LinksTableName)
+	LinksTableIDCol     = LinksTable.Col("id")
+	LinksTableNameCol   = LinksTable.Col("name")
+	LinksTableURLCol    = LinksTable.Col("url")
+	LinksTableTypeCol   = LinksTable.Col("type")
+	LinksTableItemIDCol = LinksTable.Col("item_id")
 
 	HtmlsTable        = goqu.T(HtmlsTableName)
 	HtmlsTableIDCol   = HtmlsTable.Col("id")
@@ -424,6 +453,14 @@ var (
 	SpecTableShortNameCol = SpecTable.Col(SpecTableShortNameColName)
 	SpecTableParentIDCol  = SpecTable.Col(SpecTableParentIDColName)
 
+	TelegramBrandTable          = goqu.T(TelegramBrandTableName)
+	TelegramBrandTableChatIDCol = TelegramBrandTable.Col("chat_id")
+
+	TelegramChatTable            = goqu.T(TelegramChatTableName)
+	TelegramChatTableChatIDCol   = TelegramChatTable.Col("chat_id")
+	TelegramChatTableUserIDCol   = TelegramChatTable.Col("user_id")
+	TelegramChatTableMessagesCol = TelegramChatTable.Col("messages")
+
 	TextstorageTextTable        = goqu.T(TextstorageTextTableName)
 	TextstorageTextTableIDCol   = TextstorageTextTable.Col(TextstorageTextTableIDColName)
 	TextstorageTextTableTextCol = TextstorageTextTable.Col(TextstorageTextTableTextColName)
@@ -444,11 +481,12 @@ var (
 	UserTableLastOnlineCol        = UserTable.Col(UserTableLastOnlineColName)
 	UserTableSpecsWeightCol       = UserTable.Col(UserTableSpecsWeightColName)
 	UserTableImgCol               = UserTable.Col("img")
-	UserTableEMailCol             = UserTable.Col(UserTableEmailColName)
-	UserTableEMailToCheckCol      = UserTable.Col(UserTableEmailToCheckColName)
+	UserTableEmailCol             = UserTable.Col(UserTableEmailColName)
+	UserTableEmailToCheckCol      = UserTable.Col(UserTableEmailToCheckColName)
 	UserTableRegDateCol           = UserTable.Col(UserTableRegDateColName)
 	UserTableLastMessageTimeCol   = UserTable.Col(UserTableLastMessageTimeColName)
 	UserTableMessagingIntervalCol = UserTable.Col(UserTableMessagingIntervalColName)
+	UserTableLoginCol             = UserTable.Col(UserTableLoginColName)
 
 	UserUserPreferencesTable            = goqu.T(UserUserPreferencesTableName)
 	UserUserPreferencesTableUserIDCol   = UserUserPreferencesTable.Col("user_id")

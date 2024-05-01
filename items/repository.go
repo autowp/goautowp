@@ -1224,32 +1224,24 @@ func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 }
 
 func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, itemID int64) error {
-	rows, err := s.db.QueryContext(
-		ctx,
-		"SELECT item_id FROM "+schema.ItemParentTableName+" WHERE parent_id = ?",
-		itemID,
-	)
+	var ids []int64
+
+	err := s.db.Select(schema.ItemParentTableItemIDCol).
+		From(schema.ItemParentTable).
+		Where(schema.ItemParentTableParentIDCol.Eq(itemID)).
+		ScanValsContext(ctx, &ids)
 	if err != nil {
 		return err
 	}
 
-	defer util.Close(rows)
-
-	for rows.Next() {
-		var childID int64
-
-		err = rows.Scan(&childID)
-		if err != nil {
-			return err
-		}
-
+	for _, childID := range ids {
 		err = s.refreshItemVehicleTypeInheritanceFromParents(ctx, childID)
 		if err != nil {
 			return err
 		}
 	}
 
-	return rows.Err()
+	return nil
 }
 
 func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {

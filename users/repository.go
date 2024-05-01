@@ -172,7 +172,7 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 	columns := []interface{}{
 		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
 		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol, schema.UserTableImgCol,
-		schema.UserTableEMailCol, schema.UserTablePicturesTotalCol, schema.UserTableSpecsVolumeCol,
+		schema.UserTableEmailCol, schema.UserTablePicturesTotalCol, schema.UserTableSpecsVolumeCol,
 	}
 
 	sqSelect := s.autowpDB.From(schema.UserTable)
@@ -724,7 +724,7 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 
 	err := s.autowpDB.Select(schema.UserTableIDCol, goqu.COUNT(schema.AttrsUserValuesTableUserIDCol).As("count")).
 		From(schema.UserTable).
-		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.AttrsUserValuesTableUserIDCol.Eq(schema.UserTableIDCol))).
+		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.UserTableIDCol.Eq(schema.AttrsUserValuesTableUserIDCol))).
 		Where(
 			schema.UserTableSpecsVolumeValidCol.IsFalse(),
 			schema.UserTableDeletedCol.IsFalse(),
@@ -749,26 +749,20 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 }
 
 func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {
-	rows, err := s.autowpDB.QueryContext(ctx, `
-		SELECT `+schema.UserTableIDColName+` 
-		FROM `+schema.UserTableName+` 
-		WHERE LENGTH(`+schema.UserTableLoginColName+`) > 0 OR LENGTH(`+schema.UserTableEmailColName+`) > 0 OR LENGTH(`+
-		schema.UserTableEmailToCheckColName+`) > 0 
-		ORDER BY `+schema.UserTableIDColName+` DESC
-	`)
+	var ids []int64
+
+	err := s.autowpDB.Select(schema.UserTableIDCol).From(schema.UserTable).Where(
+		goqu.Or(
+			goqu.Func("LENGTH", schema.UserTableLoginCol).Gt(0),
+			goqu.Func("LENGTH", schema.UserTableEmailCol).Gt(0),
+			goqu.Func("LENGTH", schema.UserTableEmailToCheckCol).Gt(0),
+		),
+	).Order(schema.UserTableIDCol.Desc()).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return err
 	}
-	defer util.Close(rows)
 
-	for rows.Next() {
-		var userID int64
-		err = rows.Scan(&userID)
-
-		if err != nil {
-			return err
-		}
-
+	for _, userID := range ids {
 		guid, err := s.ensureUserExportedToKeycloak(ctx, userID)
 		if err != nil {
 			logrus.Debugf("Error exporting user %d", userID)
@@ -779,7 +773,7 @@ func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {
 		logrus.Debugf("User %d exported to keycloak as %s", userID, guid)
 	}
 
-	return rows.Err()
+	return nil
 }
 
 func (s *Repository) SetDisableUserCommentsNotifications(

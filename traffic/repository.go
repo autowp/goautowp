@@ -3,6 +3,7 @@ package traffic
 import (
 	"context"
 	"errors"
+	"github.com/autowp/goautowp/schema"
 	"net"
 	"net/http"
 	"time"
@@ -40,7 +41,7 @@ type Traffic struct {
 type AutobanProfile struct {
 	Limit  int
 	Reason string
-	Group  []string
+	Group  []interface{}
 	Time   time.Duration
 }
 
@@ -49,25 +50,25 @@ var AutobanProfiles = []AutobanProfile{
 	{
 		Limit:  dailyLimit,
 		Reason: "daily limit",
-		Group:  []string{},
+		Group:  []interface{}{},
 		Time:   dailyLimitDuration,
 	},
 	{
 		Limit:  hourlyLimit,
 		Reason: "hourly limit",
-		Group:  []string{"hour"},
+		Group:  []interface{}{schema.IPMonitoringTableHourCol},
 		Time:   hourlyLimitDuration,
 	},
 	{
 		Limit:  tenMinsLimit,
 		Reason: "ten min limit",
-		Group:  []string{"hour", "tenminute"},
+		Group:  []interface{}{schema.IPMonitoringTableHourCol, schema.IPMonitoringTableTenminuteCol},
 		Time:   time.Hour * hoursInDay,
 	},
 	{
 		Limit:  oneMinLimit,
 		Reason: "min limit",
-		Group:  []string{"hour", "tenminute", "minute"},
+		Group:  []interface{}{schema.IPMonitoringTableHourCol, schema.IPMonitoringTableTenminuteCol, schema.IPMonitoringTableMinuteCol},
 		Time:   halfDay,
 	},
 }

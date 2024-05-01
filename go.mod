@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/Nerzal/gocloak/v13 v13.9.0
-	github.com/aws/aws-sdk-go v1.51.25
+	github.com/aws/aws-sdk-go v1.51.32
 	github.com/casbin/casbin v1.9.1
 	github.com/corona10/goimagehash v1.1.0
 	github.com/doug-martin/goqu/v9 v9.19.0
@@ -31,9 +31,9 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v3 v3.0.0-alpha8
 	golang.org/x/text v0.14.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240429193739-8cf5692501f6
 	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.0
 	gopkg.in/gographics/imagick.v2 v2.6.4
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 
@@ -42,11 +42,11 @@ require (
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
-	github.com/bytedance/sonic v1.11.5 // indirect
+	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cloudwego/base64x v0.1.3 // indirect
+	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
@@ -56,7 +56,7 @@ require (
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.19.0 // indirect
+	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/go-resty/resty/v2 v2.12.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
@@ -79,7 +79,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/rs/cors v1.10.1 // indirect
+	github.com/rs/cors v1.11.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
