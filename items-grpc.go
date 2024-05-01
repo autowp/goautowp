@@ -714,11 +714,13 @@ func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *APIItemLinkReques
 }
 
 func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest) (*APIItemLinksResponse, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, name, url, type, item_id
-		FROM links
-		WHERE item_id = ?
-	`, in.ItemId)
+	rows, err := s.db.Select(
+		schema.LinksTableIDCol, schema.LinksTableNameCol, schema.LinksTableURLCol, schema.LinksTableTypeCol,
+		schema.LinksTableItemIDCol,
+	).
+		From(schema.LinksTable).
+		Where(schema.LinksTableItemIDCol.Eq(in.ItemId)).
+		Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -757,7 +759,9 @@ func (s *ItemsGRPCServer) DeleteItemLink(ctx context.Context, in *APIItemLinkReq
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	_, err = s.db.ExecContext(ctx, "DELETE FROM links WHERE id = ?", in.Id)
+	_, err = s.db.Delete(schema.LinksTable).
+		Where(schema.LinksTableIDCol.Eq(in.Id)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -784,11 +788,12 @@ func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (
 		return nil, wrapFieldViolations(InvalidParams)
 	}
 
-	res, err := s.db.ExecContext(
-		ctx,
-		"INSERT INTO links (name, url, type, item_id) VALUES (?, ?, ?, ?)",
-		in.Name, in.Url, in.Type, in.ItemId,
-	)
+	res, err := s.db.Insert(schema.LinksTable).Rows(goqu.Record{
+		schema.LinksTableNameColName:   in.Name,
+		schema.LinksTableURLColName:    in.Url,
+		schema.LinksTableTypeColName:   in.Type,
+		schema.LinksTableItemIDColName: in.ItemId,
+	}).Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -822,11 +827,15 @@ func (s *ItemsGRPCServer) UpdateItemLink(ctx context.Context, in *APIItemLink) (
 		return nil, wrapFieldViolations(InvalidParams)
 	}
 
-	_, err = s.db.ExecContext(
-		ctx,
-		"UPDATE links SET name = ?, url = ?, type = ?, item_id = ? WHERE id = ?",
-		in.Name, in.Url, in.Type, in.ItemId, in.Id,
-	)
+	_, err = s.db.Update(schema.LinksTable).
+		Set(goqu.Record{
+			schema.LinksTableNameColName:   in.Name,
+			schema.LinksTableURLColName:    in.Url,
+			schema.LinksTableTypeColName:   in.Type,
+			schema.LinksTableItemIDColName: in.ItemId,
+		}).
+		Where(schema.LinksTableIDCol.Eq(in.Id)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

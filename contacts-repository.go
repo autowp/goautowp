@@ -22,17 +22,18 @@ func NewContactsRepository(db *goqu.Database) *ContactsRepository {
 func (s *ContactsRepository) isExists(ctx context.Context, id int64, contactID int64) (bool, error) {
 	v := 0
 
-	return s.autowpDB.Select(goqu.L("1")).
+	return s.autowpDB.Select(goqu.V(1)).
 		From(schema.ContactTable).
 		Where(schema.ContactTableUserIDCol.Eq(id), schema.ContactTableContactUserIDCol.Eq(contactID)).
 		ScanValContext(ctx, &v)
 }
 
 func (s *ContactsRepository) create(ctx context.Context, id int64, contactID int64) error {
-	_, err := s.autowpDB.ExecContext(ctx, `
-		INSERT IGNORE INTO contact (user_id, contact_user_id, timestamp)
-		VALUES (?, ?, NOW())
-    `, id, contactID)
+	_, err := s.autowpDB.Insert(schema.ContactTable).Rows(goqu.Record{
+		schema.ContactTableUserIDColName:        id,
+		schema.ContactTableContactUserIDColName: contactID,
+		schema.ContactTableTimestampColName:     goqu.Func("NOW"),
+	}).OnConflict(goqu.DoNothing()).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -41,7 +42,9 @@ func (s *ContactsRepository) create(ctx context.Context, id int64, contactID int
 }
 
 func (s *ContactsRepository) delete(ctx context.Context, id int64, contactID int64) error {
-	_, err := s.autowpDB.ExecContext(ctx, "DELETE FROM contact WHERE user_id = ? AND contact_user_id = ?", id, contactID)
+	_, err := s.autowpDB.Delete(schema.ContactTable).
+		Where(schema.ContactTableUserIDCol.Eq(id), schema.ContactTableContactUserIDCol.Eq(contactID)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -50,15 +53,16 @@ func (s *ContactsRepository) delete(ctx context.Context, id int64, contactID int
 }
 
 func (s *ContactsRepository) deleteUserEverywhere(ctx context.Context, id int64) error {
-	_, err := s.autowpDB.ExecContext(ctx, "DELETE FROM contact WHERE user_id = ?", id)
+	_, err := s.autowpDB.Delete(schema.ContactTable).
+		Where(schema.ContactTableUserIDCol.Eq(id)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.autowpDB.ExecContext(ctx, "DELETE FROM contact WHERE contact_user_id = ?", id)
-	if err != nil {
-		return err
-	}
+	_, err = s.autowpDB.Delete(schema.ContactTable).
+		Where(schema.ContactTableContactUserIDCol.Eq(id)).
+		Executor().ExecContext(ctx)
 
-	return nil
+	return err
 }

@@ -243,11 +243,12 @@ func (s *Forums) MoveTopic(ctx context.Context, id int64, themeID int64) error {
 		return sql.ErrNoRows
 	}
 
-	_, err = s.db.ExecContext(
-		ctx,
-		"UPDATE "+schema.ForumsTopicsTableName+" SET theme_id = ? WHERE id = ?",
-		themeID, id,
-	)
+	_, err = s.db.Update(schema.ForumsTopicsTable).
+		Set(goqu.Record{
+			schema.ForumsTopicsTableThemeIDColName: themeID,
+		}).
+		Where(schema.ForumsTopicsTableIDCol.Eq(id)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}

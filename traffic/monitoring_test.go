@@ -80,7 +80,7 @@ func TestListByBanProfile(t *testing.T) { //nolint:paralleltest
 	ips, err := s.ListByBanProfile(ctx, AutobanProfile{
 		Limit:  1,
 		Reason: "test",
-		Group:  []string{},
+		Group:  []interface{}{},
 		Time:   dailyLimitDuration,
 	})
 	require.NoError(t, err)

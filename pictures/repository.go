@@ -70,11 +70,15 @@ func NewRepository(db *goqu.Database) *Repository {
 }
 
 func (s *Repository) IncView(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, `
-        INSERT INTO picture_view (picture_id, views)
-		VALUES (?, 1)
-		ON DUPLICATE KEY UPDATE views=views+1
-    `, id)
+	_, err := s.db.Insert(schema.PictureViewTable).
+		Rows(goqu.Record{
+			schema.PictureViewTablePictureIDColName: id,
+			schema.PictureViewTableViewsColName:     1,
+		}).
+		OnConflict(goqu.DoUpdate(schema.PictureViewTablePictureIDColName, goqu.Record{
+			schema.PictureViewTableViewsColName: goqu.L("? + 1", schema.PictureViewTableViewsCol),
+		})).
+		Executor().ExecContext(ctx)
 
 	return err
 }
@@ -98,31 +102,45 @@ func (s *Repository) Status(ctx context.Context, id int64) (Status, error) {
 }
 
 func (s *Repository) GetVote(ctx context.Context, id int64, userID int64) (*VoteSummary, error) {
-	var value, positive, negative int32
+	var value int32
 	if userID > 0 {
-		err := s.db.QueryRowContext(
-			ctx,
-			"SELECT value FROM "+schema.PictureVoteTableName+" WHERE picture_id = ? AND user_id = ?",
-			id, userID,
-		).Scan(&value)
+		success, err := s.db.Select(schema.PictureVoteTableValueCol).
+			From(schema.PictureVoteTable).
+			Where(
+				schema.PictureVoteTablePictureIDCol.Eq(id),
+				schema.PictureVoteTableUserIDCol.Eq(userID),
+			).
+			ScanValContext(ctx, &value)
 		if err != nil {
 			return nil, err
 		}
+
+		if !success {
+			return nil, sql.ErrNoRows
+		}
 	}
 
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT positive, negative FROM "+schema.PictureVoteSummaryTableName+" WHERE picture_id = ?",
-		id,
-	).Scan(&positive, &negative)
+	st := struct {
+		Positive int32 `db:"positive"`
+		Negative int32 `db:"negative"`
+	}{}
+
+	success, err := s.db.Select(schema.PictureVoteSummaryTablePositiveCol, schema.PictureVoteSummaryTableNegativeCol).
+		From(schema.PictureVoteSummaryTable).
+		Where(schema.PictureVoteSummaryTablePictureIDCol.Eq(id)).
+		ScanStructContext(ctx, &st)
 	if err != nil {
 		return nil, err
 	}
 
+	if !success {
+		return nil, sql.ErrNoRows
+	}
+
 	return &VoteSummary{
 		Value:    value,
-		Positive: positive,
-		Negative: negative,
+		Positive: st.Positive,
+		Negative: st.Negative,
 	}, nil
 }
 
@@ -132,12 +150,18 @@ func (s *Repository) Vote(ctx context.Context, id int64, value int32, userID int
 		normalizedValue = -1
 	}
 
-	_, err := s.db.ExecContext(ctx, `
-        INSERT INTO `+schema.PictureVoteTableName+` (picture_id, user_id, value, timestamp)
-		VALUES (?, ?, ?, now())
-		ON DUPLICATE KEY UPDATE value = VALUES(value),
-		timestamp = VALUES(timestamp)
-    `, id, userID, normalizedValue)
+	_, err := s.db.Insert(schema.PictureVoteTable).Rows(goqu.Record{
+		schema.PictureVoteTablePictureIDColName: id,
+		schema.PictureVoteTableUserIDColName:    userID,
+		schema.PictureVoteTableValueColName:     normalizedValue,
+		schema.PictureVoteTableTimestampColName: goqu.Func("NOW"),
+	}).OnConflict(goqu.DoUpdate(
+		schema.PictureVoteTablePictureIDColName+","+schema.PictureVoteTableUserIDColName,
+		goqu.Record{
+			schema.PictureVoteTableValueColName:     goqu.Func("VALUES", goqu.C(schema.PictureVoteTableValueColName)),
+			schema.PictureVoteTableTimestampColName: goqu.Func("VALUES", goqu.C(schema.PictureVoteTableTimestampColName)),
+		},
+	)).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -154,10 +178,11 @@ func (s *Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteT
 		tpl.Vote = 1
 	}
 
-	r, err := s.db.ExecContext(ctx, `
-        INSERT INTO picture_moder_vote_template (user_id, reason, vote)
-		VALUES (?, ?, ?)
-    `, tpl.UserID, tpl.Message, tpl.Vote)
+	r, err := s.db.Insert(schema.PictureModerVoteTemplateTable).Rows(goqu.Record{
+		schema.PictureModerVoteTemplateTableUserIDColName: tpl.UserID,
+		schema.PictureModerVoteTemplateTableReasonColName: tpl.Message,
+		schema.PictureModerVoteTemplateTableVoteColName:   tpl.Vote,
+	}).Executor().ExecContext(ctx)
 	if err != nil {
 		return tpl, err
 	}
@@ -172,17 +197,25 @@ func (s *Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteT
 }
 
 func (s *Repository) DeleteModerVoteTemplate(ctx context.Context, id int64, userID int64) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM picture_moder_vote_template WHERE user_id = ? AND id = ?", userID, id)
+	_, err := s.db.Delete(schema.PictureModerVoteTemplateTable).
+		Where(
+			schema.PictureModerVoteTemplateTableUserIDCol.Eq(userID),
+			schema.PictureModerVoteTemplateTableIDCol.Eq(id),
+		).Executor().ExecContext(ctx)
 
 	return err
 }
 
 func (s *Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]ModerVoteTemplate, error) {
-	rows, err := s.db.QueryContext(
-		ctx,
-		"SELECT id, reason, vote FROM picture_moder_vote_template WHERE user_id = ? ORDER BY reason",
-		id,
-	)
+	rows, err := s.db.Select(
+		schema.PictureModerVoteTemplateTableIDCol,
+		schema.PictureModerVoteTemplateTableReasonCol,
+		schema.PictureModerVoteTemplateTableVoteCol,
+	).
+		From(schema.PictureModerVoteTemplateTable).
+		Where(schema.PictureModerVoteTemplateTableUserIDCol.Eq(id)).
+		Order(schema.PictureModerVoteTemplateTableReasonCol.Asc()).
+		Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -210,17 +243,22 @@ func (s *Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mod
 }
 
 func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, `
-        insert into `+schema.PictureVoteSummaryTableName+` (picture_id, positive, negative)
-		values (
-			?,
-			(select count(1) from `+schema.PictureVoteTableName+` where picture_id = ? and value > 0),
-			(select count(1) from `+schema.PictureVoteTableName+` where picture_id = ? and value < 0)
-		)
-		on duplicate key update
-			positive = VALUES(positive),
-			negative = VALUES(negative)
-    `, id, id, id)
+	_, err := s.db.Insert(schema.PictureVoteSummaryTable).Rows(goqu.Record{
+		schema.PictureVoteSummaryTablePictureIDColName: id,
+		schema.PictureVoteSummaryTablePositiveColName: s.db.Select(goqu.COUNT(goqu.Star())).
+			From(schema.PictureVoteTable).
+			Where(schema.PictureVoteTablePictureIDCol.Eq(id), schema.PictureVoteTableValueCol.Gt(0)),
+		schema.PictureVoteSummaryTableNegativeColName: s.db.Select(goqu.COUNT(goqu.Star())).
+			From(schema.PictureVoteTable).
+			Where(schema.PictureVoteTablePictureIDCol.Eq(id), schema.PictureVoteTableValueCol.Lt(0)),
+	}).OnConflict(goqu.DoUpdate(schema.PictureVoteSummaryTablePictureIDColName, goqu.Record{
+		schema.PictureVoteSummaryTablePositiveColName: goqu.Func(
+			"VALUES", goqu.C(schema.PictureVoteSummaryTablePositiveColName),
+		),
+		schema.PictureVoteSummaryTableNegativeColName: goqu.Func(
+			"VALUES", goqu.C(schema.PictureVoteSummaryTableNegativeColName),
+		),
+	})).Executor().ExecContext(ctx)
 
 	return err
 }

@@ -2,13 +2,11 @@ package traffic
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"net"
-	"strings"
 	"time"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jackc/pgtype"
@@ -117,25 +115,32 @@ func (s *Monitoring) Listen(ctx context.Context, url string, queue string, quitC
 
 // Add item to Monitoring.
 func (s *Monitoring) Add(ctx context.Context, ip net.IP, timestamp time.Time) error {
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO ip_monitoring (day_date, hour, tenminute, minute, ip, count)
-		VALUES (
-			$1::timestamptz,
-			EXTRACT(HOUR FROM $1::timestamptz),
-			FLOOR(EXTRACT(MINUTE FROM $1::timestamptz)/10),
-			EXTRACT(MINUTE FROM $1::timestamptz),
-			$2,
-			1
-		)
-		ON CONFLICT(ip,day_date,hour,tenminute,minute) DO UPDATE SET count=ip_monitoring.count+1
-	`, timestamp, ip.String())
+	_, err := s.db.Insert(schema.IPMonitoringTable).Rows(
+		goqu.Record{
+			schema.IPMonitoringTableDayDateColName:   timestamp,
+			schema.IPMonitoringTableHourColName:      goqu.Func("EXTRACT", goqu.L("HOUR FROM ?::timestamptz", timestamp)),
+			schema.IPMonitoringTableTenminuteColName: goqu.L("FLOOR(EXTRACT(MINUTE FROM ?::timestamptz)/10)", timestamp),
+			schema.IPMonitoringTableMinuteColName:    goqu.Func("EXTRACT", goqu.L("MINUTE FROM ?::timestamptz", timestamp)),
+			schema.IPMonitoringTableIPColName:        ip.String(),
+			schema.IPMonitoringTableCountColName:     1,
+		}).
+		OnConflict(
+			goqu.DoUpdate(
+				"ip,day_date,hour,tenminute,minute",
+				goqu.C(schema.IPMonitoringTableCountColName).Set(
+					goqu.L(schema.IPMonitoringTableName+"."+schema.IPMonitoringTableCountColName+"+1"),
+				),
+			),
+		).Executor().ExecContext(ctx)
 
 	return err
 }
 
 // GC Garbage Collect.
 func (s *Monitoring) GC(ctx context.Context) (int64, error) {
-	ct, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring WHERE day_date < CURRENT_DATE")
+	ct, err := s.db.Delete(schema.IPMonitoringTable).
+		Where(schema.IPMonitoringTableDayDateCol.Lt(goqu.L("CURRENT_DATE"))).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -150,7 +155,7 @@ func (s *Monitoring) GC(ctx context.Context) (int64, error) {
 
 // Clear removes all collected data.
 func (s *Monitoring) Clear(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring")
+	_, err := s.db.Delete(schema.IPMonitoringTable).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -158,24 +163,26 @@ func (s *Monitoring) Clear(ctx context.Context) error {
 // ClearIP removes all data collected for IP.
 func (s *Monitoring) ClearIP(ctx context.Context, ip net.IP) error {
 	logrus.Info(ip.String() + ": clear monitoring")
-	_, err := s.db.ExecContext(ctx, "DELETE FROM ip_monitoring WHERE ip = $1", ip.String())
+	_, err := s.db.Delete(schema.IPMonitoringTable).
+		Where(schema.IPMonitoringTableIPCol.Eq(ip.String())).
+		Executor().ExecContext(ctx)
 
 	return err
 }
 
 // ListOfTop ListOfTop.
-func (s *Monitoring) ListOfTop(ctx context.Context, limit int) ([]ListOfTopItem, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT ip, SUM(count) AS c
-		FROM ip_monitoring
-		WHERE day_date = CURRENT_DATE
-		GROUP BY ip
-		ORDER BY c DESC
-		LIMIT $1
-	`, limit)
+func (s *Monitoring) ListOfTop(ctx context.Context, limit uint) ([]ListOfTopItem, error) {
+	rows, err := s.db.Select(schema.IPMonitoringTableIPCol, goqu.SUM(schema.IPMonitoringTableCountCol).As("c")).
+		From(schema.IPMonitoringTable).
+		Where(schema.IPMonitoringTableDayDateCol.Eq(goqu.L("CURRENT_DATE"))).
+		GroupBy(schema.IPMonitoringTableIPCol).
+		Order(goqu.I("c").Desc()).
+		Limit(limit).
+		Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
+
 	defer util.Close(rows)
 
 	result := []ListOfTopItem{}
@@ -206,19 +213,21 @@ func (s *Monitoring) ListOfTop(ctx context.Context, limit int) ([]ListOfTopItem,
 
 // ListByBanProfile ListByBanProfile.
 func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfile) ([]net.IP, error) {
-	group := append([]string{"ip"}, profile.Group...)
+	group := append([]interface{}{schema.IPMonitoringTableIPCol}, profile.Group...)
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT ip, SUM(count) AS c
-		FROM ip_monitoring
-		WHERE day_date = CURRENT_DATE
-		GROUP BY `+strings.Join(group, ", ")+`
-		HAVING SUM(count) > $1
-		LIMIT 1000
-	`, profile.Limit)
+	const numberOfRecordsToScanForAutoban = 1000
+
+	rows, err := s.db.Select(schema.IPMonitoringTableIPCol, goqu.SUM(schema.IPMonitoringTableCountCol).As("c")).
+		From(schema.IPMonitoringTable).
+		Where(schema.IPMonitoringTableDayDateCol.Eq(goqu.L("CURRENT_DATE"))).
+		GroupBy(group...).
+		Having(goqu.SUM(schema.IPMonitoringTableCountCol).Gt(profile.Limit)).
+		Limit(numberOfRecordsToScanForAutoban).
+		Executor().QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
+
 	defer util.Close(rows)
 
 	result := []net.IP{}
@@ -246,22 +255,17 @@ func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfil
 }
 
 // ExistsIP ban list already contains IP.
-func (s *Monitoring) ExistsIP(ip net.IP) (bool, error) {
+func (s *Monitoring) ExistsIP(ctx context.Context, ip net.IP) (bool, error) {
 	var exists bool
 
-	err := s.db.QueryRowContext(context.Background(), `
-		SELECT true
-		FROM ip_monitoring
-		WHERE ip = $1
-		LIMIT 1
-	`, ip.String()).Scan(&exists)
+	success, err := s.db.Select(goqu.V(true)).
+		From(schema.IPMonitoringTable).
+		Where(schema.IPMonitoringTableIPCol.Eq(ip.String())).
+		Limit(1).
+		ScanValContext(ctx, &exists)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return false, err
-		}
-
-		return false, nil
+		return false, err
 	}
 
-	return true, nil
+	return success && exists, nil
 }

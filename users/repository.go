@@ -65,17 +65,17 @@ type GetUsersOptions struct {
 
 // DBUser DBUser.
 type DBUser struct {
-	ID            int64
-	Name          string
-	Deleted       bool
-	Identity      *string
-	LastOnline    *time.Time
-	Role          string
-	EMail         *string
-	Img           *int
-	SpecsWeight   float64
-	SpecsVolume   int64
-	PicturesTotal int64
+	ID            int64      `db:"id"`
+	Name          string     `db:"name"`
+	Deleted       bool       `db:"deleted"`
+	Identity      *string    `db:"identity"`
+	LastOnline    *time.Time `db:"last_online"`
+	Role          string     `db:"role"`
+	EMail         *string    `db:"email"`
+	Img           *int       `db:"img"`
+	SpecsWeight   float64    `db:"specs_weight"`
+	SpecsVolume   int64      `db:"specs_volume"`
+	PicturesTotal int64      `db:"pictures_total"`
 }
 
 // CreateUserOptions CreateUserOptions.
@@ -172,7 +172,7 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 	columns := []interface{}{
 		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
 		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol, schema.UserTableImgCol,
-		schema.UserTableEMailCol, schema.UserTablePicturesTotalCol, schema.UserTableSpecsVolumeCol,
+		schema.UserTableEmailCol, schema.UserTablePicturesTotalCol, schema.UserTableSpecsVolumeCol,
 	}
 
 	sqSelect := s.autowpDB.From(schema.UserTable)
@@ -359,27 +359,53 @@ func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) erro
 
 func (s *Repository) UserAvgVote(ctx context.Context, userID int64) (float64, error) {
 	var result float64
-	err := s.autowpDB.QueryRowContext(
-		ctx,
-		"SELECT IFNULL(avg(vote), 0) FROM "+schema.CommentMessageTableName+" WHERE author_id = ? AND vote <> 0",
-		userID,
-	).Scan(&result)
 
-	return result, err
+	success, err := s.autowpDB.Select(goqu.Func("IFNULL", goqu.AVG(schema.CommentMessageTableVoteCol), 0)).
+		From(schema.CommentMessageTable).
+		Where(
+			schema.CommentMessageTableAuthorIDCol.Eq(userID),
+			schema.CommentMessageTableVoteCol.Neq(0),
+		).
+		ScanValContext(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, sql.ErrNoRows
+	}
+
+	return result, nil
 }
 
 func (s *Repository) RefreshUserConflicts(ctx context.Context, userID int64) error {
-	_, err := s.autowpDB.ExecContext(ctx, `
-		UPDATE `+schema.UserTableName+` 
-		SET `+schema.UserTableName+`.`+schema.UserTableSpecsWeightColName+` = (1.5 * ((1 + IFNULL((
-		    SELECT sum(weight) FROM `+schema.AttrsUserValuesTableName+` 
-			WHERE user_id = `+schema.UserTableName+`.id AND weight > 0
-		), 0)) / (1 + IFNULL((
-			SELECT abs(sum(weight)) FROM `+schema.AttrsUserValuesTableName+` 
-			WHERE user_id = `+schema.UserTableName+`.id AND weight < 0
-		), 0))))
-		WHERE `+schema.UserTableName+`.id = ?
-	`, userID)
+	_, err := s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
+		schema.UserTableSpecsWeightColName: goqu.L(
+			"1.5 * (1 + ?) / (1 + ?)",
+			goqu.Func(
+				"IFNULL",
+				s.autowpDB.Select(goqu.SUM(schema.AttrsUserValuesTableWeightCol)).
+					From(schema.AttrsUserValuesTable).
+					Where(
+						schema.AttrsUserValuesTableUserIDCol.Eq(schema.UserTableIDCol),
+						schema.AttrsUserValuesTableWeightCol.Gt(0),
+					),
+				0,
+			),
+			goqu.Func(
+				"IFNULL",
+				s.autowpDB.Select(goqu.Func("ABS", goqu.SUM(schema.AttrsUserValuesTableWeightCol))).
+					From(schema.AttrsUserValuesTable).
+					Where(
+						schema.AttrsUserValuesTableUserIDCol.Eq(schema.UserTableIDCol),
+						schema.AttrsUserValuesTableWeightCol.Lt(0),
+					),
+				0,
+			),
+		),
+	}).
+		Where(schema.UserTableIDCol.Eq(userID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }
@@ -492,32 +518,32 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID int64) (string, error) {
 	logrus.Debugf("Ensure user `%d` exported to Keycloak", userID)
 
-	var (
-		userGUID     string
-		deleted      bool
-		userEmail    sql.NullString
-		emailToCheck sql.NullString
-		login        sql.NullString
-		name         string
-	)
+	st := struct {
+		Deleted      bool           `db:"deleted"`
+		Email        sql.NullString `db:"e_mail"`
+		EmailToCheck sql.NullString `db:"email_to_check"`
+		Login        sql.NullString `db:"login"`
+		Name         string         `db:"name"`
+		GUID         string         `db:"guid"`
+	}{}
 
-	err := s.autowpDB.
-		QueryRowContext(
-			ctx,
-			`
-				SELECT `+schema.UserTableDeletedColName+`, `+schema.UserTableEmailColName+`, `+
-				schema.UserTableEmailToCheckColName+`, `+schema.UserTableLoginColName+`, `+
-				schema.UserTableNameColName+`, IFNULL(BIN_TO_UUID(`+schema.UserTableUUIDColName+`), '')
-				FROM `+schema.UserTableName+` WHERE `+schema.UserTableIDColName+` = ?
-			`,
-			userID,
-		).Scan(&deleted, &userEmail, &emailToCheck, &login, &name, &userGUID)
+	success, err := s.autowpDB.Select(
+		schema.UserTableDeletedCol, schema.UserTableEmailCol, schema.UserTableEmailToCheckCol, schema.UserTableLoginCol,
+		schema.UserTableNameCol, goqu.Func("IFNULL", goqu.Func("BIN_TO_UUID", schema.UserTableUUIDCol), "").As("guid"),
+	).
+		From(schema.UserTable).
+		Where(schema.UserTableIDCol.Eq(userID)).
+		ScanStructContext(ctx, &st)
 	if err != nil {
 		return "", err
 	}
 
-	if len(userGUID) > 0 {
-		return userGUID, nil
+	if !success {
+		return "", sql.ErrNoRows
+	}
+
+	if len(st.GUID) > 0 {
+		return st.GUID, nil
 	}
 
 	token, err := s.keycloak.LoginClient(
@@ -531,28 +557,28 @@ func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID in
 	}
 
 	var (
-		keyCloakEmail = &userEmail.String
+		keyCloakEmail = &st.Email.String
 		emailVerified = true
 	)
 
-	if !userEmail.Valid || len(userEmail.String) == 0 {
-		keyCloakEmail = &emailToCheck.String
+	if !st.Email.Valid || len(st.Email.String) == 0 {
+		keyCloakEmail = &st.EmailToCheck.String
 		emailVerified = false
 	}
 
-	username := login.String
-	if (!login.Valid || len(login.String) == 0) && keyCloakEmail != nil && len(*keyCloakEmail) > 0 {
+	username := st.Login.String
+	if (!st.Login.Valid || len(st.Login.String) == 0) && keyCloakEmail != nil && len(*keyCloakEmail) > 0 {
 		username = *keyCloakEmail
 	}
 
 	f := false
-	enabled := !deleted
-	userGUID, err = s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
+	enabled := !st.Deleted
+	st.GUID, err = s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		Enabled:       &enabled,
 		Totp:          &f,
 		EmailVerified: &emailVerified,
 		Username:      &username,
-		FirstName:     &name,
+		FirstName:     &st.Name,
 		Email:         keyCloakEmail,
 	})
 
@@ -561,31 +587,30 @@ func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID in
 	}
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		schema.UserTableUUIDColName: goqu.Func("UUID_TO_BIN", userGUID),
+		schema.UserTableUUIDColName: goqu.Func("UUID_TO_BIN", st.GUID),
 	}).Where(goqu.C("user_id").Eq(userID)).Executor().ExecContext(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	return userGUID, err
+	return st.GUID, err
 }
 
 func (s *Repository) PasswordMatch(ctx context.Context, userID int64, password string) (bool, error) {
 	var exists bool
-	err := s.autowpDB.QueryRowContext(ctx, `
-		SELECT 1 FROM `+schema.UserTableName+` 
-		WHERE `+schema.UserTablePasswordColName+` = MD5(CONCAT(?, ?)) AND id = ? AND NOT `+schema.UserTableDeletedColName+`
-	`, s.usersSalt, password, userID).Scan(&exists)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-
+	succcess, err := s.autowpDB.Select(goqu.V(1)).
+		From(schema.UserTable).
+		Where(
+			schema.UserTablePasswordCol.Eq(goqu.Func("MD5", goqu.Func("CONTCAT", s.usersSalt, password))),
+			schema.UserTableIDCol.Eq(userID),
+			schema.UserTableDeletedCol.IsFalse(),
+		).ScanValContext(ctx, &exists)
 	if err != nil {
 		return false, err
 	}
 
-	return true, nil
+	return succcess && exists, nil
 }
 
 func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error) {
@@ -605,34 +630,35 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 	}
 
 	f := false
+
 	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		ID:      &userGUID,
 		Enabled: &f,
 	})
-
 	if err != nil {
 		return false, err
 	}
 
 	var val int
-	err = s.autowpDB.QueryRowContext(
-		ctx,
-		"SELECT 1 FROM "+schema.UserTableName+" WHERE id = ? AND NOT deleted",
-		userID,
-	).Scan(&val)
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-
+	success, err := s.autowpDB.Select(goqu.V(1)).
+		From(schema.UserTable).
+		Where(
+			schema.UserTableIDCol.Eq(userID),
+			schema.UserTableDeletedCol.IsFalse(),
+		).ScanValContext(ctx, &val)
 	if err != nil {
 		return false, err
+	}
+
+	if !success {
+		return false, nil
 	}
 
 	// $oldImageId = $row['img'];
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		"deleted": 1,
+		schema.UserTableDeletedColName: 1,
 	}).Where(schema.UserTableIDCol.Eq(userID)).Executor().ExecContext(ctx)
 	// 'img'     => null,
 	if err != nil {
@@ -643,23 +669,28 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 		$this->imageStorage->removeImage($oldImageId);
 	}*/
 
-	_, err = s.autowpDB.ExecContext(ctx, "DELETE FROM telegram_chat WHERE user_id = ?", userID)
+	_, err = s.autowpDB.Delete(schema.TelegramChatTable).
+		Where(schema.TelegramChatTableUserIDCol.Eq(userID)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return false, err
 	}
 
 	// delete linked profiles
-	_, err = s.autowpDB.ExecContext(ctx, `
-		DELETE FROM user_account WHERE user_id = ? AND service_id != ?
-	`, userID, KeycloakExternalAccountID)
+	_, err = s.autowpDB.Delete(schema.UserAccountTable).
+		Where(
+			schema.UserAccountTableUserIDCol.Eq(userID),
+			schema.UserAccountTableServiceIDCol.Eq(KeycloakExternalAccountID),
+		).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return false, err
 	}
 
 	// unsubscribe from items
-	_, err = s.autowpDB.ExecContext(ctx, `
-		DELETE FROM user_item_subscribe WHERE user_id = ?
-	`, userID)
+	_, err = s.autowpDB.Delete(schema.UserItemSubscribeTable).
+		Where(schema.UserItemSubscribeTableUserIDCol.Eq(userID)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -679,38 +710,28 @@ func (s *Repository) RestoreVotes(ctx context.Context) error {
 }
 
 func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
-	rows, err := s.autowpDB.QueryContext(
-		ctx,
-		"SELECT "+schema.UserTableIDColName+" FROM "+schema.UserTableName+
-			" WHERE NOT "+schema.UserTableDeletedColName+" AND "+
-			schema.UserTableLastOnlineColName+" > DATE_SUB(NOW(), INTERVAL 3 MONTH)",
-	)
+	var ids []int64
+
+	err := s.autowpDB.Select(schema.UserTableIDCol).
+		From(schema.UserTable).
+		Where(
+			schema.UserTableDeletedCol.IsFalse(),
+			schema.UserTableLastOnlineCol.Gt(goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL 3 MONTH"))),
+		).
+		ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
 	}
 
-	defer util.Close(rows)
-
 	affected := 0
 
-	for rows.Next() {
-		var userID int64
-		err = rows.Scan(&userID)
-
-		if err != nil {
-			return 0, err
-		}
-
+	for _, userID := range ids {
 		err = s.UpdateUserVoteLimit(ctx, userID)
 
 		if err != nil {
 			return 0, err
 		}
 		affected++
-	}
-
-	if err = rows.Err(); err != nil {
-		return 0, err
 	}
 
 	return affected, nil
@@ -724,7 +745,7 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 
 	err := s.autowpDB.Select(schema.UserTableIDCol, goqu.COUNT(schema.AttrsUserValuesTableUserIDCol).As("count")).
 		From(schema.UserTable).
-		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.AttrsUserValuesTableUserIDCol.Eq(schema.UserTableIDCol))).
+		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.UserTableIDCol.Eq(schema.AttrsUserValuesTableUserIDCol))).
 		Where(
 			schema.UserTableSpecsVolumeValidCol.IsFalse(),
 			schema.UserTableDeletedCol.IsFalse(),
@@ -749,26 +770,20 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 }
 
 func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {
-	rows, err := s.autowpDB.QueryContext(ctx, `
-		SELECT `+schema.UserTableIDColName+` 
-		FROM `+schema.UserTableName+` 
-		WHERE LENGTH(`+schema.UserTableLoginColName+`) > 0 OR LENGTH(`+schema.UserTableEmailColName+`) > 0 OR LENGTH(`+
-		schema.UserTableEmailToCheckColName+`) > 0 
-		ORDER BY `+schema.UserTableIDColName+` DESC
-	`)
+	var ids []int64
+
+	err := s.autowpDB.Select(schema.UserTableIDCol).From(schema.UserTable).Where(
+		goqu.Or(
+			goqu.Func("LENGTH", schema.UserTableLoginCol).Gt(0),
+			goqu.Func("LENGTH", schema.UserTableEmailCol).Gt(0),
+			goqu.Func("LENGTH", schema.UserTableEmailToCheckCol).Gt(0),
+		),
+	).Order(schema.UserTableIDCol.Desc()).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return err
 	}
-	defer util.Close(rows)
 
-	for rows.Next() {
-		var userID int64
-		err = rows.Scan(&userID)
-
-		if err != nil {
-			return err
-		}
-
+	for _, userID := range ids {
 		guid, err := s.ensureUserExportedToKeycloak(ctx, userID)
 		if err != nil {
 			logrus.Debugf("Error exporting user %d", userID)
@@ -779,7 +794,7 @@ func (s *Repository) ExportUsersToKeycloak(ctx context.Context) error {
 		logrus.Debugf("User %d exported to keycloak as %s", userID, guid)
 	}
 
-	return rows.Err()
+	return nil
 }
 
 func (s *Repository) SetDisableUserCommentsNotifications(
@@ -798,7 +813,7 @@ func (s *Repository) SetDisableUserCommentsNotifications(
 			goqu.DoUpdate(
 				schema.UserUserPreferencesTableUserIDColName+", "+schema.UserUserPreferencesTableToUserIDColName,
 				goqu.Record{
-					schema.UserUserPreferencesTableDCNColName: goqu.L("EXCLUDED." + schema.UserUserPreferencesTableDCNColName),
+					schema.UserUserPreferencesTableDCNColName: schema.Excluded(schema.UserUserPreferencesTableDCNColName),
 				},
 			),
 		)
@@ -953,30 +968,26 @@ func (s *Repository) NextMessageTime(ctx context.Context, userID int64) (time.Ti
 }
 
 func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
-	var (
-		lastOnline sql.NullTime
-		lastIP     *net.IP
-	)
+	st := struct {
+		LastOnline sql.NullTime `db:"last_online"`
+		LastIP     *net.IP      `db:"last_ip"`
+	}{}
 
-	err := s.autowpDB.QueryRowContext(
-		ctx,
-		"SELECT "+schema.UserTableLastOnlineColName+", "+schema.UserTableLastIPColName+
-			" FROM "+schema.UserTableName+" WHERE id = ?",
-		userID,
-	).
-		Scan(&lastOnline, &lastIP)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
-	}
-
+	success, err := s.autowpDB.Select(schema.UserTableLastOnlineCol, schema.UserTableLastIPCol).
+		From(schema.UserTable).
+		Where(schema.UserTableIDCol.Eq(userID)).
+		ScanStructContext(ctx, &st)
 	if err != nil {
 		return err
 	}
 
+	if !success {
+		return nil
+	}
+
 	set := goqu.Record{}
 
-	if !lastOnline.Valid || lastOnline.Time.Add(lastOnlineUpdateThreshold).Before(time.Now()) {
+	if !st.LastOnline.Valid || st.LastOnline.Time.Add(lastOnlineUpdateThreshold).Before(time.Now()) {
 		set[schema.UserTableLastOnlineColName] = goqu.Func("NOW")
 	}
 
@@ -997,7 +1008,7 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 
 	ip := net.ParseIP(remoteAddr)
 
-	if ip != nil && (lastIP == nil || !lastIP.Equal(ip)) {
+	if ip != nil && (st.LastIP == nil || !st.LastIP.Equal(ip)) {
 		set[schema.UserTableLastIPColName] = goqu.Func("INET6_ATON", remoteAddr)
 	}
 

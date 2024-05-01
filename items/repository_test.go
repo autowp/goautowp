@@ -201,38 +201,45 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	vehicleID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemParentTableName).Rows(goqu.Record{
+	_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
 		"item_id":   vehicleID,
 		"parent_id": brandID,
 		"catname":   "",
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemParentCacheTableName).Cols("item_id", "parent_id", "diff").Vals(
-		goqu.Vals{brandID, brandID, 0},
-		goqu.Vals{vehicleID, vehicleID, 0},
-		goqu.Vals{vehicleID, brandID, 1},
-	).Executor().ExecContext(ctx)
+	_, err = goquDB.Insert(schema.ItemParentCacheTable).
+		Cols(
+			schema.ItemParentCacheTableItemIDColName,
+			schema.ItemParentCacheTableParentIDColName,
+			schema.ItemParentCacheTableDiffColName,
+		).
+		Vals(
+			goqu.Vals{brandID, brandID, 0},
+			goqu.Vals{vehicleID, vehicleID, 0},
+			goqu.Vals{vehicleID, brandID, 1},
+		).
+		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
-	res, err = goquDB.Insert(schema.PictureTableName).Rows(goqu.Record{
-		"identity": identity,
-		"status":   "accepted",
-		"ip":       "",
-		"owner_id": userID,
+	res, err = goquDB.Insert(schema.PictureTable).Rows(goqu.Record{
+		schema.PictureTableIdentityColName: identity,
+		schema.PictureTableStatusColName:   "accepted",
+		schema.PictureTableIPColName:       "",
+		schema.PictureTableOwnerIDColName:  userID,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	pictureID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.PictureItemTableName).Rows(goqu.Record{
-		"picture_id": pictureID,
-		"item_id":    vehicleID,
+	_, err = goquDB.Insert(schema.PictureItemTable).Rows(goqu.Record{
+		schema.PictureItemTablePictureIDColName: pictureID,
+		schema.PictureItemTableItemIDColName:    vehicleID,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -277,21 +284,22 @@ func TestPaginator(t *testing.T) {
 	name := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
 	for i := 0; i < 10; i++ {
-		res, err := goquDB.ExecContext(ctx,
-			"INSERT INTO "+schema.ItemTableName+" ("+
-				schema.ItemTableItemTypeIDColName+", name, body, "+
-				schema.ItemTableProducedExactlyColName+") VALUES (?, ?, '', 0)",
-			BRAND, name+"_"+strconv.Itoa(i),
-		)
+		res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+			schema.ItemTableItemTypeIDColName:      BRAND,
+			schema.ItemTableNameColName:            name + "_" + strconv.Itoa(i),
+			schema.ItemTableBodyColName:            "",
+			schema.ItemTableProducedExactlyColName: 0,
+		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 
 		itemID, err := res.LastInsertId()
 		require.NoError(t, err)
 
-		_, err = goquDB.ExecContext(ctx,
-			"INSERT INTO "+schema.ItemLanguageTableName+" (item_id, language, name) VALUES (?, ?, ?)",
-			itemID, "en", name+"_"+strconv.Itoa(i),
-		)
+		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(goqu.Record{
+			schema.ItemLanguageTableItemIDColName:   itemID,
+			schema.ItemLanguageTableLanguageColName: "en",
+			schema.ItemLanguageTableNameColName:     name + "_" + strconv.Itoa(i),
+		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 	}
 

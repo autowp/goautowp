@@ -183,34 +183,41 @@ func (s *Repository) IsSubscribed(
 }
 
 func (s *Repository) Subscribe(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
-	_, err := s.db.ExecContext(ctx, `
-		INSERT IGNORE INTO `+schema.CommentTopicSubscribeTableName+` (type_id, item_id, user_id, sent)
-		VALUES (?, ?, ?, 0)
-    `, commentsType, itemID, userID)
+	_, err := s.db.Insert(schema.CommentTopicSubscribeTable).Rows(goqu.Record{
+		schema.CommentTopicSubscribeTableTypeIDColName: commentsType,
+		schema.CommentTopicSubscribeTableItemIDColName: itemID,
+		schema.CommentTopicSubscribeTableUserIDColName: userID,
+		schema.CommentTopicSubscribeTableSentColName:   false,
+	}).OnConflict(goqu.DoNothing()).Executor().ExecContext(ctx)
 
 	return err
 }
 
 func (s *Repository) UnSubscribe(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		"DELETE FROM "+schema.CommentTopicSubscribeTableName+" WHERE type_id = ? AND item_id = ? AND user_id = ?",
-		commentsType, itemID, userID,
-	)
+	_, err := s.db.Delete(schema.CommentTopicSubscribeTable).Where(
+		schema.CommentTopicSubscribeTableTypeIDCol.Eq(commentsType),
+		schema.CommentTopicSubscribeTableItemIDCol.Eq(itemID),
+		schema.CommentTopicSubscribeTableUserIDCol.Eq(userID),
+	).Executor().ExecContext(ctx)
 
 	return err
 }
 
 func (s *Repository) View(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		`
-			INSERT INTO `+schema.CommentTopicViewTableName+` (user_id, type_id, item_id, timestamp)
-            VALUES (?, ?, ?, NOW())
-            ON DUPLICATE KEY UPDATE timestamp = values(timestamp)
-        `,
-		userID, commentsType, itemID,
-	)
+	_, err := s.db.Insert(schema.CommentTopicViewTable).Rows(goqu.Record{
+		schema.CommentTopicViewTableUserIDColName:    userID,
+		schema.CommentTopicViewTableTypeIDColName:    commentsType,
+		schema.CommentTopicViewTableItemIDColName:    itemID,
+		schema.CommentTopicViewTableTimestampColName: goqu.Func("NOW"),
+	}).OnConflict(
+		goqu.DoUpdate(
+			schema.CommentTopicViewTableUserIDColName+","+
+				schema.CommentTopicViewTableTypeIDColName+","+
+				schema.CommentTopicViewTableItemIDColName,
+			goqu.Record{
+				schema.CommentTopicViewTableTimestampColName: goqu.Func("NOW"),
+			},
+		)).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -235,9 +242,9 @@ func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, by
 
 	_, err = s.db.Update(schema.CommentMessageTable).
 		Set(goqu.Record{
-			"deleted":     1,
-			"deleted_by":  byUserID,
-			"delete_date": goqu.Func("NOW"),
+			schema.CommentMessageTableDeletedColName:    1,
+			schema.CommentMessageTableDeletedByColName:  byUserID,
+			schema.CommentMessageTableDeleteDateColName: goqu.Func("NOW"),
 		}).
 		Where(schema.CommentMessageTableIDCol.Eq(commentID)).
 		Executor().ExecContext(ctx)
@@ -296,11 +303,14 @@ func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType C
 		return nil
 	}
 
-	_, err = s.db.ExecContext(
-		ctx,
-		"UPDATE "+schema.CommentMessageTableName+" SET type_id = ?, item_id = ?, parent_id = null WHERE id = ?",
-		dstType, dstItemID, commentID,
-	)
+	_, err = s.db.Update(schema.CommentMessageTable).
+		Set(goqu.Record{
+			schema.CommentMessageTableTypeIDColName:   dstType,
+			schema.CommentMessageTableItemIDColName:   dstItemID,
+			schema.CommentMessageTableParentIDColName: nil,
+		}).
+		Where(schema.CommentMessageTableIDCol.Eq(commentID)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -324,11 +334,13 @@ func (s *Repository) moveMessageRecursive(
 	dstType CommentType,
 	dstItemID int64,
 ) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		"UPDATE "+schema.CommentMessageTableName+" SET type_id = ?, item_id = ? WHERE id = ?",
-		dstType, dstItemID, parentID,
-	)
+	_, err := s.db.Update(schema.CommentMessageTable).
+		Set(goqu.Record{
+			schema.CommentMessageTableTypeIDColName: dstType,
+			schema.CommentMessageTableItemIDColName: dstItemID,
+		}).
+		Where(schema.CommentMessageTableIDCol.Eq(parentID)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -354,21 +366,30 @@ func (s *Repository) moveMessageRecursive(
 }
 
 func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentType, itemID int64) error {
-	var (
-		messagesCount int
-		lastUpdate    *sql.NullTime
-	)
+	st := struct {
+		MessagesCount int           `db:"count"`
+		LastUpdate    *sql.NullTime `db:"last_update"`
+	}{}
 
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT COUNT(1), MAX(datetime) FROM "+schema.CommentMessageTableName+" WHERE type_id = ? AND item_id = ?",
-		commentType, itemID,
-	).Scan(&messagesCount, &lastUpdate)
+	success, err := s.db.Select(
+		goqu.COUNT(goqu.Star()).As("count"),
+		goqu.MAX(schema.CommentMessageTableDatetimeCol).As("last_update"),
+	).
+		From(schema.CommentMessageTable).
+		Where(
+			schema.CommentMessageTableTypeIDCol.Eq(commentType),
+			schema.CommentMessageTableItemIDCol.Eq(itemID),
+		).
+		ScanStructContext(ctx, &st)
 	if err != nil {
 		return err
 	}
 
-	if messagesCount <= 0 {
+	if !success {
+		return sql.ErrNoRows
+	}
+
+	if st.MessagesCount <= 0 {
 		_, err = s.db.Delete(schema.CommentTopicTable).Where(
 			schema.CommentTopicTableTypeIDCol.Eq(commentType),
 			schema.CommentTopicTableItemIDCol.Eq(itemID),
@@ -377,16 +398,19 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentTyp
 		return err
 	}
 
-	if lastUpdate.Valid {
-		_, err = s.db.ExecContext(
-			ctx,
-			`
-				INSERT INTO `+schema.CommentTopicTableName+` (item_id, type_id, last_update, messages)
-				VALUES (?, ?, ?, ?)
-				ON DUPLICATE KEY UPDATE last_update = VALUES(last_update), messages = VALUES(messages)
-			`,
-			itemID, commentType, lastUpdate.Time.Format(time.DateTime), messagesCount,
-		)
+	if st.LastUpdate.Valid {
+		_, err = s.db.Insert(schema.CommentTopicTable).Rows(goqu.Record{
+			schema.CommentTopicTableItemIDColName:     itemID,
+			schema.CommentTopicTableTypeIDColName:     commentType,
+			schema.CommentTopicTableLastUpdateColName: st.LastUpdate.Time.Format(time.DateTime),
+			schema.CommentTopicTableMessagesColName:   st.MessagesCount,
+		}).OnConflict(goqu.DoUpdate(
+			schema.CommentTopicTableItemIDColName+","+schema.CommentTopicTableTypeIDColName,
+			goqu.Record{
+				schema.CommentTopicTableLastUpdateColName: goqu.Func("VALUES", goqu.C(schema.CommentTopicTableLastUpdateColName)),
+				schema.CommentTopicTableMessagesColName:   goqu.Func("VALUES", goqu.C(schema.CommentTopicTableMessagesColName)),
+			},
+		)).Executor().ExecContext(ctx)
 	}
 
 	return err
@@ -434,15 +458,16 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 		return 0, errors.New("self-vote forbidden")
 	}
 
-	res, err := s.db.ExecContext(
-		ctx,
-		`
-            INSERT INTO `+schema.CommentVoteTableName+` (comment_id, user_id, vote)
-			VALUES (?, ?, ?)
-			ON DUPLICATE KEY UPDATE vote = VALUES(vote)
-        `,
-		commentID, userID, vote,
-	)
+	res, err := s.db.Insert(schema.CommentVoteTable).Rows(goqu.Record{
+		schema.CommentVoteTableCommentIDColName: commentID,
+		schema.CommentVoteTableUserIDColName:    userID,
+		schema.CommentVoteTableVoteColName:      vote,
+	}).OnConflict(goqu.DoUpdate(
+		schema.CommentVoteTableCommentIDColName+","+schema.CommentVoteTableUserIDColName,
+		goqu.Record{
+			schema.CommentVoteTableVoteColName: goqu.Func("VALUES", goqu.C(schema.CommentVoteTableVoteColName)),
+		},
+	)).Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -609,14 +634,19 @@ func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID in
 }
 
 func (s *Repository) UpdateTopicView(ctx context.Context, typeID CommentType, itemID int64, userID int64) error {
-	_, err := s.db.ExecContext(
-		ctx, `
-			INSERT INTO `+schema.CommentTopicViewTableName+` (user_id, type_id, item_id, timestamp)
-			VALUES (?, ?, ?, NOW())
-			ON DUPLICATE KEY UPDATE timestamp = VALUES(timestamp)
-		`,
-		userID, typeID, itemID,
-	)
+	_, err := s.db.Insert(schema.CommentTopicViewTable).Rows(goqu.Record{
+		schema.CommentTopicViewTableUserIDColName:    userID,
+		schema.CommentTopicViewTableTypeIDColName:    typeID,
+		schema.CommentTopicViewTableItemIDColName:    itemID,
+		schema.CommentTopicViewTableTimestampColName: goqu.Func("NOW"),
+	}).OnConflict(goqu.DoUpdate(
+		schema.CommentTopicViewTableUserIDColName+
+			","+schema.CommentTopicViewTableTypeIDColName+
+			","+schema.CommentTopicViewTableItemIDColName,
+		goqu.Record{
+			schema.CommentTopicViewTableTimestampColName: goqu.Func("NOW"),
+		},
+	)).Executor().ExecContext(ctx)
 
 	return err
 }
@@ -894,21 +924,24 @@ func (s *Repository) SetSubscriptionSent(
 }
 
 func (s *Repository) messageURL(ctx context.Context, messageID int64, uri *url.URL) (string, error) {
-	var (
-		itemID int64
-		typeID CommentType
-	)
+	st := struct {
+		ItemID int64       `db:"item_id"`
+		TypeID CommentType `db:"type_id"`
+	}{}
 
-	err := s.db.QueryRowContext(
-		ctx,
-		"SELECT item_id, type_id FROM "+schema.CommentMessageTableName+" WHERE id = ?",
-		messageID,
-	).Scan(&itemID, &typeID)
+	success, err := s.db.Select(schema.CommentMessageTableItemIDCol, schema.CommentMessageTableTypeIDCol).
+		From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableIDCol.Eq(messageID)).
+		ScanStructContext(ctx, &st)
 	if err != nil {
 		return "", err
 	}
 
-	route, err := s.messageRowRoute(ctx, typeID, itemID)
+	if !success {
+		return "", sql.ErrNoRows
+	}
+
+	route, err := s.messageRowRoute(ctx, st.TypeID, st.ItemID)
 	if err != nil {
 		return "", err
 	}
@@ -1035,7 +1068,9 @@ func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 			return 0, err
 		}
 
-		res, err := s.db.ExecContext(ctx, "DELETE FROM "+schema.CommentMessageTableName+" WHERE id = ?", id)
+		res, err := s.db.Delete(schema.CommentMessageTable).
+			Where(schema.CommentMessageTableIDCol.Eq(id)).
+			Executor().ExecContext(ctx)
 		if err != nil {
 			return 0, err
 		}
@@ -1280,14 +1315,17 @@ func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error)
 }
 
 func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
-	res, err := s.db.ExecContext(ctx, `
-		DELETE `+schema.CommentTopicViewTableName+`
-		FROM `+schema.CommentTopicViewTableName+`
-			LEFT JOIN `+schema.CommentMessageTableName+` 
-				ON `+schema.CommentTopicViewTableName+`.item_id = `+schema.CommentMessageTableName+`.item_id
-				AND `+schema.CommentTopicViewTableName+`.type_id = `+schema.CommentMessageTableName+`.type_id
-		WHERE `+schema.CommentMessageTableName+`.type_id IS NULL
-    `)
+	res, err := s.db.Delete(schema.CommentTopicViewTable).Where(
+		goqu.L(
+			"NOT EXISTS (?)",
+			s.db.Select(goqu.V(true)).
+				From(schema.CommentMessageTable).
+				Where(
+					schema.CommentTopicViewTableItemIDCol.Eq(schema.CommentMessageTableItemIDCol),
+					schema.CommentTopicViewTableTypeIDCol.Eq(schema.CommentMessageTableTypeIDCol),
+				),
+		),
+	).Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -1297,14 +1335,17 @@ func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 
-	res, err = s.db.ExecContext(ctx, `
-		DELETE `+schema.CommentTopicTableName+`
-		FROM `+schema.CommentTopicTableName+`
-			LEFT JOIN `+schema.CommentMessageTableName+` 
-				ON `+schema.CommentTopicTableName+`.item_id = `+schema.CommentMessageTableName+`.item_id
-				AND `+schema.CommentTopicTableName+`.type_id = `+schema.CommentMessageTableName+`.type_id
-		WHERE `+schema.CommentMessageTableName+`.type_id IS NULL
-    `)
+	res, err = s.db.Delete(schema.CommentTopicTable).Where(
+		goqu.L(
+			"NOT EXISTS (?)",
+			s.db.Select(goqu.V(true)).
+				From(schema.CommentMessageTable).
+				Where(
+					schema.CommentTopicTableItemIDCol.Eq(schema.CommentMessageTableItemIDCol),
+					schema.CommentTopicTableTypeIDCol.Eq(schema.CommentMessageTableTypeIDCol),
+				),
+		),
+	).Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}

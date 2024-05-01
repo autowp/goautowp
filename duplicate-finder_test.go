@@ -59,15 +59,13 @@ func addImage(t *testing.T, db *goqu.Database, filepath string) int {
 	err = copyFile(filepath, newFullpath)
 	require.NoError(t, err)
 
-	stmt, err := db.Prepare(`
-		INSERT INTO ` + schema.ImageTableName + ` (filepath, filesize, width, height, dir)
-		VALUES (?, 1, 1, 1, "picture")
-	`)
-	require.NoError(t, err)
-
-	defer util.Close(stmt)
-
-	res, err := stmt.Exec(newPath)
+	res, err := db.Insert(schema.ImageTable).Rows(goqu.Record{
+		schema.ImageTableFilepathColName: newPath,
+		schema.ImageTableFilesizeColName: 1,
+		schema.ImageTableWidthColName:    1,
+		schema.ImageTableHeightColName:   1,
+		schema.ImageTableDirColName:      "picture",
+	}).Executor().ExecContext(context.Background())
 	require.NoError(t, err)
 
 	imageID, err := res.LastInsertId()
@@ -126,19 +124,28 @@ func TestDuplicateFinder(t *testing.T) {
 	require.NoError(t, err)
 
 	var hash1 uint64
-	err = db.QueryRow("SELECT hash FROM "+schema.DfHashTableName+" WHERE picture_id = ?", id1).Scan(&hash1)
+	success, err := goquDB.Select(schema.DfHashTableHashCol).
+		From(schema.DfHashTable).
+		Where(schema.DfHashTablePictureIDCol.Eq(id1)).
+		ScanValContext(ctx, &hash1)
 	require.NoError(t, err)
+	require.True(t, success)
 
 	var hash2 uint64
-	err = db.QueryRow("SELECT hash FROM "+schema.DfHashTableName+" WHERE picture_id = ?", id2).Scan(&hash2)
+	success, err = goquDB.Select(schema.DfHashTableHashCol).
+		From(schema.DfHashTable).
+		Where(schema.DfHashTablePictureIDCol.Eq(id2)).
+		ScanValContext(ctx, &hash2)
 	require.NoError(t, err)
+	require.True(t, success)
 
 	var distance int
-	err = db.QueryRow(`
-		SELECT distance FROM `+schema.TableDfDistance+` 
-		WHERE src_picture_id = ? AND dst_picture_id = ?
-	`, id1, id2).Scan(&distance)
-	require.NoError(t, err)
 
+	success, err = goquDB.Select(schema.DfDistanceTableDistanceCol).From(schema.DfDistanceTable).Where(
+		schema.DfDistanceTableSrcPictureIDCol.Eq(id1),
+		schema.DfDistanceTableDstPictureIDCol.Eq(id2),
+	).ScanValContext(ctx, &distance)
+	require.NoError(t, err)
+	require.True(t, success)
 	require.True(t, distance <= 2)
 }

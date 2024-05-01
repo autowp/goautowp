@@ -188,18 +188,20 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			}
 
 			var imageID sql.NullInt64
-			err = s.db.QueryRowContext(ctx, `
-				SELECT `+schema.PictureTableName+`.image_id
-				FROM `+schema.PictureTableName+` 
-				    INNER JOIN `+schema.PictureItemTableName+
-				` ON `+schema.PictureTableName+`.id = `+schema.PictureItemTableName+`.picture_id
-				WHERE `+schema.PictureTableName+`.status = ? AND `+schema.PictureItemTableName+`.item_id = ?
-			`, pictures.StatusAccepted, id).Scan(&imageID)
-			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+
+			success, err := s.db.Select(schema.PictureTableImageIDCol).
+				From(schema.PictureTable).
+				Join(schema.PictureItemTable, goqu.On(schema.PictureTableIDCol.Eq(schema.PictureItemTablePictureIDCol))).
+				Where(
+					schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
+					schema.PictureItemTableItemIDCol.Eq(id),
+				).
+				ScanValContext(ctx, &imageID)
+			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			if !errors.Is(err, sql.ErrNoRows) && imageID.Valid {
+			if success && imageID.Valid {
 				image, err := s.imageStorage.FormattedImage(ctx, int(imageID.Int64), "format9")
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())

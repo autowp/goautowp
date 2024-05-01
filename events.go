@@ -22,8 +22,13 @@ func NewEvents(db *goqu.Database) *Events {
 }
 
 func (s *Events) Add(event Event) error {
-	res, err := s.db.Insert(schema.LogEventsTable).Cols("description", "user_id", "add_datetime").
-		Vals(goqu.Vals{event.Message, event.UserID, goqu.Func("NOW")}).Executor().Exec()
+	res, err := s.db.Insert(schema.LogEventsTable).
+		Rows(goqu.Record{
+			schema.LogEventsTableDescriptionColName: event.Message,
+			schema.LogEventsTableUserIDColName:      event.UserID,
+			schema.LogEventsTableAddDatetimeColName: goqu.Func("NOW"),
+		}).
+		Executor().Exec()
 	if err != nil {
 		return err
 	}
@@ -34,8 +39,12 @@ func (s *Events) Add(event Event) error {
 	}
 
 	for _, id := range event.Users {
-		_, err = s.db.Insert(schema.TableLogEventsUser).Cols("log_event_id", "user_id").
-			Vals(goqu.Vals{rowID, id}).Executor().Exec()
+		_, err = s.db.Insert(schema.LogEventsUserTableName).
+			Rows(goqu.Record{
+				schema.LogEventsUserTableLogEventIDColName: rowID,
+				schema.LogEventsUserTableNameUserIDColName: id,
+			}).
+			Executor().Exec()
 
 		if err != nil {
 			return err

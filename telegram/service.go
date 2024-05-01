@@ -11,7 +11,6 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -48,26 +47,33 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 	fromName := "New personal message"
 
 	if fromID > 0 {
-		err := s.db.QueryRowContext(ctx, "SELECT name FROM "+schema.UserTableName+" WHERE id = ?", fromID).Scan(&fromName)
+		success, err := s.db.Select(schema.UserTableNameCol).
+			From(schema.UserTable).
+			Where(schema.UserTableIDCol.Eq(fromID)).
+			ScanValContext(ctx, &fromName)
 		if err != nil {
 			return err
 		}
+
+		if !success {
+			return sql.ErrNoRows
+		}
 	}
 
-	//nolint: sqlclosecheck
-	chatRows, err := s.db.QueryContext(ctx, "SELECT chat_id FROM telegram_chat WHERE user_id = ? AND messages", userID)
+	var chatIDs []int64
+
+	err := s.db.Select(schema.TelegramChatTableChatIDCol).
+		From(schema.TelegramChatTable).
+		Where(
+			schema.TelegramChatTableUserIDCol.Eq(userID),
+			schema.TelegramChatTableMessagesCol.IsTrue(),
+		).
+		ScanValsContext(ctx, &chatIDs)
 	if err != nil {
 		return err
 	}
 
-	defer util.Close(chatRows)
-
-	for chatRows.Next() {
-		var chatID int64
-		if err = chatRows.Scan(&chatID); err != nil {
-			return err
-		}
-
+	for _, chatID := range chatIDs {
 		uri, err := s.getURIByChatID(ctx, chatID)
 		if err != nil {
 			return err
@@ -94,26 +100,32 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 		}
 	}
 
-	return chatRows.Err()
+	return nil
 }
 
 func (s *Service) getURIByChatID(ctx context.Context, chatID int64) (*url.URL, error) {
 	var userID int64
-	err := s.db.QueryRowContext(ctx, "SELECT user_id FROM telegram_chat WHERE chat_id = ?", chatID).Scan(&userID)
 
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	success, err := s.db.Select(schema.TelegramChatTableUserIDCol).
+		From(schema.TelegramChatTable).
+		Where(schema.TelegramChatTableChatIDCol.Eq(chatID)).
+		ScanValContext(ctx, &userID)
+	if err != nil {
 		return nil, err
 	}
 
-	if chatID > 0 && userID > 0 {
+	if success && chatID > 0 && userID > 0 {
 		language := ""
-		err = s.db.QueryRowContext(ctx, "SELECT language FROM "+schema.UserTableName+" WHERE id = ?", userID).Scan(&language)
 
+		success, err = s.db.Select(schema.UserTableLanguageCol).
+			From(schema.UserTable).
+			Where(schema.UserTableIDCol.Eq(userID)).
+			ScanValContext(ctx, &language)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(language) > 0 {
+		if success && len(language) > 0 {
 			return s.hostsManager.URIByLanguage(language)
 		}
 	}
@@ -149,12 +161,16 @@ func (s *Service) sendMessage(ctx context.Context, text string, chat int64) erro
 }
 
 func (s *Service) unsubscribeChat(ctx context.Context, chatID int64) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM telegram_brand WHERE chat_id = ?", chatID)
+	_, err := s.db.Delete(schema.TelegramBrandTable).
+		Where(schema.TelegramBrandTableChatIDCol.Eq(chatID)).
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.db.ExecContext(ctx, "DELETE FROM telegram_chat WHERE chat_id = ?", chatID)
+	_, err = s.db.Delete(schema.TelegramChatTable).
+		Where(schema.TelegramChatTableChatIDCol.Eq(chatID)).
+		Executor().ExecContext(ctx)
 
 	return err
 }

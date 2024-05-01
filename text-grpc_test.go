@@ -7,7 +7,9 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -51,27 +53,34 @@ func TestGetText(t *testing.T) {
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
 	require.NoError(t, err)
 
-	res, err := db.ExecContext(
-		ctx,
-		`INSERT INTO textstorage_text (text, last_updated, revision) VALUES ("Text 2", NOW(), 2)`,
-	)
+	goquDB := goqu.New("mysql", db)
+
+	res, err := goquDB.Insert(schema.TextstorageTextTable).Rows(goqu.Record{
+		schema.TextstorageTextTableTextColName:        "Text 2",
+		schema.TextstorageTextTableLastUpdatedColName: goqu.Func("NOW"),
+		schema.TextstorageTextTableRevisionColName:    2,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	id, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = db.ExecContext(
-		ctx,
-		`INSERT INTO textstorage_revision (text_id, revision, text, timestamp, user_id) VALUES (?, 1, "Text 1", NOW(), ?)`,
-		id, tester.Id,
-	)
+	_, err = goquDB.Insert(schema.TextstorageRevisionTable).Rows(goqu.Record{
+		schema.TextstorageRevisionTableTextIDColName:    id,
+		schema.TextstorageRevisionTableRevisionColName:  1,
+		schema.TextstorageRevisionTableTextColName:      "Text 1",
+		schema.TextstorageRevisionTableTimestampColName: goqu.Func("NOW"),
+		schema.TextstorageRevisionTableUserIDColName:    tester.Id,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	_, err = db.ExecContext(
-		ctx,
-		`INSERT INTO textstorage_revision (text_id, revision, text, timestamp, user_id) VALUES (?, 2, "Text 2", NOW(), ?)`,
-		id, tester.Id,
-	)
+	_, err = goquDB.Insert(schema.TextstorageRevisionTable).Rows(goqu.Record{
+		schema.TextstorageRevisionTableTextIDColName:    id,
+		schema.TextstorageRevisionTableRevisionColName:  2,
+		schema.TextstorageRevisionTableTextColName:      "Text 2",
+		schema.TextstorageRevisionTableTimestampColName: goqu.Func("NOW"),
+		schema.TextstorageRevisionTableUserIDColName:    tester.Id,
+	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	r, err := client.GetText(ctx, &APIGetTextRequest{Id: id})

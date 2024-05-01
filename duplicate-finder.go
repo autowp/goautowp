@@ -177,7 +177,8 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 
 	var hash uint64
 
-	success, err := s.db.Select(schema.DfHashTableHashCol).From(schema.DfHashTable).
+	success, err := s.db.Select(schema.DfHashTableHashCol).
+		From(schema.DfHashTable).
 		Where(schema.DfHashTablePictureIDCol.Eq(id)).
 		ScanValContext(ctx, &hash)
 	if err != nil {
@@ -188,31 +189,28 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 		return sql.ErrNoRows
 	}
 
-	insertStmt, err := s.db.Prepare(`
-		INSERT INTO ` + schema.TableDfDistance + ` (src_picture_id, dst_picture_id, distance)
-		VALUES (?, ?, ?)
-		ON DUPLICATE KEY UPDATE distance=distance;
-	`)
-	if err != nil {
-		return err
-	}
-	defer util.Close(insertStmt)
+	const alias = "distance"
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT picture_id, BIT_COUNT(hash ^ `+strconv.FormatUint(hash, decimal)+`) AS distance
-		FROM `+schema.DfHashTableName+` 
-		WHERE picture_id != ? 
-		HAVING distance <= ?
-	`, id, threshold)
-	if err != nil {
-		return err
-	}
+	rows, err := s.db.Select(
+		schema.DfHashTablePictureIDCol,
+		goqu.Func("BIT_COUNT", goqu.L("? ^ "+strconv.FormatUint(hash, decimal), schema.DfHashTableHashCol)).As(alias),
+	).
+		From(schema.DfHashTable).
+		Where(schema.DfHashTablePictureIDCol.Neq(id)).
+		Having(goqu.C(alias).Lte(threshold)).
+		Executor().QueryContext(ctx)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 
+	if err != nil {
+		return err
+	}
+
 	defer util.Close(rows)
+
+	var records []goqu.Record
 
 	for rows.Next() {
 		var (
@@ -221,20 +219,30 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 		)
 
 		serr := rows.Scan(&pictureID, &distance)
-
 		if serr != nil {
 			return serr
 		}
 
-		_, serr = insertStmt.ExecContext(ctx, id, pictureID, distance)
-		if serr != nil {
-			return serr
-		}
+		records = append(records, goqu.Record{
+			schema.DfDistanceTableSrcPictureIDColName: id,
+			schema.DfDistanceTableDstPictureIDColName: pictureID,
+			schema.DfDistanceTableDistanceColName:     distance,
+		}, goqu.Record{
+			schema.DfDistanceTableSrcPictureIDColName: pictureID,
+			schema.DfDistanceTableDstPictureIDColName: id,
+			schema.DfDistanceTableDistanceColName:     distance,
+		})
+	}
 
-		_, serr = insertStmt.ExecContext(ctx, pictureID, id, distance)
-		if serr != nil {
-			return serr
-		}
+	_, err = s.db.Insert(schema.DfDistanceTable).
+		Rows(records).
+		OnConflict(goqu.DoUpdate(
+			schema.DfDistanceTableSrcPictureIDColName+","+schema.DfDistanceTableDstPictureIDColName, goqu.Record{
+				schema.DfDistanceTableDistanceColName: goqu.Func("VALUES", goqu.C(schema.DfDistanceTableDistanceColName)),
+			})).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return err
 	}
 
 	return rows.Err()
