@@ -14,4 +14,3 @@ minio
 .golangci.yml
 .gitlab-ci.yml
 .gitignore
-test.env

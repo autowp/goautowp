@@ -60,7 +60,7 @@ func (s *UsersGRPCServer) Me(ctx context.Context, _ *APIMeRequest) (*APIUser, er
 
 func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*APIUser, error) {
 	dbUser, err := s.userRepository.User(ctx, users.GetUsersOptions{
-		ID: in.UserId,
+		ID: in.GetUserId(),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -89,11 +89,11 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 	}
 
 	if !s.enforcer.Enforce(role, "user", "delete") {
-		if userID != in.UserId {
+		if userID != in.GetUserId() {
 			return nil, status.Errorf(codes.Internal, "Forbidden")
 		}
 
-		match, err := s.userRepository.PasswordMatch(ctx, in.UserId, in.Password)
+		match, err := s.userRepository.PasswordMatch(ctx, in.GetUserId(), in.GetPassword())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -106,21 +106,21 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 		}
 	}
 
-	success, err := s.userRepository.DeleteUser(ctx, in.UserId)
+	success, err := s.userRepository.DeleteUser(ctx, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if success {
-		err = s.contactsRepository.deleteUserEverywhere(ctx, in.UserId)
+		err = s.contactsRepository.deleteUserEverywhere(ctx, in.GetUserId())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		err = s.events.Add(Event{
 			UserID:  userID,
-			Message: fmt.Sprintf("Удаление пользователя №%d", in.UserId),
-			Users:   []int64{in.UserId},
+			Message: fmt.Sprintf("Удаление пользователя №%d", in.GetUserId()),
+			Users:   []int64{in.GetUserId()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -143,11 +143,11 @@ func (s *UsersGRPCServer) DisableUserCommentsNotifications(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if in.UserId == userID {
+	if in.GetUserId() == userID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.UserId, true)
+	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.GetUserId(), true)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -168,11 +168,11 @@ func (s *UsersGRPCServer) EnableUserCommentsNotifications(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if in.UserId == userID {
+	if in.GetUserId() == userID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.UserId, false)
+	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.GetUserId(), false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -193,11 +193,11 @@ func (s *UsersGRPCServer) GetUserPreferences(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if in.UserId == userID {
+	if in.GetUserId() == userID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	prefs, err := s.userRepository.UserPreferences(ctx, userID, in.UserId)
+	prefs, err := s.userRepository.UserPreferences(ctx, userID, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -210,8 +210,8 @@ func (s *UsersGRPCServer) GetUserPreferences(
 func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*APIUsersResponse, error) {
 	rows, pages, err := s.userRepository.Users(ctx, users.GetUsersOptions{
 		IsOnline: true,
-		Limit:    in.Limit,
-		Page:     in.Page,
+		Limit:    in.GetLimit(),
+		Page:     in.GetPage(),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

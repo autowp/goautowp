@@ -116,7 +116,7 @@ func (s *ItemExtractor) Extract(
 		MostsActive:                row.MostsActive,
 	}
 
-	if fields.Logo120 && row.LogoID != 0 {
+	if fields.GetLogo120() && row.LogoID != 0 {
 		logo120, err := s.imageStorage.FormattedImage(ctx, int(row.LogoID), "logo")
 		if err != nil {
 			return nil, err
@@ -125,11 +125,11 @@ func (s *ItemExtractor) Extract(
 		result.Logo120 = APIImageToGRPC(logo120)
 	}
 
-	if fields.NameOnly {
+	if fields.GetNameOnly() {
 		result.NameOnly = row.NameOnly
 	}
 
-	if fields.NameText || fields.NameHtml {
+	if fields.GetNameText() || fields.GetNameHtml() {
 		formatterOptions := items.ItemNameFormatterOptions{
 			BeginModelYear:         row.BeginModelYear,
 			EndModelYear:           row.EndModelYear,
@@ -146,7 +146,7 @@ func (s *ItemExtractor) Extract(
 			EndMonth:               row.EndMonth,
 		}
 
-		if fields.NameText {
+		if fields.GetNameText() {
 			nameText, err := s.nameFormatter.FormatText(formatterOptions, localizer)
 			if err != nil {
 				return nil, err
@@ -155,7 +155,7 @@ func (s *ItemExtractor) Extract(
 			result.NameText = nameText
 		}
 
-		if fields.NameHtml {
+		if fields.GetNameHtml() {
 			nameHTML, err := s.nameFormatter.FormatHTML(formatterOptions, localizer)
 			if err != nil {
 				return nil, err
@@ -164,7 +164,7 @@ func (s *ItemExtractor) Extract(
 			result.NameHtml = nameHTML
 		}
 
-		if fields.CommentsAttentionsCount {
+		if fields.GetCommentsAttentionsCount() {
 			cnt, err := s.commentsRepository.Count(ctx, comments.ModeratorAttentionRequired, comments.TypeIDPictures, row.ID)
 			if err != nil {
 				return nil, err
@@ -173,7 +173,7 @@ func (s *ItemExtractor) Extract(
 			result.CommentsAttentionsCount = cnt
 		}
 
-		if fields.InboxPicturesCount {
+		if fields.GetInboxPicturesCount() {
 			cnt, err := s.picturesRepository.Count(ctx, pictures.ListOptions{
 				Status:         pictures.StatusInbox,
 				AncestorItemID: row.ID,
@@ -185,7 +185,7 @@ func (s *ItemExtractor) Extract(
 			result.InboxPicturesCount = int32(cnt)
 		}
 
-		if fields.IsCompilesItemOfDay {
+		if fields.GetIsCompilesItemOfDay() {
 			IsCompiles, err := s.itemOfDayRepository.IsComplies(ctx, row.ID)
 			if err != nil {
 				return nil, err

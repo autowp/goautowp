@@ -12,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var errItemIDMustBeDefined = errors.New("itemID must be defined")
+
 const (
 	defaultMinPictures      = 3
 	YoomoneyLabelDateFormat = time.DateOnly
@@ -53,7 +55,7 @@ func (s *Repository) NextDates(ctx context.Context) ([]NextDate, error) {
 
 	result := make([]NextDate, 0)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		found := false
 
 		_, err := s.db.Select(goqu.L("1")).From(schema.OfDayTable).Where(
@@ -118,9 +120,9 @@ func (s *Repository) candidate(ctx context.Context) (int64, error) {
 		Order(goqu.Func("RAND").Desc()).
 		Limit(1)
 
-	r := CandidateRecord{}
+	rec := CandidateRecord{}
 
-	success, err := sqSelect.Executor().ScanStructContext(ctx, &r)
+	success, err := sqSelect.Executor().ScanStructContext(ctx, &rec)
 	if err != nil {
 		return 0, err
 	}
@@ -129,7 +131,7 @@ func (s *Repository) candidate(ctx context.Context) (int64, error) {
 		return 0, nil
 	}
 
-	return r.ItemID, nil
+	return rec.ItemID, nil
 }
 
 func (s *Repository) CandidateQuery() *goqu.SelectDataset {
@@ -159,14 +161,14 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 
 func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error) {
 	if itemID == 0 {
-		return false, errors.New("itemID must be defined")
+		return false, errItemIDMustBeDefined
 	}
 
 	sqSelect := s.CandidateQuery().Where(schema.ItemTableIDCol.Eq(itemID))
 
-	r := CandidateRecord{}
+	rec := CandidateRecord{}
 
-	success, err := sqSelect.Executor().ScanStructContext(ctx, &r)
+	success, err := sqSelect.Executor().ScanStructContext(ctx, &rec)
 	if err != nil {
 		return false, err
 	}
@@ -175,7 +177,7 @@ func (s *Repository) IsComplies(ctx context.Context, itemID int64) (bool, error)
 		return false, nil
 	}
 
-	return r.ItemID != 0, nil
+	return rec.ItemID != 0, nil
 }
 
 func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemID int64, userID int64) (bool, error) {

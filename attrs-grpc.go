@@ -99,7 +99,7 @@ func (s *AttrsGRPCServer) GetAttribute(ctx context.Context, in *AttrAttributeID)
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	success, row, err := s.repository.Attribute(ctx, in.Id)
+	success, row, err := s.repository.Attribute(ctx, in.GetId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -123,19 +123,19 @@ func (s *AttrsGRPCServer) GetAttributes(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.Attributes(ctx, in.ZoneId, in.ParentId)
+	rows, err := s.repository.Attributes(ctx, in.GetZoneId(), in.GetParentId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	r := make([]*AttrAttribute, len(rows))
+	items := make([]*AttrAttribute, len(rows))
 
 	for idx, row := range rows {
-		r[idx] = convertAttribute(row)
+		items[idx] = convertAttribute(row)
 	}
 
 	return &AttrAttributesResponse{
-		Items: r,
+		Items: items,
 	}, nil
 }
 
@@ -147,16 +147,16 @@ func (s *AttrsGRPCServer) GetAttributeTypes(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	r := make([]*AttrAttributeType, len(rows))
+	items := make([]*AttrAttributeType, len(rows))
 	for idx, row := range rows {
-		r[idx] = &AttrAttributeType{
+		items[idx] = &AttrAttributeType{
 			Id:   convertTypeID(row.ID),
 			Name: row.Name,
 		}
 	}
 
 	return &AttrAttributeTypesResponse{
-		Items: r,
+		Items: items,
 	}, nil
 }
 
@@ -172,12 +172,12 @@ func (s *AttrsGRPCServer) GetListOptions(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.ListOptions(ctx, in.AttributeId)
+	rows, err := s.repository.ListOptions(ctx, in.GetAttributeId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	r := make([]*AttrListOption, len(rows))
+	options := make([]*AttrListOption, len(rows))
 
 	for idx, row := range rows {
 		var parentID int64
@@ -185,7 +185,7 @@ func (s *AttrsGRPCServer) GetListOptions(
 			parentID = row.ParentID.Int64
 		}
 
-		r[idx] = &AttrListOption{
+		options[idx] = &AttrListOption{
 			Id:          row.ID,
 			Name:        row.Name,
 			AttributeId: row.AttributeID,
@@ -194,7 +194,7 @@ func (s *AttrsGRPCServer) GetListOptions(
 	}
 
 	return &AttrListOptionsResponse{
-		Items: r,
+		Items: options,
 	}, nil
 }
 
@@ -204,9 +204,9 @@ func (s *AttrsGRPCServer) GetUnits(ctx context.Context, _ *emptypb.Empty) (*Attr
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	r := make([]*AttrUnit, len(rows))
+	units := make([]*AttrUnit, len(rows))
 	for idx, row := range rows {
-		r[idx] = &AttrUnit{
+		units[idx] = &AttrUnit{
 			Id:   row.ID,
 			Name: row.Name,
 			Abbr: row.Abbr,
@@ -214,28 +214,28 @@ func (s *AttrsGRPCServer) GetUnits(ctx context.Context, _ *emptypb.Empty) (*Attr
 	}
 
 	return &AttrUnitsResponse{
-		Items: r,
+		Items: units,
 	}, nil
 }
 
 func (s *AttrsGRPCServer) GetZoneAttributes(
 	ctx context.Context, in *AttrZoneAttributesRequest,
 ) (*AttrZoneAttributesResponse, error) {
-	rows, err := s.repository.ZoneAttributes(ctx, in.ZoneId)
+	rows, err := s.repository.ZoneAttributes(ctx, in.GetZoneId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	r := make([]*AttrZoneAttribute, len(rows))
+	items := make([]*AttrZoneAttribute, len(rows))
 	for idx, row := range rows {
-		r[idx] = &AttrZoneAttribute{
+		items[idx] = &AttrZoneAttribute{
 			ZoneId:      row.ZoneID,
 			AttributeId: row.AttributeID,
 		}
 	}
 
 	return &AttrZoneAttributesResponse{
-		Items: r,
+		Items: items,
 	}, nil
 }
 
@@ -245,15 +245,15 @@ func (s *AttrsGRPCServer) GetZones(ctx context.Context, _ *emptypb.Empty) (*Attr
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	r := make([]*AttrZone, len(rows))
+	items := make([]*AttrZone, len(rows))
 	for idx, row := range rows {
-		r[idx] = &AttrZone{
+		items[idx] = &AttrZone{
 			Id:   row.ID,
 			Name: row.Name,
 		}
 	}
 
 	return &AttrZonesResponse{
-		Items: r,
+		Items: items,
 	}, nil
 }

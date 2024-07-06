@@ -26,14 +26,14 @@ func NewTextGRPCServer(
 func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*APIGetTextResponse, error) {
 	var (
 		lastRevision    int64
-		currentRevision = in.Revision
+		currentRevision = in.GetRevision()
 		prevRevision    int64
 		nextRevision    int64
 	)
 
 	success, err := s.db.Select(schema.TextstorageTextTableRevisionCol).
 		From(schema.TextstorageTextTable).
-		Where(schema.TextstorageTextTableIDCol.Eq(in.Id)).
+		Where(schema.TextstorageTextTableIDCol.Eq(in.GetId())).
 		ScanValContext(ctx, &lastRevision)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -55,7 +55,7 @@ func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*A
 	success, err = s.db.Select(schema.TextstorageRevisionTableTextCol, schema.TextstorageRevisionTableUserIDCol).
 		From(schema.TextstorageRevisionTable).
 		Where(
-			schema.TextstorageRevisionTableTextIDCol.Eq(in.Id),
+			schema.TextstorageRevisionTableTextIDCol.Eq(in.GetId()),
 			schema.TextstorageRevisionTableRevisionCol.Eq(currentRevision),
 		).ScanStructContext(ctx, &stCurrent)
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*A
 		success, err = s.db.Select(schema.TextstorageRevisionTableTextCol, schema.TextstorageRevisionTableUserIDCol).
 			From(schema.TextstorageRevisionTable).
 			Where(
-				schema.TextstorageRevisionTableTextIDCol.Eq(in.Id),
+				schema.TextstorageRevisionTableTextIDCol.Eq(in.GetId()),
 				schema.TextstorageRevisionTableRevisionCol.Eq(prevRevision),
 			).ScanStructContext(ctx, &stPrevious)
 		if err != nil {

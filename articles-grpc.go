@@ -44,7 +44,7 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 			From(schema.ArticlesTable).
 			Where(schema.ArticlesTableEnabledCol).
 			Order(schema.ArticlesTableAddDateCol.Desc()),
-		CurrentPageNumber: int32(in.Page),
+		CurrentPageNumber: int32(in.GetPage()),
 	}
 
 	sqlSelect, err := paginator.GetCurrentItems(ctx)
@@ -122,7 +122,7 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 	).
 		From(schema.ArticlesTable).
 		LeftJoin(schema.HtmlsTable, goqu.On(schema.ArticlesTableHTMLIDCol.Eq(schema.HtmlsTableIDCol))).
-		Where(schema.ArticlesTableEnabledCol, schema.ArticlesTableCatnameCol.Eq(in.Catname)).
+		Where(schema.ArticlesTableEnabledCol, schema.ArticlesTableCatnameCol.Eq(in.GetCatname())).
 		ScanStructContext(ctx, &article)
 	if err != nil {
 		return nil, err

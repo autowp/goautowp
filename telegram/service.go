@@ -15,6 +15,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+var errChatIDNotProvide = errors.New("`chat_id` not provided")
+
 type Service struct {
 	accessToken  string
 	db           *goqu.Database
@@ -140,13 +142,12 @@ func (s *Service) sendMessage(ctx context.Context, text string, chat int64) erro
 	}
 
 	if chat <= 0 {
-		return errors.New("`chat_id` not provided")
+		return errChatIDNotProvide
 	}
 
 	mc := tgbotapi.NewMessage(chat, text)
 
 	_, err = bot.Send(mc)
-
 	if err != nil {
 		if strings.Contains(err.Error(), "deactivated") {
 			return s.unsubscribeChat(ctx, chat)

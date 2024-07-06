@@ -3,7 +3,6 @@ package ban
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -14,7 +13,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var ErrBanItemNotFound = errors.New("ban item not found")
+var (
+	ErrBanItemNotFound         = errors.New("ban item not found")
+	errDatabaseConnectionIsNil = errors.New("database connection is nil")
+)
 
 // Item Item.
 type Item struct {
@@ -32,7 +34,7 @@ type Repository struct {
 // NewRepository constructor.
 func NewRepository(db *goqu.Database) (*Repository, error) {
 	if db == nil {
-		return nil, fmt.Errorf("database connection is nil")
+		return nil, errDatabaseConnectionIsNil
 	}
 
 	s := &Repository{

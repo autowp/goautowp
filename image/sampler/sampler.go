@@ -1,6 +1,7 @@
 package sampler
 
 import (
+	"errors"
 	"fmt"
 	"math"
 
@@ -9,6 +10,15 @@ import (
 )
 
 const rationComparePrecision = 0.001
+
+var (
+	errMissingCropParameters = errors.New("crop parameters not properly set")
+	errCropHeightOutOfBounds = errors.New("crop height out of bounds")
+	errCropWidthOutOfBounds  = errors.New("crop width out of bounds")
+	errCropLeftOutOfBounds   = errors.New("crop left out of bounds")
+	errCropTopOutOfBounds    = errors.New("crop top out of bounds")
+	errUnexpectedFitType     = errors.New("unexpected FIT_TYPE")
+)
 
 type Sampler struct{}
 
@@ -83,7 +93,6 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 		}
 
 		err = decomposed.SetImageBackgroundColor(pw)
-
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +116,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("unexpected FIT_TYPE `%v`", format.FitType())
+			return nil, fmt.Errorf("%w: `%v`", errUnexpectedFitType, format.FitType())
 		}
 	} else {
 		if fWidth > 0 {
@@ -150,7 +159,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 
 func (s Sampler) cropImage(mw *imagick.MagickWand, crop Crop, format Format) error {
 	if crop.IsEmpty() {
-		return fmt.Errorf("crop parameters not properly set")
+		return errMissingCropParameters
 	}
 
 	cropWidth := crop.Width
@@ -162,17 +171,18 @@ func (s Sampler) cropImage(mw *imagick.MagickWand, crop Crop, format Format) err
 	height := int(mw.GetImageHeight())
 
 	if cropLeft < 0 || cropLeft >= width {
-		return fmt.Errorf("crop left out of bounds (%v)", cropLeft)
+		return fmt.Errorf("%w: %v", errCropLeftOutOfBounds, cropLeft)
 	}
 
 	if cropTop < 0 || cropTop >= height {
-		return fmt.Errorf("crop top out of bounds (%v)", cropTop)
+		return fmt.Errorf("%w: %v", errCropTopOutOfBounds, cropTop)
 	}
 
 	right := cropLeft + cropWidth
 	if cropWidth <= 0 || right > width {
 		return fmt.Errorf(
-			"crop width out of bounds ('%v + %v' ~ '%v x %v')",
+			"%w: '%v + %v' ~ '%v x %v'",
+			errCropWidthOutOfBounds,
 			cropLeft,
 			cropWidth,
 			width,
@@ -191,7 +201,8 @@ func (s Sampler) cropImage(mw *imagick.MagickWand, crop Crop, format Format) err
 	bottom = cropTop + cropHeight
 	if cropHeight <= 0 || bottom > height {
 		return fmt.Errorf(
-			"crop height out of bounds ('%v + %v' ~ '%v x %v')",
+			"%w: '%v + %v' ~ '%v x %v'",
+			errCropHeightOutOfBounds,
 			cropTop,
 			cropHeight,
 			width,
@@ -228,11 +239,14 @@ func (s Sampler) cropImage(mw *imagick.MagickWand, crop Crop, format Format) err
 			if targetWidth > width {
 				targetWidth = width
 			}
+
 			addedWidth := targetWidth - cropWidth
+
 			cropLeft -= addedWidth / 2
 			if cropLeft < 0 {
 				cropLeft = 0
 			}
+
 			cropWidth = targetWidth
 		}
 	}
@@ -469,19 +483,19 @@ func (s Sampler) extendRightColor(mw *imagick.MagickWand) *imagick.PixelWand {
 }
 
 func (s Sampler) extendEdgeColor(iterator *imagick.PixelIterator) *imagick.PixelWand {
-	r := make([]float64, 0)
-	g := make([]float64, 0)
-	b := make([]float64, 0)
+	reds := make([]float64, 0)
+	greens := make([]float64, 0)
+	blues := make([]float64, 0)
 
 	for _, pixel := range iterator.GetNextIteratorRow() {
-		r = append(r, pixel.GetRed())
-		g = append(g, pixel.GetGreen())
-		b = append(b, pixel.GetBlue())
+		reds = append(reds, pixel.GetRed())
+		greens = append(greens, pixel.GetGreen())
+		blues = append(blues, pixel.GetBlue())
 	}
 
-	red := s.standardDeviation(r)
-	green := s.standardDeviation(g)
-	blue := s.standardDeviation(b)
+	red := s.standardDeviation(reds)
+	green := s.standardDeviation(greens)
+	blue := s.standardDeviation(blues)
 
 	limit := 0.01
 	if red > limit || green > limit || blue > limit {
@@ -489,9 +503,9 @@ func (s Sampler) extendEdgeColor(iterator *imagick.PixelIterator) *imagick.Pixel
 	}
 
 	color := imagick.NewPixelWand()
-	color.SetRed(arraySum(r) / float64(len(r)))
-	color.SetGreen(arraySum(g) / float64(len(g)))
-	color.SetBlue(arraySum(b) / float64(len(b)))
+	color.SetRed(arraySum(reds) / float64(len(reds)))
+	color.SetGreen(arraySum(greens) / float64(len(greens)))
+	color.SetBlue(arraySum(blues) / float64(len(blues)))
 
 	return color
 }
@@ -559,10 +573,13 @@ func (s Sampler) convertByInnerFit(mw *imagick.MagickWand, format Format) error 
 		}
 	} else {
 		// высчитываем размеры обрезания
-		var cropWidth int
-		var cropHeight int
-		var cropLeft int
-		var cropTop int
+		var (
+			cropWidth  int
+			cropHeight int
+			cropLeft   int
+			cropTop    int
+		)
+
 		if ratio < srcRatio {
 			// широкая картинка
 			cropWidth = int(math.Round(float64(srcHeight) * ratio))
@@ -617,14 +634,18 @@ func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error 
 			// resize by width
 			scaleWidth := formatWidth
 			scaleHeight := int(math.Round(float64(scaleWidth) / srcRatio))
+
 			err := s.scaleImage(mw, scaleWidth, scaleHeight)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
-		var scaleWidth int
-		var scaleHeight int
+		var (
+			scaleWidth  int
+			scaleHeight int
+		)
+
 		if ratio < srcRatio {
 			scaleWidth = formatWidth
 			// add top and bottom margins

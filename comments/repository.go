@@ -24,6 +24,22 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+var (
+	errUnknownTypeID                          = errors.New("unknown type_id")
+	errArticleNotFound                        = errors.New("article not found")
+	errMessageNotFound                        = errors.New("message not found")
+	errMessageIsDeleted                       = errors.New("message is deleted")
+	errAlreadyVoted                           = errors.New("already voted")
+	errInvalidType                            = errors.New("invalid type")
+	errPictureNotFound                        = errors.New("picture not found")
+	errItemNotFound                           = errors.New("item not found")
+	errSelfVote                               = errors.New("self-vote forbidden")
+	errCommentWithModerAttentionCantBeDeleted = errors.New(
+		"comment with moderation attention requirement can't be deleted",
+	)
+	errFailedToBuildURL = errors.New("failed to build URL")
+)
+
 const CommentMessagePreviewLength = 60
 
 type CommentType int32
@@ -128,7 +144,7 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 		From(schema.CommentVoteTable).
 		Join(schema.UserTable, goqu.On(schema.CommentVoteTableUserIDCol.Eq(schema.UserTableIDCol))).
 		Where(schema.CommentVoteTableCommentIDCol.Eq(id)).
-		Executor().QueryContext(ctx)
+		Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}
@@ -140,19 +156,20 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 
 	for rows.Next() {
 		var (
-			r    users.DBUser
-			vote int
+			rUser users.DBUser
+			vote  int
 		)
 
-		err = rows.Scan(&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role, &r.SpecsWeight, &vote)
+		err = rows.Scan(&rUser.ID, &rUser.Name, &rUser.Deleted, &rUser.Identity, &rUser.LastOnline, &rUser.Role,
+			&rUser.SpecsWeight, &vote)
 		if err != nil {
 			return nil, err
 		}
 
 		if vote > 0 {
-			positiveVotes = append(positiveVotes, r)
+			positiveVotes = append(positiveVotes, rUser)
 		} else {
-			negativeVotes = append(negativeVotes, r)
+			negativeVotes = append(negativeVotes, rUser)
 		}
 	}
 
@@ -237,7 +254,7 @@ func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, by
 	}
 
 	if moderatorAttention == ModeratorAttentionRequired {
-		return errors.New("comment with moderation attention requirement can't be deleted")
+		return errCommentWithModerAttentionCantBeDeleted
 	}
 
 	_, err = s.db.Update(schema.CommentMessageTable).
@@ -455,7 +472,7 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 	}
 
 	if authorID == userID {
-		return 0, errors.New("self-vote forbidden")
+		return 0, errSelfVote
 	}
 
 	res, err := s.db.Insert(schema.CommentVoteTable).Rows(goqu.Record{
@@ -478,7 +495,7 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 	}
 
 	if affected == 0 {
-		return 0, errors.New("already voted")
+		return 0, errAlreadyVoted
 	}
 
 	newVote, err := s.updateVote(ctx, commentID)
@@ -550,11 +567,11 @@ func (s *Repository) Add(
 		}
 
 		if !success {
-			return 0, errors.New("message not found")
+			return 0, errMessageNotFound
 		}
 
 		if deleted {
-			return 0, errors.New("message is deleted")
+			return 0, errMessageIsDeleted
 		}
 	}
 
@@ -680,7 +697,7 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 			Where(schema.ForumsTopicsTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
 	default:
-		return errors.New("invalid type")
+		return errInvalidType
 	}
 
 	if !success {
@@ -691,40 +708,64 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 }
 
 func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) error {
-	var (
-		authorID       int64
-		parentAuthorID int64
-		authorIdentity sql.NullString
-		parentLanguage string
-	)
+	st := struct {
+		AuthorID       int64          `db:"author_id"`
+		ParentAuthorID int64          `db:"parent_author_id"`
+		AuthorIdentity sql.NullString `db:"identity"`
+		ParentLanguage string         `db:"language"`
+	}{}
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT cm1.author_id, parent_message.author_id, u.identity, parent_user.language
-		FROM `+schema.CommentMessageTableName+` AS cm1 
-		    JOIN `+schema.CommentMessageTableName+` AS parent_message ON cm1.parent_id = parent_message.id
-			JOIN `+schema.UserTableName+` AS u ON cm1.author_id = u.id
-			JOIN `+schema.UserTableName+` AS parent_user ON parent_message.author_id = parent_user.id
-		WHERE cm1.id = ? AND cm1.author_id != parent_message.author_id AND NOT parent_user.deleted
-    `, messageID).Scan(&authorID, &parentAuthorID, &authorIdentity, &parentLanguage)
-	if errors.Is(err, sql.ErrNoRows) {
+	cm1 := "cm1"
+	cm1Table := goqu.T(cm1)
+	pm := "pm"
+	pmTable := goqu.T(pm)
+	u1 := "u1"
+	u1Table := goqu.T(u1)
+	pu := "pu"
+	puTable := goqu.T(pu)
+
+	success, err := s.db.Select(
+		cm1Table.Col(schema.CommentMessageTableAuthorIDColName),
+		pmTable.Col(schema.CommentMessageTableAuthorIDColName).As("parent_author_id"),
+		u1Table.Col(schema.UserTableIdentityColName),
+		puTable.Col(schema.UserTableLanguageColName),
+	).
+		From(schema.CommentMessageTable.As(cm1)).
+		Join(schema.CommentMessageTable.As(pm), goqu.On(
+			cm1Table.Col(schema.CommentMessageTableParentIDColName).Eq(
+				pmTable.Col(schema.CommentMessageTableIDColName),
+			),
+		)).
+		Join(schema.UserTable.As(u1), goqu.On(
+			cm1Table.Col(schema.CommentMessageTableAuthorIDColName).Eq(u1Table.Col(schema.UserTableIDColName))),
+		).
+		Join(schema.UserTable.As(pu), goqu.On(
+			pmTable.Col(schema.CommentMessageTableAuthorIDColName).Eq(puTable.Col(schema.UserTableIDColName))),
+		).
+		Where(
+			cm1Table.Col(schema.CommentMessageTableIDColName).Eq(messageID),
+			cm1Table.Col(schema.CommentMessageTableAuthorIDColName).Neq(pmTable.Col(schema.CommentMessageTableAuthorIDColName)),
+			puTable.Col(schema.UserTableDeletedColName).IsFalse(),
+		).Executor().ScanStructContext(ctx, &st)
+	if err != nil {
+		return err
+	}
+
+	if !success {
 		return nil
 	}
 
-	if err != nil {
-		return err
-	}
-
 	ai := ""
-	if authorIdentity.Valid {
-		ai = authorIdentity.String
+	if st.AuthorIdentity.Valid {
+		ai = st.AuthorIdentity.String
 	}
 
-	userURL, err := s.userURL(authorID, ai, parentLanguage)
+	userURL, err := s.userURL(st.AuthorID, ai, st.ParentLanguage)
 	if err != nil {
 		return err
 	}
 
-	uri, err := s.hostManager.URIByLanguage(parentLanguage)
+	uri, err := s.hostManager.URIByLanguage(st.ParentLanguage)
 	if err != nil {
 		return err
 	}
@@ -734,7 +775,7 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 		return err
 	}
 
-	localizer := s.i18n.Localizer(parentLanguage)
+	localizer := s.i18n.Localizer(st.ParentLanguage)
 
 	message, err := localizer.Localize(&i18n.LocalizeConfig{
 		DefaultMessage: &i18n.Message{
@@ -749,7 +790,7 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 		return err
 	}
 
-	return s.messageRepository.CreateMessage(ctx, 0, parentAuthorID, message)
+	return s.messageRepository.CreateMessage(ctx, 0, st.ParentAuthorID, message)
 }
 
 func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) error {
@@ -822,10 +863,12 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 			schema.UserTableIDCol.In(filteredIDs),
 			schema.UserTableIDCol.Neq(st.AuthorID.Int64),
 		).
-		Executor().QueryContext(ctx)
+		Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return err
 	}
+
+	defer util.Close(subscribers)
 
 	var (
 		subscriberID       int64
@@ -998,11 +1041,7 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 		case items.MUSEUM:
 			return []string{"/museums", strconv.FormatInt(itemID, 10)}, nil
 		default:
-			return nil, fmt.Errorf(
-				"failed to build url form message `%v` item_type `%v`",
-				itemID,
-				itemTypeID,
-			)
+			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
 		}
 
 	case TypeIDVotings:
@@ -1029,7 +1068,7 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 		return []string{"/forums", "message", strconv.FormatInt(itemID, 10)}, nil
 	}
 
-	return nil, fmt.Errorf("unknown type_id `%v`", typeID)
+	return nil, fmt.Errorf("%w: `%v`", errUnknownTypeID, typeID)
 }
 
 func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
@@ -1049,10 +1088,12 @@ func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 			cm2.Col(schema.CommentMessageTableParentIDColName).IsNull(),
 			cm2ParentID.Lt(goqu.L("DATE_SUB(NOW(), INTERVAL ? DAY)", deleteTTLDays)),
 		).
-		Executor().QueryContext(ctx)
+		Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return 0, err
 	}
+
+	defer util.Close(rows)
 
 	var affected int64
 
@@ -1513,7 +1554,7 @@ func (s *Repository) MessagePage(
 	}
 
 	if !success {
-		return 0, 0, 0, errors.New("message not found")
+		return 0, 0, 0, errMessageNotFound
 	}
 
 	parentRow := struct {
@@ -1635,7 +1676,7 @@ func (s *Repository) MessageRowRoute(
 		}
 
 		if !success {
-			return nil, fmt.Errorf("picture `%v` not found", itemID)
+			return nil, fmt.Errorf("%w: `%v`", errPictureNotFound, itemID)
 		}
 
 		result = []string{"/picture", identity}
@@ -1652,7 +1693,7 @@ func (s *Repository) MessageRowRoute(
 		}
 
 		if !success {
-			return nil, fmt.Errorf("item `%v` not found", itemID)
+			return nil, fmt.Errorf("%w: `%v`", errItemNotFound, itemID)
 		}
 
 		switch itemTypeID { //nolint:exhaustive
@@ -1661,7 +1702,7 @@ func (s *Repository) MessageRowRoute(
 		case items.MUSEUM:
 			result = []string{"/museums", strconv.FormatInt(itemID, 10)}
 		default:
-			return nil, fmt.Errorf("failed to build url form message `%v` item_type `%v`", itemID, itemTypeID)
+			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
 		}
 
 	case TypeIDVotings:
@@ -1679,7 +1720,7 @@ func (s *Repository) MessageRowRoute(
 		}
 
 		if !success {
-			return nil, fmt.Errorf("article `%v` not found", itemID)
+			return nil, fmt.Errorf("%w: `%v`", errArticleNotFound, itemID)
 		}
 
 		result = []string{"/articles", catname}
@@ -1688,7 +1729,7 @@ func (s *Repository) MessageRowRoute(
 		result = []string{"/forums", "message", strconv.FormatInt(messageID, 10)}
 
 	default:
-		return nil, fmt.Errorf("unknown type_id `%v`", typeID)
+		return nil, fmt.Errorf("%w: `%v`", errUnknownTypeID, typeID)
 	}
 
 	return result, nil

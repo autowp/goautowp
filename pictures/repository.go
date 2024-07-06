@@ -178,7 +178,7 @@ func (s *Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteT
 		tpl.Vote = 1
 	}
 
-	r, err := s.db.Insert(schema.PictureModerVoteTemplateTable).Rows(goqu.Record{
+	res, err := s.db.Insert(schema.PictureModerVoteTemplateTable).Rows(goqu.Record{
 		schema.PictureModerVoteTemplateTableUserIDColName: tpl.UserID,
 		schema.PictureModerVoteTemplateTableReasonColName: tpl.Message,
 		schema.PictureModerVoteTemplateTableVoteColName:   tpl.Vote,
@@ -187,8 +187,7 @@ func (s *Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteT
 		return tpl, err
 	}
 
-	tpl.ID, err = r.LastInsertId()
-
+	tpl.ID, err = res.LastInsertId()
 	if err != nil {
 		return tpl, err
 	}
@@ -215,7 +214,7 @@ func (s *Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mod
 		From(schema.PictureModerVoteTemplateTable).
 		Where(schema.PictureModerVoteTemplateTableUserIDCol.Eq(id)).
 		Order(schema.PictureModerVoteTemplateTableReasonCol.Asc()).
-		Executor().QueryContext(ctx)
+		Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}
@@ -225,14 +224,14 @@ func (s *Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]Mod
 	var items []ModerVoteTemplate
 
 	for rows.Next() {
-		var r ModerVoteTemplate
-		err = rows.Scan(&r.ID, &r.Message, &r.Vote)
+		var row ModerVoteTemplate
 
+		err = rows.Scan(&row.ID, &row.Message, &row.Vote)
 		if err != nil {
 			return nil, err
 		}
 
-		items = append(items, r)
+		items = append(items, row)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -278,8 +277,8 @@ func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation,
 			&validation.StringLength{Max: ModerVoteTemplateMessageMaxLength},
 		},
 	}
-	s.Message, problems, err = messageInputFilter.IsValidString(s.Message)
 
+	s.Message, problems, err = messageInputFilter.IsValidString(s.Message)
 	if err != nil {
 		return nil, err
 	}

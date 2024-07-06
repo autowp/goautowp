@@ -28,13 +28,13 @@ type Application struct {
 
 // NewApplication constructor.
 func NewApplication(cfg config.Config) *Application {
-	s := &Application{
+	app := &Application{
 		container: NewContainer(cfg),
 	}
 
 	gin.SetMode(cfg.GinMode)
 
-	return s
+	return app
 }
 
 func (s *Application) MigrateAutowp(_ context.Context) error {
@@ -89,13 +89,13 @@ func (s *Application) ServePublic(ctx context.Context, quit chan bool) error {
 		return err
 	}
 
-	go func() {
+	go func(ctx context.Context) {
 		<-quit
 
-		if err := httpServer.Shutdown(context.Background()); err != nil {
+		if err := httpServer.Shutdown(ctx); err != nil {
 			logrus.Error(err.Error())
 		}
-	}()
+	}(ctx)
 
 	logrus.Println("public HTTP listener started")
 
@@ -121,7 +121,6 @@ func (s *Application) ListenDuplicateFinderAMQP(ctx context.Context, quit chan b
 	logrus.Println("DuplicateFinder listener started")
 
 	err = df.ListenAMQP(ctx, cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
-
 	if err != nil {
 		logrus.Error(err.Error())
 
@@ -197,13 +196,13 @@ func (s *Application) ServePrivate(ctx context.Context, quit chan bool) error {
 		return err
 	}
 
-	go func() {
+	go func(ctx context.Context) {
 		<-quit
 
-		if err := httpServer.Shutdown(context.Background()); err != nil {
+		if err := httpServer.Shutdown(ctx); err != nil {
 			logrus.Error(err.Error())
 		}
-	}()
+	}(ctx)
 
 	logrus.Info("HTTP server started")
 
@@ -396,7 +395,6 @@ func (s *Application) ListenMonitoringAMQP(ctx context.Context, quit chan bool) 
 	logrus.Info("Monitoring listener started")
 
 	err = traffic.Monitoring.Listen(ctx, cfg.RabbitMQ, cfg.MonitoringQueue, quit)
-
 	if err != nil {
 		logrus.Error(err.Error())
 

@@ -1,4 +1,4 @@
-FROM ubuntu:mantic AS builder
+FROM docker.io/library/ubuntu:noble AS builder
 
 ENV DEBIAN_FRONTEND=non-interactive \
     PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
@@ -20,9 +20,9 @@ RUN apt-get update -qqy && \
     && \
     apt-get clean && \
     update-ca-certificates && \
-    wget -q https://go.dev/dl/go1.22.2.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz && \
-    rm go1.22.2.linux-amd64.tar.gz
+    wget -q https://go.dev/dl/go1.22.5.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.5.linux-amd64.tar.gz && \
+    rm go1.22.5.linux-amd64.tar.gz
 
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
 
@@ -36,7 +36,7 @@ COPY . $GOPATH/src/github.com/autowp/goautowp/
 RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
 
 ############################
-FROM ubuntu:mantic
+FROM docker.io/library/ubuntu:noble
 
 LABEL app_name="autowp.goautowp" \
       maintainer="dmitry@pereslegin.ru"

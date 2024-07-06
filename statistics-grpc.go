@@ -243,8 +243,8 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 
 	go func() {
 		var err error
+
 		response.TotalUsers, err = s.totalUsers(ctx)
-
 		if err != nil {
 			logrus.Error(err.Error())
 		}
@@ -256,8 +256,8 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 
 	go func() {
 		var err error
+
 		response.Contributors, err = s.contributors(ctx)
-
 		if err != nil {
 			logrus.Error(err.Error())
 		}
@@ -269,8 +269,8 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 
 	go func() {
 		var err error
+
 		response.TotalPictures, response.PicturesSize, err = s.picturesStat(ctx)
-
 		if err != nil {
 			logrus.Error(err.Error())
 		}
@@ -282,8 +282,8 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 
 	go func() {
 		var err error
+
 		response.TotalItems, err = s.totalItems(ctx)
-
 		if err != nil {
 			logrus.Error(err.Error())
 		}
@@ -295,8 +295,8 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 
 	go func() {
 		var err error
-		response.TotalComments, err = s.totalComments(ctx)
 
+		response.TotalComments, err = s.totalComments(ctx)
 		if err != nil {
 			logrus.Error(err.Error())
 		}

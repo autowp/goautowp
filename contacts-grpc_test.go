@@ -56,14 +56,14 @@ func TestCreateDeleteContact(t *testing.T) {
 	// create
 	_, err = client.CreateContact(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&CreateContactRequest{UserId: tester.Id},
+		&CreateContactRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 
 	// get contact
 	_, err = client.GetContact(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&GetContactRequest{UserId: tester.Id},
+		&GetContactRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 
@@ -77,8 +77,8 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	var contactUser *Contact
 
-	for _, i := range items.Items {
-		if i.ContactUserId == tester.Id {
+	for _, i := range items.GetItems() {
+		if i.GetContactUserId() == tester.GetId() {
 			contactUser = i
 
 			break
@@ -91,7 +91,7 @@ func TestCreateDeleteContact(t *testing.T) {
 	// delete
 	_, err = client.DeleteContact(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&DeleteContactRequest{UserId: tester.Id},
+		&DeleteContactRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 }

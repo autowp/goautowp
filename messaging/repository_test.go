@@ -152,7 +152,7 @@ func createRandomUser(t *testing.T, s *Repository) int64 {
 
 	emailAddr := "test" + strconv.Itoa(rand.Int()) + "@example.com" //nolint: gosec
 	name := "ivan"
-	r, err := s.db.Insert(schema.UserTable).
+	res, err := s.db.Insert(schema.UserTable).
 		Rows(goqu.Record{
 			schema.UserTableLoginColName:          nil,
 			schema.UserTableEmailColName:          emailAddr,
@@ -172,31 +172,31 @@ func createRandomUser(t *testing.T, s *Repository) int64 {
 		Executor().Exec()
 	require.NoError(t, err)
 
-	id, err := r.LastInsertId()
+	id, err := res.LastInsertId()
 	require.NoError(t, err)
 
 	return id
 }
 
 func TestDialogCount(t *testing.T) { //nolint:paralleltest
-	s := createRepository(t)
+	repo := createRepository(t)
 	ctx := context.Background()
 
-	user1 := createRandomUser(t, s)
-	user2 := createRandomUser(t, s)
+	user1 := createRandomUser(t, repo)
+	user2 := createRandomUser(t, repo)
 
-	countBefore, err := s.GetDialogCount(ctx, user1, user2)
+	countBefore, err := repo.GetDialogCount(ctx, user1, user2)
 	require.NoError(t, err)
 
-	err = s.CreateMessage(ctx, user1, user2, "Test message")
+	err = repo.CreateMessage(ctx, user1, user2, "Test message")
 	require.NoError(t, err)
 
-	countAfter, err := s.GetDialogCount(ctx, user1, user2)
+	countAfter, err := repo.GetDialogCount(ctx, user1, user2)
 	require.NoError(t, err)
 
 	require.Greater(t, countAfter, countBefore)
 
-	messages, _, err := s.GetSentbox(ctx, user1, 1)
+	messages, _, err := repo.GetSentbox(ctx, user1, 1)
 	require.NoError(t, err)
 	require.Equal(t, countAfter, messages[0].DialogCount)
 }

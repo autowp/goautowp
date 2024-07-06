@@ -28,13 +28,13 @@ func Contains(s []string, e string) bool {
 }
 
 func SQLNullInt64ToPtr(v sql.NullInt64) *int64 {
-	var r *int64
+	var value *int64
 
 	if v.Valid {
 		return &v.Int64
 	}
 
-	return r
+	return value
 }
 
 func ConnectRabbitMQ(config string) (*amqp.Connection, error) {

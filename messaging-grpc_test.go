@@ -57,23 +57,23 @@ func TestMessaging(t *testing.T) {
 	_, err = messagingClient.CreateMessage(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&MessagingCreateMessage{
-			UserId: tester.Id,
+			UserId: tester.GetId(),
 			Text:   "Test message",
 		},
 	)
 	require.NoError(t, err)
 
 	// get message
-	r, err := messagingClient.GetMessages(
+	res, err := messagingClient.GetMessages(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&MessagingGetMessagesRequest{
-			UserId: tester.Id,
+			UserId: tester.GetId(),
 			Folder: "sent",
 			Page:   1,
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, "Test message", r.Items[0].Text)
+	require.Equal(t, "Test message", res.GetItems()[0].GetText())
 
 	_, err = messagingClient.GetMessagesNewCount(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
@@ -89,7 +89,7 @@ func TestMessaging(t *testing.T) {
 
 	_, err = messagingClient.DeleteMessage(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&MessagingDeleteMessage{MessageId: r.Items[0].Id},
+		&MessagingDeleteMessage{MessageId: res.GetItems()[0].GetId()},
 	)
 	require.NoError(t, err)
 

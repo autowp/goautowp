@@ -70,7 +70,7 @@ func TestGetText(t *testing.T) {
 		schema.TextstorageRevisionTableRevisionColName:  1,
 		schema.TextstorageRevisionTableTextColName:      "Text 1",
 		schema.TextstorageRevisionTableTimestampColName: goqu.Func("NOW"),
-		schema.TextstorageRevisionTableUserIDColName:    tester.Id,
+		schema.TextstorageRevisionTableUserIDColName:    tester.GetId(),
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -79,17 +79,17 @@ func TestGetText(t *testing.T) {
 		schema.TextstorageRevisionTableRevisionColName:  2,
 		schema.TextstorageRevisionTableTextColName:      "Text 2",
 		schema.TextstorageRevisionTableTimestampColName: goqu.Func("NOW"),
-		schema.TextstorageRevisionTableUserIDColName:    tester.Id,
+		schema.TextstorageRevisionTableUserIDColName:    tester.GetId(),
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	r, err := client.GetText(ctx, &APIGetTextRequest{Id: id})
+	text, err := client.GetText(ctx, &APIGetTextRequest{Id: id})
 	require.NoError(t, err)
-	require.Equal(t, "Text 2", r.Current.Text)
-	require.Equal(t, tester.Id, r.Current.UserId)
-	require.Equal(t, int64(2), r.Current.Revision)
-	require.Equal(t, "Text 1", r.Prev.Text)
-	require.Equal(t, tester.Id, r.Prev.UserId)
-	require.Equal(t, int64(1), r.Prev.Revision)
-	require.Equal(t, int64(0), r.Next.Revision)
+	require.Equal(t, "Text 2", text.GetCurrent().GetText())
+	require.Equal(t, tester.GetId(), text.GetCurrent().GetUserId())
+	require.Equal(t, int64(2), text.GetCurrent().GetRevision())
+	require.Equal(t, "Text 1", text.GetPrev().GetText())
+	require.Equal(t, tester.GetId(), text.GetPrev().GetUserId())
+	require.Equal(t, int64(1), text.GetPrev().GetRevision())
+	require.Equal(t, int64(0), text.GetNext().GetRevision())
 }

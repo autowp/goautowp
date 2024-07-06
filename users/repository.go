@@ -163,10 +163,10 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 
 	result := make([]DBUser, 0)
 
-	var r DBUser
+	var row DBUser
 	valuePtrs := []interface{}{
-		&r.ID, &r.Name, &r.Deleted, &r.Identity, &r.LastOnline, &r.Role,
-		&r.SpecsWeight, &r.Img, &r.EMail, &r.PicturesTotal, &r.SpecsVolume,
+		&row.ID, &row.Name, &row.Deleted, &row.Identity, &row.LastOnline, &row.Role,
+		&row.SpecsWeight, &row.Img, &row.EMail, &row.PicturesTotal, &row.SpecsVolume,
 	}
 
 	columns := []interface{}{
@@ -235,7 +235,7 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 		sqSelect = sqSelect.Limit(uint(options.Limit))
 	}
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if errors.Is(err, sql.ErrNoRows) {
 		return result, pages, nil
 	}
@@ -252,7 +252,7 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 			return nil, nil, err
 		}
 
-		result = append(result, r)
+		result = append(result, row)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -449,9 +449,9 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 	logrus.Debugf("Ensure user `%s` imported", guid)
 
-	var r sql.Result
+	var res sql.Result
 
-	r, err := s.autowpDB.Insert(schema.UserTable).
+	res, err := s.autowpDB.Insert(schema.UserTable).
 		Rows(goqu.Record{
 			schema.UserTableLoginColName:          nil,
 			schema.UserTableEmailColName:          emailAddr,
@@ -478,13 +478,13 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 		return 0, "", err
 	}
 
-	affected, err := r.RowsAffected()
+	affected, err := res.RowsAffected()
 	if err != nil {
 		return 0, "", err
 	}
 
 	if affected == 1 { // row just inserted
-		userID, err := r.LastInsertId()
+		userID, err := res.LastInsertId()
 		if err != nil {
 			return 0, "", err
 		}
@@ -573,6 +573,7 @@ func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID in
 
 	f := false
 	enabled := !st.Deleted
+
 	st.GUID, err = s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		Enabled:       &enabled,
 		Totp:          &f,
@@ -581,7 +582,6 @@ func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID in
 		FirstName:     &st.Name,
 		Email:         keyCloakEmail,
 	})
-
 	if err != nil {
 		return "", err
 	}
@@ -727,10 +727,10 @@ func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
 
 	for _, userID := range ids {
 		err = s.UpdateUserVoteLimit(ctx, userID)
-
 		if err != nil {
 			return 0, err
 		}
+
 		affected++
 	}
 
@@ -837,29 +837,29 @@ func (s *Repository) UserPreferences(ctx context.Context, userID int64, toUserID
 }
 
 func (s *Repository) SetupPrivateRouter(_ context.Context, r *gin.Engine) {
-	r.GET("/user-user-preferences/:user_id/:to_user_id", func(c *gin.Context) {
-		userID, err := strconv.ParseInt(c.Param("user_id"), Decimal, BitSize64)
+	r.GET("/user-user-preferences/:user_id/:to_user_id", func(ctx *gin.Context) { //nolint: contextcheck
+		userID, err := strconv.ParseInt(ctx.Param("user_id"), Decimal, BitSize64)
 		if err != nil {
-			c.String(http.StatusBadRequest, "Invalid user_id")
+			ctx.String(http.StatusBadRequest, "Invalid user_id")
 
 			return
 		}
 
-		toUserID, err := strconv.ParseInt(c.Param("to_user_id"), Decimal, BitSize64)
+		toUserID, err := strconv.ParseInt(ctx.Param("to_user_id"), Decimal, BitSize64)
 		if err != nil {
-			c.String(http.StatusBadRequest, "Invalid to_user_id")
+			ctx.String(http.StatusBadRequest, "Invalid to_user_id")
 
 			return
 		}
 
-		prefs, err := s.UserPreferences(c, userID, toUserID)
+		prefs, err := s.UserPreferences(ctx, userID, toUserID)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "InternalServerError")
+			ctx.String(http.StatusInternalServerError, "InternalServerError")
 
 			return
 		}
 
-		c.JSON(http.StatusOK, prefs)
+		ctx.JSON(http.StatusOK, prefs)
 	})
 }
 

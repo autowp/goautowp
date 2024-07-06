@@ -45,11 +45,11 @@ func getUserWithCleanHistory(
 			schema.UserTableLastMessageTimeColName: "2000-01-01",
 			schema.UserTableVotesLeftColName:       100,
 		}).
-		Where(schema.UserTableIDCol.Eq(user.Id)).
+		Where(schema.UserTableIDCol.Eq(user.GetId())).
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	return user.Id, token.AccessToken
+	return user.GetId(), token.AccessToken
 }
 
 func TestAddEmptyCommentShouldReturnError(t *testing.T) {
@@ -86,7 +86,7 @@ func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 			Resolve:            false,
 		},
 	)
-	require.NotNil(t, err)
+	require.Error(t, err)
 }
 
 func TestAddComment(t *testing.T) {
@@ -112,7 +112,7 @@ func TestAddComment(t *testing.T) {
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
-	r, err := client.Add(
+	commentItem, err := client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&AddCommentRequest{
 			ItemId:             1,
@@ -128,7 +128,7 @@ func TestAddComment(t *testing.T) {
 	r2, err := client.GetMessage(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&GetMessageRequest{
-			Id: r.Id,
+			Id: commentItem.GetId(),
 			Fields: &CommentMessageFields{
 				Preview:  true,
 				Route:    true,
@@ -141,16 +141,16 @@ func TestAddComment(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, "Test", r2.Text)
+	require.Equal(t, "Test", r2.GetText())
 
 	r3, err := client.GetMessages(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
 		&GetMessagesRequest{
-			ItemId:    r2.ItemId,
-			TypeId:    r2.TypeId,
+			ItemId:    r2.GetItemId(),
+			TypeId:    r2.GetTypeId(),
 			ParentId:  0,
 			NoParents: true,
-			UserId:    r2.AuthorId,
+			UserId:    r2.GetAuthorId(),
 			Order:     1,
 			Limit:     1,
 			Page:      1,
@@ -166,7 +166,7 @@ func TestAddComment(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, r3.Items)
+	require.NotEmpty(t, r3.GetItems())
 
 	_, err = client.View(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
@@ -214,7 +214,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, response.Id)
+	require.NotEmpty(t, response.GetId())
 
 	response, err = client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+user2Token),
@@ -223,12 +223,12 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 			TypeId:             CommentsType_ARTICLES_TYPE_ID,
 			Message:            "Reply comment",
 			ModeratorAttention: false,
-			ParentId:           response.Id,
+			ParentId:           response.GetId(),
 			Resolve:            false,
 		},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, response.Id)
+	require.NotEmpty(t, response.GetId())
 
 	messagesClient := NewMessagingClient(conn)
 	messages, err := messagesClient.GetMessages(
@@ -239,7 +239,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Contains(t, messages.Items[0].Text, "replies to you")
+	require.Contains(t, messages.GetItems()[0].GetText(), "replies to you")
 }
 
 func TestSubscribeComment(t *testing.T) {
@@ -308,7 +308,7 @@ func TestVoteComment(t *testing.T) {
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
-	r, err := client.Add(
+	commentItem, err := client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&AddCommentRequest{
 			ItemId:             1,
@@ -325,7 +325,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.VoteComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&CommentsVoteCommentRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			Vote:      1,
 		},
 	)
@@ -334,7 +334,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.VoteComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsVoteCommentRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			Vote:      1,
 		},
 	)
@@ -344,7 +344,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.GetCommentVotes(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&GetCommentVotesRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 		},
 	)
 	require.NoError(t, err)
@@ -353,7 +353,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.VoteComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsVoteCommentRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			Vote:      -1,
 		},
 	)
@@ -363,7 +363,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.SetDeleted(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&CommentsSetDeletedRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			Deleted:   true,
 		},
 	)
@@ -372,7 +372,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.SetDeleted(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsSetDeletedRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			Deleted:   true,
 		},
 	)
@@ -382,7 +382,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.VoteComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsVoteCommentRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			Vote:      1,
 		},
 	)
@@ -392,7 +392,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.SetDeleted(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&CommentsSetDeletedRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			Deleted:   false,
 		},
 	)
@@ -401,7 +401,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.SetDeleted(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsSetDeletedRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			Deleted:   false,
 		},
 	)
@@ -411,7 +411,7 @@ func TestVoteComment(t *testing.T) {
 	_, err = client.MoveComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsMoveCommentRequest{
-			CommentId: r.Id,
+			CommentId: commentItem.GetId(),
 			ItemId:    2,
 			TypeId:    CommentsType_ARTICLES_TYPE_ID,
 		},
@@ -443,7 +443,7 @@ func TestCompleteComment(t *testing.T) {
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
-	r, err := client.Add(
+	commentItem, err := client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&AddCommentRequest{
 			ItemId:             1,
@@ -464,7 +464,7 @@ func TestCompleteComment(t *testing.T) {
 			Message:            "Test",
 			ModeratorAttention: true,
 			Resolve:            true,
-			ParentId:           r.Id,
+			ParentId:           commentItem.GetId(),
 		},
 	)
 	require.NoError(t, err)
@@ -542,10 +542,10 @@ func TestMoveComment(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, topic)
 
-	r, err := client.Add(
+	commentItem, err := client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&AddCommentRequest{
-			ItemId:             topic.Id,
+			ItemId:             topic.GetId(),
 			TypeId:             CommentsType_FORUMS_TYPE_ID,
 			Message:            "Test",
 			ModeratorAttention: false,
@@ -558,11 +558,11 @@ func TestMoveComment(t *testing.T) {
 	_, err = client.Add(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+userToken),
 		&AddCommentRequest{
-			ItemId:             topic.Id,
+			ItemId:             topic.GetId(),
 			TypeId:             CommentsType_FORUMS_TYPE_ID,
 			Message:            "Test",
 			ModeratorAttention: false,
-			ParentId:           r.Id,
+			ParentId:           commentItem.GetId(),
 			Resolve:            false,
 		},
 	)
@@ -584,8 +584,8 @@ func TestMoveComment(t *testing.T) {
 	_, err = client.MoveComment(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsMoveCommentRequest{
-			CommentId: r.Id,
-			ItemId:    topic2.Id,
+			CommentId: commentItem.GetId(),
+			ItemId:    topic2.GetId(),
 			TypeId:    CommentsType_FORUMS_TYPE_ID,
 		},
 	)
@@ -665,13 +665,13 @@ func TestAddCommentToDeletedOrNotExistentParent(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, response.Id)
+	require.NotEmpty(t, response.GetId())
 
 	// delete comment
 	_, err = client.SetDeleted(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&CommentsSetDeletedRequest{
-			CommentId: response.Id,
+			CommentId: response.GetId(),
 			Deleted:   true,
 		},
 	)
@@ -685,7 +685,7 @@ func TestAddCommentToDeletedOrNotExistentParent(t *testing.T) {
 			TypeId:             CommentsType_ARTICLES_TYPE_ID,
 			Message:            "Reply comment",
 			ModeratorAttention: false,
-			ParentId:           response.Id,
+			ParentId:           response.GetId(),
 			Resolve:            false,
 		},
 	)

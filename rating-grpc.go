@@ -82,7 +82,7 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 		TypeID: []items.ItemType{items.BRAND},
 		DescendantPictures: &items.ItemPicturesOptions{
 			Pictures: &items.PicturesOptions{
-				OwnerID: in.UserId,
+				OwnerID: in.GetUserId(),
 				Status:  pictures.StatusAccepted,
 			},
 		},
@@ -92,7 +92,7 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 			NameOnly:             true,
 			CurrentPicturesCount: true,
 		},
-		Language: in.Language,
+		Language: in.GetLanguage(),
 	}, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -136,7 +136,7 @@ func (s *RatingGRPCServer) GetUserCommentsRating(
 func (s *RatingGRPCServer) GetUserCommentsRatingFans(
 	ctx context.Context, in *UserRatingDetailsRequest,
 ) (*GetUserRatingFansResponse, error) {
-	fans, err := s.commentsRepository.AuthorsFans(ctx, in.UserId, numOfItemsInDetails)
+	fans, err := s.commentsRepository.AuthorsFans(ctx, in.GetUserId(), numOfItemsInDetails)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -178,7 +178,7 @@ func (s *RatingGRPCServer) GetUserPictureLikesRating(
 func (s *RatingGRPCServer) GetUserPictureLikesRatingFans(
 	ctx context.Context, in *UserRatingDetailsRequest,
 ) (*GetUserRatingFansResponse, error) {
-	fans, err := s.picturesRepository.TopOwnerFans(ctx, in.UserId, numOfItemsInDetails)
+	fans, err := s.picturesRepository.TopOwnerFans(ctx, in.GetUserId(), numOfItemsInDetails)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -229,7 +229,7 @@ func (s *RatingGRPCServer) GetUserSpecsRating(
 func (s *RatingGRPCServer) GetUserSpecsRatingBrands(
 	ctx context.Context, in *UserRatingDetailsRequest,
 ) (*UserRatingBrandsResponse, error) {
-	brands, err := s.attrsRepository.TopUserBrands(ctx, in.UserId, numOfItemsInDetails)
+	brands, err := s.attrsRepository.TopUserBrands(ctx, in.GetUserId(), numOfItemsInDetails)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

@@ -152,20 +152,20 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
-	r, err := client.GetTopTwinsBrandsList(ctx, &GetTopTwinsBrandsListRequest{
+	res, err := client.GetTopTwinsBrandsList(ctx, &GetTopTwinsBrandsListRequest{
 		Language: "ru",
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, r)
-	require.NotEmpty(t, r.Items)
-	require.Greater(t, r.Count, int32(0))
+	require.NotEmpty(t, res)
+	require.NotEmpty(t, res.GetItems())
+	require.Greater(t, res.GetCount(), int32(0))
 
 	r6, err := client.GetTwinsBrandsList(ctx, &GetTwinsBrandsListRequest{
 		Language: "ru",
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r6)
-	require.NotEmpty(t, r6.Items)
+	require.NotEmpty(t, r6.GetItems())
 }
 
 func TestTopBrandsList(t *testing.T) {
@@ -182,13 +182,13 @@ func TestTopBrandsList(t *testing.T) {
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
-	r, err := client.GetTopBrandsList(ctx, &GetTopBrandsListRequest{
+	res, err := client.GetTopBrandsList(ctx, &GetTopBrandsListRequest{
 		Language: "ru",
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, r)
-	require.NotEmpty(t, r.Brands)
-	require.Greater(t, r.Total, int32(0))
+	require.NotEmpty(t, res)
+	require.NotEmpty(t, res.GetBrands())
+	require.Greater(t, res.GetTotal(), int32(0))
 }
 
 func TestTopPersonsAuthorList(t *testing.T) {
@@ -273,7 +273,7 @@ func TestContentLanguages(t *testing.T) {
 	r, err := client.GetContentLanguages(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
-	require.Greater(t, len(r.Languages), 1)
+	require.Greater(t, len(r.GetLanguages()), 1)
 }
 
 func TestItemLinks(t *testing.T) {
@@ -309,24 +309,24 @@ func TestItemLinks(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, r1.Id)
+	require.NotEmpty(t, r1.GetId())
 
 	r2, err := client.GetItemLink(ctx, &APIItemLinkRequest{
-		Id: r1.Id,
+		Id: r1.GetId(),
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, r1.Id)
+	require.NotEmpty(t, r1.GetId())
 
-	require.Equal(t, r1.Id, r2.Id)
-	require.Equal(t, "Link 1", r2.Name)
-	require.Equal(t, "https://example.org", r2.Url)
-	require.Equal(t, "club", r2.Type)
-	require.Equal(t, int64(1), r2.ItemId)
+	require.Equal(t, r1.GetId(), r2.GetId())
+	require.Equal(t, "Link 1", r2.GetName())
+	require.Equal(t, "https://example.org", r2.GetUrl())
+	require.Equal(t, "club", r2.GetType())
+	require.Equal(t, int64(1), r2.GetItemId())
 
 	_, err = client.UpdateItemLink(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APIItemLink{
-			Id:     r1.Id,
+			Id:     r1.GetId(),
 			Name:   "Link 2",
 			Url:    "https://example2.org",
 			Type:   "default",
@@ -336,22 +336,22 @@ func TestItemLinks(t *testing.T) {
 	require.NoError(t, err)
 
 	r3, err := client.GetItemLink(ctx, &APIItemLinkRequest{
-		Id: r1.Id,
+		Id: r1.GetId(),
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, r1.Id)
+	require.NotEmpty(t, r1.GetId())
 
-	require.Equal(t, r1.Id, r3.Id)
-	require.Equal(t, "Link 2", r3.Name)
-	require.Equal(t, "https://example2.org", r3.Url)
-	require.Equal(t, "default", r3.Type)
-	require.Equal(t, int64(2), r3.ItemId)
+	require.Equal(t, r1.GetId(), r3.GetId())
+	require.Equal(t, "Link 2", r3.GetName())
+	require.Equal(t, "https://example2.org", r3.GetUrl())
+	require.Equal(t, "default", r3.GetType())
+	require.Equal(t, int64(2), r3.GetItemId())
 
 	r4, err := client.GetItemLinks(ctx, &APIGetItemLinksRequest{
-		ItemId: r3.ItemId,
+		ItemId: r3.GetItemId(),
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, r4.Items)
+	require.NotEmpty(t, r4.GetItems())
 }
 
 func TestItemVehicleTypes(t *testing.T) {
@@ -394,8 +394,8 @@ func TestItemVehicleTypes(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, int64(1), r2.ItemId)
-	require.Equal(t, int64(1), r2.VehicleTypeId)
+	require.Equal(t, int64(1), r2.GetItemId())
+	require.Equal(t, int64(1), r2.GetVehicleTypeId())
 
 	_, err = client.CreateItemVehicleType(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
@@ -413,7 +413,7 @@ func TestItemVehicleTypes(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Len(t, r4.Items, 2)
+	require.Len(t, r4.GetItems(), 2)
 
 	_, err = client.DeleteItemVehicleType(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
@@ -432,8 +432,8 @@ func TestItemVehicleTypes(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, int64(1), r6.ItemId)
-	require.Equal(t, int64(2), r6.VehicleTypeId)
+	require.Equal(t, int64(1), r6.GetItemId())
+	require.Equal(t, int64(2), r6.GetVehicleTypeId())
 
 	_, err = client.GetItemVehicleType(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
@@ -451,7 +451,7 @@ func TestItemVehicleTypes(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Len(t, r8.Items, 1)
+	require.Len(t, r8.GetItems(), 1)
 }
 
 func TestItemParentLanguages(t *testing.T) {
@@ -562,7 +562,7 @@ func TestCatalogueMenuList(t *testing.T) {
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
-	r, err := client.List(ctx, &ListItemsRequest{
+	res, err := client.List(ctx, &ListItemsRequest{
 		Language: "ru",
 		Fields: &ItemFields{
 			NameText:         true,
@@ -573,8 +573,8 @@ func TestCatalogueMenuList(t *testing.T) {
 		TypeId:   ItemType_ITEM_TYPE_CATEGORY,
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, r)
-	require.NotEmpty(t, r.Items)
+	require.NotEmpty(t, res)
+	require.NotEmpty(t, res.GetItems())
 }
 
 func TestStats(t *testing.T) {
@@ -606,5 +606,5 @@ func TestStats(t *testing.T) {
 		&emptypb.Empty{},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, r.Values)
+	require.NotEmpty(t, r.GetValues())
 }

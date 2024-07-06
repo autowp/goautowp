@@ -2,11 +2,14 @@ package textstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 )
+
+var errTextNotFound = errors.New("text not found")
 
 // Repository Main Object.
 type Repository struct {
@@ -35,7 +38,7 @@ func (s *Repository) Text(ctx context.Context, id int64) (string, error) {
 	}
 
 	if !success {
-		return "", fmt.Errorf("text `%v` not found", id)
+		return "", fmt.Errorf("%w: `%v`", errTextNotFound, id)
 	}
 
 	return result, nil
@@ -63,7 +66,7 @@ func (s *Repository) FirstText(ctx context.Context, ids []int64) (string, error)
 	}
 
 	if !success {
-		return "", fmt.Errorf("text `%v` not found", ids)
+		return "", fmt.Errorf("%w: `%v`", errTextNotFound, ids)
 	}
 
 	return result, nil

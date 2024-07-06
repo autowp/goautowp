@@ -32,52 +32,52 @@ func createMonitoringService(t *testing.T) *Monitoring {
 func TestMonitoringAdd(t *testing.T) {
 	t.Parallel()
 
-	s := createMonitoringService(t)
+	svc := createMonitoringService(t)
 
 	ctx := context.Background()
 
-	err := s.Add(ctx, net.IPv4(192, 168, 0, 1), time.Now())
+	err := svc.Add(ctx, net.IPv4(192, 168, 0, 1), time.Now())
 	require.NoError(t, err)
 
-	err = s.Add(ctx, net.IPv6loopback, time.Now())
+	err = svc.Add(ctx, net.IPv6loopback, time.Now())
 	require.NoError(t, err)
 }
 
 func TestMonitoringGC(t *testing.T) {
 	t.Parallel()
 
-	s := createMonitoringService(t)
+	svc := createMonitoringService(t)
 
 	ctx := context.Background()
 
-	err := s.Clear(ctx)
+	err := svc.Clear(ctx)
 	require.NoError(t, err)
 
-	err = s.Add(ctx, net.IPv4(192, 168, 0, 77), time.Now())
+	err = svc.Add(ctx, net.IPv4(192, 168, 0, 77), time.Now())
 	require.NoError(t, err)
 
-	affected, err := s.GC(ctx)
+	affected, err := svc.GC(ctx)
 	require.NoError(t, err)
 	require.Zero(t, affected)
 
-	_, err = s.ListOfTop(ctx, 10)
+	_, err = svc.ListOfTop(ctx, 10)
 	require.NoError(t, err)
 }
 
 func TestListByBanProfile(t *testing.T) { //nolint:paralleltest
-	s := createMonitoringService(t)
+	svc := createMonitoringService(t)
 
 	ctx := context.Background()
 
-	err := s.Clear(ctx)
+	err := svc.Clear(ctx)
 	require.NoError(t, err)
 
-	for i := 0; i < 2; i++ {
-		err = s.Add(ctx, net.IPv4(192, 168, 0, 77), time.Now())
+	for range 2 {
+		err = svc.Add(ctx, net.IPv4(192, 168, 0, 77), time.Now())
 		require.NoError(t, err)
 	}
 
-	ips, err := s.ListByBanProfile(ctx, AutobanProfile{
+	ips, err := svc.ListByBanProfile(ctx, AutobanProfile{
 		Limit:  1,
 		Reason: "test",
 		Group:  []interface{}{},
@@ -86,5 +86,5 @@ func TestListByBanProfile(t *testing.T) { //nolint:paralleltest
 	require.NoError(t, err)
 	require.NotEmpty(t, ips)
 
-	require.Equal(t, ips[0].String(), "192.168.0.77")
+	require.Equal(t, "192.168.0.77", ips[0].String())
 }

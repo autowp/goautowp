@@ -32,15 +32,13 @@ func NewFeedback(
 	recaptchaConfig config.RecaptchaConfig,
 	captchaEnabled bool,
 	emailSender email.Sender,
-) (*Feedback, error) {
-	s := &Feedback{
+) *Feedback {
+	return &Feedback{
 		config:          config,
 		recaptchaConfig: recaptchaConfig,
 		captchaEnabled:  captchaEnabled,
 		emailSender:     emailSender,
 	}
-
-	return s, nil
 }
 
 func (s *Feedback) Create(request CreateFeedbackRequest) ([]*errdetails.BadRequest_FieldViolation, error) {
@@ -74,8 +72,8 @@ func (s *CreateFeedbackRequest) Validate(
 		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}},
 	}
-	s.Name, problems, err = nameInputFilter.IsValidString(s.Name)
 
+	s.Name, problems, err = nameInputFilter.IsValidString(s.Name)
 	if err != nil {
 		return nil, err
 	}

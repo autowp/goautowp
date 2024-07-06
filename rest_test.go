@@ -135,6 +135,5 @@ func TestGetVehicleTypes(t *testing.T) {
 		&emptypb.Empty{},
 	)
 	require.NoError(t, err)
-
-	require.Greater(t, len(result.Items), 0)
+	require.NotEmpty(t, result.GetItems())
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/encoding/wkb"
@@ -90,23 +91,25 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 		Where(goqu.Func("ST_Contains", goqu.Func("ST_GeomFromText", polygon), schema.ItemPointTablePointCol))
 
 	if pointsOnly {
-		rows, err := sqSelect.Executor().QueryContext(ctx)
+		rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		for rows.Next() {
-			var p orb.Point
-			err = rows.Scan(wkb.Scanner(&p))
+		defer util.Close(rows)
 
+		for rows.Next() {
+			var point orb.Point
+
+			err = rows.Scan(wkb.Scanner(&point))
 			if err != nil {
 				return nil, status.Error(codes.InvalidArgument, err.Error())
 			}
 
 			mapPoints = append(mapPoints, &MapPoint{
 				Location: &Point{
-					Lat: p.Lat(),
-					Lng: p.Lon(),
+					Lat: point.Lat(),
+					Lng: point.Lon(),
 				},
 			})
 		}
@@ -121,24 +124,29 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				schema.ItemTableItemTypeIDCol, schema.ItemTableTodayCol,
 			).
 			Join(schema.ItemTable, goqu.On(schema.ItemPointTableItemIDCol.Eq(schema.ItemTableIDCol))).
-			Executor().QueryContext(ctx)
+			Executor().QueryContext(ctx) //nolint:sqlclosecheck
 
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
+		defer util.Close(rows)
+
 		nameFormatter := items.ItemNameFormatter{}
 		localizer := s.i18n.Localizer(in.GetLanguage())
 
 		for rows.Next() {
-			var p orb.Point
-			var id int64
-			var name string
-			var nullableBeginYear sql.NullInt32
-			var nullableEndYear sql.NullInt32
-			var itemTypeID items.ItemType
-			var today sql.NullBool
-			err = rows.Scan(wkb.Scanner(&p), &id, &name, &nullableBeginYear, &nullableEndYear, &itemTypeID, &today)
+			var (
+				point             orb.Point
+				id                int64
+				name              string
+				nullableBeginYear sql.NullInt32
+				nullableEndYear   sql.NullInt32
+				itemTypeID        items.ItemType
+				today             sql.NullBool
+			)
+
+			err = rows.Scan(wkb.Scanner(&point), &id, &name, &nullableBeginYear, &nullableEndYear, &itemTypeID, &today)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -171,8 +179,8 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 			mapPoint := &MapPoint{
 				Id: fmt.Sprintf("factory%d", id),
 				Location: &Point{
-					Lat: p.Lat(),
-					Lng: p.Lon(),
+					Lat: point.Lat(),
+					Lng: point.Lon(),
 				},
 				Name: nameText,
 			}

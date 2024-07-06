@@ -18,6 +18,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	errNotificationSecretNotConfigured  = errors.New("notification secret not configured")
+	errFailedToSetItemOfDay             = errors.New("failed to set item of day")
+	errUnacceptedPayment                = errors.New("unaccepted payment")
+	errDateNotAvailable                 = errors.New("date is not available")
+	errItemIDCantBeZero                 = errors.New("item_id can't be 0")
+	errSha1NotProvided                  = errors.New("sha1_hash not provided")
+	errSha1NotMatched                   = errors.New("sha1 hash not matched")
+	errOnlyRubIsSupported               = errors.New("only RUB currency is supported")
+	errPriceIsGreaterThanWithdrawAmount = errors.New("price is greater than withdraw_amount")
+	errLabelNotMatchedByRegexp          = errors.New("label not matched by regular expression")
+)
+
 type YoomoneyHandler struct {
 	price              decimal2.Decimal
 	notificationSecret string
@@ -44,23 +57,23 @@ func NewYoomoneyHandler(
 const RUB = "643"
 
 type YoomoneyWebhook struct {
-	NotificationType string `json:"notification_type" form:"notification_type" binding:"required"`
-	OperationID      string `json:"operation_id"      form:"operation_id"      binding:"required"`
-	Amount           string `json:"amount"            form:"amount"            binding:"required"`
-	WithdrawAmount   string `json:"withdraw_amount"   form:"withdraw_amount"`
-	Currency         string `json:"currency"          form:"currency"          binding:"required"`
-	Datetime         string `json:"datetime"          form:"datetime"          binding:"required"`
-	Sender           string `json:"sender"            form:"sender"`
-	Codepro          string `json:"codepro"           form:"codepro"           binding:"required"`
-	Label            string `json:"label"             form:"label"`
-	SHA1Hash         string `json:"sha1_hash"         form:"sha1_hash"         binding:"required"`
-	TestNotification bool   `json:"test_notification" form:"test_notification"`
-	Unaccepted       bool   `json:"unaccepted"        form:"unaccepted"`
+	NotificationType string `binding:"required"       form:"notification_type" json:"notification_type"`
+	OperationID      string `binding:"required"       form:"operation_id"      json:"operation_id"`
+	Amount           string `binding:"required"       form:"amount"            json:"amount"`
+	WithdrawAmount   string `form:"withdraw_amount"   json:"withdraw_amount"`
+	Currency         string `binding:"required"       form:"currency"          json:"currency"`
+	Datetime         string `binding:"required"       form:"datetime"          json:"datetime"`
+	Sender           string `form:"sender"            json:"sender"`
+	Codepro          string `binding:"required"       form:"codepro"           json:"codepro"`
+	Label            string `form:"label"             json:"label"`
+	SHA1Hash         string `binding:"required"       form:"sha1_hash"         json:"sha1_hash"`
+	TestNotification bool   `form:"test_notification" json:"test_notification"`
+	Unaccepted       bool   `form:"unaccepted"        json:"unaccepted"`
 }
 
 func (s *YoomoneyHandler) Hash(fields YoomoneyWebhook) (string, error) {
 	if s.notificationSecret == "" {
-		return "", errors.New("notification secret not configured")
+		return "", errNotificationSecretNotConfigured
 	}
 
 	str := strings.Join([]string{
@@ -89,15 +102,15 @@ func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) er
 	}
 
 	if fields.SHA1Hash == "" {
-		return errors.New("sha1_hash not provided")
+		return errSha1NotProvided
 	}
 
 	if !strings.EqualFold(sha1hashStr, fields.SHA1Hash) {
-		return errors.New("sha1 hash not matched")
+		return errSha1NotMatched
 	}
 
 	if fields.Currency != RUB {
-		return errors.New("only RUB currency is supported")
+		return errOnlyRubIsSupported
 	}
 
 	withdrawAmount, err := decimal2.NewFromString(fields.WithdrawAmount)
@@ -106,14 +119,14 @@ func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) er
 	}
 
 	if s.price.GreaterThan(withdrawAmount) {
-		return errors.New("price is greater than withdraw_amount")
+		return errPriceIsGreaterThanWithdrawAmount
 	}
 
 	re := regexp.MustCompile(`^vod/(\d{4}-\d{2}-\d{2})/(\d+)/(\d+)$`)
 
 	matches := re.FindStringSubmatch(fields.Label)
 	if matches == nil || len(matches) < 2 {
-		return errors.New("label not matched by regular expression")
+		return errLabelNotMatchedByRegexp
 	}
 
 	dateTime, err := time.Parse(itemofday.YoomoneyLabelDateFormat, matches[1])
@@ -127,7 +140,7 @@ func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) er
 	}
 
 	if !IsAvailableDate {
-		return errors.New("date is not available")
+		return errDateNotAvailable
 	}
 
 	itemID, err := strconv.ParseInt(matches[2], 10, 0)
@@ -141,11 +154,11 @@ func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) er
 	}
 
 	if itemID == 0 {
-		return errors.New("item_id can't be 0")
+		return errItemIDCantBeZero
 	}
 
 	if fields.Unaccepted {
-		return errors.New("unaccepted payment")
+		return errUnacceptedPayment
 	}
 
 	success, err := s.itemOfDay.SetItemOfDay(ctx, dateTime, itemID, userID)
@@ -154,31 +167,31 @@ func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) er
 	}
 
 	if !success {
-		return errors.New("failed to set item of day")
+		return errFailedToSetItemOfDay
 	}
 
 	return nil
 }
 
-func (s *YoomoneyHandler) SetupRouter(ctx context.Context, r *gin.Engine) {
-	r.POST("/yoomoney/informing", func(c *gin.Context) {
+func (s *YoomoneyHandler) SetupRouter(_ context.Context, r *gin.Engine) {
+	r.POST("/yoomoney/informing", func(ctx *gin.Context) { //nolint: contextcheck
 		var fields YoomoneyWebhook
 
-		if err := c.ShouldBind(&fields); err != nil {
+		if err := ctx.ShouldBind(&fields); err != nil {
 			logrus.Warnf("yoomoney bad request: %s", err.Error())
-			c.Status(http.StatusBadRequest)
+			ctx.Status(http.StatusBadRequest)
 
 			return
 		}
 
 		if err := s.Handle(ctx, fields); err != nil {
 			logrus.Warnf("yoomoney: %s", err.Error())
-			c.String(http.StatusInternalServerError, err.Error())
+			ctx.String(http.StatusInternalServerError, err.Error())
 
 			return
 		}
 
 		logrus.Info("yoomoney: success")
-		c.Status(http.StatusOK)
+		ctx.Status(http.StatusOK)
 	})
 }

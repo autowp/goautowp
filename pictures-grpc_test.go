@@ -26,7 +26,7 @@ func getPictureID(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint: gosec
 	identity := "p" + strconv.Itoa(random.Int())[:6]
 
-	r, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
+	res, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
 		schema.PictureTableIdentityColName: identity,
 		schema.PictureTableStatusColName:   "accepted",
 		schema.PictureTableIPColName:       "",
@@ -34,7 +34,7 @@ func getPictureID(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	pictureID, err := r.LastInsertId()
+	pictureID, err := res.LastInsertId()
 	require.NoError(t, err)
 
 	return pictureID
@@ -123,7 +123,7 @@ func TestModerVoteTemplate(t *testing.T) {
 
 	client := NewPicturesClient(conn)
 
-	r, err := client.CreateModerVoteTemplate(
+	template, err := client.CreateModerVoteTemplate(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&ModerVoteTemplate{Message: "test", Vote: 1},
 	)
@@ -137,7 +137,7 @@ func TestModerVoteTemplate(t *testing.T) {
 
 	_, err = client.DeleteModerVoteTemplate(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&DeleteModerVoteTemplateRequest{Id: r.Id},
+		&DeleteModerVoteTemplateRequest{Id: template.GetId()},
 	)
 	require.NoError(t, err)
 }

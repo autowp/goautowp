@@ -412,8 +412,8 @@ func TestAnimationPreservedDueResample(t *testing.T) {
 
 	require.Less(t, uint(1), mw.GetNumberImages())
 
-	require.EqualValues(t, mw.GetImageWidth(), 200)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
+	require.EqualValues(t, 200, mw.GetImageWidth())
+	require.EqualValues(t, 200, mw.GetImageHeight())
 
 	mw.Clear()
 }
@@ -439,8 +439,8 @@ func TestResizeGif(t *testing.T) {
 
 	require.Less(t, uint(1), mw.GetNumberImages())
 
-	require.EqualValues(t, mw.GetImageWidth(), 80)
-	require.EqualValues(t, mw.GetImageHeight(), 80)
+	require.EqualValues(t, 80, mw.GetImageWidth())
+	require.EqualValues(t, 80, mw.GetImageHeight())
 
 	mw.Clear()
 }
@@ -468,8 +468,8 @@ func TestResizeGifWithProportionsConstraints(t *testing.T) {
 
 	require.Less(t, uint(1), mw.GetNumberImages())
 
-	require.EqualValues(t, mw.GetImageWidth(), 456)
-	require.EqualValues(t, mw.GetImageHeight(), 342)
+	require.EqualValues(t, 456, mw.GetImageWidth())
+	require.EqualValues(t, 342, mw.GetImageHeight())
 
 	mw.Clear()
 }
@@ -495,8 +495,8 @@ func TestVerticalProportional(t *testing.T) {
 	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
 	require.NoError(t, err)
 
-	require.EqualValues(t, mw.GetImageWidth(), 200)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
+	require.EqualValues(t, 200, mw.GetImageWidth())
+	require.EqualValues(t, 200, mw.GetImageHeight())
 	mw.Clear()
 }
 
@@ -522,8 +522,8 @@ func TestHorizontalProportional(t *testing.T) {
 	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
 	require.NoError(t, err)
 
-	require.EqualValues(t, mw.GetImageWidth(), 400)
-	require.EqualValues(t, mw.GetImageHeight(), 200)
+	require.EqualValues(t, 400, mw.GetImageWidth())
+	require.EqualValues(t, 200, mw.GetImageHeight())
 	mw.Clear()
 }
 
@@ -543,8 +543,8 @@ func TestWidest(t *testing.T) {
 	})
 	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
 	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 305)
-	require.EqualValues(t, mw.GetImageHeight(), 229)
+	require.EqualValues(t, 305, mw.GetImageWidth())
+	require.EqualValues(t, 229, mw.GetImageHeight())
 	mw.Clear()
 }
 
@@ -564,8 +564,8 @@ func TestHighest(t *testing.T) {
 	})
 	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
 	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 101)
-	require.EqualValues(t, mw.GetImageHeight(), 101)
+	require.EqualValues(t, 101, mw.GetImageWidth())
+	require.EqualValues(t, 101, mw.GetImageHeight())
 	mw.Clear()
 }
 
@@ -590,6 +590,6 @@ func TestPngAvatar(t *testing.T) {
 	})
 	mw, err = sampler.ConvertImage(mw, Crop{}, *format)
 	require.NoError(t, err)
-	require.EqualValues(t, mw.GetImageWidth(), 70)
-	require.EqualValues(t, mw.GetImageHeight(), 70)
+	require.EqualValues(t, 70, mw.GetImageWidth())
+	require.EqualValues(t, 70, mw.GetImageHeight())
 }

@@ -23,7 +23,7 @@ type GenerateOptions struct {
 }
 
 type NamingStrategy interface {
-	Generate(GenerateOptions) string
+	Generate(options GenerateOptions) string
 }
 
 const ItemPerDir = 1000
@@ -102,7 +102,7 @@ func path(index int, deep int) string {
 
 	if deep > 0 {
 		cur := index / ItemPerDir
-		for i := 0; i < deep; i++ {
+		for range deep {
 			div := cur / ItemPerDir
 			mod := cur - div*ItemPerDir
 			path = fmt.Sprintf("%0"+strconv.Itoa(chars)+"d", mod) + "/" + path

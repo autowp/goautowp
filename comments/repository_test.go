@@ -32,7 +32,7 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 
 	emailAddr := "test" + strconv.Itoa(random.Int()) + "@example.com"
 	name := "ivan"
-	r, err := db.Insert(schema.UserTable).
+	res, err := db.Insert(schema.UserTable).
 		Rows(goqu.Record{
 			schema.UserTableLoginColName:          nil,
 			schema.UserTableEmailColName:          emailAddr,
@@ -52,7 +52,7 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	id, err := r.LastInsertId()
+	id, err := res.LastInsertId()
 	require.NoError(t, err)
 
 	return id
@@ -124,7 +124,7 @@ func TestRefreshRepliesCount(t *testing.T) {
 func TestAdd(t *testing.T) {
 	t.Parallel()
 
-	s, db := createRepository(t)
+	repo, db := createRepository(t)
 	ctx := context.Background()
 	userID := createRandomUser(ctx, t, db)
 
@@ -133,24 +133,24 @@ func TestAdd(t *testing.T) {
 		itemID      int64 = 1
 	)
 
-	_, err := s.Add(ctx, commentType, itemID, 0, userID, "Test message", "127.0.0.1", false)
+	_, err := repo.Add(ctx, commentType, itemID, 0, userID, "Test message", "127.0.0.1", false)
 	require.NoError(t, err)
 }
 
 func TestCleanBrokenMessages(t *testing.T) {
 	t.Parallel()
 
-	s, _ := createRepository(t)
+	repo, _ := createRepository(t)
 
-	_, err := s.CleanBrokenMessages(context.Background())
+	_, err := repo.CleanBrokenMessages(context.Background())
 	require.NoError(t, err)
 }
 
 func TestCleanTopics(t *testing.T) {
 	t.Parallel()
 
-	s, _ := createRepository(t)
+	repo, _ := createRepository(t)
 
-	_, err := s.CleanTopics(context.Background())
+	_, err := repo.CleanTopics(context.Background())
 	require.NoError(t, err)
 }

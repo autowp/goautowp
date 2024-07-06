@@ -1,10 +1,12 @@
 package storage
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/autowp/goautowp/config"
 )
+
+var errUnknownNamingStrategy = errors.New("unknown naming strategy")
 
 type Dir struct {
 	bucket         string
@@ -15,7 +17,7 @@ func (d *Dir) Bucket() string {
 	return d.bucket
 }
 
-func (d *Dir) NamingStrategy() NamingStrategy {
+func (d *Dir) NamingStrategy() NamingStrategy { //nolint: ireturn
 	return d.namingStrategy
 }
 
@@ -32,7 +34,7 @@ func NewDir(bucket string, config config.ImageStorageNamingStrategyConfig) (*Dir
 	}
 
 	if strategy == nil {
-		return nil, fmt.Errorf("unknown naming strategy")
+		return nil, errUnknownNamingStrategy
 	}
 
 	return &Dir{

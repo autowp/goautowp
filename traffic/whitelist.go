@@ -21,8 +21,8 @@ type Whitelist struct {
 
 // WhitelistItem WhitelistItem.
 type WhitelistItem struct {
-	IP          net.IP `json:"ip"          db:"ip"`
-	Description string `json:"description" db:"description"`
+	IP          net.IP `db:"ip"          json:"ip"`
+	Description string `db:"description" json:"description"`
 }
 
 // NewWhitelist constructor.

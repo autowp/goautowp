@@ -174,14 +174,13 @@ func (s *Paginator) getCurrentPageNumber(ctx context.Context) (int32, error) {
 
 func (s *Paginator) getPagesInRange(ctx context.Context, lowerBound int32, upperBound int32) ([]int32, error) {
 	var err error
-	lowerBound, err = s.normalizePageNumber(ctx, lowerBound)
 
+	lowerBound, err = s.normalizePageNumber(ctx, lowerBound)
 	if err != nil {
 		return nil, err
 	}
 
 	upperBound, err = s.normalizePageNumber(ctx, upperBound)
-
 	if err != nil {
 		return nil, err
 	}
@@ -214,8 +213,8 @@ func (s *Paginator) normalizePageNumber(ctx context.Context, pageNumber int32) (
 
 func (s *Paginator) GetItemsByPage(ctx context.Context, pageNumber int32) (*goqu.SelectDataset, error) {
 	var err error
-	pageNumber, err = s.normalizePageNumber(ctx, pageNumber)
 
+	pageNumber, err = s.normalizePageNumber(ctx, pageNumber)
 	if err != nil {
 		return nil, err
 	}

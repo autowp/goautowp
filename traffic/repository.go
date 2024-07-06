@@ -109,15 +109,13 @@ func NewTraffic(
 		return nil, err
 	}
 
-	s := &Traffic{
+	return &Traffic{
 		Monitoring: monitoring,
 		Whitelist:  whitelist,
 		Ban:        ban,
 		autowpDB:   autowpDB,
 		enforcer:   enforcer,
-	}
-
-	return s, nil
+	}, nil
 }
 
 func (s *Traffic) AutoBanByProfile(ctx context.Context, profile AutobanProfile) error {
@@ -208,28 +206,29 @@ func (s *Traffic) AutoWhitelistIP(ctx context.Context, ip net.IP) error {
 	return nil
 }
 
-func (s *Traffic) SetupPrivateRouter(ctx context.Context, r *gin.Engine) {
-	r.GET("/ban/:ip", func(c *gin.Context) {
-		ip := net.ParseIP(c.Param("ip"))
+func (s *Traffic) SetupPrivateRouter(_ context.Context, r *gin.Engine) {
+	r.GET("/ban/:ip", func(ctx *gin.Context) { //nolint:contextcheck
+		ip := net.ParseIP(ctx.Param("ip"))
 		if ip == nil {
-			c.String(http.StatusBadRequest, "Invalid IP")
+			ctx.String(http.StatusBadRequest, "Invalid IP")
 
 			return
 		}
 
-		b, err := s.Ban.Get(ctx, ip)
+		itm, err := s.Ban.Get(ctx, ip)
 		if err != nil {
 			if errors.Is(err, ban.ErrBanItemNotFound) {
-				c.Status(http.StatusNotFound)
+				ctx.Status(http.StatusNotFound)
 
 				return
 			}
+
 			logrus.Error(err.Error())
-			c.String(http.StatusInternalServerError, err.Error())
+			ctx.String(http.StatusInternalServerError, err.Error())
 
 			return
 		}
 
-		c.JSON(http.StatusOK, b)
+		ctx.JSON(http.StatusOK, itm)
 	})
 }

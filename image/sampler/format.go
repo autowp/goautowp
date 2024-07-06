@@ -1,10 +1,13 @@
 package sampler
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/autowp/goautowp/config"
 )
+
+var errUnsupportedFormat = errors.New("unsupported format")
 
 type Format struct {
 	format             string
@@ -68,7 +71,7 @@ func (f Format) FormatExtension() (string, error) {
 	value, ok := formatExt[f.format]
 
 	if !ok {
-		return "", fmt.Errorf("unsupported format `%s`", f.format)
+		return "", fmt.Errorf("%w: `%s`", errUnsupportedFormat, f.format)
 	}
 
 	return value, nil

@@ -92,16 +92,16 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	_, err = db.Update(schema.UserTable).
 		Set(goqu.Record{"img": imageID}).
-		Where(schema.UserTableIDCol.Eq(me.Id)).
+		Where(schema.UserTableIDCol.Eq(me.GetId())).
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id})
+	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.GetId()})
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
 	// require.NotEmpty(t, user.Gravatar)
-	require.NotEmpty(t, user.Avatar.Src)
-	require.Equal(t, name+" "+lastName, user.Name)
+	require.NotEmpty(t, user.GetAvatar().GetSrc())
+	require.Equal(t, name+" "+lastName, user.GetName())
 
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 
 	_, err = client.DeleteUser(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&APIDeleteUserRequest{UserId: me.Id, Password: password},
+		&APIDeleteUserRequest{UserId: me.GetId(), Password: password},
 	)
 	require.NoError(t, err)
 }
@@ -171,10 +171,10 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, me)
 
-	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.Id})
+	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.GetId()})
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
-	require.Equal(t, name, user.Name)
+	require.Equal(t, name, user.GetName())
 }
 
 func TestSetDisabledUserCommentsNotifications(t *testing.T) {
@@ -216,30 +216,30 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 	// disable
 	_, err = client.DisableUserCommentsNotifications(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&APIUserPreferencesRequest{UserId: tester.Id},
+		&APIUserPreferencesRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 
 	res1, err := client.GetUserPreferences(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&APIUserPreferencesRequest{UserId: tester.Id},
+		&APIUserPreferencesRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
-	require.True(t, res1.DisableCommentsNotifications)
+	require.True(t, res1.GetDisableCommentsNotifications())
 
 	// enable
 	_, err = client.EnableUserCommentsNotifications(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&APIUserPreferencesRequest{UserId: tester.Id},
+		&APIUserPreferencesRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 
 	res2, err := client.GetUserPreferences(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&APIUserPreferencesRequest{UserId: tester.Id},
+		&APIUserPreferencesRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
-	require.False(t, res2.DisableCommentsNotifications)
+	require.False(t, res2.GetDisableCommentsNotifications())
 }
 
 func TestGetOnlineUsers(t *testing.T) {
@@ -275,7 +275,7 @@ func TestGetOnlineUsers(t *testing.T) {
 
 	r, err := client.GetUsers(ctx, &APIUsersRequest{IsOnline: true})
 	require.NoError(t, err)
-	require.NotEmpty(t, r.Items)
+	require.NotEmpty(t, r.GetItems())
 }
 
 func TestGetUsersPagination(t *testing.T) {

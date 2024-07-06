@@ -39,8 +39,8 @@ func TestLikesRating(t *testing.T) {
 	r, err := client.GetUserCommentsRating(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 
-	for _, item := range r.Users {
-		_, err = client.GetUserCommentsRatingFans(ctx, &UserRatingDetailsRequest{UserId: item.UserId})
+	for _, item := range r.GetUsers() {
+		_, err = client.GetUserCommentsRatingFans(ctx, &UserRatingDetailsRequest{UserId: item.GetUserId()})
 		require.NoError(t, err)
 	}
 }
@@ -93,7 +93,7 @@ func TestPictureLikesRating(t *testing.T) {
 		schema.PictureTableIdentityColName: identity,
 		schema.PictureTableStatusColName:   "accepted",
 		schema.PictureTableIPColName:       "",
-		schema.PictureTableOwnerIDColName:  tester.Id,
+		schema.PictureTableOwnerIDColName:  tester.GetId(),
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -113,8 +113,8 @@ func TestPictureLikesRating(t *testing.T) {
 	r, err := client.GetUserPictureLikesRating(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 
-	for _, item := range r.Users {
-		_, err = client.GetUserPictureLikesRatingFans(ctx, &UserRatingDetailsRequest{UserId: item.UserId})
+	for _, item := range r.GetUsers() {
+		_, err = client.GetUserPictureLikesRatingFans(ctx, &UserRatingDetailsRequest{UserId: item.GetUserId()})
 		require.NoError(t, err)
 	}
 }
@@ -138,9 +138,9 @@ func TestPicturesRating(t *testing.T) {
 	r, err := client.GetUserPicturesRating(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 
-	for _, item := range r.Users {
+	for _, item := range r.GetUsers() {
 		_, err = client.GetUserPicturesRatingBrands(ctx, &UserRatingDetailsRequest{
-			UserId:   item.UserId,
+			UserId:   item.GetUserId(),
 			Language: "en",
 		})
 		require.NoError(t, err)
@@ -166,8 +166,8 @@ func TestSpecsRating(t *testing.T) {
 	r, err := client.GetUserSpecsRating(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 
-	for _, item := range r.Users {
-		_, err = client.GetUserSpecsRatingBrands(ctx, &UserRatingDetailsRequest{UserId: item.UserId})
+	for _, item := range r.GetUsers() {
+		_, err = client.GetUserSpecsRatingBrands(ctx, &UserRatingDetailsRequest{UserId: item.GetUserId()})
 		require.NoError(t, err)
 	}
 }

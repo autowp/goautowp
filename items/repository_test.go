@@ -60,7 +60,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 
 		c, err := repository.Count(ctx, options)
 		require.NoError(t, err)
-		require.Greater(t, c, 0)
+		require.Positive(t, c)
 	}
 }
 
@@ -141,7 +141,7 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 
 	emailAddr := "test" + strconv.Itoa(random.Int()) + "@example.com"
 	name := "ivan"
-	r, err := db.Insert(schema.UserTable).
+	res, err := db.Insert(schema.UserTable).
 		Rows(goqu.Record{
 			schema.UserTableLoginColName:          nil,
 			schema.UserTableEmailColName:          emailAddr,
@@ -161,7 +161,7 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	id, err := r.LastInsertId()
+	id, err := res.LastInsertId()
 	require.NoError(t, err)
 
 	return id
@@ -283,7 +283,7 @@ func TestPaginator(t *testing.T) {
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 			schema.ItemTableItemTypeIDColName:      BRAND,
 			schema.ItemTableNameColName:            name + "_" + strconv.Itoa(i),
@@ -313,7 +313,7 @@ func TestPaginator(t *testing.T) {
 	r, pages, err := repository.List(ctx, options, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
-	require.Equal(t, 2, len(r))
+	require.Len(t, r, 2)
 	require.Equal(t, int32(10), pages.TotalItemCount)
 	require.Equal(t, int32(5), pages.PageCount)
 	require.Equal(t, int32(2), pages.Current)
