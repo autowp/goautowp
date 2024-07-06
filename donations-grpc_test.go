@@ -29,6 +29,6 @@ func TestGetVODData(t *testing.T) {
 	r, err := client.GetVODData(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
-	require.NotEmpty(t, r.Dates)
-	require.NotEmpty(t, r.Sum)
+	require.NotEmpty(t, r.GetDates())
+	require.NotEmpty(t, r.GetSum())
 }

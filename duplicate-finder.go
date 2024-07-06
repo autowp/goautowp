@@ -19,6 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var errInvalidID = errors.New("invalid id provided")
+
 const (
 	threshold = 3
 	decimal   = 10
@@ -93,18 +95,18 @@ func (s *DuplicateFinder) ListenAMQP(ctx context.Context, url string, queue stri
 			done = true
 
 			break
-		case d := <-msgs:
-			if d.ContentType != "application/json" {
-				logrus.Errorf("unexpected mime `%v`", d.ContentType)
+		case msg := <-msgs:
+			if msg.ContentType != "application/json" {
+				logrus.Errorf("unexpected mime `%v`", msg.ContentType)
 
 				continue
 			}
 
 			var message DuplicateFinderInputMessage
 
-			err := json.Unmarshal(d.Body, &message)
+			err := json.Unmarshal(msg.Body, &message)
 			if err != nil {
-				logrus.Errorf("failed to parse json `%s`: %s", err.Error(), d.Body)
+				logrus.Errorf("failed to parse json `%s`: %s", err.Error(), msg.Body)
 
 				continue
 			}
@@ -172,7 +174,7 @@ func getFileHash(reader io.Reader) (uint64, error) {
 
 func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 	if id <= 0 {
-		return errors.New("invalid id provided")
+		return errInvalidID
 	}
 
 	var hash uint64
@@ -191,16 +193,21 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 
 	const alias = "distance"
 
-	rows, err := s.db.Select(
+	var sts []struct {
+		PictureID int `db:"picture_id"`
+		Distance  int `db:"distance"`
+	}
+
+	err = s.db.Select(
 		schema.DfHashTablePictureIDCol,
 		goqu.Func("BIT_COUNT", goqu.L("? ^ "+strconv.FormatUint(hash, decimal), schema.DfHashTableHashCol)).As(alias),
 	).
 		From(schema.DfHashTable).
 		Where(schema.DfHashTablePictureIDCol.Neq(id)).
 		Having(goqu.C(alias).Lte(threshold)).
-		Executor().QueryContext(ctx)
+		Executor().ScanStructsContext(ctx, &sts)
 
-	if errors.Is(err, sql.ErrNoRows) {
+	if len(sts) == 0 {
 		return nil
 	}
 
@@ -208,29 +215,17 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 		return err
 	}
 
-	defer util.Close(rows)
+	records := make([]goqu.Record, 0, len(sts)*2)
 
-	var records []goqu.Record
-
-	for rows.Next() {
-		var (
-			pictureID int
-			distance  int
-		)
-
-		serr := rows.Scan(&pictureID, &distance)
-		if serr != nil {
-			return serr
-		}
-
+	for _, st := range sts {
 		records = append(records, goqu.Record{
 			schema.DfDistanceTableSrcPictureIDColName: id,
-			schema.DfDistanceTableDstPictureIDColName: pictureID,
-			schema.DfDistanceTableDistanceColName:     distance,
+			schema.DfDistanceTableDstPictureIDColName: st.PictureID,
+			schema.DfDistanceTableDistanceColName:     st.Distance,
 		}, goqu.Record{
-			schema.DfDistanceTableSrcPictureIDColName: pictureID,
+			schema.DfDistanceTableSrcPictureIDColName: st.PictureID,
 			schema.DfDistanceTableDstPictureIDColName: id,
-			schema.DfDistanceTableDistanceColName:     distance,
+			schema.DfDistanceTableDistanceColName:     st.Distance,
 		})
 	}
 
@@ -241,9 +236,6 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
 				schema.DfDistanceTableDistanceColName: goqu.Func("VALUES", goqu.C(schema.DfDistanceTableDistanceColName)),
 			})).
 		Executor().ExecContext(ctx)
-	if err != nil {
-		return err
-	}
 
-	return rows.Err()
+	return err
 }

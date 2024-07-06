@@ -81,7 +81,7 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 
 	filesize, err := os.Stat(TestImageFile)
 	require.NoError(t, err)
-	require.EqualValues(t, filesize.Size(), len(body))
+	require.Len(t, body, int(filesize.Size()))
 
 	err = imageStorage.ChangeImageName(ctx, imageID, GenerateOptions{
 		Pattern: "new-name/by-pattern",
@@ -122,7 +122,7 @@ func TestAddImageFromBlobAndFormat(t *testing.T) {
 
 	require.EqualValues(t, 160, formattedImage.Width())
 	require.EqualValues(t, 120, formattedImage.Height())
-	require.True(t, formattedImage.FileSize() > 0)
+	require.Positive(t, formattedImage.FileSize())
 	require.NotEmpty(t, formattedImage.Src())
 }
 
@@ -220,14 +220,14 @@ func TestAddImageAndCrop(t *testing.T) {
 
 	filesize, err := os.Stat(TestImageFile2)
 	require.NoError(t, err)
-	require.EqualValues(t, filesize.Size(), len(body))
+	require.Len(t, body, int(filesize.Size()))
 
 	formattedImage, err := mw.FormattedImage(ctx, imageID, "picture-gallery")
 	require.NoError(t, err)
 
 	require.EqualValues(t, 1020, formattedImage.Width())
 	require.EqualValues(t, 500, formattedImage.Height())
-	require.True(t, formattedImage.FileSize() > 0)
+	require.Positive(t, formattedImage.FileSize())
 	require.NotEmpty(t, formattedImage.Src())
 
 	require.Contains(t, formattedImage.Src(), "0400030003fc01f4")
@@ -264,16 +264,16 @@ func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 	images, err := mw.images(ctx, []int{imageID1, imageID2})
 	require.NoError(t, err)
 
-	require.EqualValues(t, 2, len(images))
+	require.Len(t, images, 2)
 
 	formattedImages, err := mw.FormattedImages(ctx, []int{imageID1, imageID2}, "test")
 	require.NoError(t, err)
-	require.EqualValues(t, 2, len(formattedImages))
+	require.Len(t, formattedImages, 2)
 
 	// re-request
 	formattedImages, err = mw.FormattedImages(ctx, []int{imageID1, imageID2}, "test")
 	require.NoError(t, err)
-	require.EqualValues(t, 2, len(formattedImages))
+	require.Len(t, formattedImages, 2)
 }
 
 func TestRequestFormattedImageAgain(t *testing.T) {
@@ -301,7 +301,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 
 	require.EqualValues(t, 160, formattedImage.Width())
 	require.EqualValues(t, 120, formattedImage.Height())
-	require.True(t, formattedImage.FileSize() > 0)
+	require.Positive(t, formattedImage.FileSize())
 	require.NotEmpty(t, formattedImage.Src())
 
 	formattedImage, err = mw.FormattedImage(ctx, imageID, formatName)
@@ -309,7 +309,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 
 	require.EqualValues(t, 160, formattedImage.Width())
 	require.EqualValues(t, 120, formattedImage.Height())
-	require.True(t, formattedImage.FileSize() > 0)
+	require.Positive(t, formattedImage.FileSize())
 	require.NotEmpty(t, formattedImage.Src())
 }
 

@@ -44,7 +44,7 @@ func TestGetThemes(t *testing.T) {
 		&APIGetForumsThemesRequest{},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, themes.Items)
+	require.NotEmpty(t, themes.GetItems())
 }
 
 func TestGetTheme(t *testing.T) {
@@ -76,8 +76,8 @@ func TestGetTheme(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, theme)
-	require.NotEmpty(t, theme.Id)
-	require.NotEmpty(t, theme.Name)
+	require.NotEmpty(t, theme.GetId())
+	require.NotEmpty(t, theme.GetName())
 }
 
 //nolint:paralleltest
@@ -124,7 +124,7 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 
 	message, err := client.GetLastMessage(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token),
-		&APIGetForumsTopicRequest{Id: topic.Id},
+		&APIGetForumsTopicRequest{Id: topic.GetId()},
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, message)
@@ -134,7 +134,7 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 		&APIGetForumsTopicsRequest{ThemeId: 2, Page: 1},
 	)
 	require.NoError(t, err)
-	require.NotEmpty(t, topics.Items)
+	require.NotEmpty(t, topics.GetItems())
 }
 
 func TestGetUserSummary(t *testing.T) {
@@ -212,7 +212,7 @@ func TestCloseTopic(t *testing.T) {
 	_, err = client.CloseTopic(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APISetTopicStatusRequest{
-			Id: topic.Id,
+			Id: topic.GetId(),
 		},
 	)
 	require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestCloseTopic(t *testing.T) {
 	_, err = client.OpenTopic(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APISetTopicStatusRequest{
-			Id: topic.Id,
+			Id: topic.GetId(),
 		},
 	)
 	require.NoError(t, err)
@@ -228,7 +228,7 @@ func TestCloseTopic(t *testing.T) {
 	_, err = client.DeleteTopic(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
 		&APISetTopicStatusRequest{
-			Id: topic.Id,
+			Id: topic.GetId(),
 		},
 	)
 	require.NoError(t, err)

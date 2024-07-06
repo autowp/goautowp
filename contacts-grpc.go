@@ -43,13 +43,13 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if in.UserId == userID {
+	if in.GetUserId() == userID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
 	deleted := false
 
-	user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: in.UserId, Deleted: &deleted})
+	user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: in.GetUserId(), Deleted: &deleted})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -58,7 +58,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 		return nil, status.Error(codes.NotFound, "NotFound")
 	}
 
-	err = s.contactsRepository.create(ctx, userID, in.UserId)
+	err = s.contactsRepository.create(ctx, userID, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -76,7 +76,7 @@ func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContac
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.contactsRepository.delete(ctx, userID, in.UserId)
+	err = s.contactsRepository.delete(ctx, userID, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -94,11 +94,11 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if in.UserId == userID {
+	if in.GetUserId() == userID {
 		return nil, status.Error(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	exists, err := s.contactsRepository.isExists(ctx, userID, in.UserId)
+	exists, err := s.contactsRepository.isExists(ctx, userID, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -108,7 +108,7 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 	}
 
 	return &Contact{
-		ContactUserId: in.UserId,
+		ContactUserId: in.GetUserId(),
 	}, nil
 }
 
@@ -142,7 +142,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 		}
 
 		items[idx] = &Contact{
-			ContactUserId: user.Id,
+			ContactUserId: user.GetId(),
 			User:          user,
 		}
 	}

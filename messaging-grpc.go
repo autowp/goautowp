@@ -100,7 +100,7 @@ func (s *MessagingGRPCServer) DeleteMessage(ctx context.Context, in *MessagingDe
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	err = s.repository.DeleteMessage(ctx, userID, in.MessageId)
+	err = s.repository.DeleteMessage(ctx, userID, in.GetMessageId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

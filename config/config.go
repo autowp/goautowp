@@ -10,59 +10,59 @@ import (
 
 // MigrationsConfig MigrationsConfig.
 type MigrationsConfig struct {
-	DSN string `yaml:"dsn" mapstructure:"dsn"`
-	Dir string `yaml:"dir" mapstructure:"dir"`
+	DSN string `mapstructure:"dsn" yaml:"dsn"`
+	Dir string `mapstructure:"dir" yaml:"dir"`
 }
 
 // LanguageConfig LanguageConfig.
 type LanguageConfig struct {
-	Hostname string   `yaml:"hostname" mapstructure:"hostname"`
-	Timezone string   `yaml:"timezone" mapstructure:"timezone"`
-	Name     string   `yaml:"name"     mapstructure:"name"`
-	Flag     string   `yaml:"flag"     mapstructure:"flag"`
-	Aliases  []string `yaml:"aliases"  mapstructure:"aliases"`
+	Hostname string   `mapstructure:"hostname" yaml:"hostname"`
+	Timezone string   `mapstructure:"timezone" yaml:"timezone"`
+	Name     string   `mapstructure:"name"     yaml:"name"`
+	Flag     string   `mapstructure:"flag"     yaml:"flag"`
+	Aliases  []string `mapstructure:"aliases"  yaml:"aliases"`
 }
 
 // KeycloakConfig KeycloakConfig.
 type KeycloakConfig struct {
-	URL          string `yaml:"url"           mapstructure:"url"`
-	ClientID     string `yaml:"client-id"     mapstructure:"client-id"`
-	ClientSecret string `yaml:"client-secret" mapstructure:"client-secret"`
-	Realm        string `yaml:"realm"         mapstructure:"realm"`
+	URL          string `mapstructure:"url"           yaml:"url"`
+	ClientID     string `mapstructure:"client-id"     yaml:"client-id"`
+	ClientSecret string `mapstructure:"client-secret" yaml:"client-secret"`
+	Realm        string `mapstructure:"realm"         yaml:"realm"`
 }
 
 // SMTPConfig SMTPConfig.
 type SMTPConfig struct {
-	Hostname string `yaml:"hostname" mapstructure:"hostname"`
-	Port     int    `yaml:"port"     mapstructure:"port"`
-	Username string `yaml:"username" mapstructure:"username"`
-	Password string `yaml:"password" mapstructure:"password"`
+	Hostname string `mapstructure:"hostname" yaml:"hostname"`
+	Port     int    `mapstructure:"port"     yaml:"port"`
+	Username string `mapstructure:"username" yaml:"username"`
+	Password string `mapstructure:"password" yaml:"password"`
 }
 
 // FileStorageConfig FileStorageConfig.
 type FileStorageConfig struct {
-	S3     S3Config `yaml:"s3"     mapstructure:"s3"`
-	Bucket string   `yaml:"bucket" mapstructure:"bucket"`
+	S3     S3Config `mapstructure:"s3"     yaml:"s3"`
+	Bucket string   `mapstructure:"bucket" yaml:"bucket"`
 }
 
 // S3Config S3Config.
 type S3Config struct {
-	Credentials      S3CredentialsConfig `yaml:"credentials"         mapstructure:"credentials"`
-	Region           string              `yaml:"region"              mapstructure:"region"`
-	Endpoints        []string            `yaml:"endpoints"           mapstructure:"endpoints"`
-	S3ForcePathStyle bool                `yaml:"s3_force_path_style" mapstructure:"s3_force_path_style"`
+	Credentials      S3CredentialsConfig `mapstructure:"credentials"         yaml:"credentials"`
+	Region           string              `mapstructure:"region"              yaml:"region"`
+	Endpoints        []string            `mapstructure:"endpoints"           yaml:"endpoints"`
+	S3ForcePathStyle bool                `mapstructure:"s3_force_path_style" yaml:"s3_force_path_style"`
 }
 
 // S3CredentialsConfig S3CredentialsConfig.
 type S3CredentialsConfig struct {
-	Key    string `yaml:"key"    mapstructure:"key"`
-	Secret string `yaml:"secret" mapstructure:"secret"`
+	Key    string `mapstructure:"key"    yaml:"key"`
+	Secret string `mapstructure:"secret" yaml:"secret"`
 }
 
 // DuplicateFinderConfig DuplicateFinderConfig.
 type DuplicateFinderConfig struct {
-	RabbitMQ string `yaml:"rabbitmq" mapstructure:"rabbitmq"`
-	Queue    string `yaml:"queue"    mapstructure:"queue"`
+	RabbitMQ string `mapstructure:"rabbitmq" yaml:"rabbitmq"`
+	Queue    string `mapstructure:"queue"    yaml:"queue"`
 }
 
 // RestCorsConfig RestCorsConfig.
@@ -78,68 +78,68 @@ type RestConfig struct {
 
 // RecaptchaConfig RecaptchaConfig.
 type RecaptchaConfig struct {
-	PublicKey  string `yaml:"public-key"  mapstructure:"public-key"`
-	PrivateKey string `yaml:"private-key" mapstructure:"private-key"`
+	PublicKey  string `mapstructure:"public-key"  yaml:"public-key"`
+	PrivateKey string `mapstructure:"private-key" yaml:"private-key"`
 }
 
 // FeedbackConfig FeedbackConfig.
 type FeedbackConfig struct {
-	From    string   `yaml:"from"    mapstructure:"from"`
-	To      []string `yaml:"to"      mapstructure:"to"`
-	Subject string   `yaml:"subject" mapstructure:"subject"`
+	From    string   `mapstructure:"from"    yaml:"from"`
+	To      []string `mapstructure:"to"      yaml:"to"`
+	Subject string   `mapstructure:"subject" yaml:"subject"`
 }
 
 type TelegramConfig struct {
-	AccessToken string `yaml:"access-token" mapstructure:"access-token"`
+	AccessToken string `mapstructure:"access-token" yaml:"access-token"`
 }
 
 type AboutConfig struct {
-	Developer      string `yaml:"developer"        mapstructure:"developer"`
-	FrTranslator   string `yaml:"fr-translator"    mapstructure:"fr-translator"`
-	ZhTranslator   string `yaml:"zh-translator"    mapstructure:"zh-translator"`
-	BeTranslator   string `yaml:"be-translator"    mapstructure:"be-translator"`
-	PtBrTranslator string `yaml:"pt-br-translator" mapstructure:"pt-br-translator"`
+	Developer      string `mapstructure:"developer"        yaml:"developer"`
+	FrTranslator   string `mapstructure:"fr-translator"    yaml:"fr-translator"`
+	ZhTranslator   string `mapstructure:"zh-translator"    yaml:"zh-translator"`
+	BeTranslator   string `mapstructure:"be-translator"    yaml:"be-translator"`
+	PtBrTranslator string `mapstructure:"pt-br-translator" yaml:"pt-br-translator"`
 }
 
 type YoomoneyConfig struct {
-	Secret string `yaml:"secret" mapstructure:"secret"`
-	Price  string `yaml:"price"  mapstructure:"price"`
+	Secret string `mapstructure:"secret" yaml:"secret"`
+	Price  string `mapstructure:"price"  yaml:"price"`
 }
 
 // Config Application config definition.
 type Config struct {
-	GinMode string `yaml:"gin-mode"            mapstructure:"gin-mode"`
+	GinMode string `mapstructure:"gin-mode" yaml:"gin-mode"`
 	GRPC    struct {
-		Listen string `mapstructure:"listen"`
-	} `yaml:"grpc"            mapstructure:"grpc"`
-	PublicRest         RestConfig                `yaml:"public-rest"          mapstructure:"public-rest"`
-	DuplicateFinder    DuplicateFinderConfig     `yaml:"duplicate_finder"     mapstructure:"duplicate_finder"`
-	AutowpDSN          string                    `yaml:"autowp-dsn"           mapstructure:"autowp-dsn"`
-	AutowpMigrations   MigrationsConfig          `yaml:"autowp-migrations"    mapstructure:"autowp-migrations"`
-	FileStorage        FileStorageConfig         `yaml:"file_storage"         mapstructure:"file_storage"`
-	RabbitMQ           string                    `yaml:"rabbitmq"             mapstructure:"rabbitmq"`
-	MonitoringQueue    string                    `yaml:"monitoring_queue"     mapstructure:"monitoring_queue"`
-	PrivateRest        RestConfig                `yaml:"private-rest"         mapstructure:"private-rest"`
-	Telegram           TelegramConfig            `yaml:"telegram"             mapstructure:"telegram"`
-	PostgresDSN        string                    `yaml:"postgres-dsn"         mapstructure:"postgres-dsn"`
-	PostgresMigrations MigrationsConfig          `yaml:"postgres-migrations"  mapstructure:"postgres-migrations"`
-	Recaptcha          RecaptchaConfig           `yaml:"recaptcha"            mapstructure:"recaptcha"`
-	MockEmailSender    bool                      `yaml:"mock-email-sender"    mapstructure:"mock-email-sender"`
-	SMTP               SMTPConfig                `yaml:"smtp"                 mapstructure:"smtp"`
-	Feedback           FeedbackConfig            `yaml:"feedback"             mapstructure:"feedback"`
-	Keycloak           KeycloakConfig            `yaml:"keycloak"             mapstructure:"keycloak"`
-	UsersSalt          string                    `yaml:"users-salt"           mapstructure:"users-salt"`
-	EmailSalt          string                    `yaml:"email-salt"           mapstructure:"email-salt"`
-	Languages          map[string]LanguageConfig `yaml:"languages"            mapstructure:"languages"`
-	Captcha            bool                      `yaml:"captcha"              mapstructure:"captcha"`
-	ImageStorage       ImageStorageConfig        `yaml:"image-storage"        mapstructure:"image-storage"`
-	Redis              string                    `yaml:"redis"                mapstructure:"redis"`
-	DonationsVodPrice  int32                     `yaml:"donations-vod-price"  mapstructure:"donations-vod-price"`
-	About              AboutConfig               `yaml:"about"                mapstructure:"about"`
-	ContentLanguages   []string                  `yaml:"content-languages"    mapstructure:"content-languages"`
-	MessageInterval    int64                     `yaml:"message-interval"     mapstructure:"message-interval"`
-	MostsMinCarsCount  int                       `yaml:"mosts-min-cars-count" mapstructure:"mosts-min-cars-count"`
-	YoomoneyConfig     YoomoneyConfig            `yaml:"yoomoney"             mapstructure:"yoomoney"`
+		Listen string `mapstructure:"listen" yaml:"listen"`
+	} `mapstructure:"grpc" yaml:"grpc"`
+	PublicRest         RestConfig                `mapstructure:"public-rest"          yaml:"public-rest"`
+	DuplicateFinder    DuplicateFinderConfig     `mapstructure:"duplicate_finder"     yaml:"duplicate_finder"`
+	AutowpDSN          string                    `mapstructure:"autowp-dsn"           yaml:"autowp-dsn"`
+	AutowpMigrations   MigrationsConfig          `mapstructure:"autowp-migrations"    yaml:"autowp-migrations"`
+	FileStorage        FileStorageConfig         `mapstructure:"file_storage"         yaml:"file_storage"`
+	RabbitMQ           string                    `mapstructure:"rabbitmq"             yaml:"rabbitmq"`
+	MonitoringQueue    string                    `mapstructure:"monitoring_queue"     yaml:"monitoring_queue"`
+	PrivateRest        RestConfig                `mapstructure:"private-rest"         yaml:"private-rest"`
+	Telegram           TelegramConfig            `mapstructure:"telegram"             yaml:"telegram"`
+	PostgresDSN        string                    `mapstructure:"postgres-dsn"         yaml:"postgres-dsn"`
+	PostgresMigrations MigrationsConfig          `mapstructure:"postgres-migrations"  yaml:"postgres-migrations"`
+	Recaptcha          RecaptchaConfig           `mapstructure:"recaptcha"            yaml:"recaptcha"`
+	MockEmailSender    bool                      `mapstructure:"mock-email-sender"    yaml:"mock-email-sender"`
+	SMTP               SMTPConfig                `mapstructure:"smtp"                 yaml:"smtp"`
+	Feedback           FeedbackConfig            `mapstructure:"feedback"             yaml:"feedback"`
+	Keycloak           KeycloakConfig            `mapstructure:"keycloak"             yaml:"keycloak"`
+	UsersSalt          string                    `mapstructure:"users-salt"           yaml:"users-salt"`
+	EmailSalt          string                    `mapstructure:"email-salt"           yaml:"email-salt"`
+	Languages          map[string]LanguageConfig `mapstructure:"languages"            yaml:"languages"`
+	Captcha            bool                      `mapstructure:"captcha"              yaml:"captcha"`
+	ImageStorage       ImageStorageConfig        `mapstructure:"image-storage"        yaml:"image-storage"`
+	Redis              string                    `mapstructure:"redis"                yaml:"redis"`
+	DonationsVodPrice  int32                     `mapstructure:"donations-vod-price"  yaml:"donations-vod-price"`
+	About              AboutConfig               `mapstructure:"about"                yaml:"about"`
+	ContentLanguages   []string                  `mapstructure:"content-languages"    yaml:"content-languages"`
+	MessageInterval    int64                     `mapstructure:"message-interval"     yaml:"message-interval"`
+	MostsMinCarsCount  int                       `mapstructure:"mosts-min-cars-count" yaml:"mosts-min-cars-count"`
+	YoomoneyConfig     YoomoneyConfig            `mapstructure:"yoomoney"             yaml:"yoomoney"`
 }
 
 var configMutex = sync.RWMutex{}
@@ -163,8 +163,8 @@ func LoadConfig(path string) Config {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(path)
-	err = viper.MergeInConfig()
 
+	err = viper.MergeInConfig()
 	if err != nil {
 		panic(err)
 	}

@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -20,6 +21,11 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+var (
+	errUnknownCommentType        = errors.New("unknown comments type identifier")
+	errUnknownModeratorAttention = errors.New("unknown ModeratorAttention value")
 )
 
 const MaxReplies = 500
@@ -65,7 +71,7 @@ func convertType(commentsType CommentsType) (comments.CommentType, error) {
 		return 0, nil
 	}
 
-	return 0, fmt.Errorf("`%v` is unknown comments type identifier", commentsType)
+	return 0, fmt.Errorf("%w: `%v`", errUnknownCommentType, commentsType)
 }
 
 func reverseConvertType(commentsType comments.CommentType) (CommentsType, error) {
@@ -82,7 +88,7 @@ func reverseConvertType(commentsType comments.CommentType) (CommentsType, error)
 		return CommentsType_FORUMS_TYPE_ID, nil
 	}
 
-	return 0, fmt.Errorf("`%v` is unknown comments type identifier", commentsType)
+	return 0, fmt.Errorf("%w: `%v`", errUnknownCommentType, commentsType)
 }
 
 func convertModeratorAttention(value comments.ModeratorAttention) (ModeratorAttention, error) {
@@ -95,7 +101,7 @@ func convertModeratorAttention(value comments.ModeratorAttention) (ModeratorAtte
 		return ModeratorAttention_COMPLETE, nil
 	}
 
-	return 0, fmt.Errorf("`%v` is unknown ModeratorAttention value", value)
+	return 0, fmt.Errorf("%w: `%v`", errUnknownModeratorAttention, value)
 }
 
 func reverseConvertModeratorAttention(value ModeratorAttention) (comments.ModeratorAttention, error) {
@@ -108,7 +114,7 @@ func reverseConvertModeratorAttention(value ModeratorAttention) (comments.Modera
 		return comments.ModeratorAttentionCompleted, nil
 	}
 
-	return 0, fmt.Errorf("`%v` is unknown ModeratorAttention value", value)
+	return 0, fmt.Errorf("%w: `%v`", errUnknownModeratorAttention, value)
 }
 
 func extractMessage(
@@ -135,7 +141,7 @@ func extractMessage(
 	}
 
 	isNew := false
-	if fields.IsNew && userID > 0 {
+	if fields.GetIsNew() && userID > 0 {
 		isNew, err = repository.IsNewMessage(ctx, row.TypeID, row.ItemID, row.CreatedAt, userID)
 		if err != nil {
 			return nil, err
@@ -158,29 +164,29 @@ func extractMessage(
 	)
 
 	if canRemove || !row.Deleted {
-		if fields.Preview {
+		if fields.GetPreview() {
 			preview = util.GetTextPreview(row.Message, util.TextPreviewOptions{
 				Maxlines:  1,
 				Maxlength: comments.CommentMessagePreviewLength,
 			})
 		}
 
-		if fields.Route {
+		if fields.GetRoute() {
 			route, err = repository.MessageRowRoute(ctx, row.TypeID, row.ItemID, row.ID)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		if fields.Text {
+		if fields.GetText() {
 			text = row.Message
 		}
 
-		if fields.Vote {
+		if fields.GetVote() {
 			vote = row.Vote
 		}
 
-		if fields.UserVote {
+		if fields.GetUserVote() {
 			if userID != 0 {
 				userVote, err = repository.UserVote(ctx, userID, row.ID)
 				if err != nil {
@@ -189,15 +195,15 @@ func extractMessage(
 			}
 		}
 
-		if fields.Replies {
+		if fields.GetReplies() {
 			paginator := repository.Paginator(comments.Request{
 				ItemID:       row.ItemID,
 				TypeID:       row.TypeID,
 				ParentID:     row.ID,
 				PerPage:      MaxReplies,
 				Order:        []exp.OrderedExpression{schema.CommentMessageTableDatetimeCol.Desc()},
-				FetchMessage: fields.Preview || fields.Text,
-				FetchVote:    fields.Vote,
+				FetchMessage: fields.GetPreview() || fields.GetText(),
+				FetchVote:    fields.GetVote(),
 				FetchIP:      canViewIP,
 			})
 
@@ -226,7 +232,7 @@ func extractMessage(
 			}
 		}
 
-		if fields.Status && isModer {
+		if fields.GetStatus() && isModer {
 			if row.TypeID == comments.TypeIDPictures {
 				ps, err := picturesRepository.Status(ctx, row.ItemID)
 				if err != nil {
@@ -286,7 +292,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	ctx context.Context,
 	in *GetCommentVotesRequest,
 ) (*CommentVoteItems, error) {
-	votes, err := s.repository.GetVotes(ctx, in.CommentId)
+	votes, err := s.repository.GetVotes(ctx, in.GetCommentId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -303,7 +309,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		result = append(result, &CommentVote{
+		result = append(result, &CommentVote{ //nolint:exhaustruct
 			Value: CommentVote_POSITIVE,
 			User:  extracted,
 		})
@@ -315,13 +321,13 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		result = append(result, &CommentVote{
+		result = append(result, &CommentVote{ //nolint:exhaustruct
 			Value: CommentVote_NEGATIVE,
 			User:  extracted,
 		})
 	}
 
-	return &CommentVoteItems{
+	return &CommentVoteItems{ //nolint:exhaustruct
 		Items: result,
 	}, nil
 }
@@ -338,7 +344,6 @@ func (s *CommentsGRPCServer) Subscribe(ctx context.Context, in *CommentsSubscrib
 	}
 
 	err = s.repository.Subscribe(ctx, userID, commentsType, in.GetItemId())
-
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
@@ -440,7 +445,6 @@ func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCo
 	}
 
 	err = s.repository.MoveMessage(ctx, in.GetCommentId(), commentsType, in.GetItemId())
-
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
@@ -480,7 +484,7 @@ func (s *CommentsGRPCServer) VoteComment(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &CommentsVoteCommentResponse{
+	return &CommentsVoteCommentResponse{ //nolint:exhaustruct
 		Votes: votes,
 	}, nil
 }
@@ -500,11 +504,11 @@ func (s *AddCommentRequest) Validate(
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{
 			&validation.NotEmpty{},
-			&validation.StringLength{Max: comments.MaxMessageLength},
+			&validation.StringLength{Min: 0, Max: comments.MaxMessageLength},
 		},
 	}
-	s.Message, problems, err = msgInputFilter.IsValidString(s.Message)
 
+	s.Message, problems, err = msgInputFilter.IsValidString(s.GetMessage())
 	if err != nil {
 		return nil, err
 	}
@@ -555,14 +559,14 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	err = s.repository.AssertItem(ctx, commentsType, in.ItemId)
+	err = s.repository.AssertItem(ctx, commentsType, in.GetItemId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	moderatorAttention := false
 	if res := s.enforcer.Enforce(role, "comment", "moderator-attention"); res {
-		moderatorAttention = in.ModeratorAttention
+		moderatorAttention = in.GetModeratorAttention()
 	}
 
 	remoteAddr := "127.0.0.1"
@@ -582,7 +586,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 
 	messageID, err := s.repository.Add(
 		ctx,
-		commentsType, in.ItemId, in.ParentId, userID, in.Message, remoteAddr, moderatorAttention,
+		commentsType, in.GetItemId(), in.GetParentId(), userID, in.GetMessage(), remoteAddr, moderatorAttention,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -592,14 +596,14 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Errorf(codes.Internal, "Message add failed")
 	}
 
-	if s.enforcer.Enforce(role, "global", "moderate") && in.ParentId > 0 && in.Resolve {
-		err = s.repository.CompleteMessage(ctx, in.ParentId)
+	if s.enforcer.Enforce(role, "global", "moderate") && in.GetParentId() > 0 && in.GetResolve() {
+		err = s.repository.CompleteMessage(ctx, in.GetParentId())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
-	if in.TypeId == CommentsType_FORUMS_TYPE_ID {
+	if in.GetTypeId() == CommentsType_FORUMS_TYPE_ID {
 		err = s.usersRepository.IncForumMessages(ctx, userID)
 	} else {
 		err = s.usersRepository.TouchLastMessage(ctx, userID)
@@ -609,7 +613,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if in.ParentId > 0 {
+	if in.GetParentId() > 0 {
 		err = s.repository.NotifyAboutReply(ctx, messageID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -621,7 +625,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &AddCommentResponse{
+	return &AddCommentResponse{ //nolint:exhaustruct
 		Id: messageID,
 	}, nil
 }
@@ -629,7 +633,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 func (s *CommentsGRPCServer) GetMessagePage(
 	ctx context.Context, in *GetMessagePageRequest,
 ) (*APICommentsMessagePage, error) {
-	itemID, typeID, page, err := s.repository.MessagePage(ctx, in.MessageId, in.PerPage)
+	itemID, typeID, page, err := s.repository.MessagePage(ctx, in.GetMessageId(), in.GetPerPage())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -639,7 +643,7 @@ func (s *CommentsGRPCServer) GetMessagePage(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &APICommentsMessagePage{
+	return &APICommentsMessagePage{ //nolint:exhaustruct
 		TypeId: convertedTypeID,
 		ItemId: itemID,
 		Page:   page,
@@ -654,12 +658,12 @@ func (s *CommentsGRPCServer) GetMessage(ctx context.Context, in *GetMessageReque
 
 	canViewIP := s.enforcer.Enforce(role, "user", "ip")
 
-	fields := in.Fields
+	fields := in.GetFields()
 	if fields == nil {
-		fields = &CommentMessageFields{}
+		fields = &CommentMessageFields{} //nolint:exhaustruct
 	}
 
-	row, err := s.repository.Message(ctx, in.Id, fields.Preview || fields.Text, fields.Vote, canViewIP)
+	row, err := s.repository.Message(ctx, in.GetId(), fields.GetPreview() || fields.GetText(), fields.GetVote(), canViewIP)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -680,30 +684,30 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
 	canViewIP := s.enforcer.Enforce(role, "user", "ip")
 
-	typeID, err := convertType(in.TypeId)
+	typeID, err := convertType(in.GetTypeId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	fields := in.Fields
+	fields := in.GetFields()
 	if fields == nil {
 		fields = &CommentMessageFields{}
 	}
 
 	options := comments.Request{
-		ItemID:       in.ItemId,
+		ItemID:       in.GetItemId(),
 		TypeID:       typeID,
-		ParentID:     in.ParentId,
-		NoParents:    in.NoParents,
-		UserID:       in.UserId,
+		ParentID:     in.GetParentId(),
+		NoParents:    in.GetNoParents(),
+		UserID:       in.GetUserId(),
 		Order:        []exp.OrderedExpression{schema.CommentMessageTableDatetimeCol.Asc()},
-		FetchMessage: fields.Preview || fields.Text,
-		FetchVote:    fields.Vote,
+		FetchMessage: fields.GetPreview() || fields.GetText(),
+		FetchVote:    fields.GetVote(),
 		FetchIP:      canViewIP,
-		Page:         in.Page,
+		Page:         in.GetPage(),
 	}
 
-	switch in.Order {
+	switch in.GetOrder() {
 	case GetMessagesRequest_VOTE_DESC:
 		options.Order = []exp.OrderedExpression{
 			schema.CommentMessageTableVoteCol.Desc(),
@@ -721,15 +725,15 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 	}
 
 	if isModer {
-		if len(in.UserIdentity) > 0 {
-			options.UserID, err = s.usersRepository.UserIDByIdentity(ctx, in.UserIdentity)
+		if len(in.GetUserIdentity()) > 0 {
+			options.UserID, err = s.usersRepository.UserIDByIdentity(ctx, in.GetUserIdentity())
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		}
 
-		if in.ModeratorAttention != ModeratorAttention_NONE {
-			ma, err := reverseConvertModeratorAttention(in.ModeratorAttention)
+		if in.GetModeratorAttention() != ModeratorAttention_NONE {
+			ma, err := reverseConvertModeratorAttention(in.GetModeratorAttention())
 			if err != nil {
 				return nil, status.Error(codes.InvalidArgument, err.Error())
 			}
@@ -737,24 +741,24 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 			options.ModeratorAttention = ma
 		}
 
-		if in.PicturesOfItemId > 0 {
-			options.PicturesOfItemID = in.PicturesOfItemId
+		if in.GetPicturesOfItemId() > 0 {
+			options.PicturesOfItemID = in.GetPicturesOfItemId()
 		}
-	} else if in.ItemId == 0 && in.UserId == 0 {
+	} else if in.GetItemId() == 0 && in.GetUserId() == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if in.Limit <= 0 {
+	if in.GetLimit() <= 0 {
 		in.Limit = 50000
 	}
 
-	options.PerPage = in.Limit
+	options.PerPage = in.GetLimit()
 
 	paginator := s.repository.Paginator(options)
 
 	msgs := make([]*APICommentsMessage, 0)
 
-	if in.Limit > 0 {
+	if in.GetLimit() > 0 {
 		sqSelect, err := paginator.GetCurrentItems(ctx)
 		if err != nil {
 			return nil, err
@@ -777,8 +781,8 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 			msgs = append(msgs, msg)
 		}
 
-		if userID > 0 && in.ItemId > 0 && in.TypeId > 0 {
-			err = s.repository.SetSubscriptionSent(ctx, typeID, in.ItemId, userID, false)
+		if userID > 0 && in.GetItemId() > 0 && in.GetTypeId() > 0 {
+			err = s.repository.SetSubscriptionSent(ctx, typeID, in.GetItemId(), userID, false)
 			if err != nil {
 				return nil, err
 			}

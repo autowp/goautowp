@@ -3,7 +3,6 @@ package goautowp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/url"
 	"time"
@@ -103,7 +102,7 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 			Count:       int32(item.Count),
 			Ban:         topItemBan,
 			InWhitelist: inWhitelist,
-			WhoisUrl:    fmt.Sprintf("https://nic.ru/whois/?query=%s", url.QueryEscape(item.IP.String())),
+			WhoisUrl:    "https://nic.ru/whois/?query=" + url.QueryEscape(item.IP.String()),
 		}
 	}
 
@@ -125,7 +124,7 @@ func (s *TrafficGRPCServer) DeleteFromBlacklist(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	ip := net.ParseIP(in.Ip)
+	ip := net.ParseIP(in.GetIp())
 	if ip == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
@@ -151,7 +150,7 @@ func (s *TrafficGRPCServer) DeleteFromWhitelist(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	ip := net.ParseIP(in.Ip)
+	ip := net.ParseIP(in.GetIp())
 	if ip == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
@@ -177,14 +176,14 @@ func (s *TrafficGRPCServer) AddToBlacklist(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	ip := net.ParseIP(in.Ip)
+	ip := net.ParseIP(in.GetIp())
 	if ip == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	duration := time.Hour * time.Duration(in.Period)
+	duration := time.Hour * time.Duration(in.GetPeriod())
 
-	err = s.traffic.Ban.Add(ctx, ip, duration, userID, in.Reason)
+	err = s.traffic.Ban.Add(ctx, ip, duration, userID, in.GetReason())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -205,7 +204,7 @@ func (s *TrafficGRPCServer) AddToWhitelist(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	ip := net.ParseIP(in.Ip)
+	ip := net.ParseIP(in.GetIp())
 	if ip == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
@@ -255,7 +254,7 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 }
 
 func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*users.DBUser, error) {
-	var r users.DBUser
+	var userRow users.DBUser
 
 	success, err := s.db.Select(
 		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
@@ -263,7 +262,7 @@ func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*users.DBUse
 	).
 		From(schema.UserTable).
 		Where(schema.UserTableIDCol.Eq(id)).
-		ScanStructContext(ctx, &r)
+		ScanStructContext(ctx, &userRow)
 	if err != nil {
 		return nil, err
 	}
@@ -272,5 +271,5 @@ func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*users.DBUse
 		return nil, ErrUserNotFound
 	}
 
-	return &r, nil
+	return &userRow, nil
 }

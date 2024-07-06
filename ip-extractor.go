@@ -6,10 +6,8 @@ import (
 	"net"
 
 	"github.com/autowp/goautowp/ban"
-
-	"github.com/casbin/casbin"
-
 	"github.com/autowp/goautowp/users"
+	"github.com/casbin/casbin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

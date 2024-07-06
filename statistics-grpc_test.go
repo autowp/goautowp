@@ -18,16 +18,18 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+var errGridIsEmpty = errors.New("grid is empty")
+
 func assertGridNotEmpty(grid []*PulseGrid) error {
-	for _, x := range grid {
-		for _, y := range x.Line {
+	for _, lines := range grid {
+		for _, y := range lines.GetLine() {
 			if y > 0 {
 				return nil
 			}
 		}
 	}
 
-	return errors.New("grid is empty")
+	return errGridIsEmpty
 }
 
 func TestStatisticsPulse(t *testing.T) {
@@ -70,7 +72,7 @@ func TestStatisticsPulse(t *testing.T) {
 	_, err = db.Insert(schema.LogEventsTable).
 		Cols("description", "user_id", "add_datetime").
 		Vals(
-			goqu.Vals{"Description", user.Id, goqu.Func("NOW")},
+			goqu.Vals{"Description", user.GetId(), goqu.Func("NOW")},
 		).Executor().Exec()
 	require.NoError(t, err)
 
@@ -82,21 +84,21 @@ func TestStatisticsPulse(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, assertGridNotEmpty(r1.Grid))
+	require.NoError(t, assertGridNotEmpty(r1.GetGrid()))
 
 	r1, err = statisticsClient.GetPulse(ctxTimeout, &PulseRequest{
 		Period: PulseRequest_MONTH,
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, assertGridNotEmpty(r1.Grid))
+	require.NoError(t, assertGridNotEmpty(r1.GetGrid()))
 
 	r1, err = statisticsClient.GetPulse(ctxTimeout, &PulseRequest{
 		Period: PulseRequest_YEAR,
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, assertGridNotEmpty(r1.Grid))
+	require.NoError(t, assertGridNotEmpty(r1.GetGrid()))
 }
 
 func TestAboutData(t *testing.T) {

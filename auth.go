@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	errAuthTokenIsInvalid  = errors.New("authorization token is invalid")
+	errFailedRoleDetection = errors.New("failed role detection")
 )
 
 type Auth struct {
@@ -56,7 +62,7 @@ func (s *Auth) ValidateGRPC(ctx context.Context) (int64, string, error) {
 
 func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, string, error) {
 	if len(tokenString) == 0 {
-		return 0, "", fmt.Errorf("authorization token is invalid")
+		return 0, "", errAuthTokenIsInvalid
 	}
 
 	var claims users.Claims
@@ -72,7 +78,7 @@ func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, st
 	}
 
 	if role == "" {
-		return 0, "", fmt.Errorf("failed role detection for `%v`", claims.Subject)
+		return 0, "", fmt.Errorf("%w: subject: `%v`", errFailedRoleDetection, claims.Subject)
 	}
 
 	err = s.repository.RegisterVisit(ctx, id)

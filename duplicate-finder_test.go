@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -39,10 +40,10 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
-func addImage(t *testing.T, db *goqu.Database, filepath string) int {
+func addImage(t *testing.T, db *goqu.Database, imageFilepath string) int {
 	t.Helper()
 
-	_, filename := path.Split(filepath)
+	_, filename := path.Split(imageFilepath)
 	extension := path.Ext(filename)
 	name := strings.TrimSuffix(filename, extension)
 
@@ -50,13 +51,20 @@ func addImage(t *testing.T, db *goqu.Database, filepath string) int {
 	_, err := rand.Read(randBytes)
 	require.NoError(t, err)
 
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	exPath := filepath.Dir(ex)
+
 	newPath := name + hex.EncodeToString(randBytes) + extension
-	newFullpath := os.Getenv("AUTOWP_IMAGES_DIR") + "/" + newPath
+	newFullpath := exPath + "/images/" + newPath
 
 	err = os.MkdirAll(path.Dir(newFullpath), os.ModePerm)
 	require.NoError(t, err)
 
-	err = copyFile(filepath, newFullpath)
+	err = copyFile(imageFilepath, newFullpath)
 	require.NoError(t, err)
 
 	res, err := db.Insert(schema.ImageTable).Rows(goqu.Record{
@@ -115,11 +123,11 @@ func TestDuplicateFinder(t *testing.T) {
 
 	ctx := context.Background()
 
-	id1 := addPicture(t, goquDB, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/large.jpg")
+	id1 := addPicture(t, goquDB, "./test/large.jpg")
 	err = df.Index(ctx, id1, "http://localhost:80/large.jpg")
 	require.NoError(t, err)
 
-	id2 := addPicture(t, goquDB, os.Getenv("AUTOWP_TEST_ASSETS_DIR")+"/small.jpg")
+	id2 := addPicture(t, goquDB, "./test/small.jpg")
 	err = df.Index(ctx, id2, "http://localhost:80/small.jpg")
 	require.NoError(t, err)
 
@@ -147,5 +155,5 @@ func TestDuplicateFinder(t *testing.T) {
 	).ScanValContext(ctx, &distance)
 	require.NoError(t, err)
 	require.True(t, success)
-	require.True(t, distance <= 2)
+	require.LessOrEqual(t, distance, 2)
 }

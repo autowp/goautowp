@@ -92,7 +92,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 		return nil, status.Error(codes.Internal, "redis not initialized")
 	}
 
-	key := "GO_TOPBRANDSLIST_3_" + in.Language
+	key := "GO_TOPBRANDSLIST_3_" + in.GetLanguage()
 
 	item, err := s.redis.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -103,7 +103,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 
 	if errors.Is(err, redis.Nil) {
 		options := items.ListOptions{
-			Language: in.Language,
+			Language: in.GetLanguage(),
 			Fields: items.ListFields{
 				NameOnly:            true,
 				DescendantsCount:    true,
@@ -128,7 +128,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 		cache.Items = list
 		cache.Total = count
 
-		b, err := json.Marshal(cache)
+		b, err := json.Marshal(cache) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -138,20 +138,20 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		err = json.Unmarshal([]byte(item), &cache)
+		err = json.Unmarshal([]byte(item), &cache) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
 	brands := make([]*APITopBrandsListItem, len(cache.Items))
-	for idx, b := range cache.Items {
+	for idx, brand := range cache.Items {
 		brands[idx] = &APITopBrandsListItem{
-			Id:            b.ID,
-			Catname:       b.Catname,
-			Name:          b.NameOnly,
-			ItemsCount:    b.DescendantsCount,
-			NewItemsCount: b.NewDescendantsCount,
+			Id:            brand.ID,
+			Catname:       brand.Catname,
+			Name:          brand.NameOnly,
+			ItemsCount:    brand.DescendantsCount,
+			NewItemsCount: brand.NewDescendantsCount,
 		}
 	}
 
@@ -167,7 +167,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 ) (*APITopPersonsList, error) {
 	var pictureItemType pictures.ItemPictureType
 
-	switch in.PictureItemType { //nolint:exhaustive
+	switch in.GetPictureItemType() { //nolint:exhaustive
 	case PictureItemType_PICTURE_CONTENT:
 		pictureItemType = pictures.ItemPictureContent
 	case PictureItemType_PICTURE_AUTHOR:
@@ -176,7 +176,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 		return nil, status.Error(codes.InvalidArgument, "Unexpected picture_item_type")
 	}
 
-	key := fmt.Sprintf("GO_PERSONS_3_%d_%s", pictureItemType, in.Language)
+	key := fmt.Sprintf("GO_PERSONS_3_%d_%s", pictureItemType, in.GetLanguage())
 
 	item, err := s.redis.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -187,7 +187,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 
 	if errors.Is(err, redis.Nil) {
 		res, _, err = s.repository.List(ctx, items.ListOptions{
-			Language: in.Language,
+			Language: in.GetLanguage(),
 			Fields: items.ListFields{
 				NameOnly: true,
 			},
@@ -205,7 +205,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		b, err := json.Marshal(res)
+		b, err := json.Marshal(res) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -215,7 +215,7 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		err = json.Unmarshal([]byte(item), &res)
+		err = json.Unmarshal([]byte(item), &res) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -238,7 +238,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 	ctx context.Context,
 	in *GetTopFactoriesListRequest,
 ) (*APITopFactoriesList, error) {
-	key := fmt.Sprintf("GO_FACTORIES_3_%s", in.Language)
+	key := "GO_FACTORIES_3_" + in.GetLanguage()
 
 	item, err := s.redis.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -249,7 +249,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 
 	if errors.Is(err, redis.Nil) {
 		res, _, err = s.repository.List(ctx, items.ListOptions{
-			Language: in.Language,
+			Language: in.GetLanguage(),
 			Fields: items.ListFields{
 				NameOnly:           true,
 				ChildItemsCount:    true,
@@ -266,7 +266,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		b, err := json.Marshal(res)
+		b, err := json.Marshal(res) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -276,7 +276,7 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		err = json.Unmarshal([]byte(item), &res)
+		err = json.Unmarshal([]byte(item), &res) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -301,7 +301,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 	ctx context.Context,
 	in *GetTopCategoriesListRequest,
 ) (*APITopCategoriesList, error) {
-	key := fmt.Sprintf("GO_CATEGORIES_6_%s", in.Language)
+	key := "GO_CATEGORIES_6_" + in.GetLanguage()
 
 	item, err := s.redis.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -312,7 +312,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 
 	if errors.Is(err, redis.Nil) {
 		res, _, err = s.repository.List(ctx, items.ListOptions{
-			Language: in.Language,
+			Language: in.GetLanguage(),
 			Fields: items.ListFields{
 				NameOnly:            true,
 				DescendantsCount:    true,
@@ -327,7 +327,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		b, err := json.Marshal(res)
+		b, err := json.Marshal(res) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -337,20 +337,20 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		err = json.Unmarshal([]byte(item), &res)
+		err = json.Unmarshal([]byte(item), &res) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
 	is := make([]*APITopCategoriesListItem, len(res))
-	for idx, b := range res {
+	for idx, itm := range res {
 		is[idx] = &APITopCategoriesListItem{
-			Id:       b.ID,
-			Name:     b.NameOnly,
-			Catname:  b.Catname,
-			Count:    b.DescendantsCount,
-			NewCount: b.NewDescendantsCount,
+			Id:       itm.ID,
+			Name:     itm.NameOnly,
+			Catname:  itm.Catname,
+			Count:    itm.DescendantsCount,
+			NewCount: itm.NewDescendantsCount,
 		}
 	}
 
@@ -363,7 +363,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 	ctx context.Context,
 	in *GetTopTwinsBrandsListRequest,
 ) (*APITopTwinsBrandsList, error) {
-	key := fmt.Sprintf("GO_TWINS_5_%s", in.Language)
+	key := "GO_TWINS_5_" + in.GetLanguage()
 
 	item, err := s.redis.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -380,7 +380,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 
 	if errors.Is(err, redis.Nil) {
 		twinsData.Res, _, err = s.repository.List(ctx, items.ListOptions{
-			Language: in.Language,
+			Language: in.GetLanguage(),
 			Fields: items.ListFields{
 				NameOnly: true,
 			},
@@ -413,7 +413,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		b, err := json.Marshal(twinsData)
+		b, err := json.Marshal(twinsData) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -423,20 +423,20 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		err = json.Unmarshal([]byte(item), &twinsData)
+		err = json.Unmarshal([]byte(item), &twinsData) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
 	is := make([]*APITwinsBrandsListItem, len(twinsData.Res))
-	for idx, b := range twinsData.Res {
+	for idx, twin := range twinsData.Res {
 		is[idx] = &APITwinsBrandsListItem{
-			Id:       b.ID,
-			Catname:  b.Catname,
-			Name:     b.NameOnly,
-			Count:    b.ItemsCount,
-			NewCount: b.NewItemsCount,
+			Id:       twin.ID,
+			Catname:  twin.Catname,
+			Name:     twin.NameOnly,
+			Count:    twin.ItemsCount,
+			NewCount: twin.NewItemsCount,
 		}
 	}
 
@@ -451,7 +451,7 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	in *GetTwinsBrandsListRequest,
 ) (*APITwinsBrandsList, error) {
 	twinsData, _, err := s.repository.List(ctx, items.ListOptions{
-		Language: in.Language,
+		Language: in.GetLanguage(),
 		Fields: items.ListFields{
 			NameOnly: true,
 		},
@@ -472,13 +472,13 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	}
 
 	is := make([]*APITwinsBrandsListItem, len(twinsData))
-	for idx, b := range twinsData {
+	for idx, brand := range twinsData {
 		is[idx] = &APITwinsBrandsListItem{
-			Id:       b.ID,
-			Catname:  b.Catname,
-			Name:     b.NameOnly,
-			Count:    b.ItemsCount,
-			NewCount: b.NewItemsCount,
+			Id:       brand.ID,
+			Catname:  brand.Catname,
+			Name:     brand.NameOnly,
+			Count:    brand.ItemsCount,
+			NewCount: brand.NewItemsCount,
 		}
 	}
 
@@ -488,9 +488,9 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 }
 
 func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
-	dest.OwnerID = request.OwnerId
+	dest.OwnerID = request.GetOwnerId()
 
-	switch request.Status {
+	switch request.GetStatus() {
 	case PictureStatus_PICTURE_STATUS_UNKNOWN:
 	case PictureStatus_PICTURE_STATUS_ACCEPTED:
 		dest.Status = pictures.StatusAccepted
@@ -502,73 +502,73 @@ func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
 		dest.Status = pictures.StatusRemoved
 	}
 
-	if request.ItemPicture != nil {
+	if request.GetItemPicture() != nil {
 		dest.ItemPicture = &items.ItemPicturesOptions{}
-		mapItemPicturesRequest(request.ItemPicture, dest.ItemPicture)
+		mapItemPicturesRequest(request.GetItemPicture(), dest.ItemPicture)
 	}
 }
 
 func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
-	options.NoParents = in.NoParent
-	options.Catname = in.Catname
-	options.IsConcept = in.IsConcept
-	options.Name = in.Name
-	options.ItemID = in.Id
-	options.EngineItemID = in.EngineId
+	options.NoParents = in.GetNoParent()
+	options.Catname = in.GetCatname()
+	options.IsConcept = in.GetIsConcept()
+	options.Name = in.GetName()
+	options.ItemID = in.GetId()
+	options.EngineItemID = in.GetEngineId()
 
-	if in.AncestorId != 0 {
+	if in.GetAncestorId() != 0 {
 		options.AncestorItems = &items.ListOptions{
-			ItemID: in.AncestorId,
+			ItemID: in.GetAncestorId(),
 		}
 	}
 
-	if in.Order == ListItemsRequest_NAME_NAT {
+	if in.GetOrder() == ListItemsRequest_NAME_NAT {
 		options.SortByName = true
 	}
 
-	itemTypeID := reverseConvertItemTypeID(in.TypeId)
+	itemTypeID := reverseConvertItemTypeID(in.GetTypeId())
 	if itemTypeID != 0 {
 		options.TypeID = []items.ItemType{itemTypeID}
 	}
 
-	if in.Descendant != nil {
+	if in.GetDescendant() != nil {
 		options.DescendantItems = &items.ListOptions{}
 
-		err := mapItemsRequest(in.Descendant, options.DescendantItems)
+		err := mapItemsRequest(in.GetDescendant(), options.DescendantItems)
 		if err != nil {
 			return err
 		}
 	}
 
-	if in.Parent != nil {
+	if in.GetParent() != nil {
 		options.ParentItems = &items.ListOptions{}
 
-		err := mapItemsRequest(in.Parent, options.ParentItems)
+		err := mapItemsRequest(in.GetParent(), options.ParentItems)
 		if err != nil {
 			return err
 		}
 	}
 
-	if in.DescendantPictures != nil {
+	if in.GetDescendantPictures() != nil {
 		options.DescendantPictures = &items.ItemPicturesOptions{}
-		mapItemPicturesRequest(in.DescendantPictures, options.DescendantPictures)
+		mapItemPicturesRequest(in.GetDescendantPictures(), options.DescendantPictures)
 	}
 
-	if in.PreviewPictures != nil {
+	if in.GetPreviewPictures() != nil {
 		options.PreviewPictures = &items.ItemPicturesOptions{}
-		mapItemPicturesRequest(in.PreviewPictures, options.PreviewPictures)
+		mapItemPicturesRequest(in.GetPreviewPictures(), options.PreviewPictures)
 	}
 
 	return nil
 }
 
 func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPicturesOptions) {
-	if request.Pictures != nil {
+	if request.GetPictures() != nil {
 		dest.Pictures = &items.PicturesOptions{}
-		mapPicturesRequest(request.Pictures, dest.Pictures)
+		mapPicturesRequest(request.GetPictures(), dest.Pictures)
 	}
 
-	switch request.TypeId {
+	switch request.GetTypeId() {
 	case ItemPictureType_ITEM_PICTURE_UNKNOWN:
 	case ItemPictureType_ITEM_PICTURE_CONTENT:
 		dest.TypeID = pictures.ItemPictureContent
@@ -578,7 +578,7 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 		dest.TypeID = pictures.ItemPictureCopyrights
 	}
 
-	dest.PerspectiveID = request.PerspectiveId
+	dest.PerspectiveID = request.GetPerspectiveId()
 }
 
 func convertFields(fields *ItemFields) items.ListFields {
@@ -587,40 +587,40 @@ func convertFields(fields *ItemFields) items.ListFields {
 	}
 
 	previewPictures := items.ListPreviewPicturesFields{}
-	if fields.PreviewPictures != nil {
-		previewPictures.Route = fields.PreviewPictures.Route
+	if fields.GetPreviewPictures() != nil {
+		previewPictures.Route = fields.GetPreviewPictures().GetRoute()
 		previewPictures.Picture = items.ListPreviewPicturesPictureFields{
-			NameText: fields.PreviewPictures.Picture.NameText,
+			NameText: fields.GetPreviewPictures().GetPicture().GetNameText(),
 		}
 	}
 
 	result := items.ListFields{
-		NameOnly:                   fields.NameOnly,
-		NameHTML:                   fields.NameHtml,
-		NameText:                   fields.NameText,
-		NameDefault:                fields.NameDefault,
-		Description:                fields.Description,
-		HasText:                    fields.HasText,
+		NameOnly:                   fields.GetNameOnly(),
+		NameHTML:                   fields.GetNameHtml(),
+		NameText:                   fields.GetNameText(),
+		NameDefault:                fields.GetNameDefault(),
+		Description:                fields.GetDescription(),
+		HasText:                    fields.GetHasText(),
 		PreviewPictures:            previewPictures,
-		TotalPictures:              fields.TotalPictures,
-		DescendantsCount:           fields.DescendantsCount,
-		CurrentPicturesCount:       fields.CurrentPicturesCount,
-		ChildsCount:                fields.ChildsCount,
-		DescendantTwinsGroupsCount: fields.DescendantTwinsGroupsCount,
-		InboxPicturesCount:         fields.InboxPicturesCount,
-		FullName:                   fields.FullName,
-		Logo:                       fields.Logo120,
-		MostsActive:                fields.MostsActive,
-		CommentsAttentionsCount:    fields.CommentsAttentionsCount,
+		TotalPictures:              fields.GetTotalPictures(),
+		DescendantsCount:           fields.GetDescendantsCount(),
+		CurrentPicturesCount:       fields.GetCurrentPicturesCount(),
+		ChildsCount:                fields.GetChildsCount(),
+		DescendantTwinsGroupsCount: fields.GetDescendantTwinsGroupsCount(),
+		InboxPicturesCount:         fields.GetInboxPicturesCount(),
+		FullName:                   fields.GetFullName(),
+		Logo:                       fields.GetLogo120(),
+		MostsActive:                fields.GetMostsActive(),
+		CommentsAttentionsCount:    fields.GetCommentsAttentionsCount(),
 	}
 
 	return result
 }
 
 func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, error) {
-	fields := convertFields(in.Fields)
+	fields := convertFields(in.GetFields())
 
-	res, err := s.repository.Item(ctx, in.Id, in.Language, fields)
+	res, err := s.repository.Item(ctx, in.GetId(), in.GetLanguage(), fields)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -629,17 +629,17 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	localizer := s.i18n.Localizer(in.Language)
+	localizer := s.i18n.Localizer(in.GetLanguage())
 
-	return s.extractor.Extract(ctx, res, in.Fields, localizer)
+	return s.extractor.Extract(ctx, res, in.GetFields(), localizer)
 }
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
 	options := items.ListOptions{
-		Language: in.Language,
-		Limit:    in.Limit,
-		Page:     in.Page,
-		Fields:   convertFields(in.Fields),
+		Language: in.GetLanguage(),
+		Limit:    in.GetLimit(),
+		Page:     in.GetPage(),
+		Fields:   convertFields(in.GetFields()),
 		OrderBy: []exp.OrderedExpression{
 			goqu.T("i").Col("name").Asc(),
 			goqu.T("i").Col("body").Asc(),
@@ -659,11 +659,11 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	localizer := s.i18n.Localizer(in.Language)
+	localizer := s.i18n.Localizer(in.GetLanguage())
 
 	is := make([]*APIItem, len(res))
 	for idx, i := range res {
-		is[idx], err = s.extractor.Extract(ctx, i, in.Fields, localizer)
+		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), localizer)
 		if err != nil {
 			return nil, err
 		}
@@ -695,22 +695,36 @@ func (s *ItemsGRPCServer) GetContentLanguages(_ context.Context, _ *emptypb.Empt
 }
 
 func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *APIItemLinkRequest) (*APIItemLink, error) {
-	il := APIItemLink{}
+	st := struct {
+		ID     int64  `db:"id"`
+		Name   string `db:"name"`
+		URL    string `db:"url"`
+		Type   string `db:"type"`
+		ItemID int64  `db:"item_id"`
+	}{}
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT id, name, url, type, item_id
-		FROM links
-		WHERE id = ?
-	`, in.Id).Scan(&il.Id, &il.Name, &il.Url, &il.Type, &il.ItemId)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
+	success, err := s.db.Select(
+		schema.LinksTableIDCol, schema.LinksTableNameCol, schema.LinksTableURLCol, schema.LinksTableTypeCol,
+		schema.LinksTableItemIDCol,
+	).
+		From(schema.LinksTable).
+		Where(schema.LinksTableIDCol.Eq(in.GetId())).
+		Executor().ScanStructContext(ctx, &st)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &il, nil
+	if !success {
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	return &APIItemLink{
+		Id:     st.ID,
+		Name:   st.Name,
+		Url:    st.URL,
+		Type:   st.Type,
+		ItemId: st.ItemID,
+	}, nil
 }
 
 func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest) (*APIItemLinksResponse, error) {
@@ -719,8 +733,8 @@ func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *APIGetItemLinksR
 		schema.LinksTableItemIDCol,
 	).
 		From(schema.LinksTable).
-		Where(schema.LinksTableItemIDCol.Eq(in.ItemId)).
-		Executor().QueryContext(ctx)
+		Where(schema.LinksTableItemIDCol.Eq(in.GetItemId())).
+		Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -760,7 +774,7 @@ func (s *ItemsGRPCServer) DeleteItemLink(ctx context.Context, in *APIItemLinkReq
 	}
 
 	_, err = s.db.Delete(schema.LinksTable).
-		Where(schema.LinksTableIDCol.Eq(in.Id)).
+		Where(schema.LinksTableIDCol.Eq(in.GetId())).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -789,10 +803,10 @@ func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (
 	}
 
 	res, err := s.db.Insert(schema.LinksTable).Rows(goqu.Record{
-		schema.LinksTableNameColName:   in.Name,
-		schema.LinksTableURLColName:    in.Url,
-		schema.LinksTableTypeColName:   in.Type,
-		schema.LinksTableItemIDColName: in.ItemId,
+		schema.LinksTableNameColName:   in.GetName(),
+		schema.LinksTableURLColName:    in.GetUrl(),
+		schema.LinksTableTypeColName:   in.GetType(),
+		schema.LinksTableItemIDColName: in.GetItemId(),
 	}).Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -829,12 +843,12 @@ func (s *ItemsGRPCServer) UpdateItemLink(ctx context.Context, in *APIItemLink) (
 
 	_, err = s.db.Update(schema.LinksTable).
 		Set(goqu.Record{
-			schema.LinksTableNameColName:   in.Name,
-			schema.LinksTableURLColName:    in.Url,
-			schema.LinksTableTypeColName:   in.Type,
-			schema.LinksTableItemIDColName: in.ItemId,
+			schema.LinksTableNameColName:   in.GetName(),
+			schema.LinksTableURLColName:    in.GetUrl(),
+			schema.LinksTableTypeColName:   in.GetType(),
+			schema.LinksTableItemIDColName: in.GetItemId(),
 		}).
-		Where(schema.LinksTableIDCol.Eq(in.Id)).
+		Where(schema.LinksTableIDCol.Eq(in.GetId())).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -853,11 +867,11 @@ func (s *APIItemLink) Validate() ([]*errdetails.BadRequest_FieldViolation, error
 	nameInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
 		Validators: []validation.ValidatorInterface{
-			&validation.StringLength{Max: itemLinkNameMaxLength},
+			&validation.StringLength{Min: 0, Max: itemLinkNameMaxLength},
 		},
 	}
-	s.Name, problems, err = nameInputFilter.IsValidString(s.Name)
 
+	s.Name, problems, err = nameInputFilter.IsValidString(s.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -873,11 +887,11 @@ func (s *APIItemLink) Validate() ([]*errdetails.BadRequest_FieldViolation, error
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{
 			&validation.URL{},
-			&validation.StringLength{Max: itemLinkNameMaxLength},
+			&validation.StringLength{Min: 0, Max: itemLinkNameMaxLength},
 		},
 	}
-	s.Url, problems, err = urlInputFilter.IsValidString(s.Url)
 
+	s.Url, problems, err = urlInputFilter.IsValidString(s.GetUrl())
 	if err != nil {
 		return nil, err
 	}
@@ -900,8 +914,8 @@ func (s *APIItemLink) Validate() ([]*errdetails.BadRequest_FieldViolation, error
 			}},
 		},
 	}
-	s.Type, problems, err = typeInputFilter.IsValidString(s.Type)
 
+	s.Type, problems, err = typeInputFilter.IsValidString(s.GetType())
 	if err != nil {
 		return nil, err
 	}
@@ -929,7 +943,7 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if in.ItemId == 0 && in.VehicleTypeId == 0 {
+	if in.GetItemId() == 0 && in.GetVehicleTypeId() == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -937,15 +951,15 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 		From(schema.VehicleVehicleTypeTable).
 		Where(schema.VehicleVehicleTypeTableInheritedCol.IsFalse())
 
-	if in.ItemId != 0 {
-		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(in.ItemId))
+	if in.GetItemId() != 0 {
+		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(in.GetItemId()))
 	}
 
-	if in.VehicleTypeId != 0 {
-		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(in.VehicleTypeId))
+	if in.GetVehicleTypeId() != 0 {
+		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(in.GetVehicleTypeId()))
 	}
 
-	rows, err := sqlSelect.Executor().QueryContext(ctx)
+	rows, err := sqlSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -955,14 +969,14 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 	res := make([]*APIItemVehicleType, 0)
 
 	for rows.Next() {
-		var i APIItemVehicleType
+		var ivt APIItemVehicleType
 
-		err = rows.Scan(&i.ItemId, &i.VehicleTypeId)
+		err = rows.Scan(&ivt.ItemId, &ivt.VehicleTypeId)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		res = append(res, &i)
+		res = append(res, &ivt)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -987,7 +1001,7 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if in.ItemId == 0 && in.VehicleTypeId == 0 {
+	if in.GetItemId() == 0 && in.GetVehicleTypeId() == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -995,13 +1009,13 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 		From(schema.VehicleVehicleTypeTable).
 		Where(
 			schema.VehicleVehicleTypeTableInheritedCol.IsFalse(),
-			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(in.ItemId),
-			schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(in.VehicleTypeId),
+			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(in.GetItemId()),
+			schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(in.GetVehicleTypeId()),
 		)
 
-	var i APIItemVehicleType
+	var ivt APIItemVehicleType
 
-	rows, err := sqlSelect.Executor().QueryContext(ctx)
+	rows, err := sqlSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1010,7 +1024,7 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 
 	rows.Next()
 
-	err = rows.Scan(&i.ItemId, &i.VehicleTypeId)
+	err = rows.Scan(&ivt.ItemId, &ivt.VehicleTypeId)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1019,7 +1033,7 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 		return nil, err
 	}
 
-	return &i, nil
+	return &ivt, nil
 }
 
 func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItemVehicleType) (*emptypb.Empty, error) {
@@ -1035,7 +1049,7 @@ func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItem
 	var found bool
 
 	success, err := s.db.Select(goqu.L("1")).From(schema.ItemTable).Where(
-		schema.ItemTableIDCol.Eq(in.ItemId),
+		schema.ItemTableIDCol.Eq(in.GetItemId()),
 		schema.ItemTableItemTypeIDCol.In([]items.ItemType{items.VEHICLE, items.TWINS}),
 	).ScanValContext(ctx, &found)
 	if err != nil {
@@ -1046,7 +1060,7 @@ func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItem
 		return nil, status.Error(codes.NotFound, sql.ErrNoRows.Error())
 	}
 
-	err = s.repository.AddItemVehicleType(ctx, in.ItemId, in.VehicleTypeId)
+	err = s.repository.AddItemVehicleType(ctx, in.GetItemId(), in.GetVehicleTypeId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1067,7 +1081,7 @@ func (s *ItemsGRPCServer) DeleteItemVehicleType(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.repository.RemoveItemVehicleType(ctx, in.ItemId, in.VehicleTypeId)
+	err = s.repository.RemoveItemVehicleType(ctx, in.GetItemId(), in.GetVehicleTypeId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1087,7 +1101,7 @@ func (s *ItemsGRPCServer) GetItemLanguages(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.LanguageList(ctx, in.ItemId)
+	rows, err := s.repository.LanguageList(ctx, in.GetItemId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1139,7 +1153,7 @@ func (s *ItemsGRPCServer) GetItemParentLanguages(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.ParentLanguageList(ctx, in.ItemId, in.ParentId)
+	rows, err := s.repository.ParentLanguageList(ctx, in.GetItemId(), in.GetParentId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

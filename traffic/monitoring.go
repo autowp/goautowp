@@ -82,18 +82,18 @@ func (s *Monitoring) Listen(ctx context.Context, url string, queue string, quitC
 	quit := false
 	for !quit {
 		select {
-		case d := <-msgs:
-			if d.ContentType != "application/json" {
-				logrus.Errorf("unexpected mime `%s`", d.ContentType)
+		case msg := <-msgs:
+			if msg.ContentType != "application/json" {
+				logrus.Errorf("unexpected mime `%s`", msg.ContentType)
 
 				continue
 			}
 
 			var message MonitoringInputMessage
-			err = json.Unmarshal(d.Body, &message)
 
+			err = json.Unmarshal(msg.Body, &message)
 			if err != nil {
-				logrus.Errorf("failed to parse json `%v`: %s", err, d.Body)
+				logrus.Errorf("failed to parse json `%v`: %s", err, msg.Body)
 
 				continue
 			}
@@ -178,7 +178,7 @@ func (s *Monitoring) ListOfTop(ctx context.Context, limit uint) ([]ListOfTopItem
 		GroupBy(schema.IPMonitoringTableIPCol).
 		Order(goqu.I("c").Desc()).
 		Limit(limit).
-		Executor().QueryContext(ctx)
+		Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfil
 		GroupBy(group...).
 		Having(goqu.SUM(schema.IPMonitoringTableCountCol).Gt(profile.Limit)).
 		Limit(numberOfRecordsToScanForAutoban).
-		Executor().QueryContext(ctx)
+		Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}

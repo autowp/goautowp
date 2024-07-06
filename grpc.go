@@ -19,12 +19,14 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+var errNoEndpointsProvided = errors.New("no endpoints provided")
+
 func APIImageToGRPC(image *storage.Image) *APIImage {
 	if image == nil {
 		return nil
 	}
 
-	return &APIImage{
+	return &APIImage{ //nolint:exhaustruct
 		Id:       int32(image.ID()),
 		Src:      image.Src(),
 		Width:    int32(image.Width()),
@@ -55,7 +57,7 @@ func NewGRPCServer(
 	ipExtractor *IPExtractor,
 	feedback *Feedback,
 ) *GRPCServer {
-	return &GRPCServer{
+	return &GRPCServer{ //nolint:exhaustruct
 		auth:              auth,
 		catalogue:         catalogue,
 		reCaptchaConfig:   reCaptchaConfig,
@@ -73,7 +75,7 @@ func (s *GRPCServer) GetSpecs(ctx context.Context, _ *emptypb.Empty) (*SpecsItem
 		return nil, err
 	}
 
-	return &SpecsItems{
+	return &SpecsItems{ //nolint:exhaustruct
 		Items: items,
 	}, nil
 }
@@ -84,7 +86,7 @@ func (s *GRPCServer) GetPerspectives(ctx context.Context, _ *emptypb.Empty) (*Pe
 		return nil, err
 	}
 
-	return &PerspectivesItems{
+	return &PerspectivesItems{ //nolint:exhaustruct
 		Items: items,
 	}, nil
 }
@@ -95,20 +97,20 @@ func (s *GRPCServer) GetPerspectivePages(ctx context.Context, _ *emptypb.Empty) 
 		return nil, err
 	}
 
-	return &PerspectivePagesItems{
+	return &PerspectivePagesItems{ //nolint:exhaustruct
 		Items: items,
 	}, nil
 }
 
 func (s *GRPCServer) GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error) {
-	return &ReCaptchaConfig{
+	return &ReCaptchaConfig{ //nolint:exhaustruct
 		PublicKey: s.reCaptchaConfig.PublicKey,
 	}, nil
 }
 
 func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error) {
 	if len(s.fileStorageConfig.S3.Endpoints) == 0 {
-		return nil, errors.New("no endpoints provided")
+		return nil, errNoEndpointsProvided
 	}
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -126,7 +128,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/brands.css"
 	cssURL := parsedURL.String()
 
-	return &BrandIcons{
+	return &BrandIcons{ //nolint:exhaustruct
 		Image: imageURL,
 		Css:   cssURL,
 	}, nil
@@ -142,7 +144,7 @@ func (s *GRPCServer) AclEnforce( //nolint
 	}
 
 	return &AclEnforceResult{
-		Result: s.enforcer.Enforce(role, in.Resource, in.Privilege),
+		Result: s.enforcer.Enforce(role, in.GetResource(), in.GetPrivilege()),
 	}, nil
 }
 
@@ -170,7 +172,7 @@ func (s *GRPCServer) GetBrandVehicleTypes(
 	ctx context.Context,
 	in *GetBrandVehicleTypesRequest,
 ) (*BrandVehicleTypeItems, error) {
-	items, err := s.catalogue.getBrandVehicleTypes(ctx, in.BrandId)
+	items, err := s.catalogue.getBrandVehicleTypes(ctx, in.GetBrandId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -186,13 +188,13 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	ip := net.ParseIP(in.Ip)
+	ip := net.ParseIP(in.GetIp())
 	if ip == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
 	m := make(map[string]bool)
-	for _, e := range in.Fields {
+	for _, e := range in.GetFields() {
 		m[e] = true
 	}
 
@@ -213,10 +215,10 @@ func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRe
 	remoteAddr := p.Addr.String()
 
 	fv, err := s.feedback.Create(CreateFeedbackRequest{
-		Name:    in.Name,
-		Email:   in.Email,
-		Message: in.Message,
-		Captcha: in.Captcha,
+		Name:    in.GetName(),
+		Email:   in.GetEmail(),
+		Message: in.GetMessage(),
+		Captcha: in.GetCaptcha(),
 		IP:      remoteAddr,
 	})
 	if err != nil {

@@ -33,23 +33,23 @@ func createBanService(t *testing.T) *Repository {
 func TestAddRemove(t *testing.T) {
 	t.Parallel()
 
-	s := createBanService(t)
+	repo := createBanService(t)
 
 	ctx := context.Background()
 
 	ip := net.IPv4(66, 249, 73, 139)
 
-	err := s.Add(ctx, ip, time.Hour, 1, "Test")
+	err := repo.Add(ctx, ip, time.Hour, 1, "Test")
 	require.NoError(t, err)
 
-	exists, err := s.Exists(ctx, ip)
+	exists, err := repo.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	err = s.Remove(ctx, ip)
+	err = repo.Remove(ctx, ip)
 	require.NoError(t, err)
 
-	exists, err = s.Exists(ctx, ip)
+	exists, err = repo.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 }

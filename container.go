@@ -280,12 +280,12 @@ func (s *Container) CommentsRepository() (*comments.Repository, error) {
 			return nil, err
 		}
 
-		i, err := s.I18n()
+		i18n, err := s.I18n()
 		if err != nil {
 			return nil, err
 		}
 
-		s.commentsRepository = comments.NewRepository(db, usersRepository, messagingRepository, s.HostsManager(), i)
+		s.commentsRepository = comments.NewRepository(db, usersRepository, messagingRepository, s.HostsManager(), i18n)
 	}
 
 	return s.commentsRepository, nil
@@ -351,12 +351,7 @@ func (s *Container) Feedback() (*Feedback, error) {
 
 		emailSender := s.EmailSender()
 
-		var err error
-
-		s.feedback, err = NewFeedback(cfg.Feedback, cfg.Recaptcha, cfg.Captcha, emailSender)
-		if err != nil {
-			return nil, err
-		}
+		s.feedback = NewFeedback(cfg.Feedback, cfg.Recaptcha, cfg.Captcha, emailSender)
 	}
 
 	return s.feedback, nil
@@ -450,13 +445,13 @@ func (s *Container) PrivateRouter(ctx context.Context) (*gin.Engine, error) {
 		return nil, err
 	}
 
-	r := gin.New()
-	r.Use(gin.Recovery())
+	ginEngine := gin.New()
+	ginEngine.Use(gin.Recovery())
 
-	trafficRepo.SetupPrivateRouter(ctx, r)
-	usersRepo.SetupPrivateRouter(ctx, r)
+	trafficRepo.SetupPrivateRouter(ctx, ginEngine)
+	usersRepo.SetupPrivateRouter(ctx, ginEngine)
 
-	s.privateRouter = r
+	s.privateRouter = ginEngine
 
 	return s.privateRouter, nil
 }
@@ -465,14 +460,14 @@ func (s *Container) PublicHTTPServer(ctx context.Context) (*http.Server, error) 
 	if s.publicHTTPServer == nil {
 		cfg := s.Config()
 
-		r, err := s.PublicRouter(ctx)
+		handler, err := s.PublicRouter(ctx)
 		if err != nil {
 			return nil, err
 		}
 
 		s.publicHTTPServer = &http.Server{
 			Addr:              cfg.PublicRest.Listen,
-			Handler:           r,
+			Handler:           handler,
 			ReadHeaderTimeout: readHeaderTimeout,
 		}
 	}
@@ -507,9 +502,9 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 		return nil, err
 	}
 
-	r := gin.New()
-	r.Use(gin.Recovery())
-	yoomoney.SetupRouter(ctx, r)
+	ginEngine := gin.New()
+	ginEngine.Use(gin.Recovery())
+	yoomoney.SetupRouter(ctx, ginEngine)
 
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsGrpcWebRequest(req) {
@@ -520,7 +515,7 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 			return
 		}
 		// Fall back to gRPC+h2c server
-		r.ServeHTTP(resp, req)
+		ginEngine.ServeHTTP(resp, req)
 	}
 
 	return s.publicRouter, nil
@@ -995,7 +990,7 @@ func (s *Container) RatingGRPCServer() (*RatingGRPCServer, error) {
 
 func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 	if s.itemsGrpcServer == nil {
-		r, err := s.ItemsRepository()
+		repo, err := s.ItemsRepository()
 		if err != nil {
 			return nil, err
 		}
@@ -1025,7 +1020,7 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		i, err := s.I18n()
+		i18n, err := s.I18n()
 		if err != nil {
 			return nil, err
 		}
@@ -1041,7 +1036,7 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 		}
 
 		s.itemsGrpcServer = NewItemsGRPCServer(
-			r, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i,
+			repo, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
 			attrsRepository, picturesRepository,
 		)
 	}
@@ -1183,12 +1178,12 @@ func (s *Container) MapGRPCServer() (*MapGRPCServer, error) {
 			return nil, err
 		}
 
-		i, err := s.I18n()
+		i18n, err := s.I18n()
 		if err != nil {
 			return nil, err
 		}
 
-		s.mapGrpcServer = NewMapGRPCServer(db, imageStorage, i)
+		s.mapGrpcServer = NewMapGRPCServer(db, imageStorage, i18n)
 	}
 
 	return s.mapGrpcServer, nil
@@ -1312,7 +1307,7 @@ func (s *Container) Keycloak() *gocloak.GoCloak {
 	return s.keyCloak
 }
 
-func (s *Container) EmailSender() email.Sender {
+func (s *Container) EmailSender() email.Sender { //nolint: ireturn
 	if s.emailSender == nil {
 		cfg := s.Config()
 

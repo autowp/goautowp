@@ -23,14 +23,14 @@ func TestGetText(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	r, err := goquDB.Insert(schema.TextstorageTextTable).Rows(goqu.Record{
+	res, err := goquDB.Insert(schema.TextstorageTextTable).Rows(goqu.Record{
 		schema.TextstorageTextTableTextColName:        "test",
 		schema.TextstorageTextTableLastUpdatedColName: goqu.Func("NOW"),
 		schema.TextstorageTextTableRevisionColName:    1,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	id, err := r.LastInsertId()
+	id, err := res.LastInsertId()
 	require.NoError(t, err)
 
 	repository := New(goquDB)

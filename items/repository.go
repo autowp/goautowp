@@ -18,7 +18,10 @@ import (
 	"golang.org/x/text/language"
 )
 
-var ErrItemNotFound = errors.New("item not found")
+var (
+	ErrItemNotFound = errors.New("item not found")
+	errLangNotFound = errors.New("language not found")
+)
 
 const (
 	TopBrandsCount      = 150
@@ -323,8 +326,8 @@ func (s *Repository) applyItem( //nolint:maintidx
 				schema.ItemTable.As(iAlias),
 				goqu.On(goqu.T(ipcAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
-		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ChildItems)
 
+		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ChildItems)
 		if err != nil {
 			return sqSelect, err
 		}
@@ -342,8 +345,8 @@ func (s *Repository) applyItem( //nolint:maintidx
 				schema.ItemTable.As(iAlias),
 				goqu.On(goqu.T(ippAlias).Col("parent_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
-		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ParentItems)
 
+		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ParentItems)
 		if err != nil {
 			return sqSelect, err
 		}
@@ -365,8 +368,8 @@ func (s *Repository) applyItem( //nolint:maintidx
 					schema.ItemTable.As(iAlias),
 					goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
 				)
-			sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.DescendantItems)
 
+			sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.DescendantItems)
 			if err != nil {
 				return sqSelect, err
 			}
@@ -394,8 +397,8 @@ func (s *Repository) applyItem( //nolint:maintidx
 				schema.ItemTable.As(iAlias),
 				goqu.On(goqu.T(ipcaAlias).Col("parent_id").Eq(goqu.T(iAlias).Col("id"))),
 			)
-		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.AncestorItems)
 
+		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.AncestorItems)
 		if err != nil {
 			return sqSelect, err
 		}
@@ -536,12 +539,12 @@ func (s *Repository) applyItem( //nolint:maintidx
 		if options.SortByName || options.Fields.NameOnly || options.Fields.NameText || options.Fields.NameHTML {
 			langPriority, ok := languagePriority[options.Language]
 			if !ok {
-				return sqSelect, fmt.Errorf("language `%s` not found", options.Language)
+				return sqSelect, fmt.Errorf("%w: `%s`", errLangNotFound, options.Language)
 			}
 
-			s := make([]interface{}, len(langPriority))
+			langs := make([]interface{}, len(langPriority))
 			for i, v := range langPriority {
-				s[i] = v
+				langs[i] = v
 			}
 
 			columns = append(columns, goqu.L(`
@@ -549,11 +552,11 @@ func (s *Repository) applyItem( //nolint:maintidx
 					(SELECT name
 					FROM `+schema.ItemLanguageTableName+`
 					WHERE item_id = `+alias+`.id AND length(name) > 0
-					ORDER BY FIELD(language, `+strings.Repeat(",?", len(s))[1:]+`)
+					ORDER BY FIELD(language, `+strings.Repeat(",?", len(langs))[1:]+`)
 					LIMIT 1),
 					`+alias+`.name
 				)
-			`, s...).As(colNameOnly))
+			`, langs...).As(colNameOnly))
 		}
 
 		if options.Fields.ChildItemsCount {
@@ -804,7 +807,7 @@ func (s *Repository) List( //nolint:maintidx
 	var result []Item
 
 	for rows.Next() {
-		var r Item
+		var row Item
 
 		var (
 			catname                sql.NullString
@@ -832,9 +835,9 @@ func (s *Repository) List( //nolint:maintidx
 		for i, colName := range columnNames {
 			switch colName {
 			case schema.ItemTableIDColName:
-				pointers[i] = &r.ID
+				pointers[i] = &row.ID
 			case colNameOnly:
-				pointers[i] = &r.NameOnly
+				pointers[i] = &row.NameOnly
 			case schema.ItemTableCatnameColName:
 				pointers[i] = &catname
 			case schema.ItemTableFullNameColName:
@@ -842,11 +845,11 @@ func (s *Repository) List( //nolint:maintidx
 			case schema.ItemTableEngineItemIDColName:
 				pointers[i] = &engineItemID
 			case schema.ItemTableItemTypeIDColName:
-				pointers[i] = &r.ItemTypeID
+				pointers[i] = &row.ItemTypeID
 			case schema.ItemTableIsConceptColName:
-				pointers[i] = &r.IsConcept
+				pointers[i] = &row.IsConcept
 			case schema.ItemTableIsConceptInheritColName:
-				pointers[i] = &r.IsConceptInherit
+				pointers[i] = &row.IsConceptInherit
 			case schema.ItemTableSpecIDColName:
 				pointers[i] = &specID
 			case colDescription:
@@ -854,17 +857,17 @@ func (s *Repository) List( //nolint:maintidx
 			case colFullText:
 				pointers[i] = &fullText
 			case colItemsCount:
-				pointers[i] = &r.ItemsCount
+				pointers[i] = &row.ItemsCount
 			case colNewItemsCount:
-				pointers[i] = &r.NewItemsCount
+				pointers[i] = &row.NewItemsCount
 			case colDescendantsCount:
-				pointers[i] = &r.DescendantsCount
+				pointers[i] = &row.DescendantsCount
 			case colNewDescendantsCount:
-				pointers[i] = &r.NewDescendantsCount
+				pointers[i] = &row.NewDescendantsCount
 			case colChildItemsCount:
-				pointers[i] = &r.ChildItemsCount
+				pointers[i] = &row.ChildItemsCount
 			case colNewChildItemsCount:
-				pointers[i] = &r.NewChildItemsCount
+				pointers[i] = &row.NewChildItemsCount
 			case schema.ItemTableBeginYearColName:
 				pointers[i] = &beginYear
 			case schema.ItemTableEndYearColName:
@@ -884,19 +887,19 @@ func (s *Repository) List( //nolint:maintidx
 			case schema.ItemTableTodayColName:
 				pointers[i] = &today
 			case schema.ItemTableBodyColName:
-				pointers[i] = &r.Body
+				pointers[i] = &row.Body
 			case colSpecName:
 				pointers[i] = &specName
 			case colSpecShortName:
 				pointers[i] = &specShortName
 			case colCurrentPicturesCount:
-				pointers[i] = &r.CurrentPicturesCount
+				pointers[i] = &row.CurrentPicturesCount
 			case colChildsCount:
-				pointers[i] = &r.ChildsCount
+				pointers[i] = &row.ChildsCount
 			case colDescendantTwinsGroupsCount:
-				pointers[i] = &r.DescendantTwinsGroupsCount
+				pointers[i] = &row.DescendantTwinsGroupsCount
 			case colInboxPicturesCount:
-				pointers[i] = &r.InboxPicturesCount
+				pointers[i] = &row.InboxPicturesCount
 			case schema.ItemTableLogoIDColName:
 				pointers[i] = &logoID
 			default:
@@ -910,91 +913,91 @@ func (s *Repository) List( //nolint:maintidx
 		}
 
 		if catname.Valid {
-			r.Catname = catname.String
+			row.Catname = catname.String
 		}
 
 		if engineItemID.Valid {
-			r.EngineItemID = engineItemID.Int64
+			row.EngineItemID = engineItemID.Int64
 		}
 
 		if beginYear.Valid {
-			r.BeginYear = beginYear.Int32
+			row.BeginYear = beginYear.Int32
 		}
 
 		if endYear.Valid {
-			r.EndYear = endYear.Int32
+			row.EndYear = endYear.Int32
 		}
 
 		if beginMonth.Valid {
-			r.BeginMonth = beginMonth.Int16
+			row.BeginMonth = beginMonth.Int16
 		}
 
 		if endMonth.Valid {
-			r.EndMonth = endMonth.Int16
+			row.EndMonth = endMonth.Int16
 		}
 
 		if beginModelYear.Valid {
-			r.BeginModelYear = beginModelYear.Int32
+			row.BeginModelYear = beginModelYear.Int32
 		}
 
 		if endModelYear.Valid {
-			r.EndModelYear = endModelYear.Int32
+			row.EndModelYear = endModelYear.Int32
 		}
 
 		if beginModelYearFraction.Valid {
-			r.BeginModelYearFraction = beginModelYearFraction.String
+			row.BeginModelYearFraction = beginModelYearFraction.String
 		}
 
 		if endModelYearFraction.Valid {
-			r.EndModelYearFraction = endModelYearFraction.String
+			row.EndModelYearFraction = endModelYearFraction.String
 		}
 
 		if today.Valid {
-			r.Today = util.BoolPtr(today.Bool)
+			row.Today = util.BoolPtr(today.Bool)
 		}
 
 		if specID.Valid {
-			r.SpecID = specID.Int64
+			row.SpecID = specID.Int64
 		}
 
 		if specName.Valid {
-			r.SpecName = specName.String
+			row.SpecName = specName.String
 		}
 
 		if specShortName.Valid {
-			r.SpecShortName = specShortName.String
+			row.SpecShortName = specShortName.String
 		}
 
 		if description.Valid {
-			r.Description = description.String
+			row.Description = description.String
 		}
 
 		if fullText.Valid {
-			r.FullText = fullText.String
+			row.FullText = fullText.String
 		}
 
 		if fullName.Valid {
-			r.FullName = fullName.String
+			row.FullName = fullName.String
 		}
 
 		if logoID.Valid {
-			r.LogoID = logoID.Int64
+			row.LogoID = logoID.Int64
 		}
 
 		if options.Fields.MostsActive {
 			carsCount, err := s.Count(ctx, ListOptions{
 				AncestorItems: &ListOptions{
-					ItemID: r.ID,
+					ItemID: row.ID,
 				},
 			})
 			if err != nil {
 				return nil, nil, err
 			}
 
-			r.MostsActive = carsCount >= s.mostsMinCarsCount
+			row.MostsActive = carsCount >= s.mostsMinCarsCount
 		}
 
-		result = append(result, r)
+		result = append(result, row)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -1029,13 +1032,13 @@ func (s *Repository) List( //nolint:maintidx
 		cl := collate.New(tag, collate.IgnoreCase, collate.IgnoreDiacritics)
 
 		sort.SliceStable(result, func(i, j int) bool {
-			a := result[i].NameOnly
-			b := result[j].NameOnly
+			iName := result[i].NameOnly
+			jName := result[j].NameOnly
 
 			switch options.Language {
 			case "ru", "uk", "be":
-				aIsCyrillic := cyrillic.MatchString(a)
-				bIsCyrillic := cyrillic.MatchString(b)
+				aIsCyrillic := cyrillic.MatchString(iName)
+				bIsCyrillic := cyrillic.MatchString(jName)
 
 				if aIsCyrillic && !bIsCyrillic {
 					return true
@@ -1045,8 +1048,8 @@ func (s *Repository) List( //nolint:maintidx
 					return false
 				}
 			case "zh":
-				aIsHan := han.MatchString(a)
-				bIsHan := han.MatchString(b)
+				aIsHan := han.MatchString(iName)
+				bIsHan := han.MatchString(jName)
 
 				if aIsHan && !bIsHan {
 					return true
@@ -1057,7 +1060,7 @@ func (s *Repository) List( //nolint:maintidx
 				}
 			}
 
-			return cl.CompareString(a, b) == -1
+			return cl.CompareString(iName, jName) == -1
 		})
 	}
 
@@ -1176,12 +1179,12 @@ func (s *Repository) setItemVehicleTypeRow(
 }
 
 func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Context, itemID int64) error {
-	typeIds, err := s.getItemVehicleTypeIDs(ctx, itemID, false)
+	typeIDs, err := s.getItemVehicleTypeIDs(ctx, itemID, false)
 	if err != nil {
 		return err
 	}
 
-	if len(typeIds) > 0 {
+	if len(typeIDs) > 0 {
 		// do not inherit when own value
 		res, err := s.db.Delete(schema.VehicleVehicleTypeTable).Where(
 			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID),
@@ -1507,33 +1510,33 @@ func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLang
 
 	for rows.Next() {
 		var (
-			r              ItemLanguage
+			row            ItemLanguage
 			nullName       sql.NullString
 			nullTextID     sql.NullInt64
 			nullFullTextID sql.NullInt64
 		)
 
-		err = rows.Scan(&r.ItemID, &r.Language, &nullName, &nullTextID, &nullFullTextID)
+		err = rows.Scan(&row.ItemID, &row.Language, &nullName, &nullTextID, &nullFullTextID)
 		if err != nil {
 			return nil, err
 		}
 
-		r.Name = ""
+		row.Name = ""
 		if nullName.Valid {
-			r.Name = nullName.String
+			row.Name = nullName.String
 		}
 
-		r.TextID = 0
+		row.TextID = 0
 		if nullTextID.Valid {
-			r.TextID = nullTextID.Int64
+			row.TextID = nullTextID.Int64
 		}
 
-		r.FullTextID = 0
+		row.FullTextID = 0
 		if nullFullTextID.Valid {
-			r.FullTextID = nullFullTextID.Int64
+			row.FullTextID = nullFullTextID.Int64
 		}
 
-		result = append(result, r)
+		result = append(result, row)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -1563,14 +1566,14 @@ func (s *Repository) ParentLanguageList(
 	var result []ItemParentLanguage
 
 	for rows.Next() {
-		var r ItemParentLanguage
+		var row ItemParentLanguage
 
-		err = rows.Scan(&r.ItemID, &r.ParentID, &r.Language, &r.Name)
+		err = rows.Scan(&row.ItemID, &row.ParentID, &row.Language, &row.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		result = append(result, r)
+		result = append(result, row)
 	}
 
 	if err = rows.Err(); err != nil {

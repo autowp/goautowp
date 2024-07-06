@@ -43,44 +43,44 @@ func createTrafficService(t *testing.T) *Traffic {
 }
 
 func TestAutoWhitelist(t *testing.T) { //nolint:paralleltest
-	s := createTrafficService(t)
+	svc := createTrafficService(t)
 
 	ctx := context.Background()
 
 	ip := net.IPv4(66, 249, 73, 139) // google
 
-	err := s.Ban.Add(ctx, ip, time.Hour, 9, "test")
+	err := svc.Ban.Add(ctx, ip, time.Hour, 9, "test")
 	require.NoError(t, err)
 
-	exists, err := s.Ban.Exists(ctx, ip)
-	require.NoError(t, err)
-	require.True(t, exists)
-
-	err = s.Monitoring.Add(ctx, ip, time.Now())
-	require.NoError(t, err)
-
-	exists, err = s.Monitoring.ExistsIP(ctx, ip)
+	exists, err := svc.Ban.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	err = s.AutoWhitelist(ctx)
+	err = svc.Monitoring.Add(ctx, ip, time.Now())
 	require.NoError(t, err)
 
-	exists, err = s.Ban.Exists(ctx, ip)
+	exists, err = svc.Monitoring.ExistsIP(ctx, ip)
+	require.NoError(t, err)
+	require.True(t, exists)
+
+	err = svc.AutoWhitelist(ctx)
+	require.NoError(t, err)
+
+	exists, err = svc.Ban.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 
-	exists, err = s.Monitoring.ExistsIP(ctx, ip)
+	exists, err = svc.Monitoring.ExistsIP(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 
-	exists, err = s.Whitelist.Exists(ctx, ip)
+	exists, err = svc.Whitelist.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.True(t, exists)
 }
 
 func TestAutoBanByProfile(t *testing.T) { //nolint:paralleltest
-	s := createTrafficService(t)
+	svc := createTrafficService(t)
 
 	ctx := context.Background()
 
@@ -96,32 +96,32 @@ func TestAutoBanByProfile(t *testing.T) { //nolint:paralleltest
 	ip1 := net.IPv4(127, 0, 0, 11)
 	ip2 := net.IPv4(127, 0, 0, 12)
 
-	err := s.Monitoring.ClearIP(ctx, ip1)
+	err := svc.Monitoring.ClearIP(ctx, ip1)
 	require.NoError(t, err)
-	err = s.Monitoring.ClearIP(ctx, ip2)
-	require.NoError(t, err)
-
-	err = s.Ban.Remove(ctx, ip1)
-	require.NoError(t, err)
-	err = s.Ban.Remove(ctx, ip2)
+	err = svc.Monitoring.ClearIP(ctx, ip2)
 	require.NoError(t, err)
 
-	err = s.Monitoring.Add(ctx, ip1, time.Now())
+	err = svc.Ban.Remove(ctx, ip1)
+	require.NoError(t, err)
+	err = svc.Ban.Remove(ctx, ip2)
 	require.NoError(t, err)
 
-	for i := 0; i < 4; i++ {
-		err = s.Monitoring.Add(ctx, ip2, time.Now())
+	err = svc.Monitoring.Add(ctx, ip1, time.Now())
+	require.NoError(t, err)
+
+	for range 4 {
+		err = svc.Monitoring.Add(ctx, ip2, time.Now())
 		require.NoError(t, err)
 	}
 
-	err = s.AutoBanByProfile(ctx, profile)
+	err = svc.AutoBanByProfile(ctx, profile)
 	require.NoError(t, err)
 
-	exists, err := s.Ban.Exists(ctx, ip1)
+	exists, err := svc.Ban.Exists(ctx, ip1)
 	require.NoError(t, err)
 	require.False(t, exists)
 
-	exists, err = s.Ban.Exists(ctx, ip2)
+	exists, err = svc.Ban.Exists(ctx, ip2)
 	require.NoError(t, err)
 	require.True(t, exists)
 }
@@ -129,7 +129,7 @@ func TestAutoBanByProfile(t *testing.T) { //nolint:paralleltest
 func TestWhitelistedNotBanned(t *testing.T) {
 	t.Parallel()
 
-	s := createTrafficService(t)
+	svc := createTrafficService(t)
 
 	ctx := context.Background()
 
@@ -146,21 +146,21 @@ func TestWhitelistedNotBanned(t *testing.T) {
 
 	ip := net.IPv4(178, 154, 244, 21)
 
-	err := s.Whitelist.Add(ctx, ip, "TestWhitelistedNotBanned")
+	err := svc.Whitelist.Add(ctx, ip, "TestWhitelistedNotBanned")
 	require.NoError(t, err)
 
-	for i := 0; i < 4; i++ {
-		err = s.Monitoring.Add(ctx, ip, time.Now())
+	for range 4 {
+		err = svc.Monitoring.Add(ctx, ip, time.Now())
 		require.NoError(t, err)
 	}
 
-	err = s.AutoWhitelistIP(ctx, ip)
+	err = svc.AutoWhitelistIP(ctx, ip)
 	require.NoError(t, err)
 
-	err = s.AutoBanByProfile(ctx, profile)
+	err = svc.AutoBanByProfile(ctx, profile)
 	require.NoError(t, err)
 
-	exists, err := s.Ban.Exists(ctx, ip)
+	exists, err := svc.Ban.Exists(ctx, ip)
 	require.NoError(t, err)
 	require.False(t, exists)
 }
@@ -168,22 +168,22 @@ func TestWhitelistedNotBanned(t *testing.T) {
 func TestTop(t *testing.T) {
 	t.Parallel()
 
-	s := createTrafficService(t)
+	svc := createTrafficService(t)
 
 	ctx := context.Background()
 
-	err := s.Ban.Clear(ctx)
+	err := svc.Ban.Clear(ctx)
 	require.NoError(t, err)
 
-	err = s.Monitoring.Clear(ctx)
+	err = svc.Monitoring.Clear(ctx)
 	require.NoError(t, err)
 
-	err = s.Monitoring.Add(ctx, net.IPv4(192, 168, 0, 1), time.Now())
+	err = svc.Monitoring.Add(ctx, net.IPv4(192, 168, 0, 1), time.Now())
 	require.NoError(t, err)
 
 	now := time.Now()
-	for i := 0; i < 10; i++ {
-		err = s.Monitoring.Add(ctx, net.IPv6loopback, now)
+	for range 10 {
+		err = svc.Monitoring.Add(ctx, net.IPv6loopback, now)
 		require.NoError(t, err)
 	}
 }

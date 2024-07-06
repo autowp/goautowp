@@ -23,6 +23,7 @@ const (
 	CommentMessageTableParentIDColName           = "parent_id"
 	CommentMessageTableTypeIDColName             = "type_id"
 	CommentMessageTableItemIDColName             = "item_id"
+	CommentMessageTableAuthorIDColName           = "author_id"
 	CommentMessageTableModeratorAttentionColName = "moderator_attention"
 	CommentMessageTableDeletedColName            = "deleted"
 	CommentMessageTableDeletedByColName          = "deleted_by"
@@ -374,7 +375,7 @@ var (
 	CommentMessageTableIDCol                 = CommentMessageTable.Col(CommentMessageTableIDColName)
 	CommentMessageTableTypeIDCol             = CommentMessageTable.Col(CommentMessageTableTypeIDColName)
 	CommentMessageTableItemIDCol             = CommentMessageTable.Col(CommentMessageTableItemIDColName)
-	CommentMessageTableAuthorIDCol           = CommentMessageTable.Col("author_id")
+	CommentMessageTableAuthorIDCol           = CommentMessageTable.Col(CommentMessageTableAuthorIDColName)
 	CommentMessageTableDatetimeCol           = CommentMessageTable.Col("datetime")
 	CommentMessageTableVoteCol               = CommentMessageTable.Col(CommentMessageTableVoteColName)
 	CommentMessageTableParentIDCol           = CommentMessageTable.Col(CommentMessageTableParentIDColName)

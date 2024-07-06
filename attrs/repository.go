@@ -13,6 +13,8 @@ import (
 
 type AttributeTypeID int32
 
+var errUnsupportedAttributeTypeID = errors.New("unsupported type for AttributeTypeID")
+
 const (
 	TypeUnknown AttributeTypeID = 0
 	TypeString  AttributeTypeID = 1
@@ -48,7 +50,7 @@ func (n *NullAttributeTypeID) Scan(value any) error {
 
 	v, ok := value.(int64)
 	if !ok {
-		return errors.New("unsupported type for AttributeTypeID")
+		return errUnsupportedAttributeTypeID
 	}
 
 	n.AttributeTypeID = AttributeTypeID(v)
@@ -59,7 +61,7 @@ func (n *NullAttributeTypeID) Scan(value any) error {
 // Value implements the driver Valuer interface.
 func (n NullAttributeTypeID) Value() (driver.Value, error) {
 	if !n.Valid {
-		return nil, nil
+		return nil, nil //nolint: nilnil
 	}
 
 	return n.AttributeTypeID, nil
@@ -198,13 +200,13 @@ func (s *Repository) Units(ctx context.Context) ([]Unit, error) {
 }
 
 func (s *Repository) ZoneAttributes(ctx context.Context, zoneID int64) ([]ZoneAttribute, error) {
-	r := make([]ZoneAttribute, 0)
+	attrs := make([]ZoneAttribute, 0)
 	err := s.db.Select(schema.AttrsZoneAttributesTableZoneIDCol, schema.AttrsZoneAttributesTableAttributeIDCol).
 		From(schema.AttrsZoneAttributesTable).
 		Where(schema.AttrsZoneAttributesTableZoneIDCol.Eq(zoneID)).
-		ScanStructsContext(ctx, &r)
+		ScanStructsContext(ctx, &attrs)
 
-	return r, err
+	return attrs, err
 }
 
 func (s *Repository) Zones(ctx context.Context) ([]Zone, error) {

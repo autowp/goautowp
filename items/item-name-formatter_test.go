@@ -17,7 +17,7 @@ func TestYears(t *testing.T) {
 	bundle := i18n.NewBundle(language.English)
 	localizer := i18n.NewLocalizer(bundle, "en")
 
-	f := false
+	falseVal := false
 
 	itemOptions := ItemNameFormatterOptions{
 		BeginModelYear:         0,
@@ -30,7 +30,7 @@ func TestYears(t *testing.T) {
 		Name:                   "Autobianchi",
 		BeginYear:              1957,
 		EndYear:                1996,
-		Today:                  &f,
+		Today:                  &falseVal,
 		BeginMonth:             0,
 		EndMonth:               0,
 	}
@@ -56,7 +56,7 @@ func TestModelYears(t *testing.T) {
 
 	localizer := bundle.Localizer("en")
 
-	f := false
+	falseVal := false
 
 	itemOptions := ItemNameFormatterOptions{
 		BeginModelYear:         1957,
@@ -69,7 +69,7 @@ func TestModelYears(t *testing.T) {
 		Name:                   "Autobianchi",
 		BeginYear:              1957,
 		EndYear:                1996,
-		Today:                  &f,
+		Today:                  &falseVal,
 		BeginMonth:             3,
 		EndMonth:               7,
 	}

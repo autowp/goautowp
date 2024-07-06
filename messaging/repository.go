@@ -13,6 +13,11 @@ import (
 	"github.com/doug-martin/goqu/v9"
 )
 
+var (
+	errMessageIsEmpty = errors.New("message is empty")
+	errTooLongMessage = errors.New("too long message")
+)
+
 type Options struct {
 	AllMessagesLink bool
 }
@@ -161,11 +166,11 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 	msgLength := len(text)
 
 	if msgLength <= 0 {
-		return errors.New("message is empty")
+		return errMessageIsEmpty
 	}
 
 	if msgLength > MaxText {
-		return errors.New("too long message")
+		return errTooLongMessage
 	}
 
 	nullableFromUserID := sql.NullInt64{Int64: fromUserID, Valid: fromUserID != 0}
@@ -227,8 +232,8 @@ func (s *Repository) getBox(
 	}
 
 	var msgs []messageRow
-	err = ds.ScanStructsContext(ctx, &msgs)
 
+	err = ds.ScanStructsContext(ctx, &msgs)
 	if err != nil {
 		return nil, nil, err
 	}

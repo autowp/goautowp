@@ -29,7 +29,7 @@ func createItemWithPoint(ctx context.Context, t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 
-	r, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-%d", random.Int()),
 		schema.ItemTableIsGroupColName:         0,
 		schema.ItemTableItemTypeIDColName:      ItemType_ITEM_TYPE_VEHICLE,
@@ -39,7 +39,7 @@ func createItemWithPoint(ctx context.Context, t *testing.T) {
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	itemID, err := r.LastInsertId()
+	itemID, err := res.LastInsertId()
 	require.NoError(t, err)
 
 	_, err = goquDB.Insert(schema.ItemPointTable).Rows(goqu.Record{

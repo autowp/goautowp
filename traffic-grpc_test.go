@@ -51,14 +51,14 @@ func TestHttpBanPost(t *testing.T) {
 		Fields: []string{"blacklist"},
 	})
 	require.NoError(t, err)
-	require.NotNil(t, ip.Blacklist)
+	require.NotNil(t, ip.GetBlacklist())
 
 	_, err = trafficSrv.DeleteFromBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
 	require.NoError(t, err)
 
 	ip, err = srv.GetIP(ctx, &APIGetIPRequest{Ip: "127.0.0.1"})
 	require.NoError(t, err)
-	require.Nil(t, ip.Blacklist)
+	require.Nil(t, ip.GetBlacklist())
 }
 
 func TestTop(t *testing.T) {

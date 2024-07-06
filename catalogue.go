@@ -2,13 +2,15 @@ package goautowp
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync"
 
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 )
+
+var errDatabaseConnectionIsNil = errors.New("database connection is nil")
 
 // Catalogue service.
 type Catalogue struct {
@@ -18,7 +20,7 @@ type Catalogue struct {
 // NewCatalogue constructor.
 func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 	if db == nil {
-		return nil, fmt.Errorf("database connection is nil")
+		return nil, errDatabaseConnectionIsNil
 	}
 
 	return &Catalogue{
@@ -37,7 +39,7 @@ func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]
 		sqSelect = sqSelect.Where(schema.CarTypesTableParentIDCol.IsNull())
 	}
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	defer util.Close(rows)
 
 	if err != nil {
@@ -47,19 +49,19 @@ func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]
 	result := []*VehicleType{}
 
 	for rows.Next() {
-		var r VehicleType
-		err = rows.Scan(&r.Id, &r.Name)
+		var vType VehicleType
 
+		err = rows.Scan(&vType.Id, &vType.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		r.Childs, err = s.getVehicleTypesTree(ctx, r.Id)
+		vType.Childs, err = s.getVehicleTypesTree(ctx, vType.GetId())
 		if err != nil {
 			return nil, err
 		}
 
-		result = append(result, &r)
+		result = append(result, &vType)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -80,7 +82,7 @@ func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, erro
 		sqSelect = sqSelect.Where(schema.SpecTableParentIDCol.IsNull())
 	}
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}
@@ -89,20 +91,20 @@ func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, erro
 	var specs []*Spec
 
 	for rows.Next() {
-		var r Spec
+		var spec Spec
 
-		err = rows.Scan(&r.Id, &r.Name, &r.ShortName)
+		err = rows.Scan(&spec.Id, &spec.Name, &spec.ShortName)
 		if err != nil {
 			return nil, err
 		}
 
-		childs, err := s.getSpecs(ctx, r.Id)
+		childs, err := s.getSpecs(ctx, spec.GetId())
 		if err != nil {
 			return nil, err
 		}
 
-		r.Childs = childs
-		specs = append(specs, &r)
+		spec.Childs = childs
+		specs = append(specs, &spec)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -118,7 +120,7 @@ func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*
 		Where(schema.PerspectivesGroupsTablePageIDCol.Eq(pageID)).
 		Order(schema.PerspectivesGroupsTablePositionCol.Asc())
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}
@@ -129,9 +131,9 @@ func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*
 	var perspectiveGroups []*PerspectiveGroup
 
 	for rows.Next() {
-		var r PerspectiveGroup
-		err = rows.Scan(&r.Id, &r.Name)
+		var group PerspectiveGroup
 
+		err = rows.Scan(&group.Id, &group.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -139,17 +141,17 @@ func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*
 		wg.Add(1)
 
 		go func() {
-			perspectives, err := s.getPerspectives(ctx, &r.Id)
+			perspectives, err := s.getPerspectives(ctx, &group.Id)
 			if err != nil {
 				return
 			}
 
-			r.Perspectives = perspectives
+			group.Perspectives = perspectives
 
 			wg.Done()
 		}()
 
-		perspectiveGroups = append(perspectiveGroups, &r)
+		perspectiveGroups = append(perspectiveGroups, &group)
 	}
 
 	wg.Wait()
@@ -166,7 +168,7 @@ func (s *Catalogue) getPerspectivePages(ctx context.Context) ([]*PerspectivePage
 		From(schema.PerspectivesPagesTable).
 		Order(schema.PerspectivesPagesTableIDCol.Asc())
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +179,9 @@ func (s *Catalogue) getPerspectivePages(ctx context.Context) ([]*PerspectivePage
 	var perspectivePages []*PerspectivePage
 
 	for rows.Next() {
-		var r PerspectivePage
+		var page PerspectivePage
 
-		err = rows.Scan(&r.Id, &r.Name)
+		err = rows.Scan(&page.Id, &page.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -187,17 +189,17 @@ func (s *Catalogue) getPerspectivePages(ctx context.Context) ([]*PerspectivePage
 		wg.Add(1)
 
 		go func() {
-			groups, err := s.getPerspectiveGroups(ctx, r.Id)
+			groups, err := s.getPerspectiveGroups(ctx, page.GetId())
 			if err != nil {
 				return
 			}
 
-			r.Groups = groups
+			page.Groups = groups
 
 			wg.Done()
 		}()
 
-		perspectivePages = append(perspectivePages, &r)
+		perspectivePages = append(perspectivePages, &page)
 	}
 
 	wg.Wait()
@@ -225,7 +227,7 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 		sqSelect = sqSelect.Order(schema.PerspectivesTablePositionCol.Asc())
 	}
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
 		return nil, err
 	}
@@ -234,14 +236,14 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 	var perspectives []*Perspective
 
 	for rows.Next() {
-		var r Perspective
+		var perspective Perspective
 
-		err = rows.Scan(&r.Id, &r.Name)
+		err = rows.Scan(&perspective.Id, &perspective.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		perspectives = append(perspectives, &r)
+		perspectives = append(perspectives, &perspective)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -270,7 +272,7 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 		GroupBy(schema.CarTypesTableIDCol).
 		Order(schema.CarTypesTablePositionCol.Asc())
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	defer util.Close(rows)
 
 	if err != nil {
@@ -280,14 +282,14 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 	result := []*BrandVehicleType{}
 
 	for rows.Next() {
-		var r BrandVehicleType
+		var bvType BrandVehicleType
 
-		err = rows.Scan(&r.Id, &r.Name, &r.Catname, &r.ItemsCount)
+		err = rows.Scan(&bvType.Id, &bvType.Name, &bvType.Catname, &bvType.ItemsCount)
 		if err != nil {
 			return nil, err
 		}
 
-		result = append(result, &r)
+		result = append(result, &bvType)
 	}
 
 	if err = rows.Err(); err != nil {

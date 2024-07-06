@@ -12,6 +12,11 @@ import (
 	"github.com/doug-martin/goqu/v9"
 )
 
+var (
+	errTopicsInThemeDisabled                 = errors.New("topics in this theme is disabled")
+	errCantDeleteTopicWithModeratorAttention = errors.New("cannot delete topic with moderator attention requirement")
+)
+
 const (
 	TopicStatusNormal  = "normal"
 	TopicStatusClosed  = "closed"
@@ -109,7 +114,7 @@ func (s *Forums) AddTopic(
 	}
 
 	if disableTopics {
-		return 0, errors.New("topics in this theme is disabled")
+		return 0, errTopicsInThemeDisabled
 	}
 
 	res, err := s.db.Insert(schema.ForumsTopicsTable).
@@ -217,7 +222,7 @@ func (s *Forums) Delete(ctx context.Context, id int64) error {
 	}
 
 	if success {
-		return errors.New("cannot delete topic with moderator attention requirement")
+		return errCantDeleteTopicWithModeratorAttention
 	}
 
 	err = s.setStatus(ctx, id, TopicStatusDeleted)

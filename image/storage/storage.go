@@ -7,6 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	_ "image/gif"  // GIF support
+	_ "image/jpeg" // JPEG support
+	_ "image/png"  // PNG support
 	"io"
 	"math"
 	"math/rand"
@@ -28,10 +31,6 @@ import (
 	my "github.com/go-mysql/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v2/imagick"
-
-	_ "image/gif"  // GIF support
-	_ "image/jpeg" // JPEG support
-	_ "image/png"  // PNG support
 )
 
 const (
@@ -49,9 +48,18 @@ const (
 	gifExtension     = "gif"
 )
 
-const dirNotDefinedMessage = "dir '%s' not defined"
+const dirNotDefinedMessage = "dir not defined"
 
-var ErrImageNotFound = errors.New("image not found")
+var (
+	ErrImageNotFound        = errors.New("image not found")
+	errUnsupportedImageType = errors.New("unsupported image type")
+	errDirNotFound          = errors.New(dirNotDefinedMessage)
+	errFormatNotFound       = errors.New("format not found")
+	errFailedToFormatImage  = errors.New("failed to format image")
+	errFailedToGetImageSize = errors.New("failed to get image size")
+	errSelfRename           = errors.New("trying to rename to self")
+	errInvalidImageID       = errors.New("invalid image id provided")
+)
 
 var publicRead = "public-read"
 
@@ -124,7 +132,7 @@ func NewStorage(db *goqu.Database, config config.ImageStorageConfig) (*Storage, 
 }
 
 func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
-	var r Image
+	var img Image
 
 	st := struct {
 		ID       int    `db:"id"`
@@ -154,25 +162,25 @@ func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
 		return nil, ErrImageNotFound
 	}
 
-	r.id = st.ID
-	r.width = st.Width
-	r.height = st.Height
-	r.filepath = st.Filepath
-	r.filesize = st.Filesize
-	r.dir = st.Dir
+	img.id = st.ID
+	img.width = st.Width
+	img.height = st.Height
+	img.filepath = st.Filepath
+	img.filesize = st.Filesize
+	img.dir = st.Dir
 
-	err = s.populateSrc(&r)
+	err = s.populateSrc(&img)
 	if err != nil {
 		return nil, err
 	}
 
-	return &r, nil
+	return &img, nil
 }
 
-func (s *Storage) populateSrc(r *Image) error {
-	dir := s.dir(r.dir)
+func (s *Storage) populateSrc(img *Image) error {
+	dir := s.dir(img.dir)
 	if dir == nil {
-		return fmt.Errorf(dirNotDefinedMessage, r.dir)
+		return fmt.Errorf("%w: `%s`", errDirNotFound, img.dir)
 	}
 
 	bucket := dir.Bucket()
@@ -181,7 +189,7 @@ func (s *Storage) populateSrc(r *Image) error {
 
 	req, _ := s3Client.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: &bucket,
-		Key:    &r.filepath,
+		Key:    &img.filepath,
 	})
 	rest.Build(req)
 
@@ -195,7 +203,7 @@ func (s *Storage) populateSrc(r *Image) error {
 		url.Scheme = s.config.SrcOverride.Scheme
 	}
 
-	r.src = url.String()
+	img.src = url.String()
 
 	return nil
 }
@@ -218,21 +226,21 @@ func (s *Storage) FormattedImage(ctx context.Context, id int, formatName string)
 	}
 
 	if success {
-		var r Image
+		var img Image
 
-		r.id = row.ID
-		r.width = row.Width
-		r.height = row.Height
-		r.filesize = row.Filesize
-		r.filepath = row.Filepath
-		r.dir = row.Dir
+		img.id = row.ID
+		img.width = row.Width
+		img.height = row.Height
+		img.filesize = row.Filesize
+		img.filepath = row.Filepath
+		img.dir = row.Dir
 
-		err = s.populateSrc(&r)
+		err = s.populateSrc(&img)
 		if err != nil {
 			return nil, err
 		}
 
-		return &r, nil
+		return &img, nil
 	}
 
 	formattedImageID, err := s.doFormatImage(ctx, id, formatName)
@@ -316,7 +324,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 
 	dir := s.dir(iRow.Dir)
 	if dir == nil {
-		return 0, fmt.Errorf(dirNotDefinedMessage, iRow.Dir)
+		return 0, fmt.Errorf("%w: `%s`", errDirNotFound, iRow.Dir)
 	}
 
 	bucket := dir.Bucket()
@@ -347,7 +355,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 	// format
 	format := s.format(formatName)
 	if format == nil {
-		return 0, fmt.Errorf("format `%s` not found", formatName)
+		return 0, fmt.Errorf("%w: `%s`", errFormatNotFound, formatName)
 	}
 
 	_, err = s.db.Insert(schema.FormattedImageTable).Rows(goqu.Record{
@@ -405,7 +413,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 		}
 
 		if !fiRow.FormattedImageID.Valid {
-			return 0, fmt.Errorf("failed to format image")
+			return 0, errFailedToFormatImage
 		}
 
 		return int(fiRow.FormattedImageID.Int32), nil
@@ -517,7 +525,7 @@ func (s *Storage) addImageFromImagick(
 	height := int(mw.GetImageHeight())
 
 	if width <= 0 || height <= 0 {
-		return 0, fmt.Errorf("failed to get image size (%v x %v)", width, height)
+		return 0, fmt.Errorf("%w: (%v x %v)", errFailedToGetImageSize, width, height)
 	}
 
 	format := mw.GetImageFormat()
@@ -530,15 +538,18 @@ func (s *Storage) addImageFromImagick(
 	case "png":
 		options.Extension = pngExtension
 	default:
-		return 0, fmt.Errorf("unsupported image type `%v`", format)
+		return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, format)
 	}
 
 	dir := s.dir(dirName)
 	if dir == nil {
-		return 0, fmt.Errorf(dirNotDefinedMessage, dirName)
+		return 0, fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
 	}
 
-	blob := mw.GetImagesBlob()
+	blob, err := mw.GetImagesBlob()
+	if err != nil {
+		return 0, err
+	}
 
 	id, err := s.generateLockWrite(
 		ctx,
@@ -548,7 +559,7 @@ func (s *Storage) addImageFromImagick(
 		height,
 		func(fileName string) error {
 			s3c := s.s3Client()
-			r := bytes.NewReader(blob)
+			blobReader := bytes.NewReader(blob)
 			bucket := dir.Bucket()
 
 			contentType, err := imageFormatContentType(mw.GetImageFormat())
@@ -558,7 +569,7 @@ func (s *Storage) addImageFromImagick(
 
 			_, err = s3c.PutObject(&s3.PutObjectInput{
 				Key:         &fileName,
-				Body:        r,
+				Body:        blobReader,
 				Bucket:      &bucket,
 				ACL:         &publicRead,
 				ContentType: &contentType,
@@ -601,7 +612,7 @@ func (s *Storage) generateLockWrite(
 		imageID                = 0
 	)
 
-	for attemptIndex := 0; attemptIndex < maxInsertAttempts; attemptIndex++ {
+	for attemptIndex := range maxInsertAttempts {
 		insertAttemptException = s.incDirCounter(ctx, dirName)
 
 		if insertAttemptException == nil {
@@ -681,12 +692,12 @@ func (s *Storage) incDirCounter(ctx context.Context, dirName string) error {
 }
 
 func (s *Storage) dirCounter(ctx context.Context, dirName string) (int, error) {
-	var r int
+	var result int
 
 	success, err := s.db.Select(schema.ImageDirTableCountCol).
 		From(schema.ImageDirTable).
 		Where(schema.ImageDirTableDirCol.Eq(dirName)).
-		ScanValContext(ctx, &r)
+		ScanValContext(ctx, &result)
 	if err != nil {
 		return 0, err
 	}
@@ -695,7 +706,7 @@ func (s *Storage) dirCounter(ctx context.Context, dirName string) (int, error) {
 		return 0, sql.ErrNoRows
 	}
 
-	return r, nil
+	return result, nil
 }
 
 func indexByAttempt(attempt int) int {
@@ -713,7 +724,7 @@ func indexByAttempt(attempt int) int {
 func (s *Storage) createImagePath(ctx context.Context, dirName string, options GenerateOptions) (string, error) {
 	dir := s.dir(dirName)
 	if dir == nil {
-		return "", fmt.Errorf(dirNotDefinedMessage, dirName)
+		return "", fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
 	}
 
 	namingStrategy := dir.NamingStrategy()
@@ -737,7 +748,7 @@ func imageFormatContentType(format string) (string, error) {
 
 	result, ok := formats2ContentType[format]
 	if !ok {
-		return "", fmt.Errorf("unknown format `%s`", format)
+		return "", fmt.Errorf("%w: `%s`", errFormatNotFound, format)
 	}
 
 	return result, nil
@@ -781,18 +792,18 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 
 	dir := s.dir(row.Dir)
 	if dir == nil {
-		return fmt.Errorf(dirNotDefinedMessage, row.Dir)
+		return fmt.Errorf("%w: `%s`", errDirNotFound, row.Dir)
 	}
 
 	s3c := s.s3Client()
 
 	bucket := dir.Bucket()
 	key := row.Filepath
+
 	_, err = s3c.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -813,7 +824,7 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 		sqSelect = sqSelect.Where(schema.FormattedImageTableImageIDCol.Eq(options.Image))
 	}
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
@@ -827,12 +838,12 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 
 	for rows.Next() {
 		var (
-			iID  int
-			f    string
-			fiID sql.NullInt32
+			iID    int
+			format string
+			fiID   sql.NullInt32
 		)
 
-		err = rows.Scan(&iID, &f, &fiID)
+		err = rows.Scan(&iID, &format, &fiID)
 		if err != nil {
 			return err
 		}
@@ -847,7 +858,7 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 		_, err = s.db.Delete(schema.FormattedImageTable).
 			Where(
 				schema.FormattedImageTableImageIDCol.Eq(iID),
-				schema.FormattedImageTableFormatCol.Eq(f),
+				schema.FormattedImageTableFormatCol.Eq(format),
 			).
 			Executor().ExecContext(ctx)
 		if err != nil {
@@ -859,12 +870,12 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 }
 
 func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options GenerateOptions) error {
-	var r imageRow
+	var img imageRow
 
 	success, err := s.db.Select(schema.ImageTableIDCol, schema.ImageTableDirCol, schema.ImageTableFilepathCol).
 		From(schema.ImageTable).
 		Where(schema.ImageTableIDCol.Eq(imageID)).
-		ScanStructContext(ctx, &r)
+		ScanStructContext(ctx, &img)
 	if err != nil {
 		return err
 	}
@@ -873,39 +884,39 @@ func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options Gene
 		return sql.ErrNoRows
 	}
 
-	dir := s.dir(r.Dir)
+	dir := s.dir(img.Dir)
 	if dir == nil {
-		return fmt.Errorf(dirNotDefinedMessage, r.Dir)
+		return fmt.Errorf("%w: `%s`", errDirNotFound, img.Dir)
 	}
 
 	if len(options.Extension) == 0 {
-		options.Extension = strings.TrimLeft(filepath.Ext(r.Filepath), ".")
+		options.Extension = strings.TrimLeft(filepath.Ext(img.Filepath), ".")
 	}
 
 	var insertAttemptException error
 
 	s3c := s.s3Client()
 
-	for attemptIndex := 0; attemptIndex < maxInsertAttempts; attemptIndex++ {
+	for attemptIndex := range maxInsertAttempts {
 		options.Index = indexByAttempt(attemptIndex)
 
-		destFileName, err := s.createImagePath(ctx, r.Dir, options)
+		destFileName, err := s.createImagePath(ctx, img.Dir, options)
 		if err != nil {
 			return err
 		}
 
-		if destFileName == r.Filepath {
-			return fmt.Errorf("trying to rename to self")
+		if destFileName == img.Filepath {
+			return errSelfRename
 		}
 
 		_, insertAttemptException = s.db.Update(schema.ImageTable).
 			Set(goqu.Record{schema.ImageTableFilepathColName: destFileName}).
-			Where(schema.ImageTableIDCol.Eq(r.ID)).
+			Where(schema.ImageTableIDCol.Eq(img.ID)).
 			Executor().ExecContext(ctx)
 
 		if insertAttemptException == nil {
 			bucket := dir.Bucket()
-			copySource := dir.Bucket() + "/" + r.Filepath
+			copySource := dir.Bucket() + "/" + img.Filepath
 
 			_, err = s3c.CopyObject(&s3.CopyObjectInput{
 				Bucket:     &bucket,
@@ -917,7 +928,7 @@ func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options Gene
 				return err
 			}
 
-			fpath := r.Filepath
+			fpath := img.Filepath
 
 			_, err = s3c.DeleteObject(&s3.DeleteObjectInput{
 				Bucket: &bucket,
@@ -952,7 +963,7 @@ func (s *Storage) AddImageFromFile(
 	}
 
 	if imageInfo.Width <= 0 || imageInfo.Height <= 0 {
-		return 0, fmt.Errorf("failed to get image size of '$file' (%v x %v)", imageInfo.Width, imageInfo.Height)
+		return 0, fmt.Errorf("%w: (%v x %v)", errFailedToGetImageSize, imageInfo.Width, imageInfo.Height)
 	}
 
 	if len(options.Extension) == 0 {
@@ -966,7 +977,7 @@ func (s *Storage) AddImageFromFile(
 		case "png":
 			ext = pngExtension
 		default:
-			return 0, fmt.Errorf("unsupported image type `%v`", imageType)
+			return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, imageType)
 		}
 
 		options.Extension = ext
@@ -974,7 +985,7 @@ func (s *Storage) AddImageFromFile(
 
 	dir := s.dir(dirName)
 	if dir == nil {
-		return 0, fmt.Errorf(dirNotDefinedMessage, dirName)
+		return 0, fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
 	}
 
 	id, err := s.generateLockWrite(
@@ -1058,12 +1069,12 @@ func (s *Storage) AddImageFromBlob(
 }
 
 func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback func(*imagick.MagickWand) error) error {
-	var r imageRow
+	var img imageRow
 
 	success, err := s.db.Select(schema.ImageTableDirCol, schema.ImageTableFilepathCol).
 		From(schema.ImageTable).
 		Where(schema.ImageTableIDCol.Eq(imageID)).
-		ScanStructContext(ctx, &r)
+		ScanStructContext(ctx, &img)
 	if err != nil {
 		return err
 	}
@@ -1072,9 +1083,9 @@ func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback 
 		return sql.ErrNoRows
 	}
 
-	dir := s.dir(r.Dir)
+	dir := s.dir(img.Dir)
 	if dir == nil {
-		return fmt.Errorf(dirNotDefinedMessage, r.Dir)
+		return fmt.Errorf("%w: `%s`", errDirNotFound, img.Dir)
 	}
 
 	mw := imagick.NewMagickWand()
@@ -1083,7 +1094,7 @@ func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback 
 	s3c := s.s3Client()
 
 	bucket := dir.Bucket()
-	fpath := r.Filepath
+	fpath := img.Filepath
 
 	object, err := s3c.GetObject(&s3.GetObjectInput{
 		Bucket: &bucket,
@@ -1108,7 +1119,12 @@ func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback 
 		return err
 	}
 
-	b := bytes.NewReader(mw.GetImagesBlob())
+	blob, err := mw.GetImagesBlob()
+	if err != nil {
+		return err
+	}
+
+	blobBytes := bytes.NewReader(blob)
 
 	contentType, err := imageFormatContentType(mw.GetImageFormat())
 	if err != nil {
@@ -1117,7 +1133,7 @@ func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback 
 
 	_, err = s3c.PutObject(&s3.PutObjectInput{
 		Key:         &fpath,
-		Body:        b,
+		Body:        blobBytes,
 		Bucket:      &bucket,
 		ACL:         &publicRead,
 		ContentType: &contentType,
@@ -1145,7 +1161,7 @@ func (s *Storage) Normalize(ctx context.Context, imageID int) error {
 
 func (s *Storage) SetImageCrop(ctx context.Context, imageID int, crop sampler.Crop) error {
 	if imageID <= 0 {
-		return fmt.Errorf("invalid image id provided `%v`", imageID)
+		return fmt.Errorf("%w: `%v`", errInvalidImageID, imageID)
 	}
 
 	if crop.Left < 0 || crop.Top < 0 || crop.Width <= 0 || crop.Height <= 0 {
@@ -1209,13 +1225,13 @@ func (s *Storage) imageCrop(ctx context.Context, imageID int) (*sampler.Crop, er
 	return &crop, nil
 }
 
-func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, error) {
+func (s *Storage) images(ctx context.Context, imageIDs []int) (map[int]Image, error) {
 	sqSelect := s.db.Select(schema.ImageTableIDCol, schema.ImageTableWidthCol, schema.ImageTableHeightCol,
 		schema.ImageTableFilesizeCol, schema.ImageTableFilepathCol, schema.ImageTableDirCol).
 		From(schema.ImageTable).
-		Where(schema.ImageTableIDCol.In(imageIds))
+		Where(schema.ImageTableIDCol.In(imageIDs))
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if errors.Is(err, sql.ErrNoRows) {
 		return make(map[int]Image), nil
 	}
@@ -1229,19 +1245,19 @@ func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, er
 	result := make(map[int]Image)
 
 	for rows.Next() {
-		var r Image
+		var img Image
 
-		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir)
+		err = rows.Scan(&img.id, &img.width, &img.height, &img.filesize, &img.filepath, &img.dir)
 		if err != nil {
 			return nil, err
 		}
 
-		err = s.populateSrc(&r)
+		err = s.populateSrc(&img)
 		if err != nil {
 			return nil, err
 		}
 
-		result[r.id] = r
+		result[img.id] = img
 	}
 
 	if err = rows.Err(); err != nil {
@@ -1251,7 +1267,7 @@ func (s *Storage) images(ctx context.Context, imageIds []int) (map[int]Image, er
 	return result, nil
 }
 
-func (s *Storage) FormattedImages(ctx context.Context, imageIds []int, formatName string) (map[int]Image, error) {
+func (s *Storage) FormattedImages(ctx context.Context, imageIDs []int, formatName string) (map[int]Image, error) {
 	sqSelect := s.db.Select(
 		schema.ImageTableIDCol, schema.ImageTableWidthCol, schema.ImageTableHeightCol, schema.ImageTableFilesizeCol,
 		schema.ImageTableFilepathCol, schema.ImageTableDirCol, schema.FormattedImageTableImageIDCol,
@@ -1262,11 +1278,11 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIds []int, formatNam
 			goqu.On(schema.ImageTableIDCol.Eq(schema.FormattedImageTableFormattedImageIDCol)),
 		).
 		Where(
-			schema.FormattedImageTableImageIDCol.In(imageIds),
+			schema.FormattedImageTableImageIDCol.In(imageIDs),
 			schema.FormattedImageTableFormatCol.Eq(formatName),
 		)
 
-	rows, err := sqSelect.Executor().QueryContext(ctx)
+	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if errors.Is(err, sql.ErrNoRows) {
 		return make(map[int]Image), nil
 	}
@@ -1281,28 +1297,28 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIds []int, formatNam
 
 	for rows.Next() {
 		var (
-			r          Image
+			img        Image
 			srcImageID int
 		)
 
-		err = rows.Scan(&r.id, &r.width, &r.height, &r.filesize, &r.filepath, &r.dir, &srcImageID)
+		err = rows.Scan(&img.id, &img.width, &img.height, &img.filesize, &img.filepath, &img.dir, &srcImageID)
 		if err != nil {
 			return nil, err
 		}
 
-		err = s.populateSrc(&r)
+		err = s.populateSrc(&img)
 		if err != nil {
 			return nil, err
 		}
 
-		result[srcImageID] = r
+		result[srcImageID] = img
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
 
-	for _, imageID := range imageIds {
+	for _, imageID := range imageIDs {
 		_, ok := result[imageID]
 		if !ok {
 			formattedImageID, err := s.doFormatImage(ctx, imageID, formatName)

@@ -45,7 +45,6 @@ func (s *Events) Add(event Event) error {
 				schema.LogEventsUserTableNameUserIDColName: id,
 			}).
 			Executor().Exec()
-
 		if err != nil {
 			return err
 		}

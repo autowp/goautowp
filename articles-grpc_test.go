@@ -31,8 +31,8 @@ func TestGetArticles(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, response1)
-	require.Equal(t, 1, len(response1.Items))
-	require.Equal(t, int64(1), response1.Items[0].Id)
+	require.Len(t, response1.GetItems(), 1)
+	require.Equal(t, int64(1), response1.GetItems()[0].GetId())
 
 	response2, err := client.GetItemByCatname(
 		ctx,
@@ -40,6 +40,6 @@ func TestGetArticles(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, response2)
-	require.Equal(t, int64(1), response2.Id)
-	require.Equal(t, "Test html", response2.Html)
+	require.Equal(t, int64(1), response2.GetId())
+	require.Equal(t, "Test html", response2.GetHtml())
 }

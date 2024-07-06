@@ -6,11 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"google.golang.org/grpc"
-
 	"github.com/autowp/goautowp/config"
-
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 )
 

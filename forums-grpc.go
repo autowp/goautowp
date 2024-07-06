@@ -4,8 +4,6 @@ import (
 	"context"
 	"net"
 
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/validation"
@@ -16,6 +14,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const MaxTopicNameLength = 100
@@ -102,7 +101,7 @@ func (s *ForumsGRPCServer) CreateTopic(
 		}
 	}
 
-	topicID, err := s.forums.AddTopic(ctx, in.ThemeId, in.Name, userID, remoteAddr)
+	topicID, err := s.forums.AddTopic(ctx, in.GetThemeId(), in.GetName(), userID, remoteAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -113,15 +112,15 @@ func (s *ForumsGRPCServer) CreateTopic(
 		topicID,
 		0,
 		userID,
-		in.Message,
+		in.GetMessage(),
 		remoteAddr,
-		in.ModeratorAttention,
+		in.GetModeratorAttention(),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	if in.Subscription {
+	if in.GetSubscription() {
 		err = s.commentsRepository.Subscribe(ctx, userID, comments.TypeIDForums, topicID)
 		if err != nil {
 			return nil, err
@@ -156,8 +155,8 @@ func (s *APICreateTopicRequest) Validate(
 			&validation.StringLength{Max: MaxTopicNameLength},
 		},
 	}
-	s.Name, problems, err = nameInputFilter.IsValidString(s.Name)
 
+	s.Name, problems, err = nameInputFilter.IsValidString(s.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -176,8 +175,8 @@ func (s *APICreateTopicRequest) Validate(
 			&validation.StringLength{Max: comments.MaxMessageLength},
 		},
 	}
-	s.Message, problems, err = msgInputFilter.IsValidString(s.Message)
 
+	s.Message, problems, err = msgInputFilter.IsValidString(s.GetMessage())
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +218,7 @@ func (s *ForumsGRPCServer) CloseTopic(ctx context.Context, in *APISetTopicStatus
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.forums.Close(ctx, in.Id)
+	err = s.forums.Close(ctx, in.GetId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -242,7 +241,7 @@ func (s *ForumsGRPCServer) OpenTopic(ctx context.Context, in *APISetTopicStatusR
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.forums.Open(ctx, in.Id)
+	err = s.forums.Open(ctx, in.GetId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -265,7 +264,7 @@ func (s *ForumsGRPCServer) DeleteTopic(ctx context.Context, in *APISetTopicStatu
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.forums.Delete(ctx, in.Id)
+	err = s.forums.Delete(ctx, in.GetId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -288,7 +287,7 @@ func (s *ForumsGRPCServer) MoveTopic(ctx context.Context, in *APIMoveTopicReques
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.forums.MoveTopic(ctx, in.Id, in.ThemeId)
+	err = s.forums.MoveTopic(ctx, in.GetId(), in.GetThemeId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -329,7 +328,7 @@ func (s *ForumsGRPCServer) GetTheme(ctx context.Context, in *APIGetForumsThemeRe
 
 	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
 
-	theme, err := s.forums.Theme(ctx, in.Id, isModerator)
+	theme, err := s.forums.Theme(ctx, in.GetId(), isModerator)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -349,7 +348,7 @@ func (s *ForumsGRPCServer) GetThemes(ctx context.Context, in *APIGetForumsThemes
 
 	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
 
-	themes, err := s.forums.Themes(ctx, in.ThemeId, isModerator)
+	themes, err := s.forums.Themes(ctx, in.GetThemeId(), isModerator)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -372,7 +371,7 @@ func (s *ForumsGRPCServer) GetLastTopic(ctx context.Context, in *APIGetForumsThe
 
 	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
 
-	topic, err := s.forums.LastTopic(ctx, in.Id, userID, isModerator)
+	topic, err := s.forums.LastTopic(ctx, in.GetId(), userID, isModerator)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -395,7 +394,7 @@ func (s *ForumsGRPCServer) GetLastMessage(
 
 	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
 
-	msg, err := s.forums.LastMessage(ctx, in.Id, isModerator)
+	msg, err := s.forums.LastMessage(ctx, in.GetId(), isModerator)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -424,7 +423,7 @@ func (s *ForumsGRPCServer) GetTopics(ctx context.Context, in *APIGetForumsTopics
 
 	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
 
-	topics, pages, err := s.forums.Topics(ctx, in.ThemeId, userID, isModerator, in.Subscription, in.Page)
+	topics, pages, err := s.forums.Topics(ctx, in.GetThemeId(), userID, isModerator, in.GetSubscription(), in.GetPage())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -458,7 +457,7 @@ func (s *ForumsGRPCServer) GetTopic(ctx context.Context, in *APIGetForumsTopicRe
 
 	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
 
-	topic, err := s.forums.Topic(ctx, in.Id, userID, isModerator)
+	topic, err := s.forums.Topic(ctx, in.GetId(), userID, isModerator)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
