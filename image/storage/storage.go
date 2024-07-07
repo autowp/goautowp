@@ -1337,3 +1337,76 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIDs []int, formatNam
 
 	return result, nil
 }
+
+func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
+	dir := s.dir(dirName)
+	if dir == nil {
+		return fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
+	}
+
+	var sts []struct {
+		Filepath string `db:"filepath"`
+	}
+
+	err := s.db.Select(schema.ImageTableFilepathCol).
+		From(schema.ImageTable).
+		Where(schema.ImageTableDirCol.Eq(dirName)).
+		ScanStructsContext(ctx, &sts)
+	if err != nil {
+		return err
+	}
+
+	s3Client := s.s3Client()
+	bucket := dir.Bucket()
+
+	for _, st := range sts {
+		_, err := s3Client.HeadObject(&s3.HeadObjectInput{
+			Bucket: &bucket,
+			Key:    &st.Filepath,
+		})
+		if err != nil {
+			logrus.Warningf("Object `%s`: %s", st.Filepath, err.Error())
+		}
+	}
+
+	return nil
+}
+
+func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error {
+	dir := s.dir(dirName)
+	if dir == nil {
+		return fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
+	}
+
+	s3Client := s.s3Client()
+	bucket := dir.Bucket()
+
+	err := s3Client.ListObjectsPages(&s3.ListObjectsInput{
+		Bucket: &bucket,
+	}, func(list *s3.ListObjectsOutput, _ bool) bool {
+		var id int64
+
+		for _, item := range list.Contents {
+			success, err := s.db.Select(schema.ImageTableIDCol).
+				From(schema.ImageTable).
+				Where(
+					schema.ImageTableDirCol.Eq(dirName),
+					schema.ImageTableFilepathCol.Eq(*item.Key),
+				).
+				ScanValContext(ctx, &id)
+			if err != nil {
+				logrus.Errorf(err.Error())
+
+				return false
+			}
+
+			if !success {
+				logrus.Warningf("Object `%s`", *item.Key)
+			}
+		}
+
+		return true
+	})
+
+	return err
+}

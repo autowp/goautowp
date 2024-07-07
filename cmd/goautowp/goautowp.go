@@ -108,6 +108,34 @@ func mainReturnWithCode() int {
 							return nil
 						},
 					},
+					{
+						Name: "list-broken-images",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "dir",
+								Value:    "",
+								Usage:    "dir",
+								Required: true,
+							},
+						},
+						Action: func(ctx context.Context, command *cli.Command) error {
+							return autowpApp.ImageStorageListBrokenImages(ctx, command.String("dir"))
+						},
+					},
+					{
+						Name: "list-unlinked-objects",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "dir",
+								Value:    "",
+								Usage:    "dir",
+								Required: true,
+							},
+						},
+						Action: func(ctx context.Context, command *cli.Command) error {
+							return autowpApp.ImageStorageListUnlinkedObjects(ctx, command.String("dir"))
+						},
+					},
 				},
 			},
 			{

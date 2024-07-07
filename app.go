@@ -437,3 +437,21 @@ func (s *Application) ImageStorageGetFormattedImage(
 
 	return APIImageToGRPC(img), nil
 }
+
+func (s *Application) ImageStorageListBrokenImages(ctx context.Context, dir string) error {
+	is, err := s.container.ImageStorage()
+	if err != nil {
+		return err
+	}
+
+	return is.ListBrokenImages(ctx, dir)
+}
+
+func (s *Application) ImageStorageListUnlinkedObjects(ctx context.Context, dir string) error {
+	is, err := s.container.ImageStorage()
+	if err != nil {
+		return err
+	}
+
+	return is.ListUnlinkedObjects(ctx, dir)
+}

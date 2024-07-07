@@ -121,3 +121,25 @@ func TestServePrivate(t *testing.T) {
 	err := app.ServePrivate(ctx, done)
 	require.NoError(t, err)
 }
+
+func TestImageStorageListBrokenImages(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+	ctx := context.Background()
+
+	err := app.ImageStorageListBrokenImages(ctx, "picture")
+	require.NoError(t, err)
+}
+
+func TestImageStorageListUnlinkedObjects(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+	ctx := context.Background()
+
+	err := app.ImageStorageListUnlinkedObjects(ctx, "format")
+	require.NoError(t, err)
+}
