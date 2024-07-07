@@ -1346,16 +1346,16 @@ func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
 		return fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
 	}
 
-	var sts []struct {
-		Filepath string `db:"filepath"`
-	}
-
 	var (
 		isLastPage bool
 		lastKey    string
 	)
 
 	for !isLastPage {
+		var sts []struct {
+			Filepath string `db:"filepath"`
+		}
+
 		err := s.db.Select(schema.ImageTableFilepathCol).
 			From(schema.ImageTable).
 			Where(
