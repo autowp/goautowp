@@ -50,6 +50,8 @@ const (
 
 const dirNotDefinedMessage = "dir not defined"
 
+const listBrokenImagesPerPage = 1000
+
 var (
 	ErrImageNotFound        = errors.New("image not found")
 	errUnsupportedImageType = errors.New("unsupported image type")
@@ -1348,24 +1350,37 @@ func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
 		Filepath string `db:"filepath"`
 	}
 
-	err := s.db.Select(schema.ImageTableFilepathCol).
-		From(schema.ImageTable).
-		Where(schema.ImageTableDirCol.Eq(dirName)).
-		ScanStructsContext(ctx, &sts)
-	if err != nil {
-		return err
-	}
+	var (
+		isLastPage bool
+		page       uint
+	)
 
-	s3Client := s.s3Client()
-	bucket := dir.Bucket()
-
-	for _, st := range sts {
-		_, err := s3Client.HeadObject(&s3.HeadObjectInput{
-			Bucket: &bucket,
-			Key:    &st.Filepath,
-		})
+	for !isLastPage {
+		err := s.db.Select(schema.ImageTableFilepathCol).
+			From(schema.ImageTable).
+			Where(schema.ImageTableDirCol.Eq(dirName)).
+			Order(schema.ImageTableFilepathCol.Asc()).
+			Limit(listBrokenImagesPerPage).
+			Offset(page*listBrokenImagesPerPage).
+			ScanStructsContext(ctx, &sts)
 		if err != nil {
-			logrus.Warningf("Object `%s`: %s", st.Filepath, err.Error())
+			return err
+		}
+
+		s3Client := s.s3Client()
+		bucket := dir.Bucket()
+
+		isLastPage = len(sts) < listBrokenImagesPerPage
+		page++
+
+		for _, st := range sts {
+			_, err := s3Client.HeadObject(&s3.HeadObjectInput{
+				Bucket: &bucket,
+				Key:    &st.Filepath,
+			})
+			if err != nil {
+				fmt.Println(st.Filepath) //nolint:forbidigo
+			}
 		}
 	}
 
@@ -1401,7 +1416,7 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 			}
 
 			if !success {
-				logrus.Warningf("Object `%s`", *item.Key)
+				fmt.Println(*item.Key) //nolint:forbidigo
 			}
 		}
 
