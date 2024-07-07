@@ -41,6 +41,8 @@ const (
 
 const maxInsertAttempts = 15
 
+const maxSameSizeObjectsToFetch = 10
+
 const (
 	defaultExtension = "jpg"
 	pngExtension     = "png"
@@ -49,6 +51,8 @@ const (
 )
 
 const dirNotDefinedMessage = "dir not defined"
+
+const listBrokenImagesPerPage = 1000
 
 var (
 	ErrImageNotFound        = errors.New("image not found")
@@ -1336,4 +1340,133 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIDs []int, formatNam
 	}
 
 	return result, nil
+}
+
+func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
+	dir := s.dir(dirName)
+	if dir == nil {
+		return fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
+	}
+
+	var (
+		isLastPage bool
+		lastKey    string
+	)
+
+	for !isLastPage {
+		var sts []struct {
+			Filepath string `db:"filepath"`
+		}
+
+		err := s.db.Select(schema.ImageTableFilepathCol).
+			From(schema.ImageTable).
+			Where(
+				schema.ImageTableDirCol.Eq(dirName),
+				schema.ImageTableFilepathCol.Gt(lastKey),
+			).
+			Order(schema.ImageTableFilepathCol.Asc()).
+			Limit(listBrokenImagesPerPage).
+			ScanStructsContext(ctx, &sts)
+		if err != nil {
+			return err
+		}
+
+		isLastPage = len(sts) < listBrokenImagesPerPage
+
+		for _, st := range sts {
+			lastKey = st.Filepath
+
+			err = s.isKeyExists(dir, st.Filepath)
+			if err != nil {
+				fmt.Println(st.Filepath) //nolint:forbidigo
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *Storage) isKeyExists(dir *Dir, key string) error {
+	bucket := dir.Bucket()
+	_, err := s.s3Client().HeadObject(&s3.HeadObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+
+	return err
+}
+
+func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error {
+	dir := s.dir(dirName)
+	if dir == nil {
+		return fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
+	}
+
+	s3Client := s.s3Client()
+	bucket := dir.Bucket()
+
+	err := s3Client.ListObjectsPages(&s3.ListObjectsInput{
+		Bucket: &bucket,
+	}, func(list *s3.ListObjectsOutput, _ bool) bool {
+		var id int64
+
+		for _, item := range list.Contents {
+			success, err := s.db.Select(schema.ImageTableIDCol).
+				From(schema.ImageTable).
+				Where(
+					schema.ImageTableDirCol.Eq(dirName),
+					schema.ImageTableFilepathCol.Eq(*item.Key),
+				).
+				ScanValContext(ctx, &id)
+			if err != nil {
+				logrus.Errorf(err.Error())
+
+				return false
+			}
+
+			if !success {
+				fmt.Printf("%s (%v bytes)\n", *item.Key, *item.Size) //nolint:forbidigo
+
+				var (
+					sameSizeKeys     []string
+					lostSameSizeKeys = make(map[string]string)
+				)
+
+				err = s.db.Select(schema.ImageTableFilepathCol).
+					From(schema.ImageTable).
+					Where(
+						schema.ImageTableDirCol.Eq(dirName),
+						schema.ImageTableFilesizeCol.Eq(*item.Size),
+					).
+					Limit(maxSameSizeObjectsToFetch).
+					ScanValsContext(ctx, &sameSizeKeys)
+				if err != nil {
+					logrus.Errorf(err.Error())
+
+					return false
+				}
+
+				for _, sameSizeKey := range sameSizeKeys {
+					err = s.isKeyExists(dir, sameSizeKey)
+					if err != nil {
+						lostSameSizeKeys[sameSizeKey] = err.Error()
+					}
+				}
+
+				if len(lostSameSizeKeys) > 0 {
+					fmt.Println("Found same size keys lost objects:") //nolint:forbidigo
+
+					for lostSameSizeKey, errMsg := range lostSameSizeKeys {
+						fmt.Println(lostSameSizeKey + ": " + errMsg + "\n") //nolint:forbidigo
+					}
+				} else {
+					fmt.Println("No same size keys lost objects found") //nolint:forbidigo
+				}
+			}
+		}
+
+		return true
+	})
+
+	return err
 }
