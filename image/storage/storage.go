@@ -1352,16 +1352,18 @@ func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
 
 	var (
 		isLastPage bool
-		page       uint
+		lastKey    string
 	)
 
 	for !isLastPage {
 		err := s.db.Select(schema.ImageTableFilepathCol).
 			From(schema.ImageTable).
-			Where(schema.ImageTableDirCol.Eq(dirName)).
+			Where(
+				schema.ImageTableDirCol.Eq(dirName),
+				schema.ImageTableFilepathCol.Gt(lastKey),
+			).
 			Order(schema.ImageTableFilepathCol.Asc()).
 			Limit(listBrokenImagesPerPage).
-			Offset(page*listBrokenImagesPerPage).
 			ScanStructsContext(ctx, &sts)
 		if err != nil {
 			return err
@@ -1371,9 +1373,10 @@ func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
 		bucket := dir.Bucket()
 
 		isLastPage = len(sts) < listBrokenImagesPerPage
-		page++
 
 		for _, st := range sts {
+			lastKey = st.Filepath
+
 			_, err := s3Client.HeadObject(&s3.HeadObjectInput{
 				Bucket: &bucket,
 				Key:    &st.Filepath,
