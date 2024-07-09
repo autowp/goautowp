@@ -41,6 +41,8 @@ const (
 
 const maxInsertAttempts = 15
 
+const maxSameSizeObjectsToFetch = 10
+
 const (
 	defaultExtension = "jpg"
 	pngExtension     = "png"
@@ -1369,18 +1371,12 @@ func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
 			return err
 		}
 
-		s3Client := s.s3Client()
-		bucket := dir.Bucket()
-
 		isLastPage = len(sts) < listBrokenImagesPerPage
 
 		for _, st := range sts {
 			lastKey = st.Filepath
 
-			_, err := s3Client.HeadObject(&s3.HeadObjectInput{
-				Bucket: &bucket,
-				Key:    &st.Filepath,
-			})
+			err = s.isKeyExists(dir, st.Filepath)
 			if err != nil {
 				fmt.Println(st.Filepath) //nolint:forbidigo
 			}
@@ -1388,6 +1384,16 @@ func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
 	}
 
 	return nil
+}
+
+func (s *Storage) isKeyExists(dir *Dir, key string) error {
+	bucket := dir.Bucket()
+	_, err := s.s3Client().HeadObject(&s3.HeadObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+
+	return err
 }
 
 func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error {
@@ -1419,7 +1425,43 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 			}
 
 			if !success {
-				fmt.Println(*item.Key) //nolint:forbidigo
+				fmt.Printf("%s (%v bytes)\n", *item.Key, *item.Size) //nolint:forbidigo
+
+				var (
+					sameSizeKeys     []string
+					lostSameSizeKeys = make(map[string]string)
+				)
+
+				err = s.db.Select(schema.ImageTableFilepathCol).
+					From(schema.ImageTable).
+					Where(
+						schema.ImageTableDirCol.Eq(dirName),
+						schema.ImageTableFilesizeCol.Eq(*item.Size),
+					).
+					Limit(maxSameSizeObjectsToFetch).
+					ScanValsContext(ctx, &sameSizeKeys)
+				if err != nil {
+					logrus.Errorf(err.Error())
+
+					return false
+				}
+
+				for _, sameSizeKey := range sameSizeKeys {
+					err = s.isKeyExists(dir, sameSizeKey)
+					if err != nil {
+						lostSameSizeKeys[sameSizeKey] = err.Error()
+					}
+				}
+
+				if len(lostSameSizeKeys) > 0 {
+					fmt.Println("Found same size keys lost objects:") //nolint:forbidigo
+
+					for lostSameSizeKey, errMsg := range lostSameSizeKeys {
+						fmt.Println(lostSameSizeKey + ": " + errMsg + "\n") //nolint:forbidigo
+					}
+				} else {
+					fmt.Println("No same size keys lost objects found") //nolint:forbidigo
+				}
 			}
 		}
 
