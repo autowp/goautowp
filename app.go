@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net"
 	"os"
@@ -9,8 +10,11 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/items"
+	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
 	"github.com/golang-migrate/migrate/v4"
@@ -371,6 +375,64 @@ loop:
 	}
 
 	logrus.Info("AutoBan scheduler stopped")
+
+	return nil
+}
+
+func (s *Application) GenerateBrandsCache(ctx context.Context) error {
+	redisClient, err := s.container.Redis()
+	if err != nil {
+		return err
+	}
+
+	repository, err := s.container.ItemsRepository()
+	if err != nil {
+		return err
+	}
+
+	for lang := range s.container.Config().Languages {
+		logrus.Infof("generate brands cache for `%s`", lang)
+
+		key := "GO_TOPBRANDSLIST_3_" + lang
+
+		var cache BrandsCache
+
+		options := items.ListOptions{
+			Language: lang,
+			Fields: items.ListFields{
+				NameOnly:            true,
+				DescendantsCount:    true,
+				NewDescendantsCount: true,
+			},
+			TypeID:     []items.ItemType{items.BRAND},
+			Limit:      items.TopBrandsCount,
+			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
+			SortByName: true,
+		}
+
+		list, _, err := repository.List(ctx, options, false)
+		if err != nil {
+			return err
+		}
+
+		count, err := repository.Count(ctx, options)
+		if err != nil {
+			return err
+		}
+
+		cache.Items = list
+		cache.Total = count
+
+		b, err := json.Marshal(cache) //nolint: musttag
+		if err != nil {
+			return err
+		}
+
+		err = redisClient.Set(ctx, key, string(b), 0).Err()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

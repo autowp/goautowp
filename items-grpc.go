@@ -101,43 +101,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 
 	var cache BrandsCache
 
-	if errors.Is(err, redis.Nil) {
-		options := items.ListOptions{
-			Language: in.GetLanguage(),
-			Fields: items.ListFields{
-				NameOnly:            true,
-				DescendantsCount:    true,
-				NewDescendantsCount: true,
-			},
-			TypeID:     []items.ItemType{items.BRAND},
-			Limit:      items.TopBrandsCount,
-			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
-			SortByName: true,
-		}
-
-		list, _, err := s.repository.List(ctx, options, false)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		count, err := s.repository.Count(ctx, options)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		cache.Items = list
-		cache.Total = count
-
-		b, err := json.Marshal(cache) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else {
+	if !errors.Is(err, redis.Nil) {
 		err = json.Unmarshal([]byte(item), &cache) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
