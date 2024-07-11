@@ -274,33 +274,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 
 	var res []items.Item
 
-	if errors.Is(err, redis.Nil) {
-		res, _, err = s.repository.List(ctx, items.ListOptions{
-			Language: in.GetLanguage(),
-			Fields: items.ListFields{
-				NameOnly:            true,
-				DescendantsCount:    true,
-				NewDescendantsCount: true,
-			},
-			NoParents: true,
-			TypeID:    []items.ItemType{items.CATEGORY},
-			Limit:     items.TopCategoriesCount,
-			OrderBy:   []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
-		}, false)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		b, err := json.Marshal(res) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else {
+	if !errors.Is(err, redis.Nil) {
 		err = json.Unmarshal([]byte(item), &res) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())

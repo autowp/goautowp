@@ -434,8 +434,6 @@ func (s *Application) generateBrandsIndexCache(ctx context.Context, lang string)
 }
 
 func (s *Application) generateTwinsIndexCache(ctx context.Context, lang string) error {
-	var err error
-
 	redisClient, err := s.container.Redis()
 	if err != nil {
 		return err
@@ -503,18 +501,69 @@ func (s *Application) generateTwinsIndexCache(ctx context.Context, lang string) 
 	return nil
 }
 
+func (s *Application) generateCategoriesIndexCache(ctx context.Context, lang string) error {
+	redisClient, err := s.container.Redis()
+	if err != nil {
+		return err
+	}
+
+	repository, err := s.container.ItemsRepository()
+	if err != nil {
+		return err
+	}
+
+	key := "GO_CATEGORIES_6_" + lang
+
+	var res []items.Item
+
+	res, _, err = repository.List(ctx, items.ListOptions{
+		Language: lang,
+		Fields: items.ListFields{
+			NameOnly:            true,
+			DescendantsCount:    true,
+			NewDescendantsCount: true,
+		},
+		NoParents: true,
+		TypeID:    []items.ItemType{items.CATEGORY},
+		Limit:     items.TopCategoriesCount,
+		OrderBy:   []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
+	}, false)
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(res) //nolint: musttag
+	if err != nil {
+		return err
+	}
+
+	err = redisClient.Set(ctx, key, string(b), defaultCacheExpiration).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Application) GenerateIndexCache(ctx context.Context) error {
 	for lang := range s.container.Config().Languages {
-		logrus.Infof("generate index cache for `%s`", lang)
+		logrus.Infof("generate index brands cache for `%s`", lang)
 
-		// brands
 		err := s.generateBrandsIndexCache(ctx, lang)
 		if err != nil {
 			return err
 		}
 
-		// twins
+		logrus.Infof("generate index twins cache for `%s`", lang)
+
 		err = s.generateTwinsIndexCache(ctx, lang)
+		if err != nil {
+			return err
+		}
+
+		logrus.Infof("generate index categories cache for `%s`", lang)
+
+		err = s.generateCategoriesIndexCache(ctx, lang)
 		if err != nil {
 			return err
 		}
