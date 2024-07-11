@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/pictures"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
 	"github.com/gin-gonic/gin"
@@ -371,6 +372,47 @@ loop:
 	}
 
 	logrus.Info("AutoBan scheduler stopped")
+
+	return nil
+}
+
+func (s *Application) GenerateIndexCache(ctx context.Context) error {
+	idx, err := s.container.Index()
+	if err != nil {
+		return err
+	}
+
+	for lang := range s.container.Config().Languages {
+		err = idx.GenerateBrandsCache(ctx, lang)
+		if err != nil {
+			return err
+		}
+
+		err = idx.GenerateTwinsCache(ctx, lang)
+		if err != nil {
+			return err
+		}
+
+		err = idx.GenerateCategoriesCache(ctx, lang)
+		if err != nil {
+			return err
+		}
+
+		err = idx.GeneratePersonsCache(ctx, pictures.ItemPictureContent, lang)
+		if err != nil {
+			return err
+		}
+
+		err = idx.GeneratePersonsCache(ctx, pictures.ItemPictureAuthor, lang)
+		if err != nil {
+			return err
+		}
+
+		err = idx.GenerateFactoriesCache(ctx, lang)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

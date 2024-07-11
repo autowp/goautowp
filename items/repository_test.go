@@ -50,7 +50,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 				DescendantTwinsGroupsCount: true,
 			},
 			TypeID:     []ItemType{BRAND},
-			Limit:      TopBrandsCount,
+			Limit:      150,
 			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 			SortByName: true,
 		}
@@ -102,7 +102,7 @@ func TestListFilters(t *testing.T) {
 			NoParents: true,
 			Catname:   "test",
 		},
-		Limit:   TopBrandsCount,
+		Limit:   150,
 		OrderBy: []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 	}
 	_, _, err = repository.List(ctx, options, true)

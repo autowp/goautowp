@@ -242,6 +242,12 @@ func mainReturnWithCode() int {
 					return autowpApp.ExportUsersToKeycloak(ctx)
 				},
 			},
+			{
+				Name: "scheduler-generate-index-cache",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.GenerateIndexCache(ctx)
+				},
+			},
 		},
 	}
 

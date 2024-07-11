@@ -15,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/index"
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
@@ -1005,11 +1006,6 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		rds, err := s.Redis()
-		if err != nil {
-			return nil, err
-		}
-
 		textStorageRepository, err := s.TextStorageRepository()
 		if err != nil {
 			return nil, err
@@ -1035,9 +1031,14 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
+		idx, err := s.Index()
+		if err != nil {
+			return nil, err
+		}
+
 		s.itemsGrpcServer = NewItemsGRPCServer(
-			repo, db, rds, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
-			attrsRepository, picturesRepository,
+			repo, db, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
+			attrsRepository, picturesRepository, idx,
 		)
 	}
 
@@ -1367,6 +1368,20 @@ func (s *Container) Redis() (*redis.Client, error) {
 	}
 
 	return s.redis, nil
+}
+
+func (s *Container) Index() (*index.Index, error) {
+	redisClient, err := s.Redis()
+	if err != nil {
+		return nil, err
+	}
+
+	repository, err := s.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	return index.NewIndex(redisClient, repository), nil
 }
 
 func (s *Container) TextStorageRepository() (*textstorage.Repository, error) {

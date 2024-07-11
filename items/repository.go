@@ -24,12 +24,7 @@ var (
 )
 
 const (
-	TopBrandsCount      = 150
-	NewDays             = 7
-	TopPersonsCount     = 5
-	TopFactoriesCount   = 8
-	TopCategoriesCount  = 15
-	TopTwinsBrandsCount = 20
+	NewDays = 7
 )
 
 const (
