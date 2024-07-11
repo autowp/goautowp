@@ -157,8 +157,6 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, res)
-	require.NotEmpty(t, res.GetItems())
-	require.Greater(t, res.GetCount(), int32(0))
 
 	r6, err := client.GetTwinsBrandsList(ctx, &GetTwinsBrandsListRequest{
 		Language: "ru",

@@ -144,13 +144,13 @@ func TestImageStorageListUnlinkedObjects(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestGenerateBrandsCache(t *testing.T) {
+func TestGenerateIndexCache(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
 	ctx := context.Background()
 
-	err := app.GenerateBrandsCache(ctx)
+	err := app.GenerateIndexCache(ctx)
 	require.NoError(t, err)
 }

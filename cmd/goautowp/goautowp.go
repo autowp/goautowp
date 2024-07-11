@@ -243,9 +243,9 @@ func mainReturnWithCode() int {
 				},
 			},
 			{
-				Name: "scheduler-generate-brands-cache",
+				Name: "scheduler-generate-index-cache",
 				Action: func(ctx context.Context, _ *cli.Command) error {
-					return autowpApp.GenerateBrandsCache(ctx)
+					return autowpApp.GenerateIndexCache(ctx)
 				},
 			},
 		},

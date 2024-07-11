@@ -379,7 +379,7 @@ loop:
 	return nil
 }
 
-func (s *Application) GenerateBrandsCache(ctx context.Context) error {
+func (s *Application) generateBrandsIndexCache(ctx context.Context, lang string) error {
 	redisClient, err := s.container.Redis()
 	if err != nil {
 		return err
@@ -390,45 +390,131 @@ func (s *Application) GenerateBrandsCache(ctx context.Context) error {
 		return err
 	}
 
-	for lang := range s.container.Config().Languages {
-		logrus.Infof("generate brands cache for `%s`", lang)
+	key := "GO_TOPBRANDSLIST_3_" + lang
 
-		key := "GO_TOPBRANDSLIST_3_" + lang
+	var cache BrandsCache
 
-		var cache BrandsCache
+	options := items.ListOptions{
+		Language: lang,
+		Fields: items.ListFields{
+			NameOnly:            true,
+			DescendantsCount:    true,
+			NewDescendantsCount: true,
+		},
+		TypeID:     []items.ItemType{items.BRAND},
+		Limit:      items.TopBrandsCount,
+		OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
+		SortByName: true,
+	}
 
-		options := items.ListOptions{
-			Language: lang,
-			Fields: items.ListFields{
-				NameOnly:            true,
-				DescendantsCount:    true,
-				NewDescendantsCount: true,
+	list, _, err := repository.List(ctx, options, false)
+	if err != nil {
+		return err
+	}
+
+	count, err := repository.Count(ctx, options)
+	if err != nil {
+		return err
+	}
+
+	cache.Items = list
+	cache.Total = count
+
+	cacheBytes, err := json.Marshal(cache) //nolint: musttag
+	if err != nil {
+		return err
+	}
+
+	err = redisClient.Set(ctx, key, string(cacheBytes), 0).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Application) generateTwinsIndexCache(ctx context.Context, lang string) error {
+	var err error
+
+	redisClient, err := s.container.Redis()
+	if err != nil {
+		return err
+	}
+
+	repository, err := s.container.ItemsRepository()
+	if err != nil {
+		return err
+	}
+
+	key := "GO_TWINS_5_" + lang
+
+	twinsData := struct {
+		Count int
+		Res   []items.Item
+	}{
+		0,
+		nil,
+	}
+
+	twinsData.Res, _, err = repository.List(ctx, items.ListOptions{
+		Language: lang,
+		Fields: items.ListFields{
+			NameOnly: true,
+		},
+		DescendantItems: &items.ListOptions{
+			ParentItems: &items.ListOptions{
+				TypeID: []items.ItemType{items.TWINS},
+				Fields: items.ListFields{
+					ItemsCount:    true,
+					NewItemsCount: true,
+				},
 			},
-			TypeID:     []items.ItemType{items.BRAND},
-			Limit:      items.TopBrandsCount,
-			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
-			SortByName: true,
-		}
+		},
+		TypeID:  []items.ItemType{items.BRAND},
+		Limit:   items.TopTwinsBrandsCount,
+		OrderBy: []exp.OrderedExpression{goqu.C("items_count").Desc()},
+	}, false)
+	if err != nil {
+		return err
+	}
 
-		list, _, err := repository.List(ctx, options, false)
+	twinsData.Count, err = repository.CountDistinct(ctx, items.ListOptions{
+		DescendantItems: &items.ListOptions{
+			ParentItems: &items.ListOptions{
+				TypeID: []items.ItemType{items.TWINS},
+			},
+		},
+		TypeID: []items.ItemType{items.BRAND},
+	})
+	if err != nil {
+		return err
+	}
+
+	cacheBytes, err := json.Marshal(twinsData) //nolint: musttag
+	if err != nil {
+		return err
+	}
+
+	err = redisClient.Set(ctx, key, string(cacheBytes), 0).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Application) GenerateIndexCache(ctx context.Context) error {
+	for lang := range s.container.Config().Languages {
+		logrus.Infof("generate index cache for `%s`", lang)
+
+		// brands
+		err := s.generateBrandsIndexCache(ctx, lang)
 		if err != nil {
 			return err
 		}
 
-		count, err := repository.Count(ctx, options)
-		if err != nil {
-			return err
-		}
-
-		cache.Items = list
-		cache.Total = count
-
-		b, err := json.Marshal(cache) //nolint: musttag
-		if err != nil {
-			return err
-		}
-
-		err = redisClient.Set(ctx, key, string(b), 0).Err()
+		// twins
+		err = s.generateTwinsIndexCache(ctx, lang)
 		if err != nil {
 			return err
 		}

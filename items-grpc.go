@@ -342,51 +342,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 		nil,
 	}
 
-	if errors.Is(err, redis.Nil) {
-		twinsData.Res, _, err = s.repository.List(ctx, items.ListOptions{
-			Language: in.GetLanguage(),
-			Fields: items.ListFields{
-				NameOnly: true,
-			},
-			DescendantItems: &items.ListOptions{
-				ParentItems: &items.ListOptions{
-					TypeID: []items.ItemType{items.TWINS},
-					Fields: items.ListFields{
-						ItemsCount:    true,
-						NewItemsCount: true,
-					},
-				},
-			},
-			TypeID:  []items.ItemType{items.BRAND},
-			Limit:   items.TopTwinsBrandsCount,
-			OrderBy: []exp.OrderedExpression{goqu.C("items_count").Desc()},
-		}, false)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		twinsData.Count, err = s.repository.CountDistinct(ctx, items.ListOptions{
-			DescendantItems: &items.ListOptions{
-				ParentItems: &items.ListOptions{
-					TypeID: []items.ItemType{items.TWINS},
-				},
-			},
-			TypeID: []items.ItemType{items.BRAND},
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		b, err := json.Marshal(twinsData) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else {
+	if !errors.Is(err, redis.Nil) {
 		err = json.Unmarshal([]byte(item), &twinsData) //nolint: musttag
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
