@@ -277,14 +277,14 @@ func (s *Application) SchedulerDaily(ctx context.Context) error {
 
 	logrus.Infof("Comments deleted: %d", affected)
 
-	//affected, err = commentsRep.RefreshRepliesCount(ctx)
-	//if err != nil {
+	// affected, err = commentsRep.RefreshRepliesCount(ctx)
+	// if err != nil {
 	//	logrus.Error(err.Error())
 	//
 	//	return err
-	//}
+	// }
 	//
-	//logrus.Infof("Replies refreshed: %d", affected)
+	// logrus.Infof("Replies refreshed: %d", affected)
 
 	affected, err = commentsRep.CleanBrokenMessages(ctx)
 	if err != nil {
@@ -295,14 +295,14 @@ func (s *Application) SchedulerDaily(ctx context.Context) error {
 
 	logrus.Infof("Clean broken: %d", affected)
 
-	//affected, err = commentsRep.CleanTopics(ctx)
-	//if err != nil {
+	// affected, err = commentsRep.CleanTopics(ctx)
+	// if err != nil {
 	//	logrus.Error(err.Error())
 	//
 	//	return err
-	//}
+	// }
 	//
-	//logrus.Infof("Clean topics: %d", affected)
+	// logrus.Infof("Clean topics: %d", affected)
 
 	return nil
 }
