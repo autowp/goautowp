@@ -187,8 +187,6 @@ func TestTopBrandsList(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, res)
-	// require.NotEmpty(t, res.GetBrands())
-	// require.Greater(t, res.GetTotal(), int32(0))
 }
 
 func TestTopPersonsAuthorList(t *testing.T) {
