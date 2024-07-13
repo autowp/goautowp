@@ -997,6 +997,7 @@ message DonationsTransaction {
   google.protobuf.Timestamp date = 3;
   string contributor = 4;
   string purpose = 5;
+  int64 user_id = 6;
 }
 
 message DonationsTransactionsResponse {

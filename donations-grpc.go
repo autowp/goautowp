@@ -2,6 +2,7 @@ package goautowp
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/autowp/goautowp/itemofday"
@@ -55,15 +56,16 @@ func (s *DonationsGRPCServer) GetTransactions(
 	ctx context.Context, _ *emptypb.Empty,
 ) (*DonationsTransactionsResponse, error) {
 	var rows []struct {
-		Sum         int32     `db:"sum"`
-		Currency    string    `db:"currency"`
-		Date        time.Time `db:"date"`
-		Contributor string    `db:"contributor"`
-		Purpose     string    `db:"purpose"`
+		Sum         int32         `db:"sum"`
+		Currency    string        `db:"currency"`
+		Date        time.Time     `db:"date"`
+		Contributor string        `db:"contributor"`
+		Purpose     string        `db:"purpose"`
+		UserID      sql.NullInt64 `db:"user_id"`
 	}
 
 	err := s.db.Select(schema.TransactionTableSumCol, schema.TransactionTableCurrencyCol, schema.TransactionTableDateCol,
-		schema.TransactionTableContributorCol, schema.TransactionTablePurposeCol).
+		schema.TransactionTableContributorCol, schema.TransactionTablePurposeCol, schema.TransactionTableUserIDCol).
 		From(schema.TransactionTable).
 		Order(schema.TransactionTableDateCol.Desc()).
 		Where(schema.TransactionTableDateCol.Gt(goqu.L("CURRENT_DATE - INTERVAL '6 months'"))).
@@ -73,13 +75,20 @@ func (s *DonationsGRPCServer) GetTransactions(
 	}
 
 	res := make([]*DonationsTransaction, 0, len(rows))
+
 	for _, row := range rows {
+		userID := row.UserID.Int64
+		if !row.UserID.Valid {
+			userID = 0
+		}
+
 		res = append(res, &DonationsTransaction{
 			Sum:         row.Sum,
 			Currency:    row.Currency,
 			Date:        timestamppb.New(row.Date),
 			Contributor: row.Contributor,
 			Purpose:     row.Purpose,
+			UserId:      userID,
 		})
 	}
 

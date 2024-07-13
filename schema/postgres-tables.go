@@ -27,6 +27,7 @@ const (
 	TransactionTableDateColName        = "date"
 	TransactionTableContributorColName = "contributor"
 	TransactionTablePurposeColName     = "purpose"
+	TransactionTableUserIDColName      = "user_id"
 
 	UserUserPreferencesTableName            = "user_user_preferences"
 	UserUserPreferencesTableDCNColName      = "disable_comments_notifications"
@@ -59,6 +60,7 @@ var (
 	TransactionTableDateCol        = TransactionTable.Col(TransactionTableDateColName)
 	TransactionTableContributorCol = TransactionTable.Col(TransactionTableContributorColName)
 	TransactionTablePurposeCol     = TransactionTable.Col(TransactionTablePurposeColName)
+	TransactionTableUserIDCol      = TransactionTable.Col(TransactionTableUserIDColName)
 
 	UserUserPreferencesTable            = goqu.T(UserUserPreferencesTableName)
 	UserUserPreferencesTableUserIDCol   = UserUserPreferencesTable.Col("user_id")
