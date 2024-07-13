@@ -1396,6 +1396,32 @@ func (s *Storage) isKeyExists(dir *Dir, key string) error {
 	return err
 }
 
+func (s *Storage) getObjectBytes(bucket string, key string) ([]byte, error) {
+	object, err := s.s3Client().GetObject(&s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	objectBytes, err := io.ReadAll(object.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return objectBytes, nil
+}
+
+func (s *Storage) isObjectBytesEqual(bucket string, key string, expectedBytes []byte) (bool, error) {
+	actualBytes, err := s.getObjectBytes(bucket, key)
+	if err != nil {
+		return false, err
+	}
+
+	return bytes.Equal(actualBytes, expectedBytes), nil
+}
+
 func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error {
 	dir := s.dir(dirName)
 	if dir == nil {
@@ -1411,6 +1437,8 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 		var id int64
 
 		for _, item := range list.Contents {
+			var itemBytes []byte
+
 			success, err := s.db.Select(schema.ImageTableIDCol).
 				From(schema.ImageTable).
 				Where(
@@ -1428,9 +1456,9 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 				fmt.Printf("%s (%v bytes)\n", *item.Key, *item.Size) //nolint:forbidigo
 
 				var (
-					sameSizeKeys        []string
-					lostSameSizeKeys    = make(map[string]string)
-					nonLostSameSizeKeys []string
+					sameSizeKeys     []string
+					lostSameSizeKeys = make(map[string]string)
+					nonLostSameKeys  []string
 				)
 
 				err = s.db.Select(schema.ImageTableFilepathCol).
@@ -1452,7 +1480,25 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 					if err != nil {
 						lostSameSizeKeys[sameSizeKey] = err.Error()
 					} else {
-						nonLostSameSizeKeys = append(nonLostSameSizeKeys, sameSizeKey)
+						if itemBytes == nil {
+							itemBytes, err = s.getObjectBytes(bucket, *item.Key)
+							if err != nil {
+								fmt.Printf("getObjectBytes(%s, %s): %v\n", bucket, *item.Key, err.Error()) //nolint:forbidigo
+
+								return false
+							}
+						}
+
+						equal, err := s.isObjectBytesEqual(bucket, sameSizeKey, itemBytes)
+						if err != nil {
+							fmt.Printf("isObjectBytesEqual(%s, %s): %v\n", bucket, sameSizeKey, err.Error()) //nolint:forbidigo
+
+							return false
+						}
+
+						if equal {
+							nonLostSameKeys = append(nonLostSameKeys, sameSizeKey)
+						}
 					}
 				}
 
@@ -1465,11 +1511,11 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 				} else {
 					fmt.Println("No same size keys lost objects found") //nolint:forbidigo
 
-					if len(nonLostSameSizeKeys) > 0 {
-						fmt.Println("But found some similar valid images:") //nolint:forbidigo
+					if len(nonLostSameKeys) > 0 {
+						fmt.Println("But found some equal valid images:") //nolint:forbidigo
 
-						for _, nonLostSameSizeKey := range nonLostSameSizeKeys {
-							fmt.Println("- " + nonLostSameSizeKey + "\n") //nolint:forbidigo
+						for _, nonLostSameKey := range nonLostSameKeys {
+							fmt.Println("- " + nonLostSameKey + "\n") //nolint:forbidigo
 						}
 					}
 				}
