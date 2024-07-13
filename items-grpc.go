@@ -3,13 +3,11 @@ package goautowp
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"time"
 
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/i18nbundle"
+	"github.com/autowp/goautowp/index"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
@@ -19,14 +17,11 @@ import (
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
-	"github.com/redis/go-redis/v9"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-const defaultCacheExpiration = 180 * time.Second
 
 const itemLinkNameMaxLength = 255
 
@@ -36,7 +31,6 @@ type ItemsGRPCServer struct {
 	UnimplementedItemsServer
 	repository            *items.Repository
 	db                    *goqu.Database
-	redis                 *redis.Client
 	auth                  *Auth
 	enforcer              *casbin.Enforcer
 	contentLanguages      []string
@@ -45,17 +39,12 @@ type ItemsGRPCServer struct {
 	i18n                  *i18nbundle.I18n
 	attrsRepository       *attrs.Repository
 	picturesRepository    *pictures.Repository
-}
-
-type BrandsCache struct {
-	Items []items.Item
-	Total int
+	index                 *index.Index
 }
 
 func NewItemsGRPCServer(
 	repository *items.Repository,
 	db *goqu.Database,
-	redis *redis.Client,
 	auth *Auth,
 	enforcer *casbin.Enforcer,
 	contentLanguages []string,
@@ -64,11 +53,11 @@ func NewItemsGRPCServer(
 	i18n *i18nbundle.I18n,
 	attrsRepository *attrs.Repository,
 	picturesRepository *pictures.Repository,
+	index *index.Index,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository:            repository,
 		db:                    db,
-		redis:                 redis,
 		auth:                  auth,
 		enforcer:              enforcer,
 		contentLanguages:      contentLanguages,
@@ -77,6 +66,7 @@ func NewItemsGRPCServer(
 		i18n:                  i18n,
 		attrsRepository:       attrsRepository,
 		picturesRepository:    picturesRepository,
+		index:                 index,
 	}
 }
 
@@ -88,24 +78,9 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 		return nil, status.Error(codes.Internal, "self not initialized")
 	}
 
-	if s.redis == nil {
-		return nil, status.Error(codes.Internal, "redis not initialized")
-	}
-
-	key := "GO_TOPBRANDSLIST_3_" + in.GetLanguage()
-
-	item, err := s.redis.Get(ctx, key).Result()
-	if err != nil && !errors.Is(err, redis.Nil) {
+	cache, err := s.index.BrandsCache(ctx, in.GetLanguage())
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var cache BrandsCache
-
-	if !errors.Is(err, redis.Nil) {
-		err = json.Unmarshal([]byte(item), &cache) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
 	}
 
 	brands := make([]*APITopBrandsListItem, len(cache.Items))
@@ -140,49 +115,9 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 		return nil, status.Error(codes.InvalidArgument, "Unexpected picture_item_type")
 	}
 
-	key := fmt.Sprintf("GO_PERSONS_3_%d_%s", pictureItemType, in.GetLanguage())
-
-	item, err := s.redis.Get(ctx, key).Result()
-	if err != nil && !errors.Is(err, redis.Nil) {
+	res, err := s.index.PersonsCache(ctx, pictureItemType, in.GetLanguage())
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var res []items.Item
-
-	if errors.Is(err, redis.Nil) {
-		res, _, err = s.repository.List(ctx, items.ListOptions{
-			Language: in.GetLanguage(),
-			Fields: items.ListFields{
-				NameOnly: true,
-			},
-			TypeID: []items.ItemType{items.PERSON},
-			DescendantPictures: &items.ItemPicturesOptions{
-				TypeID: pictureItemType,
-				Pictures: &items.PicturesOptions{
-					Status: pictures.StatusAccepted,
-				},
-			},
-			Limit:   items.TopPersonsCount,
-			OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},
-		}, false)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		b, err := json.Marshal(res) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else {
-		err = json.Unmarshal([]byte(item), &res) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
 	}
 
 	is := make([]*APITopPersonsListItem, len(res))
@@ -202,48 +137,9 @@ func (s *ItemsGRPCServer) GetTopFactoriesList(
 	ctx context.Context,
 	in *GetTopFactoriesListRequest,
 ) (*APITopFactoriesList, error) {
-	key := "GO_FACTORIES_3_" + in.GetLanguage()
-
-	item, err := s.redis.Get(ctx, key).Result()
-	if err != nil && !errors.Is(err, redis.Nil) {
+	res, err := s.index.FactoriesCache(ctx, in.GetLanguage())
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var res []items.Item
-
-	if errors.Is(err, redis.Nil) {
-		res, _, err = s.repository.List(ctx, items.ListOptions{
-			Language: in.GetLanguage(),
-			Fields: items.ListFields{
-				NameOnly:           true,
-				ChildItemsCount:    true,
-				NewChildItemsCount: true,
-			},
-			TypeID: []items.ItemType{items.FACTORY},
-			ChildItems: &items.ListOptions{
-				TypeID: []items.ItemType{items.VEHICLE, items.ENGINE},
-			},
-			Limit:   items.TopFactoriesCount,
-			OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},
-		}, false)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		b, err := json.Marshal(res) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		err = s.redis.Set(ctx, key, string(b), defaultCacheExpiration).Err()
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else {
-		err = json.Unmarshal([]byte(item), &res) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
 	}
 
 	is := make([]*APITopFactoriesListItem, len(res))
@@ -265,20 +161,9 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 	ctx context.Context,
 	in *GetTopCategoriesListRequest,
 ) (*APITopCategoriesList, error) {
-	key := "GO_CATEGORIES_6_" + in.GetLanguage()
-
-	item, err := s.redis.Get(ctx, key).Result()
-	if err != nil && !errors.Is(err, redis.Nil) {
+	res, err := s.index.CategoriesCache(ctx, in.GetLanguage())
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var res []items.Item
-
-	if !errors.Is(err, redis.Nil) {
-		err = json.Unmarshal([]byte(item), &res) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
 	}
 
 	is := make([]*APITopCategoriesListItem, len(res))
@@ -301,26 +186,9 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 	ctx context.Context,
 	in *GetTopTwinsBrandsListRequest,
 ) (*APITopTwinsBrandsList, error) {
-	key := "GO_TWINS_5_" + in.GetLanguage()
-
-	item, err := s.redis.Get(ctx, key).Result()
-	if err != nil && !errors.Is(err, redis.Nil) {
+	twinsData, err := s.index.TwinsCache(ctx, in.GetLanguage())
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	twinsData := struct {
-		Count int
-		Res   []items.Item
-	}{
-		0,
-		nil,
-	}
-
-	if !errors.Is(err, redis.Nil) {
-		err = json.Unmarshal([]byte(item), &twinsData) //nolint: musttag
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
 	}
 
 	is := make([]*APITwinsBrandsListItem, len(twinsData.Res))
