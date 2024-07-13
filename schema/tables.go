@@ -110,24 +110,6 @@ const (
 	ImageTableCropHeightColName = "crop_height"
 	ImageTableS3ColName         = "s3"
 
-	IPBanTableName            = "ip_ban"
-	IPBanTableIPColName       = "ip"
-	IPBanTableUntilColName    = "until"
-	IPBanTableByUserIDColName = "by_user_id"
-	IPBanTableReasonColName   = "reason"
-
-	IPMonitoringTableName             = "ip_monitoring"
-	IPMonitoringTableIPColName        = "ip"
-	IPMonitoringTableCountColName     = "count"
-	IPMonitoringTableDayDateColName   = "day_date"
-	IPMonitoringTableMinuteColName    = "minute"
-	IPMonitoringTableTenminuteColName = "tenminute"
-	IPMonitoringTableHourColName      = "hour"
-
-	IPWhitelistTableName               = "ip_whitelist"
-	IPWhitelistTableIPColName          = "ip"
-	IPWhitelistTableDescriptionColName = "description"
-
 	ItemTableName                          = "item"
 	ItemTableNameColName                   = "name"
 	ItemTableCatnameColName                = "catname"
@@ -296,11 +278,6 @@ const (
 	UserTableForumsMessagesColName    = "forums_messages"
 	UserTableForumsTopicsColName      = "forums_topics"
 
-	UserUserPreferencesTableName            = "user_user_preferences"
-	UserUserPreferencesTableDCNColName      = "disable_comments_notifications"
-	UserUserPreferencesTableUserIDColName   = "user_id"
-	UserUserPreferencesTableToUserIDColName = "to_user_id"
-
 	VehicleVehicleTypeTableName                 = "vehicle_vehicle_type"
 	VehicleVehicleTypeTableVehicleTypeIDColName = "vehicle_type_id"
 	VehicleVehicleTypeTableVehicleIDColName     = "vehicle_id"
@@ -466,24 +443,6 @@ var (
 	ImageDirTable         = goqu.T(ImageDirTableName)
 	ImageDirTableCountCol = ImageDirTable.Col(ImageDirTableCountColName)
 	ImageDirTableDirCol   = ImageDirTable.Col(ImageDirTableDirColName)
-
-	IPBanTable            = goqu.T(IPBanTableName)
-	IPBanTableIPCol       = IPBanTable.Col(IPBanTableIPColName)
-	IPBanTableUntilCol    = IPBanTable.Col(IPBanTableUntilColName)
-	IPBanTableByUserIDCol = IPBanTable.Col(IPBanTableByUserIDColName)
-	IPBanTableReasonCol   = IPBanTable.Col(IPBanTableReasonColName)
-
-	IPMonitoringTable             = goqu.T(IPMonitoringTableName)
-	IPMonitoringTableIPCol        = IPMonitoringTable.Col(IPMonitoringTableIPColName)
-	IPMonitoringTableCountCol     = IPMonitoringTable.Col(IPMonitoringTableCountColName)
-	IPMonitoringTableDayDateCol   = IPMonitoringTable.Col(IPMonitoringTableDayDateColName)
-	IPMonitoringTableMinuteCol    = IPMonitoringTable.Col(IPMonitoringTableMinuteColName)
-	IPMonitoringTableTenminuteCol = IPMonitoringTable.Col(IPMonitoringTableTenminuteColName)
-	IPMonitoringTableHourCol      = IPMonitoringTable.Col(IPMonitoringTableHourColName)
-
-	IPWhitelistTable               = goqu.T(IPWhitelistTableName)
-	IPWhitelistTableIPCol          = IPWhitelistTable.Col(IPWhitelistTableIPColName)
-	IPWhitelistTableDescriptionCol = IPWhitelistTable.Col(IPWhitelistTableDescriptionColName)
 
 	ItemLanguageTable              = goqu.T(ItemLanguageTableName)
 	ItemLanguageTableItemIDCol     = ItemLanguageTable.Col(ItemLanguageTableItemIDColName)
@@ -659,11 +618,6 @@ var (
 	UserTableMessagingIntervalCol = UserTable.Col(UserTableMessagingIntervalColName)
 	UserTableLoginCol             = UserTable.Col(UserTableLoginColName)
 	UserTablePasswordCol          = UserTable.Col(UserTablePasswordColName)
-
-	UserUserPreferencesTable            = goqu.T(UserUserPreferencesTableName)
-	UserUserPreferencesTableUserIDCol   = UserUserPreferencesTable.Col("user_id")
-	UserUserPreferencesTableToUserIDCol = UserUserPreferencesTable.Col("to_user_id")
-	UserUserPreferencesTableDCNCol      = UserUserPreferencesTable.Col(UserUserPreferencesTableDCNColName)
 
 	VehicleVehicleTypeTable                 = goqu.T(VehicleVehicleTypeTableName)
 	VehicleVehicleTypeTableVehicleTypeIDCol = VehicleVehicleTypeTable.Col(VehicleVehicleTypeTableVehicleTypeIDColName)

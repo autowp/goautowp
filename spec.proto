@@ -146,6 +146,7 @@ service Statistics {
 
 service Donations {
   rpc GetVODData(google.protobuf.Empty) returns (VODDataResponse) {}
+  rpc GetTransactions(google.protobuf.Empty) returns (DonationsTransactionsResponse) {}
 }
 
 service Text {
@@ -988,6 +989,18 @@ message Pages {
   int32 lastPageInRange = 8;
   repeated int32 pagesInRange = 9;
   int32 totalItemCount = 10;
+}
+
+message DonationsTransaction {
+  int32 sum = 1;
+  string currency = 2;
+  google.protobuf.Timestamp date = 3;
+  string contributor = 4;
+  string purpose = 5;
+}
+
+message DonationsTransactionsResponse {
+  repeated DonationsTransaction items = 1;
 }
 
 message VODDataResponse {

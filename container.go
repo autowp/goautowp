@@ -1197,7 +1197,12 @@ func (s *Container) DonationsGRPCServer() (*DonationsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.donationsGrpcServer = NewDonationsGRPCServer(repository, s.Config().DonationsVodPrice)
+		db, err := s.GoquPostgresDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.donationsGrpcServer = NewDonationsGRPCServer(repository, s.Config().DonationsVodPrice, db)
 	}
 
 	return s.donationsGrpcServer, nil
