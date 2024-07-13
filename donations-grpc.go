@@ -67,7 +67,7 @@ func (s *DonationsGRPCServer) GetTransactions(
 	err := s.db.Select(schema.TransactionTableSumCol, schema.TransactionTableCurrencyCol, schema.TransactionTableDateCol,
 		schema.TransactionTableContributorCol, schema.TransactionTablePurposeCol, schema.TransactionTableUserIDCol).
 		From(schema.TransactionTable).
-		Order(schema.TransactionTableDateCol.Desc()).
+		Order(schema.TransactionTableDateCol.Asc()).
 		Where(schema.TransactionTableDateCol.Gt(goqu.L("CURRENT_DATE - INTERVAL '6 months'"))).
 		ScanStructsContext(ctx, &rows)
 	if err != nil {
