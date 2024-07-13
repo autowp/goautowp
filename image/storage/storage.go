@@ -1428,8 +1428,9 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 				fmt.Printf("%s (%v bytes)\n", *item.Key, *item.Size) //nolint:forbidigo
 
 				var (
-					sameSizeKeys     []string
-					lostSameSizeKeys = make(map[string]string)
+					sameSizeKeys        []string
+					lostSameSizeKeys    = make(map[string]string)
+					nonLostSameSizeKeys []string
 				)
 
 				err = s.db.Select(schema.ImageTableFilepathCol).
@@ -1450,6 +1451,8 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 					err = s.isKeyExists(dir, sameSizeKey)
 					if err != nil {
 						lostSameSizeKeys[sameSizeKey] = err.Error()
+					} else {
+						nonLostSameSizeKeys = append(nonLostSameSizeKeys, sameSizeKey)
 					}
 				}
 
@@ -1461,6 +1464,14 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 					}
 				} else {
 					fmt.Println("No same size keys lost objects found") //nolint:forbidigo
+
+					if len(nonLostSameSizeKeys) > 0 {
+						fmt.Println("But found some similar valid images:") //nolint:forbidigo
+
+						for _, nonLostSameSizeKey := range nonLostSameSizeKeys {
+							fmt.Println("- " + nonLostSameSizeKey + "\n") //nolint:forbidigo
+						}
+					}
 				}
 			}
 		}
