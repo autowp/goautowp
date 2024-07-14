@@ -1431,6 +1431,8 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 	s3Client := s.s3Client()
 	bucket := dir.Bucket()
 
+	foundLostImages := make(map[int64][]string)
+
 	err := s3Client.ListObjectsPages(&s3.ListObjectsInput{
 		Bucket: &bucket,
 	}, func(list *s3.ListObjectsOutput, _ bool) bool {
@@ -1454,6 +1456,13 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 
 			if !success {
 				fmt.Printf("%s (%v bytes)\n", *item.Key, *item.Size) //nolint:forbidigo
+
+				_, ok := foundLostImages[*item.Size]
+				if !ok {
+					foundLostImages[*item.Size] = make([]string, 0)
+				}
+
+				foundLostImages[*item.Size] = append(foundLostImages[*item.Size], *item.Key)
 
 				var (
 					sameSizeKeys     []string
@@ -1512,10 +1521,35 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 					fmt.Println("No same size keys lost objects found") //nolint:forbidigo
 
 					if len(nonLostSameKeys) > 0 {
-						fmt.Println("But found some equal valid images:") //nolint:forbidigo
+						fmt.Println("But found some equal VALID images:") //nolint:forbidigo
 
 						for _, nonLostSameKey := range nonLostSameKeys {
-							fmt.Println("- " + nonLostSameKey + "\n") //nolint:forbidigo
+							fmt.Println("- " + nonLostSameKey) //nolint:forbidigo
+						}
+					} else if len(foundLostImages[*item.Size]) > 1 {
+						var lostEqual []string
+
+						for _, key := range foundLostImages[*item.Size] {
+							if key != *item.Key {
+								equal, err := s.isObjectBytesEqual(bucket, key, itemBytes)
+								if err != nil {
+									fmt.Printf("isObjectBytesEqual(%s, %s): %v\n", bucket, key, err.Error()) //nolint:forbidigo
+
+									return false
+								}
+
+								if equal {
+									lostEqual = append(lostEqual, key)
+								}
+							}
+						}
+
+						if len(lostEqual) > 0 {
+							fmt.Println("But found some equal LOST images:") //nolint:forbidigo
+
+							for _, key := range lostEqual {
+								fmt.Println("- " + key) //nolint:forbidigo
+							}
 						}
 					}
 				}
