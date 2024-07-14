@@ -1529,6 +1529,15 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 					} else if len(foundLostImages[*item.Size]) > 1 {
 						var lostEqual []string
 
+						if itemBytes == nil {
+							itemBytes, err = s.getObjectBytes(bucket, *item.Key)
+							if err != nil {
+								fmt.Printf("getObjectBytes(%s, %s): %v\n", bucket, *item.Key, err.Error()) //nolint:forbidigo
+
+								return false
+							}
+						}
+
 						for _, key := range foundLostImages[*item.Size] {
 							if key != *item.Key {
 								equal, err := s.isObjectBytesEqual(bucket, key, itemBytes)
