@@ -1455,7 +1455,7 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 			}
 
 			if !success {
-				fmt.Printf("%s (%v bytes)\n", *item.Key, *item.Size) //nolint:forbidigo
+				fmt.Printf("\n%s (%v bytes)\n", *item.Key, *item.Size) //nolint:forbidigo
 
 				_, ok := foundLostImages[*item.Size]
 				if !ok {
