@@ -489,11 +489,13 @@ func (s *Application) ImageStorageListBrokenImages(ctx context.Context, dir stri
 	return is.ListBrokenImages(ctx, dir)
 }
 
-func (s *Application) ImageStorageListUnlinkedObjects(ctx context.Context, dir string, moveToLostAndFound bool) error {
+func (s *Application) ImageStorageListUnlinkedObjects(
+	ctx context.Context, dir string, moveToLostAndFound bool, offset string,
+) error {
 	is, err := s.container.ImageStorage()
 	if err != nil {
 		return err
 	}
 
-	return is.ListUnlinkedObjects(ctx, dir, moveToLostAndFound)
+	return is.ListUnlinkedObjects(ctx, dir, moveToLostAndFound, offset)
 }

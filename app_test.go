@@ -140,7 +140,7 @@ func TestImageStorageListUnlinkedObjects(t *testing.T) {
 	app := NewApplication(cfg)
 	ctx := context.Background()
 
-	err := app.ImageStorageListUnlinkedObjects(ctx, "format", true)
+	err := app.ImageStorageListUnlinkedObjects(ctx, "format", true, "")
 	require.NoError(t, err)
 }
 

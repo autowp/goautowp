@@ -1422,7 +1422,9 @@ func (s *Storage) isObjectBytesEqual(bucket string, key string, expectedBytes []
 	return bytes.Equal(actualBytes, expectedBytes), nil
 }
 
-func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string, moveToLostAndFound bool) error {
+func (s *Storage) ListUnlinkedObjects(
+	ctx context.Context, dirName string, moveToLostAndFound bool, offset string,
+) error {
 	dir := s.dir(dirName)
 	if dir == nil {
 		return fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
@@ -1433,8 +1435,14 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string, moveT
 
 	foundLostImages := make(map[int64][]string)
 
+	var marker *string
+	if offset != "" {
+		marker = &offset
+	}
+
 	err := s3Client.ListObjectsPages(&s3.ListObjectsInput{
 		Bucket: &bucket,
+		Marker: marker,
 	}, func(list *s3.ListObjectsOutput, _ bool) bool {
 		var id int64
 

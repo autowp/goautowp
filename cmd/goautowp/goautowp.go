@@ -137,10 +137,19 @@ func mainReturnWithCode() int {
 								Usage:    "true",
 								Required: false,
 							},
+							&cli.StringFlag{
+								Name:     "offset",
+								Value:    "",
+								Usage:    "offset",
+								Required: false,
+							},
 						},
 						Action: func(ctx context.Context, command *cli.Command) error {
-							return autowpApp.ImageStorageListUnlinkedObjects(ctx, command.String("dir"),
-								command.Bool("move-to-lost-and-found"))
+							return autowpApp.ImageStorageListUnlinkedObjects(ctx,
+								command.String("dir"),
+								command.Bool("move-to-lost-and-found"),
+								command.String("offset"),
+							)
 						},
 					},
 				},
