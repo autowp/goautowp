@@ -117,9 +117,19 @@ func mainReturnWithCode() int {
 								Usage:    "dir",
 								Required: true,
 							},
+							&cli.StringFlag{
+								Name:     "offset",
+								Value:    "",
+								Usage:    "offset",
+								Required: false,
+							},
 						},
 						Action: func(ctx context.Context, command *cli.Command) error {
-							return autowpApp.ImageStorageListBrokenImages(ctx, command.String("dir"))
+							return autowpApp.ImageStorageListBrokenImages(
+								ctx,
+								command.String("dir"),
+								command.String("offset"),
+							)
 						},
 					},
 					{

@@ -1342,18 +1342,17 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIDs []int, formatNam
 	return result, nil
 }
 
-func (s *Storage) ListBrokenImages(ctx context.Context, dirName string) error {
+func (s *Storage) ListBrokenImages(ctx context.Context, dirName string, lastKey string) error {
 	dir := s.dir(dirName)
 	if dir == nil {
 		return fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
 	}
 
-	var (
-		isLastPage bool
-		lastKey    string
-	)
+	var isLastPage bool
 
 	for !isLastPage {
+		fmt.Printf("Fetch next `%d` from `%s`\n", listBrokenImagesPerPage, lastKey) //nolint:forbidigo
+
 		var sts []struct {
 			Filepath string `db:"filepath"`
 		}

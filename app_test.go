@@ -129,7 +129,7 @@ func TestImageStorageListBrokenImages(t *testing.T) {
 	app := NewApplication(cfg)
 	ctx := context.Background()
 
-	err := app.ImageStorageListBrokenImages(ctx, "picture")
+	err := app.ImageStorageListBrokenImages(ctx, "picture", "")
 	require.NoError(t, err)
 }
 
