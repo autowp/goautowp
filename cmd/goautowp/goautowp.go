@@ -131,9 +131,16 @@ func mainReturnWithCode() int {
 								Usage:    "dir",
 								Required: true,
 							},
+							&cli.BoolFlag{
+								Name:     "move-to-lost-and-found",
+								Value:    false,
+								Usage:    "true",
+								Required: false,
+							},
 						},
 						Action: func(ctx context.Context, command *cli.Command) error {
-							return autowpApp.ImageStorageListUnlinkedObjects(ctx, command.String("dir"))
+							return autowpApp.ImageStorageListUnlinkedObjects(ctx, command.String("dir"),
+								command.Bool("move-to-lost-and-found"))
 						},
 					},
 				},

@@ -1422,7 +1422,7 @@ func (s *Storage) isObjectBytesEqual(bucket string, key string, expectedBytes []
 	return bytes.Equal(actualBytes, expectedBytes), nil
 }
 
-func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error {
+func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string, moveToLostAndFound bool) error {
 	dir := s.dir(dirName)
 	if dir == nil {
 		return fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
@@ -1520,13 +1520,14 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 				} else {
 					fmt.Println("No same size keys lost objects found") //nolint:forbidigo
 
-					if len(nonLostSameKeys) > 0 {
+					switch {
+					case len(nonLostSameKeys) > 0:
 						fmt.Println("But found some equal VALID images:") //nolint:forbidigo
 
 						for _, nonLostSameKey := range nonLostSameKeys {
 							fmt.Println("- " + nonLostSameKey) //nolint:forbidigo
 						}
-					} else if len(foundLostImages[*item.Size]) > 1 {
+					case len(foundLostImages[*item.Size]) > 1:
 						var lostEqual []string
 
 						if itemBytes == nil {
@@ -1559,6 +1560,36 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string) error
 							for _, key := range lostEqual {
 								fmt.Println("- " + key) //nolint:forbidigo
 							}
+						}
+					default:
+						const prefix = "lost-and-found/"
+						if moveToLostAndFound && !strings.HasPrefix(*item.Key, prefix) {
+							copySource := bucket + "/" + *item.Key
+							dest := prefix + *item.Key
+
+							_, err = s3Client.CopyObject(&s3.CopyObjectInput{
+								Bucket:     &bucket,
+								CopySource: &copySource,
+								Key:        &dest,
+								ACL:        &publicRead,
+							})
+							if err != nil {
+								fmt.Printf("CopyObject(%s, %s, %s): %v\n", bucket, *item.Key, dest, err.Error()) //nolint:forbidigo
+
+								return false
+							}
+
+							_, err = s3Client.DeleteObject(&s3.DeleteObjectInput{
+								Bucket: &bucket,
+								Key:    item.Key,
+							})
+							if err != nil {
+								fmt.Printf("DeleteObject(%s, %s): %v\n", bucket, *item.Key, err.Error()) //nolint:forbidigo
+
+								return false
+							}
+
+							fmt.Printf("was MOVED from `%s` to `%s`\n", copySource, dest) //nolint:forbidigo
 						}
 					}
 				}
