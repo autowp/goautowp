@@ -1527,6 +1527,17 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string, moveT
 						for _, nonLostSameKey := range nonLostSameKeys {
 							fmt.Println("- " + nonLostSameKey) //nolint:forbidigo
 						}
+
+						const prefix = "lost-and-has-valid-copy/"
+						if moveToLostAndFound && !strings.HasPrefix(*item.Key, prefix) {
+							err = s.moveWithPrefix(bucket, *item.Key, prefix)
+							if err != nil {
+								fmt.Printf("moveWithPrefix(%s, %s, %s): %v\n", bucket, *item.Key, prefix, err.Error()) //nolint:forbidigo
+
+								return false
+							}
+						}
+
 					case len(foundLostImages[*item.Size]) > 1:
 						var lostEqual []string
 
@@ -1564,32 +1575,12 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string, moveT
 					default:
 						const prefix = "lost-and-found/"
 						if moveToLostAndFound && !strings.HasPrefix(*item.Key, prefix) {
-							copySource := bucket + "/" + *item.Key
-							dest := prefix + *item.Key
-
-							_, err = s3Client.CopyObject(&s3.CopyObjectInput{
-								Bucket:     &bucket,
-								CopySource: &copySource,
-								Key:        &dest,
-								ACL:        &publicRead,
-							})
+							err = s.moveWithPrefix(bucket, *item.Key, prefix)
 							if err != nil {
-								fmt.Printf("CopyObject(%s, %s, %s): %v\n", bucket, *item.Key, dest, err.Error()) //nolint:forbidigo
+								fmt.Printf("moveWithPrefix(%s, %s, %s): %v\n", bucket, *item.Key, prefix, err.Error()) //nolint:forbidigo
 
 								return false
 							}
-
-							_, err = s3Client.DeleteObject(&s3.DeleteObjectInput{
-								Bucket: &bucket,
-								Key:    item.Key,
-							})
-							if err != nil {
-								fmt.Printf("DeleteObject(%s, %s): %v\n", bucket, *item.Key, err.Error()) //nolint:forbidigo
-
-								return false
-							}
-
-							fmt.Printf("was MOVED from `%s` to `%s`\n", copySource, dest) //nolint:forbidigo
 						}
 					}
 				}
@@ -1600,4 +1591,31 @@ func (s *Storage) ListUnlinkedObjects(ctx context.Context, dirName string, moveT
 	})
 
 	return err
+}
+
+func (s *Storage) moveWithPrefix(bucket string, key string, prefix string) error {
+	copySource := bucket + "/" + key
+	dest := prefix + key
+
+	_, err := s.s3Client().CopyObject(&s3.CopyObjectInput{
+		Bucket:     &bucket,
+		CopySource: &copySource,
+		Key:        &dest,
+		ACL:        &publicRead,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = s.s3Client().DeleteObject(&s3.DeleteObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("was MOVED from `%s` to `%s`\n", copySource, dest) //nolint:forbidigo
+
+	return nil
 }
