@@ -118,6 +118,10 @@ service Comments {
   rpc GetMessages(GetMessagesRequest) returns (APICommentsMessages) {}
 }
 
+service Log {
+  rpc GetEvents(LogEventsRequest) returns (LogEvents) {}
+}
+
 service Map {
   rpc GetPoints(MapGetPointsRequest) returns (MapPoints) {}
 }
@@ -886,6 +890,27 @@ message CommentsVoteCommentRequest {
 
 message CommentsVoteCommentResponse {
   int32 votes = 1;
+}
+
+message LogEventsRequest {
+  int64 article_id = 1;
+  int64 item_id = 2;
+  int64 picture_id = 3;
+  int64 user_id = 4;
+  uint32 page = 5;
+}
+
+message LogEvents {
+  repeated LogEvent items = 1;
+  Pages paginator = 2;
+}
+
+message LogEvent {
+  google.protobuf.Timestamp created_at = 1;
+  string description = 2;
+  int64 user_id = 3;
+  repeated int64 pictures = 4;
+  repeated int64 items = 5;
 }
 
 message MapGetPointsRequest {

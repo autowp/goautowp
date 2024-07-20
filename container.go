@@ -18,6 +18,7 @@ import (
 	"github.com/autowp/goautowp/index"
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/log"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/telegram"
@@ -93,6 +94,8 @@ type Container struct {
 	attrsGRPCServer        *AttrsGRPCServer
 	textStorageRepository  *textstorage.Repository
 	yoomoneyHandler        *YoomoneyHandler
+	logRepository          *log.Repository
+	LogGrpcServer          *LogGRPCServer
 }
 
 // NewContainer constructor.
@@ -399,6 +402,19 @@ func (s *Container) Location() (*time.Location, error) {
 	return s.location, nil
 }
 
+func (s *Container) LogRepository() (*log.Repository, error) {
+	if s.logRepository == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.logRepository = log.NewRepository(db)
+	}
+
+	return s.logRepository, nil
+}
+
 func (s *Container) PicturesRepository() (*pictures.Repository, error) {
 	if s.picturesRepository == nil {
 		db, err := s.GoquDB()
@@ -567,6 +583,11 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
+	logSrv, err := s.LogGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	mapSrv, err := s.MapGRPCServer()
 	if err != nil {
 		return nil, err
@@ -630,6 +651,7 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 	RegisterDonationsServer(grpcServer, donationsSrv)
 	RegisterForumsServer(grpcServer, forumsSrv)
 	RegisterItemsServer(grpcServer, itemsSrv)
+	RegisterLogServer(grpcServer, logSrv)
 	RegisterMapServer(grpcServer, mapSrv)
 	RegisterMessagingServer(grpcServer, messagingSrv)
 	RegisterPicturesServer(grpcServer, picturesSrv)
@@ -1147,6 +1169,24 @@ func (s *Container) ContactsGRPCServer() (*ContactsGRPCServer, error) {
 	}
 
 	return s.contactsGrpcServer, nil
+}
+
+func (s *Container) LogGRPCServer() (*LogGRPCServer, error) {
+	if s.LogGrpcServer == nil {
+		repository, err := s.LogRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		s.LogGrpcServer = NewLogGRPCServer(repository, auth, s.Enforcer())
+	}
+
+	return s.LogGrpcServer, nil
 }
 
 func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {

@@ -165,9 +165,22 @@ const (
 	LinksTableItemIDColName = "item_id"
 
 	LogEventsTableName               = "log_events"
+	LogEventsTableIDColName          = "id"
 	LogEventsTableDescriptionColName = "description"
 	LogEventsTableUserIDColName      = "user_id"
 	LogEventsTableAddDatetimeColName = "add_datetime"
+
+	LogEventsArticlesTableName              = "log_events_articles"
+	LogEventsArticlesTableLogEventIDColName = "log_event_id"
+	LogEventsArticlesTableArticleIDColName  = "article_id"
+
+	LogEventsItemTableName              = "log_events_item"
+	LogEventsItemTableLogEventIDColName = "log_event_id"
+	LogEventsItemTableItemIDColName     = "item_id"
+
+	LogEventsPicturesTableName              = "log_events_pictures"
+	LogEventsPicturesTableLogEventIDColName = "log_event_id"
+	LogEventsPicturesTablePictureIDColName  = "picture_id"
 
 	LogEventsUserTableName              = "log_events_user"
 	LogEventsUserTableLogEventIDColName = "log_event_id"
@@ -493,9 +506,22 @@ var (
 	HtmlsTableHTMLCol = HtmlsTable.Col("html")
 
 	LogEventsTable               = goqu.T(LogEventsTableName)
+	LogEventsTableIDCol          = LogEventsTable.Col(LogEventsTableIDColName)
 	LogEventsTableDescriptionCol = LogEventsTable.Col(LogEventsTableDescriptionColName)
 	LogEventsTableUserIDCol      = LogEventsTable.Col(LogEventsTableUserIDColName)
 	LogEventsTableAddDatetimeCol = LogEventsTable.Col(LogEventsTableAddDatetimeColName)
+
+	LogEventsArticlesTable              = goqu.T(LogEventsArticlesTableName)
+	LogEventsArticlesTableLogEventIDCol = LogEventsArticlesTable.Col(LogEventsArticlesTableLogEventIDColName)
+	LogEventsArticlesTableArticleIDCol  = LogEventsArticlesTable.Col(LogEventsArticlesTableArticleIDColName)
+
+	LogEventsItemTable              = goqu.T(LogEventsItemTableName)
+	LogEventsItemTableLogEventIDCol = LogEventsItemTable.Col(LogEventsItemTableLogEventIDColName)
+	LogEventsItemTableItemIDCol     = LogEventsItemTable.Col(LogEventsItemTableItemIDColName)
+
+	LogEventsPicturesTable              = goqu.T(LogEventsPicturesTableName)
+	LogEventsPicturesTableLogEventIDCol = LogEventsPicturesTable.Col(LogEventsPicturesTableLogEventIDColName)
+	LogEventsPicturesTablePictureIDCol  = LogEventsPicturesTable.Col(LogEventsPicturesTablePictureIDColName)
 
 	OfDayTable           = goqu.T(OfDayTableName)
 	OfDayTableDayDateCol = OfDayTable.Col(OfDayTableDayDateColName)

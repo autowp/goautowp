@@ -3613,6 +3613,97 @@ var Comments_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
+	Log_GetEvents_FullMethodName = "/goautowp.Log/GetEvents"
+)
+
+// LogClient is the client API for Log service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type LogClient interface {
+	GetEvents(ctx context.Context, in *LogEventsRequest, opts ...grpc.CallOption) (*LogEvents, error)
+}
+
+type logClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewLogClient(cc grpc.ClientConnInterface) LogClient {
+	return &logClient{cc}
+}
+
+func (c *logClient) GetEvents(ctx context.Context, in *LogEventsRequest, opts ...grpc.CallOption) (*LogEvents, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LogEvents)
+	err := c.cc.Invoke(ctx, Log_GetEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// LogServer is the server API for Log service.
+// All implementations must embed UnimplementedLogServer
+// for forward compatibility
+type LogServer interface {
+	GetEvents(context.Context, *LogEventsRequest) (*LogEvents, error)
+	mustEmbedUnimplementedLogServer()
+}
+
+// UnimplementedLogServer must be embedded to have forward compatible implementations.
+type UnimplementedLogServer struct {
+}
+
+func (UnimplementedLogServer) GetEvents(context.Context, *LogEventsRequest) (*LogEvents, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEvents not implemented")
+}
+func (UnimplementedLogServer) mustEmbedUnimplementedLogServer() {}
+
+// UnsafeLogServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to LogServer will
+// result in compilation errors.
+type UnsafeLogServer interface {
+	mustEmbedUnimplementedLogServer()
+}
+
+func RegisterLogServer(s grpc.ServiceRegistrar, srv LogServer) {
+	s.RegisterService(&Log_ServiceDesc, srv)
+}
+
+func _Log_GetEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogServer).GetEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Log_GetEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogServer).GetEvents(ctx, req.(*LogEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Log_ServiceDesc is the grpc.ServiceDesc for Log service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Log_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Log",
+	HandlerType: (*LogServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetEvents",
+			Handler:    _Log_GetEvents_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+const (
 	Map_GetPoints_FullMethodName = "/goautowp.Map/GetPoints"
 )
 
