@@ -101,6 +101,7 @@ service Items {
   rpc DeleteItemVehicleType(APIItemVehicleTypeRequest) returns (google.protobuf.Empty) {}
   rpc GetItemLanguages(APIGetItemLanguagesRequest) returns (ItemLanguages) {}
   rpc GetItemParentLanguages(APIGetItemParentLanguagesRequest) returns (ItemParentLanguages) {}
+  rpc SetItemParentLanguage(ItemParentLanguage) returns (google.protobuf.Empty) {}
   rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
 }
 

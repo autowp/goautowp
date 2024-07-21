@@ -10,6 +10,7 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -123,7 +124,8 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = goquDB.Insert(schema.ItemParentTable).
-		Cols("item_id", "parent_id", "catname", "type").
+		Cols(schema.ItemParentTableItemIDColName, schema.ItemParentTableParentIDColName,
+			schema.ItemParentTableCatnameColName, schema.ItemParentTableTypeColName).
 		Vals(
 			goqu.Vals{vehicle1, brand1, "vehicle1", 0},
 			goqu.Vals{vehicle2, brand2, "vehicle2", 0},
@@ -603,4 +605,189 @@ func TestStats(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, r.GetValues())
+}
+
+func TestSetItemParentLanguage(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	cases := []struct {
+		ParentName           string
+		ParentBeginYear      int32
+		ParentEndYear        int32
+		ParentBeginModelYear int32
+		ParentEndModelYear   int32
+		ParentSpecID         sql.NullInt32
+		ChildName            string
+		ChildBeginYear       int32
+		ChildEndYear         int32
+		ChildBeginModelYear  int32
+		ChildEndModelYear    int32
+		ChildSpecID          sql.NullInt32
+		Result               string
+	}{
+		{
+			"Peugeot %d",
+			2000, 2010,
+			0, 0,
+			sql.NullInt32{},
+			"Peugeot %d",
+			2000, 2005,
+			0, 0,
+			sql.NullInt32{},
+			"2000–05",
+		},
+		{
+			"Peugeot %d",
+			2000, 2010,
+			0, 0,
+			sql.NullInt32{},
+			"Peugeot %d Coupe",
+			2000, 2010,
+			0, 0,
+			sql.NullInt32{},
+			"Coupe",
+		},
+		{
+			"Peugeot %d",
+			2000, 2010,
+			0, 0,
+			sql.NullInt32{},
+			"Peugeot %d",
+			2000, 2010,
+			0, 0,
+			sql.NullInt32{Valid: true, Int32: 29},
+			"Worldwide",
+		},
+		{
+			"Peugeot %d",
+			2000, 2010,
+			2001, 2010,
+			sql.NullInt32{},
+			"Peugeot %d",
+			2000, 2010,
+			2001, 2005,
+			sql.NullInt32{},
+			"2001–05",
+		},
+	}
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	for _, testCase := range cases {
+		randomInt := random.Int()
+		childName := fmt.Sprintf(testCase.ChildName, randomInt)
+		parentName := fmt.Sprintf(testCase.ParentName, randomInt)
+
+		r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+			schema.ItemTableNameColName:            childName,
+			schema.ItemTableIsGroupColName:         0,
+			schema.ItemTableItemTypeIDColName:      items.VEHICLE,
+			schema.ItemTableCatnameColName:         nil,
+			schema.ItemTableBodyColName:            "",
+			schema.ItemTableProducedExactlyColName: 0,
+			schema.ItemTableBeginYearColName:       testCase.ChildBeginYear,
+			schema.ItemTableEndYearColName:         testCase.ChildEndYear,
+			schema.ItemTableBeginModelYearColName:  testCase.ChildBeginModelYear,
+			schema.ItemTableEndModelYearColName:    testCase.ChildEndModelYear,
+			schema.ItemTableSpecIDColName:          testCase.ChildSpecID,
+		}).Executor().ExecContext(ctx)
+		require.NoError(t, err)
+
+		itemID, err := r1.LastInsertId()
+		require.NoError(t, err)
+
+		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(goqu.Record{
+			schema.ItemLanguageTableItemIDColName:   itemID,
+			schema.ItemLanguageTableLanguageColName: "xx",
+			schema.ItemLanguageTableNameColName:     childName,
+		}).Executor().ExecContext(ctx)
+		require.NoError(t, err)
+
+		r2, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+			schema.ItemTableNameColName:            parentName,
+			schema.ItemTableIsGroupColName:         1,
+			schema.ItemTableItemTypeIDColName:      items.VEHICLE,
+			schema.ItemTableCatnameColName:         nil,
+			schema.ItemTableBodyColName:            "",
+			schema.ItemTableProducedExactlyColName: 0,
+			schema.ItemTableBeginYearColName:       testCase.ParentBeginYear,
+			schema.ItemTableEndYearColName:         testCase.ParentEndYear,
+			schema.ItemTableBeginModelYearColName:  testCase.ParentBeginModelYear,
+			schema.ItemTableEndModelYearColName:    testCase.ParentEndModelYear,
+			schema.ItemTableSpecIDColName:          testCase.ParentSpecID,
+		}).Executor().ExecContext(ctx)
+		require.NoError(t, err)
+
+		parentID, err := r2.LastInsertId()
+		require.NoError(t, err)
+
+		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(goqu.Record{
+			schema.ItemLanguageTableItemIDColName:   parentID,
+			schema.ItemLanguageTableLanguageColName: "xx",
+			schema.ItemLanguageTableNameColName:     parentName,
+		}).Executor().ExecContext(ctx)
+		require.NoError(t, err)
+
+		_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
+			schema.ItemParentTableItemIDColName:   itemID,
+			schema.ItemParentTableParentIDColName: parentID,
+			schema.ItemParentTableCatnameColName:  "child-item",
+			schema.ItemParentTableTypeColName:     0,
+		}).Executor().ExecContext(ctx)
+		require.NoError(t, err)
+
+		_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+		_, err = client.SetItemParentLanguage(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+			&ItemParentLanguage{
+				ItemId:   itemID,
+				ParentId: parentID,
+				Language: "en",
+				Name:     "",
+			},
+		)
+		require.NoError(t, err)
+
+		r3, err := client.GetItemParentLanguages(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+			&APIGetItemParentLanguagesRequest{
+				ItemId:   itemID,
+				ParentId: parentID,
+			},
+		)
+		require.NoError(t, err)
+
+		var itemParentLanguageRow *ItemParentLanguage
+
+		for _, row := range r3.GetItems() {
+			if row.GetLanguage() == "en" {
+				itemParentLanguageRow = row
+
+				break
+			}
+		}
+
+		require.NotNil(t, itemParentLanguageRow)
+		require.Equal(t, testCase.Result, itemParentLanguageRow.GetName())
+	}
 }

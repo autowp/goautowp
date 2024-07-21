@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/autowp/goautowp/pictures"
@@ -24,7 +25,8 @@ var (
 )
 
 const (
-	NewDays = 7
+	NewDays                   = 7
+	ItemLanguageNameMaxLength = 255
 )
 
 const (
@@ -91,6 +93,18 @@ const (
 type Repository struct {
 	db                *goqu.Database
 	mostsMinCarsCount int
+}
+
+type itemRow struct {
+	ID             int64         `db:"id"`
+	Name           string        `db:"name"`
+	ItemType       ItemType      `db:"item_type_id"`
+	Body           string        `db:"body"`
+	BeginYear      sql.NullInt32 `db:"begin_year"`
+	EndYear        sql.NullInt32 `db:"end_year"`
+	BeginModelYear sql.NullInt32 `db:"begin_model_year"`
+	EndModelYear   sql.NullInt32 `db:"end_model_year"`
+	SpecID         sql.NullInt32 `db:"spec_id"`
 }
 
 type Item struct {
@@ -231,6 +245,37 @@ type ListOptions struct {
 	HasBeginMonth      bool
 	HasEndMonth        bool
 	HasLogo            bool
+}
+
+func yearsPrefix(begin int32, end int32) string {
+	if begin <= 0 && end <= 0 {
+		return ""
+	}
+
+	if end == begin {
+		return strconv.Itoa(int(begin))
+	}
+
+	const oneHundred = 100
+
+	var (
+		bms = begin / oneHundred
+		ems = end / oneHundred
+	)
+
+	if bms == ems {
+		return fmt.Sprintf("%d–%02d", begin, end%oneHundred)
+	}
+
+	if begin <= 0 {
+		return fmt.Sprintf("xx–%d", end)
+	}
+
+	if end > 0 {
+		return fmt.Sprintf("%d–%d", begin, end)
+	}
+
+	return fmt.Sprintf("%d–xx", begin)
 }
 
 func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesOptions) *goqu.SelectDataset {
@@ -1605,4 +1650,268 @@ func (s *Repository) ItemsWithPicturesCount(
 	}
 
 	return result, nil
+}
+
+func (s *Repository) SetItemParentLanguage(
+	ctx context.Context, parentID int64, itemID int64, language string, newName string, forceIsAuto bool,
+) error {
+	bvlRow := struct {
+		IsAuto bool   `db:"is_auto"`
+		Name   string `db:"name"`
+	}{}
+
+	success, err := s.db.Select().From(schema.ItemParentLanguageTable).Where(
+		schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
+		schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
+		schema.ItemParentLanguageTableLanguageCol.Eq(language),
+	).ScanStructContext(ctx, &bvlRow)
+	if err != nil {
+		return err
+	}
+
+	isAuto := true
+
+	if !forceIsAuto {
+		name := ""
+
+		if success {
+			isAuto = bvlRow.IsAuto
+			name = bvlRow.Name
+		}
+
+		if name != newName {
+			isAuto = false
+		}
+	}
+
+	if len(newName) == 0 {
+		parentRow := itemRow{}
+		itmRow := itemRow{}
+
+		success, err = s.db.Select(
+			schema.ItemTableIDCol, schema.ItemTableNameCol, schema.ItemTableBodyCol, schema.ItemTableSpecIDCol,
+			schema.ItemTableBeginYearCol, schema.ItemTableEndYearCol,
+			schema.ItemTableBeginModelYearCol, schema.ItemTableEndModelYearCol,
+		).
+			From(schema.ItemTable).
+			Where(schema.ItemTableIDCol.Eq(parentID)).
+			ScanStructContext(ctx, &parentRow)
+		if err != nil {
+			return err
+		}
+
+		if !success {
+			return ErrItemNotFound
+		}
+
+		success, err = s.db.Select(
+			schema.ItemTableIDCol, schema.ItemTableNameCol, schema.ItemTableBodyCol, schema.ItemTableSpecIDCol,
+			schema.ItemTableBeginYearCol, schema.ItemTableEndYearCol,
+			schema.ItemTableBeginModelYearCol, schema.ItemTableEndModelYearCol,
+		).
+			From(schema.ItemTable).
+			Where(schema.ItemTableIDCol.Eq(itemID)).
+			ScanStructContext(ctx, &itmRow)
+		if err != nil {
+			return err
+		}
+
+		if !success {
+			return ErrItemNotFound
+		}
+
+		newName, err = s.extractName(ctx, parentRow, itmRow, language)
+		if err != nil {
+			return err
+		}
+
+		isAuto = true
+	}
+
+	if len(newName) > ItemLanguageNameMaxLength {
+		newName = newName[:ItemLanguageNameMaxLength]
+	}
+
+	_, err = s.db.Insert(schema.ItemParentLanguageTable).Rows(goqu.Record{
+		schema.ItemParentLanguageTableItemIDColName:   itemID,
+		schema.ItemParentLanguageTableParentIDColName: parentID,
+		schema.ItemParentLanguageTableLanguageColName: language,
+		schema.ItemParentLanguageTableNameColName:     newName,
+		schema.ItemParentLanguageTableIsAutoColName:   isAuto,
+	}).OnConflict(
+		goqu.DoUpdate(schema.ItemParentLanguageTableNameColName+","+schema.ItemParentLanguageTableIsAutoColName,
+			goqu.Record{
+				schema.ItemParentLanguageTableNameColName: goqu.Func(
+					"VALUES",
+					goqu.C(schema.ItemParentLanguageTableNameColName),
+				),
+				schema.ItemParentLanguageTableIsAutoColName: goqu.Func(
+					"VALUES",
+					goqu.C(schema.ItemParentLanguageTableIsAutoColName),
+				),
+			},
+		)).Executor().ExecContext(ctx)
+
+	return err
+}
+
+func (s *Repository) extractName(
+	ctx context.Context, parentRow itemRow, vehicleRow itemRow, language string,
+) (string, error) {
+	langName, err := s.getName(ctx, vehicleRow.ID, language)
+	if err != nil {
+		return "", err
+	}
+
+	vehicleName := langName
+	if len(langName) == 0 {
+		vehicleName = vehicleRow.Name
+	}
+
+	aliases, err := s.getAliases(ctx, parentRow.ID)
+	if err != nil {
+		return "", err
+	}
+
+	name := vehicleName
+
+	for _, alias := range aliases {
+		patterns := []string{
+			"by The " + alias + " Company",
+			"by " + alias,
+			"di " + alias,
+			"par " + alias,
+			alias + "-",
+			"-" + alias,
+		}
+
+		for _, pattern := range patterns {
+			re := regexp.MustCompile(regexp.QuoteMeta(pattern))
+			name = re.ReplaceAllString(name, "")
+		}
+
+		re := regexp.MustCompile(`\b` + regexp.QuoteMeta(alias) + `\b`)
+		name = re.ReplaceAllString(name, "")
+	}
+
+	re := regexp.MustCompile("[[:space:]]+")
+	name = strings.TrimSpace(re.ReplaceAllString(name, " "))
+
+	name = strings.TrimLeft(name, "/")
+	if len(name) == 0 && len(vehicleRow.Body) > 0 && vehicleRow.Body != parentRow.Body {
+		name = vehicleRow.Body
+	}
+
+	vbmy := vehicleRow.BeginModelYear.Int32
+	vemy := vehicleRow.EndModelYear.Int32
+
+	if len(name) == 0 && vehicleRow.BeginModelYear.Valid && vbmy > 0 {
+		modelYearsDifferent := vbmy != parentRow.BeginModelYear.Int32 || vemy != parentRow.EndModelYear.Int32
+		if modelYearsDifferent {
+			name = yearsPrefix(vbmy, vemy)
+		}
+	}
+
+	vby := vehicleRow.BeginYear.Int32
+	vey := vehicleRow.EndYear.Int32
+
+	if len(name) == 0 && vehicleRow.BeginYear.Valid && vby > 0 {
+		yearsDifferent := vby != parentRow.BeginYear.Int32 || vey != parentRow.EndYear.Int32
+		if yearsDifferent {
+			name = yearsPrefix(vby, vey)
+		}
+	}
+
+	if len(name) == 0 && vehicleRow.SpecID.Valid {
+		specsDifferent := vehicleRow.SpecID.Int32 != parentRow.SpecID.Int32
+		if specsDifferent {
+			specShortName := ""
+
+			success, err := s.db.Select(schema.SpecTableShortNameCol).From(schema.SpecTable).
+				Where(schema.SpecTableIDCol.Eq(vehicleRow.SpecID.Int32)).ScanValContext(ctx, &specShortName)
+			if err != nil {
+				return "", err
+			}
+
+			if success {
+				name = specShortName
+			}
+		}
+	}
+
+	if len(name) == 0 {
+		name = vehicleName
+	}
+
+	return name, nil
+}
+
+func (s *Repository) getAliases(ctx context.Context, itemID int64) ([]string, error) {
+	var aliases []string
+
+	err := s.db.Select(schema.BrandAliasTableNameCol).From(schema.BrandAliasTable).
+		Where(schema.BrandAliasTableItemIDCol.Eq(itemID)).ScanValsContext(ctx, &aliases)
+	if err != nil {
+		return nil, err
+	}
+
+	langNames, err := s.getNames(ctx, itemID)
+	if err != nil {
+		return nil, err
+	}
+
+	aliases = append(aliases, langNames...)
+
+	sort.Slice(aliases, func(i, j int) bool {
+		return len(aliases[i]) > len(aliases[j])
+	})
+
+	return aliases, nil
+}
+
+func (s *Repository) getName(ctx context.Context, itemID int64, language string) (string, error) {
+	langPriority, ok := languagePriority[language]
+	if !ok {
+		return "", fmt.Errorf("%w: `%s`", errLangNotFound, language)
+	}
+
+	fieldParams := make([]interface{}, len(langPriority)+1)
+	fieldParams[0] = language
+
+	for i, v := range langPriority {
+		fieldParams[i+1] = v
+	}
+
+	result := ""
+
+	success, err := s.db.Select(schema.ItemLanguageTableNameCol).
+		From(schema.ItemLanguageTable).
+		Where(
+			schema.ItemLanguageTableItemIDCol.Eq(itemID),
+			goqu.L("? > 0", goqu.Func("length", schema.ItemLanguageTableNameCol)),
+		).
+		Order(goqu.Func("FIELD", fieldParams...).Asc()).
+		Limit(1).
+		ScanValContext(ctx, &result)
+	if err != nil {
+		return "", err
+	}
+
+	if !success {
+		return "", nil
+	}
+
+	return result, nil
+}
+
+func (s *Repository) getNames(ctx context.Context, itemID int64) ([]string, error) {
+	var result []string
+
+	err := s.db.Select(schema.ItemLanguageTableNameCol).From(schema.ItemLanguageTable).
+		Where(
+			schema.ItemLanguageTableItemIDCol.Eq(itemID),
+			goqu.L("? > 0", goqu.Func("length", schema.ItemLanguageTableNameCol)),
+		).ScanValsContext(ctx, &result)
+
+	return result, err
 }

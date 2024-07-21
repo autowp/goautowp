@@ -557,7 +557,7 @@ func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (
 
 	InvalidParams, err := in.Validate()
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if len(InvalidParams) > 0 {
@@ -1058,4 +1058,60 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 			},
 		},
 	}, nil
+}
+
+func (s *ItemParentLanguage) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
+	var (
+		result   = make([]*errdetails.BadRequest_FieldViolation, 0)
+		problems []string
+		err      error
+	)
+
+	nameInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.StringLength{Min: 0, Max: items.ItemLanguageNameMaxLength},
+		},
+	}
+
+	s.Name, problems, err = nameInputFilter.IsValidString(s.GetName())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "name",
+			Description: fv,
+		})
+	}
+
+	return result, nil
+}
+
+func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemParentLanguage) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	InvalidParams, err := in.Validate()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	err = s.repository.SetItemParentLanguage(ctx, in.GetParentId(), in.GetItemId(), in.GetLanguage(), in.GetName(), false)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
 }

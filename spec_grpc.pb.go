@@ -2274,6 +2274,7 @@ const (
 	Items_DeleteItemVehicleType_FullMethodName  = "/goautowp.Items/DeleteItemVehicleType"
 	Items_GetItemLanguages_FullMethodName       = "/goautowp.Items/GetItemLanguages"
 	Items_GetItemParentLanguages_FullMethodName = "/goautowp.Items/GetItemParentLanguages"
+	Items_SetItemParentLanguage_FullMethodName  = "/goautowp.Items/SetItemParentLanguage"
 	Items_GetStats_FullMethodName               = "/goautowp.Items/GetStats"
 )
 
@@ -2302,6 +2303,7 @@ type ItemsClient interface {
 	DeleteItemVehicleType(ctx context.Context, in *APIItemVehicleTypeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetItemLanguages(ctx context.Context, in *APIGetItemLanguagesRequest, opts ...grpc.CallOption) (*ItemLanguages, error)
 	GetItemParentLanguages(ctx context.Context, in *APIGetItemParentLanguagesRequest, opts ...grpc.CallOption) (*ItemParentLanguages, error)
+	SetItemParentLanguage(ctx context.Context, in *ItemParentLanguage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error)
 }
 
@@ -2523,6 +2525,16 @@ func (c *itemsClient) GetItemParentLanguages(ctx context.Context, in *APIGetItem
 	return out, nil
 }
 
+func (c *itemsClient) SetItemParentLanguage(ctx context.Context, in *ItemParentLanguage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_SetItemParentLanguage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *itemsClient) GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(StatsResponse)
@@ -2558,6 +2570,7 @@ type ItemsServer interface {
 	DeleteItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*emptypb.Empty, error)
 	GetItemLanguages(context.Context, *APIGetItemLanguagesRequest) (*ItemLanguages, error)
 	GetItemParentLanguages(context.Context, *APIGetItemParentLanguagesRequest) (*ItemParentLanguages, error)
+	SetItemParentLanguage(context.Context, *ItemParentLanguage) (*emptypb.Empty, error)
 	GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error)
 	mustEmbedUnimplementedItemsServer()
 }
@@ -2628,6 +2641,9 @@ func (UnimplementedItemsServer) GetItemLanguages(context.Context, *APIGetItemLan
 }
 func (UnimplementedItemsServer) GetItemParentLanguages(context.Context, *APIGetItemParentLanguagesRequest) (*ItemParentLanguages, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItemParentLanguages not implemented")
+}
+func (UnimplementedItemsServer) SetItemParentLanguage(context.Context, *ItemParentLanguage) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetItemParentLanguage not implemented")
 }
 func (UnimplementedItemsServer) GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStats not implemented")
@@ -3023,6 +3039,24 @@ func _Items_GetItemParentLanguages_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_SetItemParentLanguage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ItemParentLanguage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).SetItemParentLanguage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_SetItemParentLanguage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).SetItemParentLanguage(ctx, req.(*ItemParentLanguage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Items_GetStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -3131,6 +3165,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetItemParentLanguages",
 			Handler:    _Items_GetItemParentLanguages_Handler,
+		},
+		{
+			MethodName: "SetItemParentLanguage",
+			Handler:    _Items_SetItemParentLanguage_Handler,
 		},
 		{
 			MethodName: "GetStats",

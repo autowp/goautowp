@@ -16,7 +16,12 @@ const (
 
 	AttrsZonesTableName          = "attrs_zones"
 	AttrsZoneAttributesTableName = "attrs_zone_attributes"
-	CarTypesTableName            = "car_types"
+
+	BrandAliasTableName          = "brand_alias"
+	BrandAliasTableItemIDColName = "item_id"
+	BrandAliasTableNameColName   = "name"
+
+	CarTypesTableName = "car_types"
 
 	CommentMessageTableName                      = "comment_message"
 	CommentMessageTableIDColName                 = "id"
@@ -153,9 +158,18 @@ const (
 	ItemLanguageTableTextIDColName     = "text_id"
 	ItemLanguageTableFullTextIDColName = "full_text_id"
 
-	ItemParentTableName = "item_parent"
+	ItemParentTableName            = "item_parent"
+	ItemParentTableParentIDColName = "parent_id"
+	ItemParentTableItemIDColName   = "item_id"
+	ItemParentTableTypeColName     = "type"
+	ItemParentTableCatnameColName  = "catname"
 
-	ItemParentLanguageTableName = "item_parent_language"
+	ItemParentLanguageTableName            = "item_parent_language"
+	ItemParentLanguageTableItemIDColName   = "item_id"
+	ItemParentLanguageTableParentIDColName = "parent_id"
+	ItemParentLanguageTableLanguageColName = "language"
+	ItemParentLanguageTableNameColName     = "name"
+	ItemParentLanguageTableIsAutoColName   = "is_auto"
 
 	LinksTableName          = "links"
 	LinksTableIDColName     = "id"
@@ -354,6 +368,10 @@ var (
 	AttrsZonesTableIDCol   = AttrsZonesTable.Col("id")
 	AttrsZonesTableNameCol = AttrsZonesTable.Col("name")
 
+	BrandAliasTable          = goqu.T(BrandAliasTableName)
+	BrandAliasTableItemIDCol = BrandAliasTable.Col(BrandAliasTableItemIDColName)
+	BrandAliasTableNameCol   = BrandAliasTable.Col(BrandAliasTableNameColName)
+
 	CarTypesTable            = goqu.T(CarTypesTableName)
 	CarTypesTableIDCol       = CarTypesTable.Col("id")
 	CarTypesTableNameCol     = CarTypesTable.Col("name")
@@ -465,19 +483,20 @@ var (
 	ItemLanguageTableFullTextIDCol = ItemLanguageTable.Col(ItemLanguageTableFullTextIDColName)
 
 	ItemParentTable            = goqu.T(ItemParentTableName)
-	ItemParentTableParentIDCol = ItemParentTable.Col("parent_id")
-	ItemParentTableItemIDCol   = ItemParentTable.Col("item_id")
-	ItemParentTableTypeCol     = ItemParentTable.Col("type")
+	ItemParentTableParentIDCol = ItemParentTable.Col(ItemParentTableParentIDColName)
+	ItemParentTableItemIDCol   = ItemParentTable.Col(ItemParentTableItemIDColName)
+	ItemParentTableTypeCol     = ItemParentTable.Col(ItemParentTableTypeColName)
+	ItemParentTableCatnameCol  = ItemParentTable.Col(ItemParentTableCatnameColName)
 
 	ItemParentCacheTable            = goqu.T(ItemParentCacheTableName)
 	ItemParentCacheTableItemIDCol   = ItemParentCacheTable.Col(ItemParentCacheTableItemIDColName)
 	ItemParentCacheTableParentIDCol = ItemParentCacheTable.Col(ItemParentCacheTableParentIDColName)
 
 	ItemParentLanguageTable            = goqu.T(ItemParentLanguageTableName)
-	ItemParentLanguageTableItemIDCol   = ItemParentLanguageTable.Col("item_id")
-	ItemParentLanguageTableParentIDCol = ItemParentLanguageTable.Col("parent_id")
-	ItemParentLanguageTableLanguageCol = ItemParentLanguageTable.Col("language")
-	ItemParentLanguageTableNameCol     = ItemParentLanguageTable.Col("name")
+	ItemParentLanguageTableItemIDCol   = ItemParentLanguageTable.Col(ItemParentLanguageTableItemIDColName)
+	ItemParentLanguageTableParentIDCol = ItemParentLanguageTable.Col(ItemParentLanguageTableParentIDColName)
+	ItemParentLanguageTableLanguageCol = ItemParentLanguageTable.Col(ItemParentLanguageTableLanguageColName)
+	ItemParentLanguageTableNameCol     = ItemParentLanguageTable.Col(ItemParentLanguageTableNameColName)
 
 	ItemPointTable          = goqu.T(ItemPointTableName)
 	ItemPointTablePointCol  = ItemPointTable.Col(ItemPointTablePointColName)
@@ -485,11 +504,14 @@ var (
 
 	ItemTable                  = goqu.T(ItemTableName)
 	ItemTableIDCol             = ItemTable.Col(ItemTableIDColName)
+	ItemTableBodyCol           = ItemTable.Col(ItemTableBodyColName)
+	ItemTableSpecIDCol         = ItemTable.Col(ItemTableSpecIDColName)
 	ItemTableCatnameCol        = ItemTable.Col(ItemTableCatnameColName)
 	ItemTableNameCol           = ItemTable.Col(ItemTableNameColName)
 	ItemTableBeginYearCol      = ItemTable.Col(ItemTableBeginYearColName)
 	ItemTableEndYearCol        = ItemTable.Col(ItemTableEndYearColName)
 	ItemTableBeginModelYearCol = ItemTable.Col(ItemTableBeginModelYearColName)
+	ItemTableEndModelYearCol   = ItemTable.Col(ItemTableEndModelYearColName)
 	ItemTableIsGroupCol        = ItemTable.Col(ItemTableIsGroupColName)
 	ItemTableItemTypeIDCol     = ItemTable.Col(ItemTableItemTypeIDColName)
 	ItemTableTodayCol          = ItemTable.Col(ItemTableTodayColName)
