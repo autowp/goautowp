@@ -117,7 +117,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		err = s.events.Add(Event{
+		err = s.events.Add(ctx, Event{
 			UserID:  userID,
 			Message: fmt.Sprintf("Удаление пользователя №%d", in.GetUserId()),
 			Users:   []int64{in.GetUserId()},

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -138,6 +139,111 @@ func TestModerVoteTemplate(t *testing.T) {
 	_, err = client.DeleteModerVoteTemplate(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&DeleteModerVoteTemplateRequest{Id: template.GetId()},
+	)
+	require.NoError(t, err)
+}
+
+func TestModerVote(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	pictureID := addPicture(t, goquDB, "./test/small.jpg")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	_, err = client.UpdateModerVote(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&UpdateModerVoteRequest{PictureId: pictureID, Reason: "test", Vote: 1, Save: true},
+	)
+	require.NoError(t, err)
+
+	_, err = client.UpdateModerVote(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&UpdateModerVoteRequest{PictureId: pictureID, Reason: "test", Vote: 1, Save: true},
+	)
+	require.NoError(t, err)
+
+	_, err = client.UpdateModerVote(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&UpdateModerVoteRequest{PictureId: pictureID, Reason: "test", Vote: -1, Save: true},
+	)
+	require.NoError(t, err)
+
+	_, err = client.DeleteModerVote(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&DeleteModerVoteRequest{PictureId: pictureID},
+	)
+	require.NoError(t, err)
+
+	secondUserID, _ := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
+
+	var picStatus pictures.Status
+
+	// test unaccepting
+	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
+		schema.PictureTableStatusColName:             pictures.StatusAccepted,
+		schema.PictureTableChangeStatusUserIDColName: secondUserID,
+	}).Where(schema.PictureTableIDCol.Eq(pictureID)).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	_, err = client.UpdateModerVote(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&UpdateModerVoteRequest{PictureId: pictureID, Reason: "test", Vote: -1, Save: false},
+	)
+	require.NoError(t, err)
+
+	success, err := goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, pictures.StatusInbox, picStatus)
+
+	// test restore from removing
+	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
+		schema.PictureTableStatusColName:             pictures.StatusRemoving,
+		schema.PictureTableChangeStatusUserIDColName: secondUserID,
+	}).Where(schema.PictureTableIDCol.Eq(pictureID)).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	_, err = client.UpdateModerVote(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&UpdateModerVoteRequest{PictureId: pictureID, Reason: "test", Vote: 1, Save: false},
+	)
+	require.NoError(t, err)
+
+	success, err = goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, pictures.StatusInbox, picStatus)
+
+	_, err = client.DeleteModerVote(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&DeleteModerVoteRequest{PictureId: pictureID},
 	)
 	require.NoError(t, err)
 }

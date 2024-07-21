@@ -668,7 +668,7 @@ func (s *APIItemLink) Validate() ([]*errdetails.BadRequest_FieldViolation, error
 	typeInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
 		Validators: []validation.ValidatorInterface{
-			&validation.InArray{Haystack: []string{
+			&validation.InArray{HaystackString: []string{
 				"default",
 				"official",
 				"club",

@@ -1,14 +1,17 @@
 package goautowp
 
 import (
+	"context"
+
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 )
 
 type Event struct {
-	UserID  int64
-	Message string
-	Users   []int64
+	UserID   int64
+	Message  string
+	Users    []int64
+	Pictures []int64
 }
 
 type Events struct {
@@ -21,14 +24,14 @@ func NewEvents(db *goqu.Database) *Events {
 	}
 }
 
-func (s *Events) Add(event Event) error {
+func (s *Events) Add(ctx context.Context, event Event) error {
 	res, err := s.db.Insert(schema.LogEventsTable).
 		Rows(goqu.Record{
 			schema.LogEventsTableDescriptionColName: event.Message,
 			schema.LogEventsTableUserIDColName:      event.UserID,
 			schema.LogEventsTableAddDatetimeColName: goqu.Func("NOW"),
 		}).
-		Executor().Exec()
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -38,13 +41,31 @@ func (s *Events) Add(event Event) error {
 		return err
 	}
 
-	for _, id := range event.Users {
-		_, err = s.db.Insert(schema.LogEventsUserTableName).
-			Rows(goqu.Record{
+	if len(event.Users) > 0 {
+		rows := make([]interface{}, len(event.Users))
+		for idx, id := range event.Users {
+			rows[idx] = goqu.Record{
 				schema.LogEventsUserTableLogEventIDColName: rowID,
-				schema.LogEventsUserTableNameUserIDColName: id,
-			}).
-			Executor().Exec()
+				schema.LogEventsUserTableUserIDColName:     id,
+			}
+		}
+
+		_, err = s.db.Insert(schema.LogEventsUserTable).Rows(rows...).Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(event.Pictures) > 0 {
+		rows := make([]interface{}, len(event.Pictures))
+		for idx, id := range event.Pictures {
+			rows[idx] = goqu.Record{
+				schema.LogEventsPicturesTableLogEventIDColName: rowID,
+				schema.LogEventsPicturesTablePictureIDColName:  id,
+			}
+		}
+
+		_, err = s.db.Insert(schema.LogEventsPicturesTable).Rows(rows...).Executor().ExecContext(ctx)
 		if err != nil {
 			return err
 		}

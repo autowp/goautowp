@@ -2,111 +2,14 @@ package goautowp
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 )
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer util.Close(in)
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer util.Close(out)
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func addImage(t *testing.T, db *goqu.Database, imageFilepath string) int {
-	t.Helper()
-
-	_, filename := path.Split(imageFilepath)
-	extension := path.Ext(filename)
-	name := strings.TrimSuffix(filename, extension)
-
-	randBytes := make([]byte, 16)
-	_, err := rand.Read(randBytes)
-	require.NoError(t, err)
-
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-
-	exPath := filepath.Dir(ex)
-
-	newPath := name + hex.EncodeToString(randBytes) + extension
-	newFullpath := exPath + "/images/" + newPath
-
-	err = os.MkdirAll(path.Dir(newFullpath), os.ModePerm)
-	require.NoError(t, err)
-
-	err = copyFile(imageFilepath, newFullpath)
-	require.NoError(t, err)
-
-	res, err := db.Insert(schema.ImageTable).Rows(goqu.Record{
-		schema.ImageTableFilepathColName: newPath,
-		schema.ImageTableFilesizeColName: 1,
-		schema.ImageTableWidthColName:    1,
-		schema.ImageTableHeightColName:   1,
-		schema.ImageTableDirColName:      "picture",
-	}).Executor().ExecContext(context.Background())
-	require.NoError(t, err)
-
-	imageID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	return int(imageID)
-}
-
-func addPicture(t *testing.T, db *goqu.Database, filepath string) int {
-	t.Helper()
-
-	imageID := addImage(t, db, filepath)
-
-	randBytes := make([]byte, 3)
-	_, err := rand.Read(randBytes)
-	require.NoError(t, err)
-
-	identity := hex.EncodeToString(randBytes)
-	ctx := context.Background()
-
-	res, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
-		schema.PictureTableImageIDColName:  imageID,
-		schema.PictureTableIdentityColName: identity,
-		schema.PictureTableIPColName:       goqu.Func("INET6_ATON", "127.0.0.1"),
-		schema.PictureTableOwnerIDColName:  nil,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	pictureID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	return int(pictureID)
-}
 
 func TestDuplicateFinder(t *testing.T) {
 	t.Parallel()

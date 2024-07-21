@@ -5,9 +5,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -15,42 +13,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
-
-//nolint:unparam
-func getUserWithCleanHistory(
-	t *testing.T,
-	conn *grpc.ClientConn,
-	cfg config.Config,
-	db *goqu.Database,
-	username string,
-	password string,
-) (int64, string) {
-	t.Helper()
-
-	ctx := context.Background()
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
-
-	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, username, password)
-	require.NoError(t, err)
-	require.NotNil(t, token)
-
-	user, err := NewUsersClient(conn).Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&APIMeRequest{},
-	)
-	require.NoError(t, err)
-
-	_, err = db.Update(schema.UserTable).
-		Set(goqu.Record{
-			schema.UserTableLastMessageTimeColName: "2000-01-01",
-			schema.UserTableVotesLeftColName:       100,
-		}).
-		Where(schema.UserTableIDCol.Eq(user.GetId())).
-		Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	return user.GetId(), token.AccessToken
-}
 
 func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 	t.Parallel()

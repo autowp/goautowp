@@ -17,7 +17,7 @@ func (d *Dir) Bucket() string {
 	return d.bucket
 }
 
-func (d *Dir) NamingStrategy() NamingStrategy { //nolint: ireturn
+func (d *Dir) NamingStrategy() NamingStrategy { //nolint:ireturn
 	return d.namingStrategy
 }
 

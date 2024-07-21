@@ -1201,7 +1201,28 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
-		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer())
+		events, err := s.Events()
+		if err != nil {
+			return nil, err
+		}
+
+		messagingRepository, err := s.MessagingRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		userRepository, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		i18n, err := s.I18n()
+		if err != nil {
+			return nil, err
+		}
+
+		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer(), events, s.HostsManager(),
+			messagingRepository, userRepository, i18n)
 	}
 
 	return s.picturesGrpcServer, nil

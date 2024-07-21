@@ -13,6 +13,8 @@ import (
 
 type Status string
 
+const IdentityLength = 6
+
 const (
 	StatusAccepted Status = "accepted"
 	StatusRemoving Status = "removing"
@@ -29,6 +31,12 @@ const (
 )
 
 const ModerVoteTemplateMessageMaxLength = 80
+
+type PictureRow struct {
+	OwnerID            sql.NullInt64 `db:"owner_id"`
+	ChangeStatusUserID sql.NullInt64 `db:"change_status_user_id"`
+	Identity           string        `db:"identity"`
+}
 
 type ModerVoteTemplate struct {
 	ID      int64
@@ -99,6 +107,18 @@ func (s *Repository) Status(ctx context.Context, id int64) (Status, error) {
 	}
 
 	return status, nil
+}
+
+func (s *Repository) SetStatus(ctx context.Context, id int64, status Status, userID int64) error {
+	_, err := s.db.Update(schema.PictureTable).
+		Set(goqu.Record{
+			schema.PictureTableStatusColName:             status,
+			schema.PictureTableChangeStatusUserIDColName: userID,
+		}).
+		Where(schema.PictureTableIDCol.Eq(id)).
+		Executor().ExecContext(ctx)
+
+	return err
 }
 
 func (s *Repository) GetVote(ctx context.Context, id int64, userID int64) (*VoteSummary, error) {
@@ -205,14 +225,28 @@ func (s *Repository) DeleteModerVoteTemplate(ctx context.Context, id int64, user
 	return err
 }
 
-func (s *Repository) GetModerVoteTemplates(ctx context.Context, id int64) ([]ModerVoteTemplate, error) {
+func (s *Repository) IsModerVoteTemplateExists(ctx context.Context, userID int64, reason string) (bool, error) {
+	var id int64
+
+	success, err := s.db.Select(schema.PictureModerVoteTemplateTableIDCol).
+		From(schema.PictureModerVoteTemplateTable).
+		Where(
+			schema.PictureModerVoteTemplateTableUserIDCol.Eq(userID),
+			schema.PictureModerVoteTemplateTableReasonCol.Eq(reason),
+		).
+		ScanValContext(ctx, &id)
+
+	return success, err
+}
+
+func (s *Repository) GetModerVoteTemplates(ctx context.Context, userID int64) ([]ModerVoteTemplate, error) {
 	rows, err := s.db.Select(
 		schema.PictureModerVoteTemplateTableIDCol,
 		schema.PictureModerVoteTemplateTableReasonCol,
 		schema.PictureModerVoteTemplateTableVoteCol,
 	).
 		From(schema.PictureModerVoteTemplateTable).
-		Where(schema.PictureModerVoteTemplateTableUserIDCol.Eq(id)).
+		Where(schema.PictureModerVoteTemplateTableUserIDCol.Eq(userID)).
 		Order(schema.PictureModerVoteTemplateTableReasonCol.Asc()).
 		Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	if err != nil {
@@ -380,4 +414,69 @@ func (s *Repository) TopOwnerFans(ctx context.Context, userID int64, limit uint)
 		ScanStructsContext(ctx, &rows)
 
 	return rows, err
+}
+
+func (s *Repository) DeleteModerVote(ctx context.Context, pictureID int64, userID int64) (bool, error) {
+	res, err := s.db.Delete(schema.PicturesModerVotesTable).
+		Where(
+			schema.PicturesModerVotesTableUserIDCol.Eq(userID),
+			schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
+		).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+
+	return affected > 0, err
+}
+
+func (s *Repository) CreateModerVote(
+	ctx context.Context, pictureID int64, userID int64, vote bool, reason string,
+) (bool, error) {
+	res, err := s.db.Insert(schema.PicturesModerVotesTable).Rows(goqu.Record{
+		schema.PicturesModerVotesTablePictureIDColName: pictureID,
+		schema.PicturesModerVotesTableUserIDColName:    userID,
+		schema.PicturesModerVotesTableVoteColName:      vote,
+		schema.PicturesModerVotesTableReasonColName:    reason,
+		schema.PicturesModerVotesTableDayDateColName:   goqu.Func("NOW"),
+	}).OnConflict(
+		goqu.DoUpdate(
+			schema.PicturesModerVotesTablePictureIDColName+","+schema.PicturesModerVotesTableUserIDColName,
+			goqu.Record{
+				schema.PicturesModerVotesTableVoteColName: goqu.Func("VALUES",
+					goqu.C(schema.PicturesModerVotesTableVoteColName)),
+				schema.PicturesModerVotesTableReasonColName: goqu.Func("VALUES",
+					goqu.C(schema.PicturesModerVotesTableReasonColName)),
+				schema.PicturesModerVotesTableDayDateColName: goqu.Func("VALUES",
+					goqu.C(schema.PicturesModerVotesTableDayDateColName)),
+			},
+		)).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+
+	return affected > 0, err
+}
+
+func (s *Repository) Picture(ctx context.Context, id int64) (*PictureRow, error) {
+	st := PictureRow{}
+
+	success, err := s.db.Select(
+		schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol, schema.PictureTableIdentityCol,
+	).
+		From(schema.PictureTable).
+		Where(schema.PictureTableIDCol.Eq(id)).
+		ScanStructContext(ctx, &st)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, sql.ErrNoRows
+	}
+
+	return &st, nil
 }

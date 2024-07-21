@@ -3,5 +3,7 @@
   "pm/user-%s-replies-to-you-%s" : "{{.Name}}回复了您\n{{.Message}}",
   "carlist/model-years": "年款",
   "carlist/years": "生产年份",
-  "present-time-abbr": "至今"
+  "present-time-abbr": "至今",
+  "pm/new-picture-%s-vote-%s/accept": "收到接受图片表决\n{{.Picture}}\nReason: {{.Reason}}",
+  "pm/new-picture-%s-vote-%s/delete": "收到删除图片表决\n{{.Picture}}\nReason: {{.Reason}}"
 }

@@ -133,6 +133,8 @@ service Pictures {
   rpc CreateModerVoteTemplate(ModerVoteTemplate) returns (ModerVoteTemplate) {}
   rpc DeleteModerVoteTemplate(DeleteModerVoteTemplateRequest) returns (google.protobuf.Empty) {}
   rpc GetModerVoteTemplates(google.protobuf.Empty) returns (ModerVoteTemplates) {}
+  rpc DeleteModerVote(DeleteModerVoteRequest) returns (google.protobuf.Empty) {}
+  rpc UpdateModerVote(UpdateModerVoteRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {
@@ -965,6 +967,17 @@ message ModerVoteTemplates {
 
 message DeleteModerVoteTemplateRequest {
   int64 id = 1;
+}
+
+message UpdateModerVoteRequest {
+  int64 picture_id = 1;
+  string reason = 2;
+  int32 vote = 3;
+  bool save = 4;
+}
+
+message DeleteModerVoteRequest {
+  int64 picture_id = 1;
 }
 
 message MessagingDeleteMessage {

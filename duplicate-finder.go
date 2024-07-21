@@ -33,7 +33,7 @@ type DuplicateFinder struct {
 
 // DuplicateFinderInputMessage InputMessage.
 type DuplicateFinderInputMessage struct {
-	PictureID int    `json:"picture_id"`
+	PictureID int64  `json:"picture_id"`
 	URL       string `json:"url"`
 }
 
@@ -125,7 +125,7 @@ func (s *DuplicateFinder) ListenAMQP(ctx context.Context, url string, queue stri
 
 // Index picture image
 // #nosec G107
-func (s *DuplicateFinder) Index(ctx context.Context, id int, url string) error {
+func (s *DuplicateFinder) Index(ctx context.Context, id int64, url string) error {
 	logrus.Infof("Indexing picture %v", id)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -172,7 +172,7 @@ func getFileHash(reader io.Reader) (uint64, error) {
 	return hash.GetHash(), nil
 }
 
-func (s *DuplicateFinder) updateDistance(ctx context.Context, id int) error {
+func (s *DuplicateFinder) updateDistance(ctx context.Context, id int64) error {
 	if id <= 0 {
 		return errInvalidID
 	}

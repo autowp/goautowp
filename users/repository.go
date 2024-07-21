@@ -14,6 +14,7 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/Nerzal/gocloak/v13/pkg/jwx"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -1021,4 +1022,36 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 	}
 
 	return nil
+}
+
+func (s *Repository) UserLanguage(ctx context.Context, userID int64) (string, error) {
+	language := ""
+
+	success, err := s.autowpDB.Select(schema.UserTableLanguageCol).
+		From(schema.UserTable).
+		Where(schema.UserTableIDCol.Eq(userID)).
+		ScanValContext(ctx, &language)
+	if err != nil {
+		return "", err
+	}
+
+	if !success {
+		return "", ErrUserNotFound
+	}
+
+	return language, nil
+}
+
+func (s *Repository) RefreshPicturesCount(ctx context.Context, userID int64) error {
+	_, err := s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
+		schema.UserTablePicturesTotalColName: s.autowpDB.Select(goqu.COUNT(goqu.Star())).
+			From(schema.PictureTable).
+			Where(
+				schema.PictureTableOwnerIDCol.Eq(userID),
+				schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
+			),
+	}).
+		Where(schema.UserTableIDCol.Eq(userID)).Executor().ExecContext(ctx)
+
+	return err
 }

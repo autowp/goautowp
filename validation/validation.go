@@ -1,18 +1,5 @@
 package validation
 
-import (
-	"fmt"
-	"net/mail"
-	"net/url"
-	"regexp"
-	"strings"
-
-	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
-	"github.com/doug-martin/goqu/v9"
-	"github.com/dpapathanasiou/go-recaptcha"
-)
-
 const (
 	NotEmptyIsEmpty           = "Value is required and can't be empty"
 	EmailAddressInvalidFormat = "The input is not a valid email address"
@@ -26,174 +13,12 @@ const (
 
 type FilterInterface interface {
 	FilterString(value string) string
+	FilterInt32(value int32) int32
 }
 
 type ValidatorInterface interface {
 	IsValidString(value string) ([]string, error)
-}
-
-// NotEmpty validator.
-type NotEmpty struct{}
-
-// StringLength validator.
-type StringLength struct {
-	Min int
-	Max int
-}
-
-// EmailAddress validator.
-type EmailAddress struct{}
-
-// URL validator.
-type URL struct{}
-
-// Recaptcha validator.
-type Recaptcha struct {
-	ClientIP string
-}
-
-// EmailNotExists validator.
-type EmailNotExists struct {
-	DB *goqu.Database
-}
-
-// IdenticalStrings validator.
-type IdenticalStrings struct {
-	Pattern string
-}
-
-// InArray validator.
-type InArray struct {
-	Haystack []string
-}
-
-// Callback validator.
-type Callback struct {
-	Callback func(value string) ([]string, error)
-}
-
-// StringTrimFilter filter.
-type StringTrimFilter struct{}
-
-// StringSingleSpaces filter.
-type StringSingleSpaces struct{}
-
-// IsValidString IsValidString.
-func (s *NotEmpty) IsValidString(value string) ([]string, error) {
-	if len(value) > 0 {
-		return []string{}, nil
-	}
-
-	return []string{NotEmptyIsEmpty}, nil
-}
-
-// IsValidString IsValidString.
-func (s *StringLength) IsValidString(value string) ([]string, error) {
-	l := len(value)
-	if l < s.Min {
-		return []string{fmt.Sprintf(StringLengthTooShort, s.Min)}, nil
-	}
-
-	if l > s.Max {
-		return []string{fmt.Sprintf(StringLengthTooLong, s.Max)}, nil
-	}
-
-	return []string{}, nil
-}
-
-// IsValidString IsValidString.
-func (s *EmailAddress) IsValidString(value string) ([]string, error) {
-	_, err := mail.ParseAddress(value)
-	if err != nil {
-		return []string{EmailAddressInvalidFormat}, nil //nolint:nilerr
-	}
-
-	return []string{}, nil
-}
-
-// IsValidString IsValidString.
-func (s *URL) IsValidString(value string) ([]string, error) {
-	_, err := url.ParseRequestURI(value)
-	if err != nil {
-		return []string{URLInvalidFormat}, nil //nolint:nilerr
-	}
-
-	return []string{}, nil
-}
-
-// IsValidString IsValidString.
-func (s *Recaptcha) IsValidString(value string) ([]string, error) {
-	_, err := recaptcha.Confirm(s.ClientIP, value)
-	if err != nil {
-		return []string{err.Error()}, nil //nolint:nilerr
-	}
-
-	return []string{}, nil
-}
-
-// IsValidString IsValidString.
-func (s *EmailNotExists) IsValidString(value string) ([]string, error) {
-	var exists bool
-
-	success, err := s.DB.Select(goqu.V(1)).
-		From(schema.UserTable).
-		Where(schema.UserTableEmailCol.Eq(value)).
-		ScanVal(&exists)
-	if err != nil {
-		return nil, err
-	}
-
-	if !success {
-		return []string{}, nil
-	}
-
-	return []string{EmailNotExistsExists}, nil
-}
-
-// IsValidString IsValidString.
-func (s *IdenticalStrings) IsValidString(value string) ([]string, error) {
-	if value != s.Pattern {
-		return []string{IdenticalStringsNotSame}, nil
-	}
-
-	return []string{}, nil
-}
-
-// IsValidString IsValidString.
-func (s *InArray) IsValidString(value string) ([]string, error) {
-	if !util.Contains(s.Haystack, value) {
-		return []string{NotInArray}, nil
-	}
-
-	return []string{}, nil
-}
-
-// IsValidString IsValidString.
-func (s *Callback) IsValidString(value string) ([]string, error) {
-	return s.Callback(value)
-}
-
-// FilterString filter.
-func (s *StringTrimFilter) FilterString(value string) string {
-	return strings.TrimSpace(value)
-}
-
-// FilterString filter.
-func (s *StringSingleSpaces) FilterString(value string) string {
-	if len(value) == 0 {
-		return ""
-	}
-
-	value = strings.ReplaceAll(value, "\r", "")
-	lines := strings.Split(value, "\n")
-	re := regexp.MustCompile("[[:space:]]+")
-	out := make([]string, len(lines))
-
-	for idx, line := range lines {
-		out[idx] = re.ReplaceAllString(line, " ")
-	}
-
-	return strings.Join(out, "\n")
+	IsValidInt32(value int32) ([]string, error)
 }
 
 type InputFilter struct {
@@ -226,6 +51,43 @@ func validateString(value string, validators []ValidatorInterface) ([]string, er
 
 	for _, validator := range validators {
 		violations, err := validator.IsValidString(value)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(violations) > 0 {
+			return violations, nil
+		}
+	}
+
+	return result, nil
+}
+
+// IsValidInt32 IsValidInt32.
+func (s *InputFilter) IsValidInt32(value int32) (int32, []string, error) {
+	value = filterInt32(value, s.Filters)
+
+	violations, err := validateInt32(value, s.Validators)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return value, violations, nil
+}
+
+func filterInt32(value int32, filters []FilterInterface) int32 {
+	for _, filter := range filters {
+		value = filter.FilterInt32(value)
+	}
+
+	return value
+}
+
+func validateInt32(value int32, validators []ValidatorInterface) ([]string, error) {
+	result := make([]string, 0)
+
+	for _, validator := range validators {
+		violations, err := validator.IsValidInt32(value)
 		if err != nil {
 			return nil, err
 		}

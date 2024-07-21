@@ -3,5 +3,7 @@
   "pm/user-%s-replies-to-you-%s": "{{.Name}} ответил на ваше сообщение\n{{.Message}}",
   "carlist/model-years": "модельный год",
   "carlist/years": "года выпуска",
-  "present-time-abbr": "н.в."
+  "present-time-abbr": "н.в.",
+  "pm/new-picture-%s-vote-%s/accept": "Подана заявка на принятие добавленной вами картинки\n{{.Picture}}\nПричина: {{.Reason}}",
+  "pm/new-picture-%s-vote-%s/delete": "Подана заявка на удаление добавленной вами картинки\n{{.Picture}}\nПричина: {{.Reason}}"
 }

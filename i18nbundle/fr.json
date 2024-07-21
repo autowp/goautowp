@@ -3,5 +3,7 @@
   "pm/user-%s-replies-to-you-%s": "{{.Name}} vous a répondu\n{{.Message}",
   "carlist/model-years": "années-modèles",
   "carlist/years": "années de production",
-  "present-time-abbr": "pr."
+  "present-time-abbr": "pr.",
+  "pm/new-picture-%s-vote-%s/accept": "Vote accepter pour la nouvelle image\n{{.Picture}}\nRaison: {{.Reason}}",
+  "pm/new-picture-%s-vote-%s/delete": "Vote pour suppression de la nouvelle image\n{{.Picture}}\nRaison: {{.Reason}}"
 }

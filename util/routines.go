@@ -27,6 +27,16 @@ func Contains(s []string, e string) bool {
 	return false
 }
 
+func ContainsInt32(s []int32, e int32) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+
+	return false
+}
+
 func SQLNullInt64ToPtr(v sql.NullInt64) *int64 {
 	var value *int64
 

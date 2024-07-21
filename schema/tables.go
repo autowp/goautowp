@@ -198,7 +198,7 @@ const (
 
 	LogEventsUserTableName              = "log_events_user"
 	LogEventsUserTableLogEventIDColName = "log_event_id"
-	LogEventsUserTableNameUserIDColName = "user_id"
+	LogEventsUserTableUserIDColName     = "user_id"
 
 	OfDayTableName           = "of_day"
 	OfDayTableItemIDColName  = "item_id"
@@ -219,19 +219,27 @@ const (
 	PerspectivesGroupsPerspectivesTableName = "perspectives_groups_perspectives"
 	PerspectivesPagesTableName              = "perspectives_pages"
 
+	PicturesModerVotesTableName             = "pictures_moder_votes"
+	PicturesModerVotesTableUserIDColName    = "user_id"
+	PicturesModerVotesTablePictureIDColName = "picture_id"
+	PicturesModerVotesTableVoteColName      = "vote"
+	PicturesModerVotesTableReasonColName    = "reason"
+	PicturesModerVotesTableDayDateColName   = "day_date"
+
 	PictureModerVoteTemplateTableName          = "picture_moder_vote_template"
 	PictureModerVoteTemplateTableIDColName     = "id"
 	PictureModerVoteTemplateTableReasonColName = "reason"
 	PictureModerVoteTemplateTableVoteColName   = "vote"
 	PictureModerVoteTemplateTableUserIDColName = "user_id"
 
-	PictureTableName            = "pictures"
-	PictureTableIDColName       = "id"
-	PictureTableImageIDColName  = "image_id"
-	PictureTableIdentityColName = "identity"
-	PictureTableIPColName       = "ip"
-	PictureTableOwnerIDColName  = "owner_id"
-	PictureTableStatusColName   = "status"
+	PictureTableName                      = "pictures"
+	PictureTableIDColName                 = "id"
+	PictureTableImageIDColName            = "image_id"
+	PictureTableIdentityColName           = "identity"
+	PictureTableIPColName                 = "ip"
+	PictureTableOwnerIDColName            = "owner_id"
+	PictureTableStatusColName             = "status"
+	PictureTableChangeStatusUserIDColName = "change_status_user_id"
 
 	PictureItemTableName             = "picture_item"
 	PictureItemTablePictureIDColName = "picture_id"
@@ -284,6 +292,7 @@ const (
 	UserTableVotesLeftColName         = "votes_left"
 	UserTableVotesPerDayColName       = "votes_per_day"
 	UserTableLanguageColName          = "language"
+	UserTablePicturesTotalColName     = "pictures_total"
 	UserTableRoleColName              = "role"
 	UserTableDeletedColName           = "deleted"
 	UserTableUUIDColName              = "uuid"
@@ -545,6 +554,8 @@ var (
 	LogEventsPicturesTableLogEventIDCol = LogEventsPicturesTable.Col(LogEventsPicturesTableLogEventIDColName)
 	LogEventsPicturesTablePictureIDCol  = LogEventsPicturesTable.Col(LogEventsPicturesTablePictureIDColName)
 
+	LogEventsUserTable = goqu.T(LogEventsUserTableName)
+
 	OfDayTable           = goqu.T(OfDayTableName)
 	OfDayTableDayDateCol = OfDayTable.Col(OfDayTableDayDateColName)
 	OfDayTableItemIDCol  = OfDayTable.Col(OfDayTableItemIDColName)
@@ -584,12 +595,17 @@ var (
 	PictureModerVoteTemplateTableVoteCol   = PictureModerVoteTemplateTable.Col(PictureModerVoteTemplateTableVoteColName)
 	PictureModerVoteTemplateTableUserIDCol = PictureModerVoteTemplateTable.Col(PictureModerVoteTemplateTableUserIDColName)
 
-	PictureTable            = goqu.T(PictureTableName)
-	PictureTableIDCol       = PictureTable.Col(PictureTableIDColName)
-	PictureTableIdentityCol = PictureTable.Col(PictureTableIdentityColName)
-	PictureTableOwnerIDCol  = PictureTable.Col(PictureTableOwnerIDColName)
-	PictureTableStatusCol   = PictureTable.Col(PictureTableStatusColName)
-	PictureTableImageIDCol  = PictureTable.Col(PictureTableImageIDColName)
+	PicturesModerVotesTable             = goqu.T(PicturesModerVotesTableName)
+	PicturesModerVotesTableUserIDCol    = PicturesModerVotesTable.Col(PicturesModerVotesTableUserIDColName)
+	PicturesModerVotesTablePictureIDCol = PicturesModerVotesTable.Col(PicturesModerVotesTablePictureIDColName)
+
+	PictureTable                      = goqu.T(PictureTableName)
+	PictureTableIDCol                 = PictureTable.Col(PictureTableIDColName)
+	PictureTableIdentityCol           = PictureTable.Col(PictureTableIdentityColName)
+	PictureTableOwnerIDCol            = PictureTable.Col(PictureTableOwnerIDColName)
+	PictureTableStatusCol             = PictureTable.Col(PictureTableStatusColName)
+	PictureTableImageIDCol            = PictureTable.Col(PictureTableImageIDColName)
+	PictureTableChangeStatusUserIDCol = PictureTable.Col(PictureTableChangeStatusUserIDColName)
 
 	PictureItemTable             = goqu.T(PictureItemTableName)
 	PictureItemTablePictureIDCol = PictureItemTable.Col(PictureItemTablePictureIDColName)
@@ -649,7 +665,7 @@ var (
 	UserTableNameCol              = UserTable.Col(UserTableNameColName)
 	UserTableIdentityCol          = UserTable.Col(UserTableIdentityColName)
 	UserTableLanguageCol          = UserTable.Col(UserTableLanguageColName)
-	UserTablePicturesTotalCol     = UserTable.Col("pictures_total")
+	UserTablePicturesTotalCol     = UserTable.Col(UserTablePicturesTotalColName)
 	UserTableSpecsVolumeCol       = UserTable.Col(UserTableSpecsVolumeColName)
 	UserTableSpecsVolumeValidCol  = UserTable.Col(UserTableSpecsVolumeValidColName)
 	UserTableVotesLeftCol         = UserTable.Col(UserTableVotesLeftColName)
