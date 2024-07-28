@@ -292,6 +292,11 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	ctx context.Context,
 	in *GetCommentVotesRequest,
 ) (*CommentVoteItems, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	votes, err := s.repository.GetVotes(ctx, in.GetCommentId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -304,7 +309,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	result := make([]*CommentVote, 0)
 
 	for idx := range votes.PositiveVotes {
-		extracted, err := s.userExtractor.Extract(ctx, &votes.PositiveVotes[idx])
+		extracted, err := s.userExtractor.Extract(ctx, &votes.PositiveVotes[idx], nil, userID, role)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -316,7 +321,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	}
 
 	for idx := range votes.NegativeVotes {
-		extracted, err := s.userExtractor.Extract(ctx, &votes.NegativeVotes[idx])
+		extracted, err := s.userExtractor.Extract(ctx, &votes.NegativeVotes[idx], nil, userID, role)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

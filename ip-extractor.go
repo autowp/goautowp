@@ -33,7 +33,9 @@ func NewIPExtractor(
 	}
 }
 
-func (s *IPExtractor) Extract(ctx context.Context, ip net.IP, fields map[string]bool, role string) (*APIIP, error) {
+func (s *IPExtractor) Extract(
+	ctx context.Context, ip net.IP, fields map[string]bool, userID int64, role string,
+) (*APIIP, error) {
 	result := APIIP{
 		Address: ip.String(),
 	}
@@ -77,7 +79,7 @@ func (s *IPExtractor) Extract(ctx context.Context, ip net.IP, fields map[string]
 				}
 
 				if user != nil {
-					apiUser, err := s.userExtractor.Extract(ctx, user)
+					apiUser, err := s.userExtractor.Extract(ctx, user, nil, userID, role)
 					if err != nil {
 						return nil, err
 					}

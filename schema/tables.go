@@ -313,6 +313,7 @@ const (
 	UserTableLoginColName             = "login"
 	UserTableForumsMessagesColName    = "forums_messages"
 	UserTableForumsTopicsColName      = "forums_topics"
+	UserTablePicturesAddedColName     = "pictures_added"
 
 	VehicleVehicleTypeTableName                 = "vehicle_vehicle_type"
 	VehicleVehicleTypeTableVehicleTypeIDColName = "vehicle_type_id"
@@ -682,6 +683,8 @@ var (
 	UserTableMessagingIntervalCol = UserTable.Col(UserTableMessagingIntervalColName)
 	UserTableLoginCol             = UserTable.Col(UserTableLoginColName)
 	UserTablePasswordCol          = UserTable.Col(UserTablePasswordColName)
+	UserTableTimezoneCol          = UserTable.Col(UserTableTimezoneColName)
+	UserTablePicturesAddedCol     = UserTable.Col(UserTablePicturesAddedColName)
 
 	VehicleVehicleTypeTable                 = goqu.T(VehicleVehicleTypeTableName)
 	VehicleVehicleTypeTableVehicleTypeIDCol = VehicleVehicleTypeTable.Col(VehicleVehicleTypeTableVehicleTypeIDColName)

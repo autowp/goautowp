@@ -717,7 +717,12 @@ func (s *Container) UserExtractor() (*UserExtractor, error) {
 		return nil, err
 	}
 
-	return NewUserExtractor(s.Enforcer(), is), nil
+	picRepository, err := s.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewUserExtractor(s.Enforcer(), is, picRepository), nil
 }
 
 func (s *Container) UsersRepository() (*users.Repository, error) {

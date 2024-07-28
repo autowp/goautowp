@@ -55,6 +55,7 @@ type ListOptions struct {
 	Status         Status
 	AncestorItemID int64
 	HasCopyrights  bool
+	UserID         int64
 }
 
 type RatingUser struct {
@@ -379,6 +380,10 @@ func (s *Repository) applyPicture(
 
 	if options.HasCopyrights {
 		sqSelect = sqSelect.Where(aliasTable.Col("copyrights_text_id").IsNotNull())
+	}
+
+	if options.UserID > 0 {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableOwnerIDColName).Eq(options.UserID))
 	}
 
 	return sqSelect

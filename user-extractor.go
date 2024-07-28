@@ -6,27 +6,37 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/drexedam/gravatar"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-const avatarSize = 70
+const (
+	avatarSize      = 70
+	avatarLargeSize = 270
+)
 
 type UserExtractor struct {
-	enforcer     *casbin.Enforcer
-	imageStorage *storage.Storage
+	enforcer           *casbin.Enforcer
+	imageStorage       *storage.Storage
+	picturesRepository *pictures.Repository
 }
 
-func NewUserExtractor(enforcer *casbin.Enforcer, imageStorage *storage.Storage) *UserExtractor {
+func NewUserExtractor(
+	enforcer *casbin.Enforcer, imageStorage *storage.Storage, picturesRepository *pictures.Repository,
+) *UserExtractor {
 	return &UserExtractor{
-		enforcer:     enforcer,
-		imageStorage: imageStorage,
+		enforcer:           enforcer,
+		imageStorage:       imageStorage,
+		picturesRepository: picturesRepository,
 	}
 }
 
-func (s *UserExtractor) Extract(ctx context.Context, row *users.DBUser) (*APIUser, error) {
+func (s *UserExtractor) Extract(
+	ctx context.Context, row *users.DBUser, fields *UserFields, currentUserID int64, currentUserRole string,
+) (*APIUser, error) {
 	longAway := true
 
 	if row.LastOnline != nil {
@@ -47,14 +57,19 @@ func (s *UserExtractor) Extract(ctx context.Context, row *users.DBUser) (*APIUse
 	}
 
 	user := APIUser{
-		Id:          row.ID,
-		Name:        row.Name,
-		Deleted:     row.Deleted,
-		LongAway:    longAway,
-		Green:       isGreen,
-		Route:       route,
-		Identity:    identity,
-		SpecsWeight: row.SpecsWeight,
+		Id:            row.ID,
+		Name:          row.Name,
+		Deleted:       row.Deleted,
+		LongAway:      longAway,
+		Green:         isGreen,
+		Route:         route,
+		Identity:      identity,
+		SpecsWeight:   row.SpecsWeight,
+		PicturesAdded: row.PicturesAdded,
+	}
+
+	if fields.GetRegDate() && row.RegDate != nil {
+		user.RegDate = timestamppb.New(*row.RegDate)
 	}
 
 	if row.LastOnline != nil {
@@ -62,7 +77,12 @@ func (s *UserExtractor) Extract(ctx context.Context, row *users.DBUser) (*APIUse
 	}
 
 	if row.EMail != nil {
-		user.Gravatar = gravatar.New(*row.EMail).Size(avatarSize).Rating(gravatar.G).AvatarURL()
+		gr := gravatar.New(*row.EMail)
+		user.Gravatar = gr.Size(avatarSize).Rating(gravatar.G).AvatarURL()
+
+		if fields.GetGravatarLarge() {
+			user.GravatarLarge = gr.Size(avatarLargeSize).Rating(gravatar.G).AvatarURL()
+		}
 	}
 
 	if row.Img != nil {
@@ -72,6 +92,73 @@ func (s *UserExtractor) Extract(ctx context.Context, row *users.DBUser) (*APIUse
 		}
 
 		user.Avatar = APIImageToGRPC(avatar)
+
+		if fields.GetPhoto() {
+			photo, err := s.imageStorage.FormattedImage(ctx, *row.Img, "photo")
+			if err != nil {
+				return nil, err
+			}
+
+			user.Photo = APIImageToGRPC(photo)
+		}
+	}
+
+	isMe := row.ID == currentUserID
+
+	if fields.GetEmail() && row.EMail != nil &&
+		(isMe || len(currentUserRole) > 0 && s.enforcer.Enforce(currentUserRole, "global", "moderate")) {
+		user.Email = *row.EMail
+	}
+
+	if isMe {
+		if fields.GetVotesLeft() {
+			user.VotesLeft = row.VotesLeft
+		}
+
+		if fields.GetVotesPerDay() {
+			user.VotesPerDay = row.VotesPerDay
+		}
+
+		if fields.GetLanguage() {
+			user.Language = row.Language
+		}
+
+		if fields.GetTimezone() {
+			user.Timezone = row.Timezone
+		}
+
+		if fields.GetImg() {
+			img, err := s.imageStorage.Image(ctx, *row.Img)
+			if err != nil {
+				return nil, err
+			}
+
+			user.Img = APIImageToGRPC(img)
+		}
+	}
+
+	if fields.GetPicturesAcceptedCount() {
+		count, err := s.picturesRepository.Count(ctx, pictures.ListOptions{
+			Status: pictures.StatusAccepted,
+			UserID: row.ID,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		user.PicturesAcceptedCount = int64(count)
+	}
+
+	if fields.GetLastIp() && len(currentUserRole) > 0 && s.enforcer.Enforce(currentUserRole, "user", "ip") {
+		user.LastIp = row.LastIP
+	}
+
+	if fields.GetIsModer() {
+		user.IsModer = s.enforcer.Enforce(row.Role, "global", "moderate")
+	}
+
+	if fields.GetLogin() && row.Login != nil && s.enforcer.Enforce(currentUserRole, "global", "moderate") {
+		user.Login = *row.Login
 	}
 
 	return &user, nil

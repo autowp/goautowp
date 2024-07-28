@@ -52,8 +52,24 @@ type AutowpResourceAccess struct {
 
 const KeycloakExternalAccountID = "keycloak"
 
+type UserFields struct {
+	Email         bool
+	Timezone      bool
+	Language      bool
+	VotesPerDay   bool
+	VotesLeft     bool
+	RegDate       bool
+	LastOnline    bool
+	Accounts      bool
+	PicturesAdded bool
+	LastIP        bool
+	Login         bool
+}
+
 type GetUsersOptions struct {
 	ID          int64
+	IDs         []int64
+	Identity    string
 	InContacts  int64
 	Order       []exp.OrderedExpression
 	Deleted     *bool
@@ -62,6 +78,8 @@ type GetUsersOptions struct {
 	HasPictures *bool
 	Limit       uint64
 	Page        uint64
+	Search      string
+	Fields      UserFields
 }
 
 // DBUser DBUser.
@@ -77,6 +95,14 @@ type DBUser struct {
 	SpecsWeight   float64    `db:"specs_weight"`
 	SpecsVolume   int64      `db:"specs_volume"`
 	PicturesTotal int64      `db:"pictures_total"`
+	VotesLeft     int64      `db:"votes_left"`
+	VotesPerDay   int64      `db:"votes_per_day"`
+	Language      string     `db:"language"`
+	Timezone      string     `db:"timezone"`
+	RegDate       *time.Time `db:"reg_date"`
+	PicturesAdded int64      `db:"pictures_added"`
+	LastIP        string     `db:"last_ip"`
+	Login         *string    `db:"login"`
 }
 
 // CreateUserOptions CreateUserOptions.
@@ -176,17 +202,69 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 		schema.UserTableEmailCol, schema.UserTablePicturesTotalCol, schema.UserTableSpecsVolumeCol,
 	}
 
+	if options.Fields.VotesLeft {
+		valuePtrs = append(valuePtrs, &row.VotesLeft)
+		columns = append(columns, schema.UserTableVotesLeftCol)
+	}
+
+	if options.Fields.VotesPerDay {
+		valuePtrs = append(valuePtrs, &row.VotesPerDay)
+		columns = append(columns, schema.UserTableVotesPerDayCol)
+	}
+
+	if options.Fields.Language {
+		valuePtrs = append(valuePtrs, &row.Language)
+		columns = append(columns, schema.UserTableLanguageCol)
+	}
+
+	if options.Fields.Timezone {
+		valuePtrs = append(valuePtrs, &row.Timezone)
+		columns = append(columns, schema.UserTableTimezoneCol)
+	}
+
+	if options.Fields.RegDate {
+		valuePtrs = append(valuePtrs, &row.RegDate)
+		columns = append(columns, schema.UserTableRegDateCol)
+	}
+
+	if options.Fields.PicturesAdded {
+		valuePtrs = append(valuePtrs, &row.PicturesAdded)
+		columns = append(columns, schema.UserTablePicturesAddedCol)
+	}
+
+	if options.Fields.LastIP {
+		valuePtrs = append(valuePtrs, &row.LastIP)
+		columns = append(columns, goqu.Func("INET6_NTOA", schema.UserTableLastIPCol))
+	}
+
+	if options.Fields.Login {
+		valuePtrs = append(valuePtrs, &row.Login)
+		columns = append(columns, schema.UserTableLoginCol)
+	}
+
 	sqSelect := s.autowpDB.From(schema.UserTable)
 
 	if options.ID != 0 {
 		sqSelect = sqSelect.Where(schema.UserTableIDCol.Eq(options.ID))
 	}
 
+	if len(options.IDs) != 0 {
+		sqSelect = sqSelect.Where(schema.UserTableIDCol.In(options.IDs))
+	}
+
+	if len(options.Identity) > 0 {
+		sqSelect = sqSelect.Where(schema.UserTableIdentityCol.Eq(options.Identity))
+	}
+
+	if len(options.Search) > 0 {
+		sqSelect = sqSelect.Where(schema.UserTableNameCol.Like(options.Search + "%"))
+	}
+
 	if options.InContacts != 0 {
 		sqSelect = sqSelect.Join(
 			schema.ContactTable,
-			goqu.On(schema.UserTableIDCol.Eq(schema.ContactTable.Col("contact_user_id")))).
-			Where(schema.ContactTable.Col("user_id").Eq(options.InContacts))
+			goqu.On(schema.UserTableIDCol.Eq(schema.ContactTableContactUserIDCol))).
+			Where(schema.ContactTableUserIDCol.Eq(options.InContacts))
 	}
 
 	if options.Deleted != nil {

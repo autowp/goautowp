@@ -51,6 +51,11 @@ func NewTrafficGRPCServer(
 func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
 	var err error
 
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	items, err := s.traffic.Monitoring.ListOfTop(ctx, trafficTopLimit)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -78,7 +83,7 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 			var extractedUser *APIUser
 
 			if user != nil {
-				extractedUser, err = s.userExtractor.Extract(ctx, user)
+				extractedUser, err = s.userExtractor.Extract(ctx, user, nil, userID, role)
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}

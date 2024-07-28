@@ -113,7 +113,7 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 }
 
 func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequest) (*ContactItems, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -136,7 +136,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 	items := make([]*Contact, len(userRows))
 
 	for idx := range userRows {
-		user, err := s.userExtractor.Extract(ctx, &userRows[idx])
+		user, err := s.userExtractor.Extract(ctx, &userRows[idx], nil, userID, role)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

@@ -13,6 +13,31 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+func convertUserFields(fields *UserFields, enforcer *casbin.Enforcer, currentUserRole string) users.UserFields {
+	lastIP := false
+	if fields.GetLastIp() && len(currentUserRole) > 0 && enforcer.Enforce(currentUserRole, "user", "ip") {
+		lastIP = true
+	}
+
+	login := false
+	if fields.GetLogin() && len(currentUserRole) > 0 && enforcer.Enforce(currentUserRole, "global", "moderate") {
+		login = true
+	}
+
+	return users.UserFields{
+		Email:         fields.GetEmail(),
+		Timezone:      fields.GetTimezone(),
+		Language:      fields.GetLanguage(),
+		VotesPerDay:   fields.GetVotesPerDay(),
+		VotesLeft:     fields.GetVotesLeft(),
+		RegDate:       fields.GetRegDate(),
+		PicturesAdded: fields.GetPicturesAdded(),
+		LastIP:        lastIP,
+		LastOnline:    fields.GetLastOnline(),
+		Login:         login,
+	}
+}
+
 type UsersGRPCServer struct {
 	UnimplementedUsersServer
 	auth               *Auth
@@ -47,7 +72,7 @@ func NewUsersGRPCServer(
 	}
 }
 
-func (s *UsersGRPCServer) Me(ctx context.Context, _ *APIMeRequest) (*APIUser, error) {
+func (s *UsersGRPCServer) Me(ctx context.Context, in *APIMeRequest) (*APIUser, error) {
 	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -55,12 +80,20 @@ func (s *UsersGRPCServer) Me(ctx context.Context, _ *APIMeRequest) (*APIUser, er
 
 	return s.GetUser(ctx, &APIGetUserRequest{
 		UserId: userID,
+		Fields: in.GetFields(),
 	})
 }
 
 func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*APIUser, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	dbUser, err := s.userRepository.User(ctx, users.GetUsersOptions{
-		ID: in.GetUserId(),
+		ID:       in.GetUserId(),
+		Identity: in.GetIdentity(),
+		Fields:   convertUserFields(in.GetFields(), s.enforcer, role),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -70,7 +103,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 		return nil, status.Error(codes.NotFound, "User not found")
 	}
 
-	apiUser, err := s.userExtractor.Extract(ctx, dbUser)
+	apiUser, err := s.userExtractor.Extract(ctx, dbUser, in.GetFields(), userID, role)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -208,10 +241,18 @@ func (s *UsersGRPCServer) GetUserPreferences(
 }
 
 func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*APIUsersResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	rows, pages, err := s.userRepository.Users(ctx, users.GetUsersOptions{
 		IsOnline: true,
 		Limit:    in.GetLimit(),
 		Page:     in.GetPage(),
+		Search:   in.GetSearch(),
+		Fields:   convertUserFields(in.GetFields(), s.enforcer, role),
+		IDs:      in.GetId(),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -220,7 +261,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 	result := make([]*APIUser, 0)
 
 	for idx := range rows {
-		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx])
+		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx], in.GetFields(), userID, role)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

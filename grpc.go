@@ -183,7 +183,7 @@ func (s *GRPCServer) GetBrandVehicleTypes(
 }
 
 func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -198,7 +198,7 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 		m[e] = true
 	}
 
-	result, err := s.ipExtractor.Extract(ctx, ip, m, role)
+	result, err := s.ipExtractor.Extract(ctx, ip, m, userID, role)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

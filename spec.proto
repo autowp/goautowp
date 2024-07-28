@@ -409,6 +409,20 @@ message APIUser {
   string gravatar = 9;
   google.protobuf.Timestamp last_online = 10;
   double specs_weight = 11;
+  string email = 12;
+  string timezone = 13;
+  string language = 14;
+  int64 votes_per_day = 15;
+  int64 votes_left = 16;
+  APIImage img = 17;
+  string gravatar_large = 18;
+  APIImage photo = 19;
+  bool is_moder = 20;
+  google.protobuf.Timestamp reg_date = 21;
+  int64 pictures_added = 23;
+  int64 pictures_accepted_count = 24;
+  string last_ip = 25;
+  string login = 26;
 }
 
 message Contact {
@@ -604,10 +618,31 @@ message APIDeleteUserRequest {
 }
 
 message APIMeRequest {
+  UserFields fields = 1;
 }
 
 message APIGetUserRequest {
   int64 user_id = 1;
+  string identity = 3;
+  UserFields fields = 2;
+}
+
+message UserFields {
+  bool email = 1;
+  bool timezone = 3;
+  bool language = 4;
+  bool votes_per_day = 5;
+  bool votes_left = 6;
+  bool img = 7;
+  bool gravatar_large = 8;
+  bool photo = 9;
+  bool is_moder = 10;
+  bool reg_date = 11;
+  bool pictures_added = 14;
+  bool pictures_accepted_count = 15;
+  bool last_ip = 16;
+  bool last_online = 17;
+  bool login = 18;
 }
 
 message GetTopBrandsListRequest {
@@ -1079,6 +1114,9 @@ message APIUsersRequest {
   bool is_online = 2;
   uint64 limit = 3;
   uint64 page = 4;
+  UserFields fields = 5;
+  string search = 6;
+  repeated int64 id = 7;
 }
 
 message APIUsersResponse {

@@ -171,7 +171,23 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, me)
 
-	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.GetId()})
+	user, err := client.GetUser(ctx, &APIGetUserRequest{UserId: me.GetId(), Fields: &UserFields{
+		Email:                 true,
+		Timezone:              true,
+		Language:              true,
+		VotesPerDay:           true,
+		VotesLeft:             true,
+		Img:                   true,
+		GravatarLarge:         true,
+		Photo:                 true,
+		IsModer:               true,
+		RegDate:               true,
+		PicturesAdded:         true,
+		PicturesAcceptedCount: true,
+		LastIp:                true,
+		LastOnline:            true,
+		Login:                 true,
+	}})
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
 	require.Equal(t, name, user.GetName())
@@ -273,9 +289,25 @@ func TestGetOnlineUsers(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	r, err := client.GetUsers(ctx, &APIUsersRequest{IsOnline: true})
+	res, err := client.GetUsers(ctx, &APIUsersRequest{IsOnline: true, Fields: &UserFields{
+		Email:                 true,
+		Timezone:              true,
+		Language:              true,
+		VotesPerDay:           true,
+		VotesLeft:             true,
+		Img:                   true,
+		GravatarLarge:         true,
+		Photo:                 true,
+		IsModer:               true,
+		RegDate:               true,
+		PicturesAdded:         true,
+		PicturesAcceptedCount: true,
+		LastIp:                true,
+		LastOnline:            true,
+		Login:                 true,
+	}})
 	require.NoError(t, err)
-	require.NotEmpty(t, r.GetItems())
+	require.NotEmpty(t, res.GetItems())
 }
 
 func TestGetUsersPagination(t *testing.T) {
