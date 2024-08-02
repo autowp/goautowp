@@ -140,9 +140,7 @@ func TestAddComment(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) {
-	t.Parallel()
-
+func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) { //nolint:paralleltest
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
 		"localhost",

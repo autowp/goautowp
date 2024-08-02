@@ -247,7 +247,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 	}
 
 	rows, pages, err := s.userRepository.Users(ctx, users.GetUsersOptions{
-		IsOnline: true,
+		IsOnline: in.GetIsOnline(),
 		Limit:    in.GetLimit(),
 		Page:     in.GetPage(),
 		Search:   in.GetSearch(),

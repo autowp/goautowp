@@ -257,7 +257,7 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 	}
 
 	if len(options.Search) > 0 {
-		sqSelect = sqSelect.Where(schema.UserTableNameCol.Like(options.Search + "%"))
+		sqSelect = sqSelect.Where(schema.UserTableNameCol.ILike(options.Search + "%"))
 	}
 
 	if options.InContacts != 0 {

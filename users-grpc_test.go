@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -328,4 +329,46 @@ func TestGetUsersPagination(t *testing.T) {
 
 	_, err = client.GetUsers(ctx, &APIUsersRequest{Page: 1, Limit: 10})
 	require.NoError(t, err)
+}
+
+func TestGetUsersSearch(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	client := NewUsersClient(conn)
+
+	// tester
+	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	require.NoError(t, err)
+	require.NotNil(t, testerToken)
+
+	// touch last_online for tester
+	me, err := client.Me(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		&APIMeRequest{},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetUsers(ctx, &APIUsersRequest{Search: strings.ToLower(me.GetName())})
+	require.NoError(t, err)
+	require.NotEmpty(t, res.GetItems())
+	require.NotEmpty(t, res.GetItems()[0])
+
+	res, err = client.GetUsers(ctx, &APIUsersRequest{Search: strings.ToUpper(me.GetName())})
+	require.NoError(t, err)
+	require.NotEmpty(t, res.GetItems())
+	require.NotEmpty(t, res.GetItems()[0])
 }
