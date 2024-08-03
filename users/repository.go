@@ -295,7 +295,7 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 
 	var pages *util.Pages
 
-	if options.Page > 0 {
+	if options.Limit > 0 {
 		paginator := util.Paginator{
 			SQLSelect:        sqSelect,
 			ItemCountPerPage: int32(options.Limit),
@@ -310,8 +310,6 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 		if err != nil {
 			return nil, nil, err
 		}
-	} else if options.Limit > 0 {
-		sqSelect = sqSelect.Limit(uint(options.Limit))
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
