@@ -279,6 +279,8 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 			LastPageInRange:  pages.LastPageInRange,
 			PagesInRange:     pages.PagesInRange,
 			TotalItemCount:   pages.TotalItemCount,
+			Next:             pages.Next,
+			Previous:         pages.Previous,
 		}
 	}
 

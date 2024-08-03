@@ -65,6 +65,8 @@ func (s *LogGRPCServer) GetEvents(ctx context.Context, in *LogEventsRequest) (*L
 		LastPageInRange:  pages.LastPageInRange,
 		PagesInRange:     pages.PagesInRange,
 		TotalItemCount:   pages.TotalItemCount,
+		Next:             pages.Next,
+		Previous:         pages.Previous,
 	}
 
 	return &LogEvents{

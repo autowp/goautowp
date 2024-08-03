@@ -441,6 +441,8 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 			LastPageInRange:  pages.LastPageInRange,
 			PagesInRange:     pages.PagesInRange,
 			TotalItemCount:   pages.TotalItemCount,
+			Next:             pages.Next,
+			Previous:         pages.Previous,
 		}
 	}
 
