@@ -30,11 +30,13 @@ type PicturesGRPCServer struct {
 	messagingRepository *messaging.Repository
 	userRepository      *users.Repository
 	i18n                *i18nbundle.I18n
+	duplicateFinder     *DuplicateFinder
 }
 
 func NewPicturesGRPCServer(
 	repository *pictures.Repository, auth *Auth, enforcer *casbin.Enforcer, events *Events, hostManager *hosts.Manager,
 	messagingRepository *messaging.Repository, userRepository *users.Repository, i18n *i18nbundle.I18n,
+	duplicateFinder *DuplicateFinder,
 ) *PicturesGRPCServer {
 	return &PicturesGRPCServer{
 		repository:          repository,
@@ -45,6 +47,7 @@ func NewPicturesGRPCServer(
 		messagingRepository: messagingRepository,
 		userRepository:      userRepository,
 		i18n:                i18n,
+		duplicateFinder:     duplicateFinder,
 	}
 }
 
@@ -595,6 +598,36 @@ func (s *PicturesGRPCServer) Flop(ctx context.Context, in *PictureIDRequest) (*e
 		UserID:   userID,
 		Message:  fmt.Sprintf("К картинке %d применён flop", pictureID),
 		Pictures: []int64{pictureID},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimilarRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	if err = s.duplicateFinder.HideSimilar(ctx, in.GetId(), in.GetSimilarPictureId()); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID:   userID,
+		Message:  "Отменёно предупреждение о повторе",
+		Pictures: []int64{in.GetId(), in.GetSimilarPictureId()},
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

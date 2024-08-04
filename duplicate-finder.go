@@ -239,3 +239,25 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int64) error {
 
 	return err
 }
+
+func (s *DuplicateFinder) HideSimilar(ctx context.Context, srcPictureID, dstPictureID int64) error {
+	_, err := s.db.Update(schema.DfDistanceTable).
+		Set(goqu.Record{
+			schema.DfDistanceTableHideColName: true,
+		}).
+		Where(
+			goqu.Or(
+				goqu.And(
+					schema.DfDistanceTableSrcPictureIDCol.Eq(srcPictureID),
+					schema.DfDistanceTableSrcPictureIDCol.Eq(dstPictureID),
+				),
+				goqu.And(
+					schema.DfDistanceTableSrcPictureIDCol.Eq(dstPictureID),
+					schema.DfDistanceTableSrcPictureIDCol.Eq(srcPictureID),
+				),
+			),
+		).
+		Executor().ExecContext(ctx)
+
+	return err
+}

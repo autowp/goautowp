@@ -1231,8 +1231,13 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
+		duplicateFinder, err := s.DuplicateFinder()
+		if err != nil {
+			return nil, err
+		}
+
 		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer(), events, s.HostsManager(),
-			messagingRepository, userRepository, i18n)
+			messagingRepository, userRepository, i18n, duplicateFinder)
 	}
 
 	return s.picturesGrpcServer, nil

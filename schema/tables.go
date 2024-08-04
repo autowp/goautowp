@@ -68,6 +68,7 @@ const (
 	DfDistanceTableDistanceColName     = "distance"
 	DfDistanceTableSrcPictureIDColName = "src_picture_id"
 	DfDistanceTableDstPictureIDColName = "dst_picture_id"
+	DfDistanceTableHideColName         = "hide"
 
 	DfHashTableName             = "df_hash"
 	DfHashTableHashColName      = "hash"

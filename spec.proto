@@ -138,6 +138,7 @@ service Pictures {
   rpc GetUserSummary(google.protobuf.Empty) returns (PicturesUserSummary) {}
   rpc Normalize(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc Flop(PictureIDRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteSimilar(DeleteSimilarRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {
@@ -1021,6 +1022,11 @@ message PicturesUserSummary {
 
 message PictureIDRequest {
   int64 id = 1;
+}
+
+message DeleteSimilarRequest {
+  int64 id = 1;
+  int64 similar_picture_id = 2;
 }
 
 message DeleteModerVoteRequest {
