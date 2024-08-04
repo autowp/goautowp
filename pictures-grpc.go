@@ -487,3 +487,35 @@ func (s *PicturesGRPCServer) notifyVote(
 
 	return nil
 }
+
+func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empty) (*PicturesUserSummary, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	acceptedCount, err := s.repository.Count(ctx, pictures.ListOptions{
+		Status: pictures.StatusAccepted,
+		UserID: userID,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	inboxCount, err := s.repository.Count(ctx, pictures.ListOptions{
+		Status: pictures.StatusInbox,
+		UserID: userID,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &PicturesUserSummary{
+		AcceptedCount: int32(acceptedCount),
+		InboxCount:    int32(inboxCount),
+	}, nil
+}

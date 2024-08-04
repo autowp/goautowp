@@ -3840,6 +3840,7 @@ const (
 	Pictures_GetModerVoteTemplates_FullMethodName   = "/goautowp.Pictures/GetModerVoteTemplates"
 	Pictures_DeleteModerVote_FullMethodName         = "/goautowp.Pictures/DeleteModerVote"
 	Pictures_UpdateModerVote_FullMethodName         = "/goautowp.Pictures/UpdateModerVote"
+	Pictures_GetUserSummary_FullMethodName          = "/goautowp.Pictures/GetUserSummary"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -3853,6 +3854,7 @@ type PicturesClient interface {
 	GetModerVoteTemplates(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ModerVoteTemplates, error)
 	DeleteModerVote(ctx context.Context, in *DeleteModerVoteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdateModerVote(ctx context.Context, in *UpdateModerVoteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PicturesUserSummary, error)
 }
 
 type picturesClient struct {
@@ -3933,6 +3935,16 @@ func (c *picturesClient) UpdateModerVote(ctx context.Context, in *UpdateModerVot
 	return out, nil
 }
 
+func (c *picturesClient) GetUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PicturesUserSummary, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PicturesUserSummary)
+	err := c.cc.Invoke(ctx, Pictures_GetUserSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility
@@ -3944,6 +3956,7 @@ type PicturesServer interface {
 	GetModerVoteTemplates(context.Context, *emptypb.Empty) (*ModerVoteTemplates, error)
 	DeleteModerVote(context.Context, *DeleteModerVoteRequest) (*emptypb.Empty, error)
 	UpdateModerVote(context.Context, *UpdateModerVoteRequest) (*emptypb.Empty, error)
+	GetUserSummary(context.Context, *emptypb.Empty) (*PicturesUserSummary, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -3971,6 +3984,9 @@ func (UnimplementedPicturesServer) DeleteModerVote(context.Context, *DeleteModer
 }
 func (UnimplementedPicturesServer) UpdateModerVote(context.Context, *UpdateModerVoteRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateModerVote not implemented")
+}
+func (UnimplementedPicturesServer) GetUserSummary(context.Context, *emptypb.Empty) (*PicturesUserSummary, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserSummary not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 
@@ -4111,6 +4127,24 @@ func _Pictures_UpdateModerVote_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_GetUserSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).GetUserSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_GetUserSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).GetUserSummary(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -4145,6 +4179,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateModerVote",
 			Handler:    _Pictures_UpdateModerVote_Handler,
+		},
+		{
+			MethodName: "GetUserSummary",
+			Handler:    _Pictures_GetUserSummary_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

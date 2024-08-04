@@ -247,3 +247,33 @@ func TestModerVote(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestUserSummary(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	_, err = client.GetUserSummary(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
+}
