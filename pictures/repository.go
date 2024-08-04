@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
@@ -36,6 +37,8 @@ type PictureRow struct {
 	OwnerID            sql.NullInt64 `db:"owner_id"`
 	ChangeStatusUserID sql.NullInt64 `db:"change_status_user_id"`
 	Identity           string        `db:"identity"`
+	Status             Status        `db:"status"`
+	ImageID            int64         `db:"image_id"`
 }
 
 type ModerVoteTemplate struct {
@@ -69,12 +72,14 @@ type RatingFan struct {
 }
 
 type Repository struct {
-	db *goqu.Database
+	db           *goqu.Database
+	imageStorage *storage.Storage
 }
 
-func NewRepository(db *goqu.Database) *Repository {
+func NewRepository(db *goqu.Database, imageStorage *storage.Storage) *Repository {
 	return &Repository{
-		db: db,
+		db:           db,
+		imageStorage: imageStorage,
 	}
 }
 
@@ -471,6 +476,7 @@ func (s *Repository) Picture(ctx context.Context, id int64) (*PictureRow, error)
 
 	success, err := s.db.Select(
 		schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol, schema.PictureTableIdentityCol,
+		schema.PictureTableStatusCol, schema.PictureTableImageIDCol,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(id)).
@@ -484,4 +490,34 @@ func (s *Repository) Picture(ctx context.Context, id int64) (*PictureRow, error)
 	}
 
 	return &st, nil
+}
+
+func (s *Repository) Normalize(ctx context.Context, id int64) error {
+	pic, err := s.Picture(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if pic.ImageID != 0 {
+		if err = s.imageStorage.Normalize(ctx, int(pic.ImageID)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) Flop(ctx context.Context, id int64) error {
+	pic, err := s.Picture(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if pic.ImageID != 0 {
+		if err = s.imageStorage.Flop(ctx, int(pic.ImageID)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

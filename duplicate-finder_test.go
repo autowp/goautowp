@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -26,11 +27,14 @@ func TestDuplicateFinder(t *testing.T) {
 
 	ctx := context.Background()
 
-	id1 := addPicture(t, goquDB, "./test/large.jpg")
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	id1 := addPicture(t, imageStorage, goquDB, "./test/large.jpg")
 	err = df.Index(ctx, id1, "http://localhost:80/large.jpg")
 	require.NoError(t, err)
 
-	id2 := addPicture(t, goquDB, "./test/small.jpg")
+	id2 := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 	err = df.Index(ctx, id2, "http://localhost:80/small.jpg")
 	require.NoError(t, err)
 

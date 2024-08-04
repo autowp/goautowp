@@ -519,3 +519,86 @@ func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empt
 		InboxCount:    int32(inboxCount),
 	}, nil
 }
+
+func (s *PicturesGRPCServer) enforcePictureImageOperation(
+	ctx context.Context, pictureID int64, action string,
+) (int64, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return 0, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return 0, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	pic, err := s.repository.Picture(ctx, pictureID)
+	if err != nil {
+		return 0, status.Error(codes.Internal, err.Error())
+	}
+
+	if pic == nil {
+		return 0, status.Errorf(codes.NotFound, "NotFound")
+	}
+
+	canNormalize := pic.Status == pictures.StatusInbox && s.enforcer.Enforce(role, "picture", action)
+	if !canNormalize {
+		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	return userID, nil
+}
+
+func (s *PicturesGRPCServer) Normalize(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+	pictureID := in.GetId()
+
+	userID, err := s.enforcePictureImageOperation(ctx, pictureID, "normalize")
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repository.Normalize(ctx, pictureID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID:   userID,
+		Message:  fmt.Sprintf("К картинке %d применён normalize", pictureID),
+		Pictures: []int64{pictureID},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) Flop(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+	pictureID := in.GetId()
+
+	userID, err := s.enforcePictureImageOperation(ctx, pictureID, "flop")
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repository.Flop(ctx, pictureID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID:   userID,
+		Message:  fmt.Sprintf("К картинке %d применён flop", pictureID),
+		Pictures: []int64{pictureID},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}

@@ -136,6 +136,8 @@ service Pictures {
   rpc DeleteModerVote(DeleteModerVoteRequest) returns (google.protobuf.Empty) {}
   rpc UpdateModerVote(UpdateModerVoteRequest) returns (google.protobuf.Empty) {}
   rpc GetUserSummary(google.protobuf.Empty) returns (PicturesUserSummary) {}
+  rpc Normalize(PictureIDRequest) returns (google.protobuf.Empty) {}
+  rpc Flop(PictureIDRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {
@@ -1015,6 +1017,10 @@ message UpdateModerVoteRequest {
 message PicturesUserSummary {
     int32 inbox_count = 1;
     int32 accepted_count = 2;
+}
+
+message PictureIDRequest {
+  int64 id = 1;
 }
 
 message DeleteModerVoteRequest {

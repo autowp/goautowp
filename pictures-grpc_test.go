@@ -10,6 +10,7 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -164,7 +165,10 @@ func TestModerVote(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 
-	pictureID := addPicture(t, goquDB, "./test/small.jpg")
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	pictureID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -274,6 +278,57 @@ func TestUserSummary(t *testing.T) {
 	_, err = client.GetUserSummary(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
+}
+
+func TestFlopAndNormalize(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	pictureID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+
+	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
+		schema.PictureTableStatusColName: pictures.StatusInbox,
+	}).Where(schema.PictureTableIDCol.Eq(pictureID)).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	_, err = client.Flop(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PictureIDRequest{Id: pictureID},
+	)
+	require.NoError(t, err)
+
+	_, err = client.Normalize(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PictureIDRequest{Id: pictureID},
 	)
 	require.NoError(t, err)
 }

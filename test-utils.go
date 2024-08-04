@@ -4,18 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -33,27 +28,6 @@ const bearerPrefix = "Bearer "
 
 const authorizationHeader = "authorization"
 
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer util.Close(in)
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer util.Close(out)
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func randomHexString(t *testing.T, length int) string {
 	t.Helper()
 
@@ -64,52 +38,15 @@ func randomHexString(t *testing.T, length int) string {
 	return hex.EncodeToString(randBytes)
 }
 
-func addImage(t *testing.T, db *goqu.Database, imageFilepath string) int {
+func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, filepath string) int64 {
 	t.Helper()
 
-	_, filename := path.Split(imageFilepath)
-	extension := path.Ext(filename)
-	name := strings.TrimSuffix(filename, extension)
-
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-
-	exPath := filepath.Dir(ex)
-
-	const hexPathLength = 16
-
-	newPath := name + randomHexString(t, hexPathLength) + extension
-	newFullpath := exPath + "/images/" + newPath
-
-	err = os.MkdirAll(path.Dir(newFullpath), os.ModePerm)
-	require.NoError(t, err)
-
-	err = copyFile(imageFilepath, newFullpath)
-	require.NoError(t, err)
-
-	res, err := db.Insert(schema.ImageTable).Rows(goqu.Record{
-		schema.ImageTableFilepathColName: newPath,
-		schema.ImageTableFilesizeColName: 1,
-		schema.ImageTableWidthColName:    1,
-		schema.ImageTableHeightColName:   1,
-		schema.ImageTableDirColName:      "picture",
-	}).Executor().ExecContext(context.Background())
-	require.NoError(t, err)
-
-	imageID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	return int(imageID)
-}
-
-func addPicture(t *testing.T, db *goqu.Database, filepath string) int64 {
-	t.Helper()
-
-	imageID := addImage(t, db, filepath)
-	identity := randomHexString(t, pictures.IdentityLength/2)
 	ctx := context.Background()
+
+	imageID, err := imageStorage.AddImageFromFile(ctx, filepath, "picture", storage.GenerateOptions{})
+	require.NoError(t, err)
+
+	identity := randomHexString(t, pictures.IdentityLength/2)
 
 	res, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
 		schema.PictureTableImageIDColName:  imageID,
