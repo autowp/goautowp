@@ -521,3 +521,7 @@ func (s *Repository) Flop(ctx context.Context, id int64) error {
 
 	return nil
 }
+
+func (s *Repository) Repair(ctx context.Context, id int64) error {
+	return s.imageStorage.Flush(ctx, storage.FlushOptions{Image: int(id)})
+}

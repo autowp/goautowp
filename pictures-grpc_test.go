@@ -282,7 +282,7 @@ func TestUserSummary(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestFlopAndNormalize(t *testing.T) {
+func TestFlopNormalizeAndRepair(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -327,6 +327,12 @@ func TestFlopAndNormalize(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.Normalize(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PictureIDRequest{Id: pictureID},
+	)
+	require.NoError(t, err)
+
+	_, err = client.Repair(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&PictureIDRequest{Id: pictureID},
 	)

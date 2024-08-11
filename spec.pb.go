@@ -14583,7 +14583,7 @@ var file_spec_proto_rawDesc = []byte{
 	0x75, 0x74, 0x6f, 0x77, 0x70, 0x2e, 0x4d, 0x61, 0x70, 0x47, 0x65, 0x74, 0x50, 0x6f, 0x69, 0x6e,
 	0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x13, 0x2e, 0x67, 0x6f, 0x61, 0x75,
 	0x74, 0x6f, 0x77, 0x70, 0x2e, 0x4d, 0x61, 0x70, 0x50, 0x6f, 0x69, 0x6e, 0x74, 0x73, 0x22, 0x00,
-	0x32, 0xcf, 0x06, 0x0a, 0x08, 0x50, 0x69, 0x63, 0x74, 0x75, 0x72, 0x65, 0x73, 0x12, 0x3f, 0x0a,
+	0x32, 0x8f, 0x07, 0x0a, 0x08, 0x50, 0x69, 0x63, 0x74, 0x75, 0x72, 0x65, 0x73, 0x12, 0x3f, 0x0a,
 	0x04, 0x56, 0x69, 0x65, 0x77, 0x12, 0x1d, 0x2e, 0x67, 0x6f, 0x61, 0x75, 0x74, 0x6f, 0x77, 0x70,
 	0x2e, 0x50, 0x69, 0x63, 0x74, 0x75, 0x72, 0x65, 0x73, 0x56, 0x69, 0x65, 0x77, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
@@ -14635,6 +14635,10 @@ var file_spec_proto_rawDesc = []byte{
 	0x65, 0x53, 0x69, 0x6d, 0x69, 0x6c, 0x61, 0x72, 0x12, 0x1e, 0x2e, 0x67, 0x6f, 0x61, 0x75, 0x74,
 	0x6f, 0x77, 0x70, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x69, 0x6d, 0x69, 0x6c, 0x61,
 	0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
+	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
+	0x22, 0x00, 0x12, 0x3e, 0x0a, 0x06, 0x52, 0x65, 0x70, 0x61, 0x69, 0x72, 0x12, 0x1a, 0x2e, 0x67,
+	0x6f, 0x61, 0x75, 0x74, 0x6f, 0x77, 0x70, 0x2e, 0x50, 0x69, 0x63, 0x74, 0x75, 0x72, 0x65, 0x49,
+	0x44, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
 	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
 	0x22, 0x00, 0x32, 0xea, 0x03, 0x0a, 0x09, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x69, 0x6e, 0x67,
 	0x12, 0x4d, 0x0a, 0x13, 0x47, 0x65, 0x74, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x4e,
@@ -15184,140 +15188,142 @@ var file_spec_proto_depIdxs = []int32{
 	142, // 220: goautowp.Pictures.Normalize:input_type -> goautowp.PictureIDRequest
 	142, // 221: goautowp.Pictures.Flop:input_type -> goautowp.PictureIDRequest
 	143, // 222: goautowp.Pictures.DeleteSimilar:input_type -> goautowp.DeleteSimilarRequest
-	211, // 223: goautowp.Messaging.GetMessagesNewCount:input_type -> google.protobuf.Empty
-	211, // 224: goautowp.Messaging.GetMessagesSummary:input_type -> google.protobuf.Empty
-	145, // 225: goautowp.Messaging.DeleteMessage:input_type -> goautowp.MessagingDeleteMessage
-	146, // 226: goautowp.Messaging.ClearFolder:input_type -> goautowp.MessagingClearFolder
-	147, // 227: goautowp.Messaging.CreateMessage:input_type -> goautowp.MessagingCreateMessage
-	149, // 228: goautowp.Messaging.GetMessages:input_type -> goautowp.MessagingGetMessagesRequest
-	28,  // 229: goautowp.Statistics.GetPulse:input_type -> goautowp.PulseRequest
-	211, // 230: goautowp.Statistics.GetAboutData:input_type -> google.protobuf.Empty
-	211, // 231: goautowp.Donations.GetVODData:input_type -> google.protobuf.Empty
-	211, // 232: goautowp.Donations.GetTransactions:input_type -> google.protobuf.Empty
-	199, // 233: goautowp.Text.GetText:input_type -> goautowp.APIGetTextRequest
-	12,  // 234: goautowp.Attrs.GetAttribute:input_type -> goautowp.AttrAttributeID
-	13,  // 235: goautowp.Attrs.GetAttributes:input_type -> goautowp.AttrAttributesRequest
-	211, // 236: goautowp.Attrs.GetAttributeTypes:input_type -> google.protobuf.Empty
-	16,  // 237: goautowp.Attrs.GetListOptions:input_type -> goautowp.AttrListOptionsRequest
-	211, // 238: goautowp.Attrs.GetUnits:input_type -> google.protobuf.Empty
-	19,  // 239: goautowp.Attrs.GetZoneAttributes:input_type -> goautowp.AttrZoneAttributesRequest
-	211, // 240: goautowp.Attrs.GetZones:input_type -> google.protobuf.Empty
-	42,  // 241: goautowp.Autowp.AclEnforce:output_type -> goautowp.AclEnforceResult
-	211, // 242: goautowp.Autowp.CreateFeedback:output_type -> google.protobuf.Empty
-	40,  // 243: goautowp.Autowp.GetBrandIcons:output_type -> goautowp.BrandIcons
-	46,  // 244: goautowp.Autowp.GetBrandVehicleTypes:output_type -> goautowp.BrandVehicleTypeItems
-	63,  // 245: goautowp.Autowp.GetIP:output_type -> goautowp.APIIP
-	35,  // 246: goautowp.Autowp.GetPerspectives:output_type -> goautowp.PerspectivesItems
-	38,  // 247: goautowp.Autowp.GetPerspectivePages:output_type -> goautowp.PerspectivePagesItems
-	39,  // 248: goautowp.Autowp.GetReCaptchaConfig:output_type -> goautowp.ReCaptchaConfig
-	33,  // 249: goautowp.Autowp.GetSpecs:output_type -> goautowp.SpecsItems
-	44,  // 250: goautowp.Autowp.GetVehicleTypes:output_type -> goautowp.VehicleTypeItems
-	71,  // 251: goautowp.Forums.GetUserSummary:output_type -> goautowp.APIForumsUserSummary
-	82,  // 252: goautowp.Forums.CreateTopic:output_type -> goautowp.APICreateTopicResponse
-	211, // 253: goautowp.Forums.CloseTopic:output_type -> google.protobuf.Empty
-	211, // 254: goautowp.Forums.OpenTopic:output_type -> google.protobuf.Empty
-	211, // 255: goautowp.Forums.DeleteTopic:output_type -> google.protobuf.Empty
-	211, // 256: goautowp.Forums.MoveTopic:output_type -> google.protobuf.Empty
-	76,  // 257: goautowp.Forums.GetTheme:output_type -> goautowp.APIForumsTheme
-	77,  // 258: goautowp.Forums.GetThemes:output_type -> goautowp.APIForumsThemes
-	78,  // 259: goautowp.Forums.GetTopic:output_type -> goautowp.APIForumsTopic
-	78,  // 260: goautowp.Forums.GetLastTopic:output_type -> goautowp.APIForumsTopic
-	80,  // 261: goautowp.Forums.GetLastMessage:output_type -> goautowp.APICommentMessage
-	79,  // 262: goautowp.Forums.GetTopics:output_type -> goautowp.APIForumsTopics
-	169, // 263: goautowp.Articles.GetList:output_type -> goautowp.ArticlesResponse
-	170, // 264: goautowp.Articles.GetItemByCatname:output_type -> goautowp.Article
-	211, // 265: goautowp.Traffic.AddToBlacklist:output_type -> google.protobuf.Empty
-	211, // 266: goautowp.Traffic.AddToWhitelist:output_type -> google.protobuf.Empty
-	211, // 267: goautowp.Traffic.DeleteFromBlacklist:output_type -> google.protobuf.Empty
-	211, // 268: goautowp.Traffic.DeleteFromWhitelist:output_type -> google.protobuf.Empty
-	60,  // 269: goautowp.Traffic.GetTop:output_type -> goautowp.APITrafficTopResponse
-	70,  // 270: goautowp.Traffic.GetWhitelist:output_type -> goautowp.APITrafficWhitelistItems
-	211, // 271: goautowp.Contacts.CreateContact:output_type -> google.protobuf.Empty
-	211, // 272: goautowp.Contacts.DeleteContact:output_type -> google.protobuf.Empty
-	53,  // 273: goautowp.Contacts.GetContact:output_type -> goautowp.Contact
-	54,  // 274: goautowp.Contacts.GetContacts:output_type -> goautowp.ContactItems
-	211, // 275: goautowp.Users.DeleteUser:output_type -> google.protobuf.Empty
-	52,  // 276: goautowp.Users.GetUser:output_type -> goautowp.APIUser
-	52,  // 277: goautowp.Users.Me:output_type -> goautowp.APIUser
-	158, // 278: goautowp.Users.GetUserPreferences:output_type -> goautowp.APIUserPreferencesResponse
-	211, // 279: goautowp.Users.DisableUserCommentsNotifications:output_type -> google.protobuf.Empty
-	211, // 280: goautowp.Users.EnableUserCommentsNotifications:output_type -> google.protobuf.Empty
-	160, // 281: goautowp.Users.GetUsers:output_type -> goautowp.APIUsersResponse
-	164, // 282: goautowp.Rating.GetUserPicturesRating:output_type -> goautowp.APIUsersRatingResponse
-	166, // 283: goautowp.Rating.GetUserPicturesRatingBrands:output_type -> goautowp.UserRatingBrandsResponse
-	164, // 284: goautowp.Rating.GetUserCommentsRating:output_type -> goautowp.APIUsersRatingResponse
-	167, // 285: goautowp.Rating.GetUserCommentsRatingFans:output_type -> goautowp.GetUserRatingFansResponse
-	164, // 286: goautowp.Rating.GetUserPictureLikesRating:output_type -> goautowp.APIUsersRatingResponse
-	167, // 287: goautowp.Rating.GetUserPictureLikesRatingFans:output_type -> goautowp.GetUserRatingFansResponse
-	164, // 288: goautowp.Rating.GetUserSpecsRating:output_type -> goautowp.APIUsersRatingResponse
-	166, // 289: goautowp.Rating.GetUserSpecsRatingBrands:output_type -> goautowp.UserRatingBrandsResponse
-	92,  // 290: goautowp.Items.GetTopBrandsList:output_type -> goautowp.APITopBrandsList
-	99,  // 291: goautowp.Items.GetTopPersonsList:output_type -> goautowp.APITopPersonsList
-	106, // 292: goautowp.Items.GetTopFactoriesList:output_type -> goautowp.APITopFactoriesList
-	104, // 293: goautowp.Items.GetTopCategoriesList:output_type -> goautowp.APITopCategoriesList
-	102, // 294: goautowp.Items.GetTwinsBrandsList:output_type -> goautowp.APITwinsBrandsList
-	103, // 295: goautowp.Items.GetTopTwinsBrandsList:output_type -> goautowp.APITopTwinsBrandsList
-	117, // 296: goautowp.Items.Item:output_type -> goautowp.APIItem
-	118, // 297: goautowp.Items.List:output_type -> goautowp.APIItemList
-	116, // 298: goautowp.Items.GetTree:output_type -> goautowp.APITreeItem
-	172, // 299: goautowp.Items.GetContentLanguages:output_type -> goautowp.APIContentLanguages
-	176, // 300: goautowp.Items.GetItemLink:output_type -> goautowp.APIItemLink
-	175, // 301: goautowp.Items.GetItemLinks:output_type -> goautowp.APIItemLinksResponse
-	211, // 302: goautowp.Items.DeleteItemLink:output_type -> google.protobuf.Empty
-	177, // 303: goautowp.Items.CreateItemLink:output_type -> goautowp.APICreateItemLinkResponse
-	211, // 304: goautowp.Items.UpdateItemLink:output_type -> google.protobuf.Empty
-	180, // 305: goautowp.Items.GetItemVehicleTypes:output_type -> goautowp.APIGetItemVehicleTypesResponse
-	179, // 306: goautowp.Items.GetItemVehicleType:output_type -> goautowp.APIItemVehicleType
-	211, // 307: goautowp.Items.CreateItemVehicleType:output_type -> google.protobuf.Empty
-	211, // 308: goautowp.Items.DeleteItemVehicleType:output_type -> google.protobuf.Empty
-	183, // 309: goautowp.Items.GetItemLanguages:output_type -> goautowp.ItemLanguages
-	186, // 310: goautowp.Items.GetItemParentLanguages:output_type -> goautowp.ItemParentLanguages
-	211, // 311: goautowp.Items.SetItemParentLanguage:output_type -> google.protobuf.Empty
-	188, // 312: goautowp.Items.GetStats:output_type -> goautowp.StatsResponse
-	56,  // 313: goautowp.Comments.GetCommentVotes:output_type -> goautowp.CommentVoteItems
-	211, // 314: goautowp.Comments.Subscribe:output_type -> google.protobuf.Empty
-	211, // 315: goautowp.Comments.UnSubscribe:output_type -> google.protobuf.Empty
-	211, // 316: goautowp.Comments.View:output_type -> google.protobuf.Empty
-	211, // 317: goautowp.Comments.SetDeleted:output_type -> google.protobuf.Empty
-	211, // 318: goautowp.Comments.MoveComment:output_type -> google.protobuf.Empty
-	126, // 319: goautowp.Comments.VoteComment:output_type -> goautowp.CommentsVoteCommentResponse
-	198, // 320: goautowp.Comments.Add:output_type -> goautowp.AddCommentResponse
-	195, // 321: goautowp.Comments.GetMessagePage:output_type -> goautowp.APICommentsMessagePage
-	197, // 322: goautowp.Comments.GetMessage:output_type -> goautowp.APICommentsMessage
-	196, // 323: goautowp.Comments.GetMessages:output_type -> goautowp.APICommentsMessages
-	128, // 324: goautowp.Log.GetEvents:output_type -> goautowp.LogEvents
-	132, // 325: goautowp.Map.GetPoints:output_type -> goautowp.MapPoints
-	211, // 326: goautowp.Pictures.View:output_type -> google.protobuf.Empty
-	136, // 327: goautowp.Pictures.Vote:output_type -> goautowp.PicturesVoteSummary
-	137, // 328: goautowp.Pictures.CreateModerVoteTemplate:output_type -> goautowp.ModerVoteTemplate
-	211, // 329: goautowp.Pictures.DeleteModerVoteTemplate:output_type -> google.protobuf.Empty
-	138, // 330: goautowp.Pictures.GetModerVoteTemplates:output_type -> goautowp.ModerVoteTemplates
-	211, // 331: goautowp.Pictures.DeleteModerVote:output_type -> google.protobuf.Empty
-	211, // 332: goautowp.Pictures.UpdateModerVote:output_type -> google.protobuf.Empty
-	141, // 333: goautowp.Pictures.GetUserSummary:output_type -> goautowp.PicturesUserSummary
-	211, // 334: goautowp.Pictures.Normalize:output_type -> google.protobuf.Empty
-	211, // 335: goautowp.Pictures.Flop:output_type -> google.protobuf.Empty
-	211, // 336: goautowp.Pictures.DeleteSimilar:output_type -> google.protobuf.Empty
-	85,  // 337: goautowp.Messaging.GetMessagesNewCount:output_type -> goautowp.APIMessageNewCount
-	86,  // 338: goautowp.Messaging.GetMessagesSummary:output_type -> goautowp.APIMessageSummary
-	211, // 339: goautowp.Messaging.DeleteMessage:output_type -> google.protobuf.Empty
-	211, // 340: goautowp.Messaging.ClearFolder:output_type -> google.protobuf.Empty
-	211, // 341: goautowp.Messaging.CreateMessage:output_type -> google.protobuf.Empty
-	150, // 342: goautowp.Messaging.GetMessages:output_type -> goautowp.MessagingGetMessagesResponse
-	31,  // 343: goautowp.Statistics.GetPulse:output_type -> goautowp.PulseResponse
-	156, // 344: goautowp.Statistics.GetAboutData:output_type -> goautowp.AboutDataResponse
-	154, // 345: goautowp.Donations.GetVODData:output_type -> goautowp.VODDataResponse
-	153, // 346: goautowp.Donations.GetTransactions:output_type -> goautowp.DonationsTransactionsResponse
-	201, // 347: goautowp.Text.GetText:output_type -> goautowp.APIGetTextResponse
-	15,  // 348: goautowp.Attrs.GetAttribute:output_type -> goautowp.AttrAttribute
-	14,  // 349: goautowp.Attrs.GetAttributes:output_type -> goautowp.AttrAttributesResponse
-	22,  // 350: goautowp.Attrs.GetAttributeTypes:output_type -> goautowp.AttrAttributeTypesResponse
-	17,  // 351: goautowp.Attrs.GetListOptions:output_type -> goautowp.AttrListOptionsResponse
-	24,  // 352: goautowp.Attrs.GetUnits:output_type -> goautowp.AttrUnitsResponse
-	20,  // 353: goautowp.Attrs.GetZoneAttributes:output_type -> goautowp.AttrZoneAttributesResponse
-	26,  // 354: goautowp.Attrs.GetZones:output_type -> goautowp.AttrZonesResponse
-	241, // [241:355] is the sub-list for method output_type
-	127, // [127:241] is the sub-list for method input_type
+	142, // 223: goautowp.Pictures.Repair:input_type -> goautowp.PictureIDRequest
+	211, // 224: goautowp.Messaging.GetMessagesNewCount:input_type -> google.protobuf.Empty
+	211, // 225: goautowp.Messaging.GetMessagesSummary:input_type -> google.protobuf.Empty
+	145, // 226: goautowp.Messaging.DeleteMessage:input_type -> goautowp.MessagingDeleteMessage
+	146, // 227: goautowp.Messaging.ClearFolder:input_type -> goautowp.MessagingClearFolder
+	147, // 228: goautowp.Messaging.CreateMessage:input_type -> goautowp.MessagingCreateMessage
+	149, // 229: goautowp.Messaging.GetMessages:input_type -> goautowp.MessagingGetMessagesRequest
+	28,  // 230: goautowp.Statistics.GetPulse:input_type -> goautowp.PulseRequest
+	211, // 231: goautowp.Statistics.GetAboutData:input_type -> google.protobuf.Empty
+	211, // 232: goautowp.Donations.GetVODData:input_type -> google.protobuf.Empty
+	211, // 233: goautowp.Donations.GetTransactions:input_type -> google.protobuf.Empty
+	199, // 234: goautowp.Text.GetText:input_type -> goautowp.APIGetTextRequest
+	12,  // 235: goautowp.Attrs.GetAttribute:input_type -> goautowp.AttrAttributeID
+	13,  // 236: goautowp.Attrs.GetAttributes:input_type -> goautowp.AttrAttributesRequest
+	211, // 237: goautowp.Attrs.GetAttributeTypes:input_type -> google.protobuf.Empty
+	16,  // 238: goautowp.Attrs.GetListOptions:input_type -> goautowp.AttrListOptionsRequest
+	211, // 239: goautowp.Attrs.GetUnits:input_type -> google.protobuf.Empty
+	19,  // 240: goautowp.Attrs.GetZoneAttributes:input_type -> goautowp.AttrZoneAttributesRequest
+	211, // 241: goautowp.Attrs.GetZones:input_type -> google.protobuf.Empty
+	42,  // 242: goautowp.Autowp.AclEnforce:output_type -> goautowp.AclEnforceResult
+	211, // 243: goautowp.Autowp.CreateFeedback:output_type -> google.protobuf.Empty
+	40,  // 244: goautowp.Autowp.GetBrandIcons:output_type -> goautowp.BrandIcons
+	46,  // 245: goautowp.Autowp.GetBrandVehicleTypes:output_type -> goautowp.BrandVehicleTypeItems
+	63,  // 246: goautowp.Autowp.GetIP:output_type -> goautowp.APIIP
+	35,  // 247: goautowp.Autowp.GetPerspectives:output_type -> goautowp.PerspectivesItems
+	38,  // 248: goautowp.Autowp.GetPerspectivePages:output_type -> goautowp.PerspectivePagesItems
+	39,  // 249: goautowp.Autowp.GetReCaptchaConfig:output_type -> goautowp.ReCaptchaConfig
+	33,  // 250: goautowp.Autowp.GetSpecs:output_type -> goautowp.SpecsItems
+	44,  // 251: goautowp.Autowp.GetVehicleTypes:output_type -> goautowp.VehicleTypeItems
+	71,  // 252: goautowp.Forums.GetUserSummary:output_type -> goautowp.APIForumsUserSummary
+	82,  // 253: goautowp.Forums.CreateTopic:output_type -> goautowp.APICreateTopicResponse
+	211, // 254: goautowp.Forums.CloseTopic:output_type -> google.protobuf.Empty
+	211, // 255: goautowp.Forums.OpenTopic:output_type -> google.protobuf.Empty
+	211, // 256: goautowp.Forums.DeleteTopic:output_type -> google.protobuf.Empty
+	211, // 257: goautowp.Forums.MoveTopic:output_type -> google.protobuf.Empty
+	76,  // 258: goautowp.Forums.GetTheme:output_type -> goautowp.APIForumsTheme
+	77,  // 259: goautowp.Forums.GetThemes:output_type -> goautowp.APIForumsThemes
+	78,  // 260: goautowp.Forums.GetTopic:output_type -> goautowp.APIForumsTopic
+	78,  // 261: goautowp.Forums.GetLastTopic:output_type -> goautowp.APIForumsTopic
+	80,  // 262: goautowp.Forums.GetLastMessage:output_type -> goautowp.APICommentMessage
+	79,  // 263: goautowp.Forums.GetTopics:output_type -> goautowp.APIForumsTopics
+	169, // 264: goautowp.Articles.GetList:output_type -> goautowp.ArticlesResponse
+	170, // 265: goautowp.Articles.GetItemByCatname:output_type -> goautowp.Article
+	211, // 266: goautowp.Traffic.AddToBlacklist:output_type -> google.protobuf.Empty
+	211, // 267: goautowp.Traffic.AddToWhitelist:output_type -> google.protobuf.Empty
+	211, // 268: goautowp.Traffic.DeleteFromBlacklist:output_type -> google.protobuf.Empty
+	211, // 269: goautowp.Traffic.DeleteFromWhitelist:output_type -> google.protobuf.Empty
+	60,  // 270: goautowp.Traffic.GetTop:output_type -> goautowp.APITrafficTopResponse
+	70,  // 271: goautowp.Traffic.GetWhitelist:output_type -> goautowp.APITrafficWhitelistItems
+	211, // 272: goautowp.Contacts.CreateContact:output_type -> google.protobuf.Empty
+	211, // 273: goautowp.Contacts.DeleteContact:output_type -> google.protobuf.Empty
+	53,  // 274: goautowp.Contacts.GetContact:output_type -> goautowp.Contact
+	54,  // 275: goautowp.Contacts.GetContacts:output_type -> goautowp.ContactItems
+	211, // 276: goautowp.Users.DeleteUser:output_type -> google.protobuf.Empty
+	52,  // 277: goautowp.Users.GetUser:output_type -> goautowp.APIUser
+	52,  // 278: goautowp.Users.Me:output_type -> goautowp.APIUser
+	158, // 279: goautowp.Users.GetUserPreferences:output_type -> goautowp.APIUserPreferencesResponse
+	211, // 280: goautowp.Users.DisableUserCommentsNotifications:output_type -> google.protobuf.Empty
+	211, // 281: goautowp.Users.EnableUserCommentsNotifications:output_type -> google.protobuf.Empty
+	160, // 282: goautowp.Users.GetUsers:output_type -> goautowp.APIUsersResponse
+	164, // 283: goautowp.Rating.GetUserPicturesRating:output_type -> goautowp.APIUsersRatingResponse
+	166, // 284: goautowp.Rating.GetUserPicturesRatingBrands:output_type -> goautowp.UserRatingBrandsResponse
+	164, // 285: goautowp.Rating.GetUserCommentsRating:output_type -> goautowp.APIUsersRatingResponse
+	167, // 286: goautowp.Rating.GetUserCommentsRatingFans:output_type -> goautowp.GetUserRatingFansResponse
+	164, // 287: goautowp.Rating.GetUserPictureLikesRating:output_type -> goautowp.APIUsersRatingResponse
+	167, // 288: goautowp.Rating.GetUserPictureLikesRatingFans:output_type -> goautowp.GetUserRatingFansResponse
+	164, // 289: goautowp.Rating.GetUserSpecsRating:output_type -> goautowp.APIUsersRatingResponse
+	166, // 290: goautowp.Rating.GetUserSpecsRatingBrands:output_type -> goautowp.UserRatingBrandsResponse
+	92,  // 291: goautowp.Items.GetTopBrandsList:output_type -> goautowp.APITopBrandsList
+	99,  // 292: goautowp.Items.GetTopPersonsList:output_type -> goautowp.APITopPersonsList
+	106, // 293: goautowp.Items.GetTopFactoriesList:output_type -> goautowp.APITopFactoriesList
+	104, // 294: goautowp.Items.GetTopCategoriesList:output_type -> goautowp.APITopCategoriesList
+	102, // 295: goautowp.Items.GetTwinsBrandsList:output_type -> goautowp.APITwinsBrandsList
+	103, // 296: goautowp.Items.GetTopTwinsBrandsList:output_type -> goautowp.APITopTwinsBrandsList
+	117, // 297: goautowp.Items.Item:output_type -> goautowp.APIItem
+	118, // 298: goautowp.Items.List:output_type -> goautowp.APIItemList
+	116, // 299: goautowp.Items.GetTree:output_type -> goautowp.APITreeItem
+	172, // 300: goautowp.Items.GetContentLanguages:output_type -> goautowp.APIContentLanguages
+	176, // 301: goautowp.Items.GetItemLink:output_type -> goautowp.APIItemLink
+	175, // 302: goautowp.Items.GetItemLinks:output_type -> goautowp.APIItemLinksResponse
+	211, // 303: goautowp.Items.DeleteItemLink:output_type -> google.protobuf.Empty
+	177, // 304: goautowp.Items.CreateItemLink:output_type -> goautowp.APICreateItemLinkResponse
+	211, // 305: goautowp.Items.UpdateItemLink:output_type -> google.protobuf.Empty
+	180, // 306: goautowp.Items.GetItemVehicleTypes:output_type -> goautowp.APIGetItemVehicleTypesResponse
+	179, // 307: goautowp.Items.GetItemVehicleType:output_type -> goautowp.APIItemVehicleType
+	211, // 308: goautowp.Items.CreateItemVehicleType:output_type -> google.protobuf.Empty
+	211, // 309: goautowp.Items.DeleteItemVehicleType:output_type -> google.protobuf.Empty
+	183, // 310: goautowp.Items.GetItemLanguages:output_type -> goautowp.ItemLanguages
+	186, // 311: goautowp.Items.GetItemParentLanguages:output_type -> goautowp.ItemParentLanguages
+	211, // 312: goautowp.Items.SetItemParentLanguage:output_type -> google.protobuf.Empty
+	188, // 313: goautowp.Items.GetStats:output_type -> goautowp.StatsResponse
+	56,  // 314: goautowp.Comments.GetCommentVotes:output_type -> goautowp.CommentVoteItems
+	211, // 315: goautowp.Comments.Subscribe:output_type -> google.protobuf.Empty
+	211, // 316: goautowp.Comments.UnSubscribe:output_type -> google.protobuf.Empty
+	211, // 317: goautowp.Comments.View:output_type -> google.protobuf.Empty
+	211, // 318: goautowp.Comments.SetDeleted:output_type -> google.protobuf.Empty
+	211, // 319: goautowp.Comments.MoveComment:output_type -> google.protobuf.Empty
+	126, // 320: goautowp.Comments.VoteComment:output_type -> goautowp.CommentsVoteCommentResponse
+	198, // 321: goautowp.Comments.Add:output_type -> goautowp.AddCommentResponse
+	195, // 322: goautowp.Comments.GetMessagePage:output_type -> goautowp.APICommentsMessagePage
+	197, // 323: goautowp.Comments.GetMessage:output_type -> goautowp.APICommentsMessage
+	196, // 324: goautowp.Comments.GetMessages:output_type -> goautowp.APICommentsMessages
+	128, // 325: goautowp.Log.GetEvents:output_type -> goautowp.LogEvents
+	132, // 326: goautowp.Map.GetPoints:output_type -> goautowp.MapPoints
+	211, // 327: goautowp.Pictures.View:output_type -> google.protobuf.Empty
+	136, // 328: goautowp.Pictures.Vote:output_type -> goautowp.PicturesVoteSummary
+	137, // 329: goautowp.Pictures.CreateModerVoteTemplate:output_type -> goautowp.ModerVoteTemplate
+	211, // 330: goautowp.Pictures.DeleteModerVoteTemplate:output_type -> google.protobuf.Empty
+	138, // 331: goautowp.Pictures.GetModerVoteTemplates:output_type -> goautowp.ModerVoteTemplates
+	211, // 332: goautowp.Pictures.DeleteModerVote:output_type -> google.protobuf.Empty
+	211, // 333: goautowp.Pictures.UpdateModerVote:output_type -> google.protobuf.Empty
+	141, // 334: goautowp.Pictures.GetUserSummary:output_type -> goautowp.PicturesUserSummary
+	211, // 335: goautowp.Pictures.Normalize:output_type -> google.protobuf.Empty
+	211, // 336: goautowp.Pictures.Flop:output_type -> google.protobuf.Empty
+	211, // 337: goautowp.Pictures.DeleteSimilar:output_type -> google.protobuf.Empty
+	211, // 338: goautowp.Pictures.Repair:output_type -> google.protobuf.Empty
+	85,  // 339: goautowp.Messaging.GetMessagesNewCount:output_type -> goautowp.APIMessageNewCount
+	86,  // 340: goautowp.Messaging.GetMessagesSummary:output_type -> goautowp.APIMessageSummary
+	211, // 341: goautowp.Messaging.DeleteMessage:output_type -> google.protobuf.Empty
+	211, // 342: goautowp.Messaging.ClearFolder:output_type -> google.protobuf.Empty
+	211, // 343: goautowp.Messaging.CreateMessage:output_type -> google.protobuf.Empty
+	150, // 344: goautowp.Messaging.GetMessages:output_type -> goautowp.MessagingGetMessagesResponse
+	31,  // 345: goautowp.Statistics.GetPulse:output_type -> goautowp.PulseResponse
+	156, // 346: goautowp.Statistics.GetAboutData:output_type -> goautowp.AboutDataResponse
+	154, // 347: goautowp.Donations.GetVODData:output_type -> goautowp.VODDataResponse
+	153, // 348: goautowp.Donations.GetTransactions:output_type -> goautowp.DonationsTransactionsResponse
+	201, // 349: goautowp.Text.GetText:output_type -> goautowp.APIGetTextResponse
+	15,  // 350: goautowp.Attrs.GetAttribute:output_type -> goautowp.AttrAttribute
+	14,  // 351: goautowp.Attrs.GetAttributes:output_type -> goautowp.AttrAttributesResponse
+	22,  // 352: goautowp.Attrs.GetAttributeTypes:output_type -> goautowp.AttrAttributeTypesResponse
+	17,  // 353: goautowp.Attrs.GetListOptions:output_type -> goautowp.AttrListOptionsResponse
+	24,  // 354: goautowp.Attrs.GetUnits:output_type -> goautowp.AttrUnitsResponse
+	20,  // 355: goautowp.Attrs.GetZoneAttributes:output_type -> goautowp.AttrZoneAttributesResponse
+	26,  // 356: goautowp.Attrs.GetZones:output_type -> goautowp.AttrZonesResponse
+	242, // [242:357] is the sub-list for method output_type
+	127, // [127:242] is the sub-list for method input_type
 	127, // [127:127] is the sub-list for extension type_name
 	127, // [127:127] is the sub-list for extension extendee
 	0,   // [0:127] is the sub-list for field type_name

@@ -139,6 +139,7 @@ service Pictures {
   rpc Normalize(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc Flop(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc DeleteSimilar(DeleteSimilarRequest) returns (google.protobuf.Empty) {}
+  rpc Repair(PictureIDRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {

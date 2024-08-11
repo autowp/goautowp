@@ -3844,6 +3844,7 @@ const (
 	Pictures_Normalize_FullMethodName               = "/goautowp.Pictures/Normalize"
 	Pictures_Flop_FullMethodName                    = "/goautowp.Pictures/Flop"
 	Pictures_DeleteSimilar_FullMethodName           = "/goautowp.Pictures/DeleteSimilar"
+	Pictures_Repair_FullMethodName                  = "/goautowp.Pictures/Repair"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -3861,6 +3862,7 @@ type PicturesClient interface {
 	Normalize(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Flop(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteSimilar(ctx context.Context, in *DeleteSimilarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Repair(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type picturesClient struct {
@@ -3981,6 +3983,16 @@ func (c *picturesClient) DeleteSimilar(ctx context.Context, in *DeleteSimilarReq
 	return out, nil
 }
 
+func (c *picturesClient) Repair(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Pictures_Repair_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility
@@ -3996,6 +4008,7 @@ type PicturesServer interface {
 	Normalize(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	Flop(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	DeleteSimilar(context.Context, *DeleteSimilarRequest) (*emptypb.Empty, error)
+	Repair(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -4035,6 +4048,9 @@ func (UnimplementedPicturesServer) Flop(context.Context, *PictureIDRequest) (*em
 }
 func (UnimplementedPicturesServer) DeleteSimilar(context.Context, *DeleteSimilarRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteSimilar not implemented")
+}
+func (UnimplementedPicturesServer) Repair(context.Context, *PictureIDRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Repair not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 
@@ -4247,6 +4263,24 @@ func _Pictures_DeleteSimilar_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_Repair_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PictureIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).Repair(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_Repair_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).Repair(ctx, req.(*PictureIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -4297,6 +4331,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSimilar",
 			Handler:    _Pictures_DeleteSimilar_Handler,
+		},
+		{
+			MethodName: "Repair",
+			Handler:    _Pictures_Repair_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

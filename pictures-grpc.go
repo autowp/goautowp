@@ -635,3 +635,25 @@ func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimila
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *PicturesGRPCServer) Repair(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	err = s.repository.Repair(ctx, in.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
