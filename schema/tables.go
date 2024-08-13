@@ -139,6 +139,7 @@ const (
 	ItemTableBodyColName                   = "body"
 	ItemTableIsGroupColName                = "is_group"
 	ItemTableProducedExactlyColName        = "produced_exactly"
+	ItemTableAddDatetimeColName            = "add_datetime"
 
 	ItemPointTableName          = "item_point"
 	ItemPointTableItemIDColName = "item_id"

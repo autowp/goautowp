@@ -245,6 +245,7 @@ type ListOptions struct {
 	HasBeginMonth      bool
 	HasEndMonth        bool
 	HasLogo            bool
+	CreatedInDays      int
 }
 
 func yearsPrefix(begin int32, end int32) string {
@@ -351,6 +352,12 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 	if options.TypeID != nil && len(options.TypeID) > 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableItemTypeIDColName).Eq(options.TypeID))
+	}
+
+	if options.CreatedInDays > 0 {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableAddDatetimeColName).Gt(
+			goqu.L("DATE_SUB(NOW(), INTERVAL ? DAY)", options.CreatedInDays),
+		))
 	}
 
 	ipcAlias := alias + "_ipc"
@@ -759,13 +766,8 @@ func (s *Repository) CountDistinct(ctx context.Context, options ListOptions) (in
 	return count, nil
 }
 
-func (s *Repository) Item(ctx context.Context, id int64, language string, fields ListFields) (Item, error) {
-	options := ListOptions{
-		ItemID:   id,
-		Fields:   fields,
-		Limit:    1,
-		Language: language,
-	}
+func (s *Repository) Item(ctx context.Context, options ListOptions) (Item, error) {
+	options.Limit = 1
 
 	res, _, err := s.List(ctx, options, false)
 	if err != nil {

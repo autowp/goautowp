@@ -380,9 +380,11 @@ func convertFields(fields *ItemFields) items.ListFields {
 }
 
 func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, error) {
-	fields := convertFields(in.GetFields())
-
-	res, err := s.repository.Item(ctx, in.GetId(), in.GetLanguage(), fields)
+	res, err := s.repository.Item(ctx, items.ListOptions{
+		ItemID:   in.GetId(),
+		Language: in.GetLanguage(),
+		Fields:   convertFields(in.GetFields()),
+	})
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -1116,4 +1118,71 @@ func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemPar
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) GetBrandNewItems(
+	ctx context.Context, in *BrandNewItemsRequest,
+) (*BrandNewItemsResponse, error) {
+	const (
+		newItemsLimit = 30
+		daysLimit     = 7
+	)
+
+	lang := in.GetLanguage()
+
+	brand, err := s.repository.Item(ctx, items.ListOptions{
+		TypeID:   []items.ItemType{items.BRAND},
+		ItemID:   in.GetItemId(),
+		Language: lang,
+		Fields: items.ListFields{
+			NameHTML: true,
+		},
+	})
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	localizer := s.i18n.Localizer(lang)
+
+	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{NameHtml: true}, localizer)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	carList, _, err := s.repository.List(ctx, items.ListOptions{
+		Language: lang,
+		AncestorItems: &items.ListOptions{
+			Language: lang,
+			ItemID:   brand.ID,
+			Fields: items.ListFields{
+				NameHTML: true,
+			},
+		},
+		CreatedInDays: daysLimit,
+		Limit:         newItemsLimit,
+		OrderBy:       []exp.OrderedExpression{goqu.T("i").Col("add_datetime").Desc()},
+	}, false)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	extractedItems := make([]*APIItem, 0, len(carList))
+
+	for _, car := range carList {
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, localizer)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		extractedItems = append(extractedItems, extractedItem)
+	}
+
+	return &BrandNewItemsResponse{
+		Brand: extractedBrand,
+		Items: extractedItems,
+	}, nil
 }

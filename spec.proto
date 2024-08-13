@@ -103,6 +103,7 @@ service Items {
   rpc GetItemParentLanguages(APIGetItemParentLanguagesRequest) returns (ItemParentLanguages) {}
   rpc SetItemParentLanguage(ItemParentLanguage) returns (google.protobuf.Empty) {}
   rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
+  rpc GetBrandNewItems(BrandNewItemsRequest) returns (BrandNewItemsResponse) {}
 }
 
 service Comments {
@@ -1291,6 +1292,16 @@ message StatsValue {
   string name = 1;
   int32 total = 2;
   int32 value = 3;
+}
+
+message BrandNewItemsRequest {
+  int64 item_id = 1;
+  string language = 2;
+}
+
+message BrandNewItemsResponse {
+  APIItem brand = 1;
+  repeated APIItem items = 2;
 }
 
 message AddCommentRequest {

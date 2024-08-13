@@ -791,3 +791,47 @@ func TestSetItemParentLanguage(t *testing.T) {
 		require.Equal(t, testCase.Result, itemParentLanguageRow.GetName())
 	}
 }
+
+func TestBrandNewItems(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+		schema.ItemTableNameColName:            fmt.Sprintf("brand-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      items.BRAND,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("brand-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	_, err = client.GetBrandNewItems(ctx, &BrandNewItemsRequest{
+		ItemId:   itemID,
+		Language: "ru",
+	})
+	require.NoError(t, err)
+}

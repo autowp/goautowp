@@ -2276,6 +2276,7 @@ const (
 	Items_GetItemParentLanguages_FullMethodName = "/goautowp.Items/GetItemParentLanguages"
 	Items_SetItemParentLanguage_FullMethodName  = "/goautowp.Items/SetItemParentLanguage"
 	Items_GetStats_FullMethodName               = "/goautowp.Items/GetStats"
+	Items_GetBrandNewItems_FullMethodName       = "/goautowp.Items/GetBrandNewItems"
 )
 
 // ItemsClient is the client API for Items service.
@@ -2305,6 +2306,7 @@ type ItemsClient interface {
 	GetItemParentLanguages(ctx context.Context, in *APIGetItemParentLanguagesRequest, opts ...grpc.CallOption) (*ItemParentLanguages, error)
 	SetItemParentLanguage(ctx context.Context, in *ItemParentLanguage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error)
+	GetBrandNewItems(ctx context.Context, in *BrandNewItemsRequest, opts ...grpc.CallOption) (*BrandNewItemsResponse, error)
 }
 
 type itemsClient struct {
@@ -2545,6 +2547,16 @@ func (c *itemsClient) GetStats(ctx context.Context, in *emptypb.Empty, opts ...g
 	return out, nil
 }
 
+func (c *itemsClient) GetBrandNewItems(ctx context.Context, in *BrandNewItemsRequest, opts ...grpc.CallOption) (*BrandNewItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BrandNewItemsResponse)
+	err := c.cc.Invoke(ctx, Items_GetBrandNewItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility
@@ -2572,6 +2584,7 @@ type ItemsServer interface {
 	GetItemParentLanguages(context.Context, *APIGetItemParentLanguagesRequest) (*ItemParentLanguages, error)
 	SetItemParentLanguage(context.Context, *ItemParentLanguage) (*emptypb.Empty, error)
 	GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error)
+	GetBrandNewItems(context.Context, *BrandNewItemsRequest) (*BrandNewItemsResponse, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -2647,6 +2660,9 @@ func (UnimplementedItemsServer) SetItemParentLanguage(context.Context, *ItemPare
 }
 func (UnimplementedItemsServer) GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStats not implemented")
+}
+func (UnimplementedItemsServer) GetBrandNewItems(context.Context, *BrandNewItemsRequest) (*BrandNewItemsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBrandNewItems not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 
@@ -3075,6 +3091,24 @@ func _Items_GetStats_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetBrandNewItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BrandNewItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetBrandNewItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_GetBrandNewItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetBrandNewItems(ctx, req.(*BrandNewItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3173,6 +3207,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStats",
 			Handler:    _Items_GetStats_Handler,
+		},
+		{
+			MethodName: "GetBrandNewItems",
+			Handler:    _Items_GetBrandNewItems_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
