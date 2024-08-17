@@ -1143,6 +1143,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		ItemID:   in.GetItemId(),
 		Language: lang,
+		Fields:   items.ListFields{Logo: true},
 	})
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
