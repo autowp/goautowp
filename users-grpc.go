@@ -274,6 +274,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 		paginator = &Pages{
 			PageCount:        pages.PageCount,
 			First:            pages.First,
+			Last:             pages.Last,
 			Current:          pages.Current,
 			FirstPageInRange: pages.FirstPageInRange,
 			LastPageInRange:  pages.LastPageInRange,

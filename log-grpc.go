@@ -60,6 +60,7 @@ func (s *LogGRPCServer) GetEvents(ctx context.Context, in *LogEventsRequest) (*L
 	paginator := &Pages{
 		PageCount:        pages.PageCount,
 		First:            pages.First,
+		Last:             pages.Last,
 		Current:          pages.Current,
 		FirstPageInRange: pages.FirstPageInRange,
 		LastPageInRange:  pages.LastPageInRange,

@@ -91,6 +91,7 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 		Paginator: &Pages{
 			PageCount:        pages.PageCount,
 			First:            pages.First,
+			Last:             pages.Last,
 			Previous:         pages.Previous,
 			Next:             pages.Next,
 			Current:          pages.Current,

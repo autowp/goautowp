@@ -804,6 +804,7 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 		Paginator: &Pages{
 			PageCount:        pages.PageCount,
 			First:            pages.First,
+			Last:             pages.Last,
 			Previous:         pages.Previous,
 			Next:             pages.Next,
 			Current:          pages.Current,

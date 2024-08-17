@@ -446,6 +446,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		paginator = &Pages{
 			PageCount:        pages.PageCount,
 			First:            pages.First,
+			Last:             pages.Last,
 			Current:          pages.Current,
 			FirstPageInRange: pages.FirstPageInRange,
 			LastPageInRange:  pages.LastPageInRange,
