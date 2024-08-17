@@ -185,7 +185,7 @@ func (s *ItemExtractor) Extract(
 
 		if fields.GetInboxPicturesCount() {
 			cnt, err := s.picturesRepository.Count(ctx, pictures.ListOptions{
-				Status:         pictures.StatusInbox,
+				Status:         schema.PictureStatusInbox,
 				AncestorItemID: row.ID,
 			})
 			if err != nil {

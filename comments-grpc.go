@@ -40,15 +40,15 @@ type CommentsGRPCServer struct {
 	enforcer           *casbin.Enforcer
 }
 
-func reverseConvertPicturesStatus(status pictures.Status) PictureStatus {
+func reverseConvertPicturesStatus(status schema.PictureStatus) PictureStatus {
 	switch status {
-	case pictures.StatusAccepted:
+	case schema.PictureStatusAccepted:
 		return PictureStatus_PICTURE_STATUS_ACCEPTED
-	case pictures.StatusRemoving:
+	case schema.PictureStatusRemoving:
 		return PictureStatus_PICTURE_STATUS_REMOVING
-	case pictures.StatusInbox:
+	case schema.PictureStatusInbox:
 		return PictureStatus_PICTURE_STATUS_INBOX
-	case pictures.StatusRemoved:
+	case schema.PictureStatusRemoved:
 		return PictureStatus_PICTURE_STATUS_REMOVED
 	}
 

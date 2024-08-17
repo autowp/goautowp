@@ -243,10 +243,17 @@ const (
 	PictureTableOwnerIDColName            = "owner_id"
 	PictureTableStatusColName             = "status"
 	PictureTableChangeStatusUserIDColName = "change_status_user_id"
+	PictureTableWidthColName              = "width"
+	PictureTableHeightColName             = "height"
 
-	PictureItemTableName             = "picture_item"
-	PictureItemTablePictureIDColName = "picture_id"
-	PictureItemTableItemIDColName    = "item_id"
+	PictureItemTableName              = "picture_item"
+	PictureItemTablePictureIDColName  = "picture_id"
+	PictureItemTableItemIDColName     = "item_id"
+	PictureItemTableTypeColName       = "type"
+	PictureItemTableCropLeftColName   = "crop_left"
+	PictureItemTableCropTopColName    = "crop_top"
+	PictureItemTableCropWidthColName  = "crop_width"
+	PictureItemTableCropHeightColName = "crop_height"
 
 	PictureViewTableName             = "picture_view"
 	PictureViewTablePictureIDColName = "picture_id"
@@ -610,10 +617,17 @@ var (
 	PictureTableStatusCol             = PictureTable.Col(PictureTableStatusColName)
 	PictureTableImageIDCol            = PictureTable.Col(PictureTableImageIDColName)
 	PictureTableChangeStatusUserIDCol = PictureTable.Col(PictureTableChangeStatusUserIDColName)
+	PictureTableWidthCol              = PictureTable.Col(PictureTableWidthColName)
+	PictureTableHeightCol             = PictureTable.Col(PictureTableHeightColName)
 
-	PictureItemTable             = goqu.T(PictureItemTableName)
-	PictureItemTablePictureIDCol = PictureItemTable.Col(PictureItemTablePictureIDColName)
-	PictureItemTableItemIDCol    = PictureItemTable.Col(PictureItemTableItemIDColName)
+	PictureItemTable              = goqu.T(PictureItemTableName)
+	PictureItemTablePictureIDCol  = PictureItemTable.Col(PictureItemTablePictureIDColName)
+	PictureItemTableItemIDCol     = PictureItemTable.Col(PictureItemTableItemIDColName)
+	PictureItemTableTypeCol       = PictureItemTable.Col(PictureItemTableTypeColName)
+	PictureItemTableCropLeftCol   = PictureItemTable.Col(PictureItemTableCropLeftColName)
+	PictureItemTableCropTopCol    = PictureItemTable.Col(PictureItemTableCropTopColName)
+	PictureItemTableCropWidthCol  = PictureItemTable.Col(PictureItemTableCropWidthColName)
+	PictureItemTableCropHeightCol = PictureItemTable.Col(PictureItemTableCropHeightColName)
 
 	PictureViewTable             = goqu.T(PictureViewTableName)
 	PictureViewTablePictureIDCol = PictureViewTable.Col(PictureViewTablePictureIDColName)

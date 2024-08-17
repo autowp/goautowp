@@ -13,3 +13,20 @@ const (
 	ItemTableItemTypeIDPerson    ItemTableItemTypeID = 8
 	ItemTableItemTypeIDCopyright ItemTableItemTypeID = 9
 )
+
+type PictureStatus string
+
+const (
+	PictureStatusAccepted PictureStatus = "accepted"
+	PictureStatusRemoving PictureStatus = "removing"
+	PictureStatusRemoved  PictureStatus = "removed"
+	PictureStatusInbox    PictureStatus = "inbox"
+)
+
+type PictureItemType int
+
+const (
+	PictureItemContent    PictureItemType = 1
+	PictureItemAuthor     PictureItemType = 2
+	PictureItemCopyrights PictureItemType = 3
+)

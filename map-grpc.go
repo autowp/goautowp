@@ -11,7 +11,6 @@ import (
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -201,7 +200,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				From(schema.PictureTable).
 				Join(schema.PictureItemTable, goqu.On(schema.PictureTableIDCol.Eq(schema.PictureItemTablePictureIDCol))).
 				Where(
-					schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
+					schema.PictureTableStatusCol.Eq(schema.PictureStatusAccepted),
 					schema.PictureItemTableItemIDCol.Eq(id),
 				).
 				ScanValContext(ctx, &imageID)

@@ -83,7 +83,7 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 		DescendantPictures: &items.ItemPicturesOptions{
 			Pictures: &items.PicturesOptions{
 				OwnerID: in.GetUserId(),
-				Status:  pictures.StatusAccepted,
+				Status:  schema.PictureStatusAccepted,
 			},
 		},
 		OrderBy: []exp.OrderedExpression{goqu.COUNT(goqu.DISTINCT(goqu.T("i_ipcd_pi_p").Col("id"))).Desc()},

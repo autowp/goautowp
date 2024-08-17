@@ -6,7 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
@@ -146,7 +145,7 @@ func (s *Repository) CandidateQuery() *goqu.SelectDataset {
 		Join(schema.PictureItemTable, goqu.On(schema.ItemParentCacheTableItemIDCol.Eq(schema.PictureItemTableItemIDCol))).
 		Join(schema.PictureTable, goqu.On(schema.PictureItemTablePictureIDCol.Eq(schema.PictureTableIDCol))).
 		Where(
-			schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
+			schema.PictureTableStatusCol.Eq(schema.PictureStatusAccepted),
 			schema.ItemTableIDCol.NotIn(
 				s.db.Select(schema.OfDayTableItemIDCol).
 					From(schema.OfDayTable).

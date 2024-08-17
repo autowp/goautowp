@@ -14,7 +14,6 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/Nerzal/gocloak/v13/pkg/jwx"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -1005,7 +1004,7 @@ func (s *Repository) messagingInterval(regDate time.Time, messagingInterval int6
 		return messagingInterval
 	}
 
-	return util.MaxInt64(messagingInterval, s.messageInterval)
+	return util.Max(messagingInterval, s.messageInterval)
 }
 
 func (s *Repository) NextMessageTime(ctx context.Context, userID int64) (time.Time, error) {
@@ -1125,7 +1124,7 @@ func (s *Repository) RefreshPicturesCount(ctx context.Context, userID int64) err
 			From(schema.PictureTable).
 			Where(
 				schema.PictureTableOwnerIDCol.Eq(userID),
-				schema.PictureTableStatusCol.Eq(pictures.StatusAccepted),
+				schema.PictureTableStatusCol.Eq(schema.PictureStatusAccepted),
 			),
 	}).
 		Where(schema.UserTableIDCol.Eq(userID)).Executor().ExecContext(ctx)

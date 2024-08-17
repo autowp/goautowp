@@ -8,6 +8,7 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/constraints"
 )
 
 // Close resource and prints error.
@@ -80,14 +81,6 @@ func ConnectRabbitMQ(config string) (*amqp.Connection, error) {
 	return rabbitMQ, nil
 }
 
-func MaxInt64(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-
-	return b
-}
-
 type TextPreviewOptions struct {
 	Maxlength int
 	Maxlines  int
@@ -131,4 +124,20 @@ func BoolPtr(b bool) *bool {
 	boolVar := b
 
 	return &boolVar
+}
+
+func Min[T constraints.Ordered](a, b T) T { //nolint: ireturn
+	if a < b {
+		return a
+	}
+
+	return b
+}
+
+func Max[T constraints.Ordered](a, b T) T { //nolint: ireturn
+	if a > b {
+		return a
+	}
+
+	return b
 }

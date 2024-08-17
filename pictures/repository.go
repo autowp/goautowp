@@ -3,6 +3,7 @@ package pictures
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
@@ -12,34 +13,11 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
-type Status string
+var errCropIsAllowedForPictureItemContentOnly = errors.New("crop is allowed only for picture-item-content")
 
 const IdentityLength = 6
 
-const (
-	StatusAccepted Status = "accepted"
-	StatusRemoving Status = "removing"
-	StatusRemoved  Status = "removed"
-	StatusInbox    Status = "inbox"
-)
-
-type ItemPictureType int
-
-const (
-	ItemPictureContent    ItemPictureType = 1
-	ItemPictureAuthor     ItemPictureType = 2
-	ItemPictureCopyrights ItemPictureType = 3
-)
-
 const ModerVoteTemplateMessageMaxLength = 80
-
-type PictureRow struct {
-	OwnerID            sql.NullInt64 `db:"owner_id"`
-	ChangeStatusUserID sql.NullInt64 `db:"change_status_user_id"`
-	Identity           string        `db:"identity"`
-	Status             Status        `db:"status"`
-	ImageID            int64         `db:"image_id"`
-}
 
 type ModerVoteTemplate struct {
 	ID      int64
@@ -55,7 +33,7 @@ type VoteSummary struct {
 }
 
 type ListOptions struct {
-	Status         Status
+	Status         schema.PictureStatus
 	AncestorItemID int64
 	HasCopyrights  bool
 	UserID         int64
@@ -97,8 +75,8 @@ func (s *Repository) IncView(ctx context.Context, id int64) error {
 	return err
 }
 
-func (s *Repository) Status(ctx context.Context, id int64) (Status, error) {
-	var status Status
+func (s *Repository) Status(ctx context.Context, id int64) (schema.PictureStatus, error) {
+	var status schema.PictureStatus
 
 	success, err := s.db.Select(schema.PictureTableStatusCol).
 		From(schema.PictureTable).
@@ -115,7 +93,7 @@ func (s *Repository) Status(ctx context.Context, id int64) (Status, error) {
 	return status, nil
 }
 
-func (s *Repository) SetStatus(ctx context.Context, id int64, status Status, userID int64) error {
+func (s *Repository) SetStatus(ctx context.Context, id int64, status schema.PictureStatus, userID int64) error {
 	_, err := s.db.Update(schema.PictureTable).
 		Set(goqu.Record{
 			schema.PictureTableStatusColName:             status,
@@ -471,8 +449,8 @@ func (s *Repository) CreateModerVote(
 	return affected > 0, err
 }
 
-func (s *Repository) Picture(ctx context.Context, id int64) (*PictureRow, error) {
-	st := PictureRow{}
+func (s *Repository) Picture(ctx context.Context, id int64) (*schema.PictureRow, error) {
+	st := schema.PictureRow{}
 
 	success, err := s.db.Select(
 		schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol, schema.PictureTableIdentityCol,
@@ -524,4 +502,96 @@ func (s *Repository) Flop(ctx context.Context, id int64) error {
 
 func (s *Repository) Repair(ctx context.Context, id int64) error {
 	return s.imageStorage.Flush(ctx, storage.FlushOptions{Image: int(id)})
+}
+
+func (s *Repository) SetPictureItemArea(
+	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, area PictureItemArea,
+) error {
+	pic := schema.PictureRow{}
+
+	success, err := s.db.Select(schema.PictureTableWidthCol, schema.PictureTableHeightCol).
+		From(schema.PictureTable).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanStructContext(ctx, &pic)
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return sql.ErrNoRows
+	}
+
+	picItem := schema.PictureItemRow{}
+
+	success, err = s.db.Select(
+		schema.PictureItemTableCropLeftCol, schema.PictureItemTableCropTopCol, schema.PictureItemTableCropWidthCol,
+		schema.PictureItemTableCropHeightCol, schema.PictureItemTableTypeCol,
+	).
+		From(schema.PictureItemTable).
+		Where(
+			schema.PictureItemTablePictureIDCol.Eq(pictureID),
+			schema.PictureItemTableItemIDCol.Eq(itemID),
+			schema.PictureItemTableTypeCol.Eq(pictureItemType),
+		).ScanStructContext(ctx, &picItem)
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return sql.ErrNoRows
+	}
+
+	if picItem.Type != schema.PictureItemContent {
+		return errCropIsAllowedForPictureItemContentOnly
+	}
+
+	area.Left = util.Max(0, area.Left)
+	area.Left = util.Min(pic.Width, area.Left)
+	area.Width = util.Max(0, area.Width)
+	area.Width = util.Min(pic.Width, area.Width)
+
+	area.Top = util.Max(0, area.Top)
+	area.Top = util.Min(pic.Height, area.Top)
+	area.Height = util.Max(0, area.Height)
+	area.Height = util.Min(pic.Height, area.Height)
+
+	isFull := area.Left == 0 && area.Top == 0 && area.Width == pic.Width && area.Height == pic.Height
+	isEmpty := area.Height == 0 || area.Width == 0
+	valid := !isEmpty && !isFull
+
+	picItem.CropLeft = sql.NullInt32{
+		Valid: valid,
+		Int32: int32(area.Left),
+	}
+	picItem.CropTop = sql.NullInt32{
+		Valid: valid,
+		Int32: int32(area.Top),
+	}
+	picItem.CropWidth = sql.NullInt32{
+		Valid: valid,
+		Int32: int32(area.Width),
+	}
+	picItem.CropHeight = sql.NullInt32{
+		Valid: valid,
+		Int32: int32(area.Height),
+	}
+
+	_, err = s.db.Update(schema.PictureItemTable).
+		Set(goqu.Record{
+			schema.PictureItemTableCropLeftColName:   picItem.CropLeft,
+			schema.PictureItemTableCropTopColName:    picItem.CropTop,
+			schema.PictureItemTableCropWidthColName:  picItem.CropWidth,
+			schema.PictureItemTableCropHeightColName: picItem.CropHeight,
+		}).
+		Where(
+			schema.PictureItemTablePictureIDCol.Eq(pictureID),
+			schema.PictureItemTableItemIDCol.Eq(itemID),
+			schema.PictureItemTableTypeCol.Eq(pictureItemType),
+		).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

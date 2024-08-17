@@ -10,6 +10,7 @@ import (
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
@@ -19,6 +20,21 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func convertPictureItemType(pictureItemType PictureItemType) schema.PictureItemType {
+	switch pictureItemType {
+	case PictureItemType_PICTURE_ITEM_UNKNOWN:
+		return 0
+	case PictureItemType_PICTURE_ITEM_CONTENT:
+		return schema.PictureItemContent
+	case PictureItemType_PICTURE_ITEM_AUTHOR:
+		return schema.PictureItemAuthor
+	case PictureItemType_PICTURE_ITEM_COPYRIGHTS:
+		return schema.PictureItemCopyrights
+	}
+
+	return 0
+}
 
 type PicturesGRPCServer struct {
 	UnimplementedPicturesServer
@@ -267,14 +283,14 @@ func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateMode
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if vote && currentStatus == pictures.StatusRemoving {
-		err = s.repository.SetStatus(ctx, pictureID, pictures.StatusInbox, userID)
+	if vote && currentStatus == schema.PictureStatusRemoving {
+		err = s.repository.SetStatus(ctx, pictureID, schema.PictureStatusInbox, userID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
-	if (!vote) && currentStatus == pictures.StatusAccepted {
+	if (!vote) && currentStatus == schema.PictureStatusAccepted {
 		err = s.unaccept(ctx, pictureID, userID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -383,7 +399,7 @@ func (s *PicturesGRPCServer) unaccept(ctx context.Context, pictureID int64, user
 		previousStatusUserID = picture.ChangeStatusUserID.Int64
 	}
 
-	err = s.repository.SetStatus(ctx, pictureID, pictures.StatusInbox, userID)
+	err = s.repository.SetStatus(ctx, pictureID, schema.PictureStatusInbox, userID)
 	if err != nil {
 		return err
 	}
@@ -502,7 +518,7 @@ func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empt
 	}
 
 	acceptedCount, err := s.repository.Count(ctx, pictures.ListOptions{
-		Status: pictures.StatusAccepted,
+		Status: schema.PictureStatusAccepted,
 		UserID: userID,
 	})
 	if err != nil {
@@ -510,7 +526,7 @@ func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empt
 	}
 
 	inboxCount, err := s.repository.Count(ctx, pictures.ListOptions{
-		Status: pictures.StatusInbox,
+		Status: schema.PictureStatusInbox,
 		UserID: userID,
 	})
 	if err != nil {
@@ -548,7 +564,7 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(
 		return 0, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	canNormalize := pic.Status == pictures.StatusInbox && s.enforcer.Enforce(role, "picture", action)
+	canNormalize := pic.Status == schema.PictureStatusInbox && s.enforcer.Enforce(role, "picture", action)
 	if !canNormalize {
 		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -651,6 +667,49 @@ func (s *PicturesGRPCServer) Repair(ctx context.Context, in *PictureIDRequest) (
 	}
 
 	err = s.repository.Repair(ctx, in.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) SetPictureItemArea(
+	ctx context.Context, in *SetPictureItemAreaRequest,
+) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	pictureItemType := convertPictureItemType(in.GetType())
+
+	err = s.repository.SetPictureItemArea(
+		ctx, in.GetPictureId(), in.GetItemId(), pictureItemType, pictures.PictureItemArea{
+			Left:   uint16(in.GetCropLeft()),
+			Top:    uint16(in.GetCropTop()),
+			Width:  uint16(in.GetCropWidth()),
+			Height: uint16(in.GetCropHeight()),
+		},
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID:   userID,
+		Message:  "Выделение области на картинке",
+		Pictures: []int64{in.GetPictureId()},
+		Items:    []int64{in.GetItemId()},
+	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

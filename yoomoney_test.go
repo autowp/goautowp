@@ -11,7 +11,6 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/itemofday"
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -102,7 +101,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 
 	res, err := goquDB.Insert(schema.PictureTable).Rows(goqu.Record{
 		schema.PictureTableIdentityColName: identity,
-		schema.PictureTableStatusColName:   pictures.StatusAccepted,
+		schema.PictureTableStatusColName:   schema.PictureStatusAccepted,
 		schema.PictureTableIPColName:       "",
 		schema.PictureTableOwnerIDColName:  nil,
 	}).Executor().ExecContext(ctx)

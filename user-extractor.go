@@ -7,6 +7,7 @@ import (
 
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/drexedam/gravatar"
@@ -139,7 +140,7 @@ func (s *UserExtractor) Extract(
 
 	if fields.GetPicturesAcceptedCount() {
 		count, err := s.picturesRepository.Count(ctx, pictures.ListOptions{
-			Status: pictures.StatusAccepted,
+			Status: schema.PictureStatusAccepted,
 			UserID: row.ID,
 		})
 		if err != nil {

@@ -46,6 +46,9 @@ func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, 
 	imageID, err := imageStorage.AddImageFromFile(ctx, filepath, "picture", storage.GenerateOptions{})
 	require.NoError(t, err)
 
+	img, err := imageStorage.Image(ctx, imageID)
+	require.NoError(t, err)
+
 	identity := randomHexString(t, pictures.IdentityLength/2)
 
 	res, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
@@ -53,6 +56,8 @@ func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, 
 		schema.PictureTableIdentityColName: identity,
 		schema.PictureTableIPColName:       goqu.Func("INET6_ATON", "127.0.0.1"),
 		schema.PictureTableOwnerIDColName:  nil,
+		schema.PictureTableWidthColName:    img.Width(),
+		schema.PictureTableHeightColName:   img.Height(),
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 

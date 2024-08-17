@@ -104,13 +104,13 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 	ctx context.Context,
 	in *GetTopPersonsListRequest,
 ) (*APITopPersonsList, error) {
-	var pictureItemType pictures.ItemPictureType
+	var pictureItemType schema.PictureItemType
 
 	switch in.GetPictureItemType() { //nolint:exhaustive
-	case PictureItemType_PICTURE_CONTENT:
-		pictureItemType = pictures.ItemPictureContent
-	case PictureItemType_PICTURE_AUTHOR:
-		pictureItemType = pictures.ItemPictureAuthor
+	case PictureItemType_PICTURE_ITEM_CONTENT:
+		pictureItemType = schema.PictureItemContent
+	case PictureItemType_PICTURE_ITEM_AUTHOR:
+		pictureItemType = schema.PictureItemAuthor
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Unexpected picture_item_type")
 	}
@@ -257,13 +257,13 @@ func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
 	switch request.GetStatus() {
 	case PictureStatus_PICTURE_STATUS_UNKNOWN:
 	case PictureStatus_PICTURE_STATUS_ACCEPTED:
-		dest.Status = pictures.StatusAccepted
+		dest.Status = schema.PictureStatusAccepted
 	case PictureStatus_PICTURE_STATUS_REMOVING:
-		dest.Status = pictures.StatusRemoving
+		dest.Status = schema.PictureStatusRemoving
 	case PictureStatus_PICTURE_STATUS_INBOX:
-		dest.Status = pictures.StatusInbox
+		dest.Status = schema.PictureStatusInbox
 	case PictureStatus_PICTURE_STATUS_REMOVED:
-		dest.Status = pictures.StatusRemoved
+		dest.Status = schema.PictureStatusRemoved
 	}
 
 	if request.GetItemPicture() != nil {
@@ -339,13 +339,13 @@ func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPictur
 	}
 
 	switch request.GetTypeId() {
-	case ItemPictureType_ITEM_PICTURE_UNKNOWN:
-	case ItemPictureType_ITEM_PICTURE_CONTENT:
-		dest.TypeID = pictures.ItemPictureContent
-	case ItemPictureType_ITEM_PICTURE_AUTHOR:
-		dest.TypeID = pictures.ItemPictureAuthor
-	case ItemPictureType_ITEM_PICTURE_COPYRIGHTS:
-		dest.TypeID = pictures.ItemPictureCopyrights
+	case PictureItemType_PICTURE_ITEM_UNKNOWN:
+	case PictureItemType_PICTURE_ITEM_CONTENT:
+		dest.TypeID = schema.PictureItemContent
+	case PictureItemType_PICTURE_ITEM_AUTHOR:
+		dest.TypeID = schema.PictureItemAuthor
+	case PictureItemType_PICTURE_ITEM_COPYRIGHTS:
+		dest.TypeID = schema.PictureItemCopyrights
 	}
 
 	dest.PerspectiveID = request.GetPerspectiveId()

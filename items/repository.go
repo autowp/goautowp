@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -158,13 +157,13 @@ func NewRepository(
 }
 
 type PicturesOptions struct {
-	Status      pictures.Status
+	Status      schema.PictureStatus
 	OwnerID     int64
 	ItemPicture *ItemPicturesOptions
 }
 
 type ItemPicturesOptions struct {
-	TypeID        pictures.ItemPictureType
+	TypeID        schema.PictureItemType
 	Pictures      *PicturesOptions
 	PerspectiveID int32
 }

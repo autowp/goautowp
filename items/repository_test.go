@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
@@ -258,7 +257,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 		DescendantPictures: &ItemPicturesOptions{
 			Pictures: &PicturesOptions{
 				OwnerID: userID,
-				Status:  pictures.StatusAccepted,
+				Status:  schema.PictureStatusAccepted,
 			},
 		},
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},

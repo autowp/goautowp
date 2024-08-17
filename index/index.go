@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/autowp/goautowp/items"
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
@@ -215,7 +214,7 @@ func (s *Index) CategoriesCache(ctx context.Context, lang string) ([]items.Item,
 }
 
 func (s *Index) GeneratePersonsCache(
-	ctx context.Context, pictureItemType pictures.ItemPictureType, lang string,
+	ctx context.Context, pictureItemType schema.PictureItemType, lang string,
 ) error {
 	logrus.Infof("generate index persons cache for `%s`", lang)
 
@@ -230,7 +229,7 @@ func (s *Index) GeneratePersonsCache(
 		DescendantPictures: &items.ItemPicturesOptions{
 			TypeID: pictureItemType,
 			Pictures: &items.PicturesOptions{
-				Status: pictures.StatusAccepted,
+				Status: schema.PictureStatusAccepted,
 			},
 		},
 		Limit:   topPersonsCount,
@@ -249,7 +248,7 @@ func (s *Index) GeneratePersonsCache(
 }
 
 func (s *Index) PersonsCache(
-	ctx context.Context, pictureItemType pictures.ItemPictureType, lang string,
+	ctx context.Context, pictureItemType schema.PictureItemType, lang string,
 ) ([]items.Item, error) {
 	var res []items.Item
 

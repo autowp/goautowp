@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
 	"github.com/gin-gonic/gin"
@@ -398,12 +398,12 @@ func (s *Application) GenerateIndexCache(ctx context.Context) error {
 			return err
 		}
 
-		err = idx.GeneratePersonsCache(ctx, pictures.ItemPictureContent, lang)
+		err = idx.GeneratePersonsCache(ctx, schema.PictureItemContent, lang)
 		if err != nil {
 			return err
 		}
 
-		err = idx.GeneratePersonsCache(ctx, pictures.ItemPictureAuthor, lang)
+		err = idx.GeneratePersonsCache(ctx, schema.PictureItemAuthor, lang)
 		if err != nil {
 			return err
 		}

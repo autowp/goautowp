@@ -12,6 +12,7 @@ type Event struct {
 	Message  string
 	Users    []int64
 	Pictures []int64
+	Items    []int64
 }
 
 type Events struct {
@@ -66,6 +67,21 @@ func (s *Events) Add(ctx context.Context, event Event) error {
 		}
 
 		_, err = s.db.Insert(schema.LogEventsPicturesTable).Rows(rows...).Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(event.Items) > 0 {
+		rows := make([]interface{}, len(event.Items))
+		for idx, id := range event.Items {
+			rows[idx] = goqu.Record{
+				schema.LogEventsItemTableLogEventIDColName: rowID,
+				schema.LogEventsItemTableItemIDColName:     id,
+			}
+		}
+
+		_, err = s.db.Insert(schema.LogEventsItemTable).Rows(rows...).Executor().ExecContext(ctx)
 		if err != nil {
 			return err
 		}
