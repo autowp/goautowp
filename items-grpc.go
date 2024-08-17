@@ -1163,13 +1163,13 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		AncestorItems: &items.ListOptions{
 			Language: lang,
 			ItemID:   brand.ID,
-			Fields: items.ListFields{
-				NameHTML: true,
-			},
 		},
 		CreatedInDays: daysLimit,
 		Limit:         newItemsLimit,
 		OrderBy:       []exp.OrderedExpression{goqu.T("i").Col(schema.ItemTableAddDatetimeColName).Desc()},
+		Fields: items.ListFields{
+			NameHTML: true,
+		},
 	}, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1235,9 +1235,9 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		AncestorItems: &items.ListOptions{
 			Language: lang,
 			ItemID:   category.ID,
-			Fields: items.ListFields{
-				NameHTML: true,
-			},
+		},
+		Fields: items.ListFields{
+			NameHTML: true,
 		},
 		Limit:   newItemsLimit,
 		OrderBy: []exp.OrderedExpression{goqu.MAX(goqu.T("i_ipp").Col(schema.ItemParentTableTimestampColName)).Desc()},
