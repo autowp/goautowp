@@ -41,25 +41,7 @@ var (
 
 const CommentMessagePreviewLength = 60
 
-type CommentType int32
-
-const (
-	TypeIDPictures CommentType = 1
-	TypeIDItems    CommentType = 2
-	TypeIDVotings  CommentType = 3
-	TypeIDArticles CommentType = 4
-	TypeIDForums   CommentType = 5
-)
-
 const deleteTTLDays = 300
-
-type ModeratorAttention int32
-
-const (
-	ModeratorAttentionNone      ModeratorAttention = 0
-	ModeratorAttentionRequired  ModeratorAttention = 1
-	ModeratorAttentionCompleted ModeratorAttention = 2
-)
 
 const MaxMessageLength = 16 * 1024
 
@@ -74,27 +56,27 @@ type GetVotesResult struct {
 }
 
 type CommentMessage struct {
-	ID                 int64              `db:"id"`
-	TypeID             CommentType        `db:"type_id"`
-	ItemID             int64              `db:"item_id"`
-	ParentID           sql.NullInt64      `db:"parent_id"`
-	CreatedAt          time.Time          `db:"datetime"`
-	Deleted            bool               `db:"deleted"`
-	ModeratorAttention ModeratorAttention `db:"moderator_attention"`
-	AuthorID           sql.NullInt64      `db:"author_id"`
-	IP                 net.IP             `db:"ip"`
-	Message            string             `db:"message"`
-	Vote               int32              `db:"vote"`
+	ID                 int64                                   `db:"id"`
+	TypeID             schema.CommentMessageType               `db:"type_id"`
+	ItemID             int64                                   `db:"item_id"`
+	ParentID           sql.NullInt64                           `db:"parent_id"`
+	CreatedAt          time.Time                               `db:"datetime"`
+	Deleted            bool                                    `db:"deleted"`
+	ModeratorAttention schema.CommentMessageModeratorAttention `db:"moderator_attention"`
+	AuthorID           sql.NullInt64                           `db:"author_id"`
+	IP                 net.IP                                  `db:"ip"`
+	Message            string                                  `db:"message"`
+	Vote               int32                                   `db:"vote"`
 }
 
 type Request struct {
 	ItemID             int64
-	TypeID             CommentType
+	TypeID             schema.CommentMessageType
 	ParentID           int64
 	NoParents          bool
 	UserID             int64
 	Order              []exp.OrderedExpression
-	ModeratorAttention ModeratorAttention
+	ModeratorAttention schema.CommentMessageModeratorAttention
 	PicturesOfItemID   int64
 	FetchMessage       bool
 	FetchVote          bool
@@ -183,7 +165,7 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 }
 
 func (s *Repository) IsSubscribed(
-	ctx context.Context, userID int64, commentsType CommentType, itemID int64,
+	ctx context.Context, userID int64, commentsType schema.CommentMessageType, itemID int64,
 ) (bool, error) {
 	var result bool
 
@@ -198,7 +180,9 @@ func (s *Repository) IsSubscribed(
 	return success && result, err
 }
 
-func (s *Repository) Subscribe(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
+func (s *Repository) Subscribe(
+	ctx context.Context, userID int64, commentsType schema.CommentMessageType, itemID int64,
+) error {
 	_, err := s.db.Insert(schema.CommentTopicSubscribeTable).Rows(goqu.Record{
 		schema.CommentTopicSubscribeTableTypeIDColName: commentsType,
 		schema.CommentTopicSubscribeTableItemIDColName: itemID,
@@ -209,7 +193,9 @@ func (s *Repository) Subscribe(ctx context.Context, userID int64, commentsType C
 	return err
 }
 
-func (s *Repository) UnSubscribe(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
+func (s *Repository) UnSubscribe(
+	ctx context.Context, userID int64, commentsType schema.CommentMessageType, itemID int64,
+) error {
 	_, err := s.db.Delete(schema.CommentTopicSubscribeTable).Where(
 		schema.CommentTopicSubscribeTableTypeIDCol.Eq(commentsType),
 		schema.CommentTopicSubscribeTableItemIDCol.Eq(itemID),
@@ -219,7 +205,9 @@ func (s *Repository) UnSubscribe(ctx context.Context, userID int64, commentsType
 	return err
 }
 
-func (s *Repository) View(ctx context.Context, userID int64, commentsType CommentType, itemID int64) error {
+func (s *Repository) View(
+	ctx context.Context, userID int64, commentsType schema.CommentMessageType, itemID int64,
+) error {
 	_, err := s.db.Insert(schema.CommentTopicViewTable).Rows(goqu.Record{
 		schema.CommentTopicViewTableUserIDColName:    userID,
 		schema.CommentTopicViewTableTypeIDColName:    commentsType,
@@ -239,7 +227,7 @@ func (s *Repository) View(ctx context.Context, userID int64, commentsType Commen
 }
 
 func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, byUserID int64) error {
-	var moderatorAttention ModeratorAttention
+	var moderatorAttention schema.CommentMessageModeratorAttention
 
 	success, err := s.db.Select(schema.CommentMessageTableModeratorAttentionCol).From(schema.CommentMessageTable).
 		Where(schema.CommentMessageTableIDCol.Eq(commentID)).
@@ -252,7 +240,7 @@ func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, by
 		return sql.ErrNoRows
 	}
 
-	if moderatorAttention == ModeratorAttentionRequired {
+	if moderatorAttention == schema.CommentMessageModeratorAttentionRequired {
 		return errCommentWithModerAttentionCantBeDeleted
 	}
 
@@ -280,8 +268,8 @@ func (s *Repository) RestoreMessage(ctx context.Context, commentID int64) error 
 	return err
 }
 
-func (s *Repository) GetCommentType(ctx context.Context, commentID int64) (CommentType, error) {
-	var commentType CommentType
+func (s *Repository) GetCommentType(ctx context.Context, commentID int64) (schema.CommentMessageType, error) {
+	var commentType schema.CommentMessageType
 
 	success, err := s.db.Select(schema.CommentMessageTableTypeIDCol).
 		From(schema.CommentMessageTable).
@@ -298,10 +286,12 @@ func (s *Repository) GetCommentType(ctx context.Context, commentID int64) (Comme
 	return commentType, nil
 }
 
-func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType CommentType, dstItemID int64) error {
+func (s *Repository) MoveMessage(
+	ctx context.Context, commentID int64, dstType schema.CommentMessageType, dstItemID int64,
+) error {
 	st := struct {
-		SrcType   CommentType `db:"type_id"`
-		SrcItemID int64       `db:"item_id"`
+		SrcType   schema.CommentMessageType `db:"type_id"`
+		SrcItemID int64                     `db:"item_id"`
 	}{}
 
 	success, err := s.db.Select(schema.CommentMessageTableTypeIDCol, schema.CommentMessageTableItemIDCol).
@@ -347,7 +337,7 @@ func (s *Repository) MoveMessage(ctx context.Context, commentID int64, dstType C
 func (s *Repository) moveMessageRecursive(
 	ctx context.Context,
 	parentID int64,
-	dstType CommentType,
+	dstType schema.CommentMessageType,
 	dstItemID int64,
 ) error {
 	_, err := s.db.Update(schema.CommentMessageTable).
@@ -381,7 +371,7 @@ func (s *Repository) moveMessageRecursive(
 	return nil
 }
 
-func (s *Repository) updateTopicStat(ctx context.Context, commentType CommentType, itemID int64) error {
+func (s *Repository) updateTopicStat(ctx context.Context, commentType schema.CommentMessageType, itemID int64) error {
 	st := struct {
 		MessagesCount int           `db:"count"`
 		LastUpdate    *sql.NullTime `db:"last_update"`
@@ -530,10 +520,12 @@ func (s *Repository) updateVote(ctx context.Context, commentID int64) (int32, er
 
 func (s *Repository) CompleteMessage(ctx context.Context, id int64) error {
 	_, err := s.db.Update(schema.CommentMessageTable).
-		Set(goqu.Record{schema.CommentMessageTableModeratorAttentionColName: ModeratorAttentionCompleted}).
+		Set(goqu.Record{
+			schema.CommentMessageTableModeratorAttentionColName: schema.CommentMessageModeratorAttentionCompleted,
+		}).
 		Where(
 			schema.CommentMessageTableIDCol.Eq(id),
-			schema.CommentMessageTableModeratorAttentionCol.Eq(ModeratorAttentionRequired),
+			schema.CommentMessageTableModeratorAttentionCol.Eq(schema.CommentMessageModeratorAttentionRequired),
 		).
 		Executor().ExecContext(ctx)
 
@@ -542,7 +534,7 @@ func (s *Repository) CompleteMessage(ctx context.Context, id int64) error {
 
 func (s *Repository) Add(
 	ctx context.Context,
-	typeID CommentType,
+	typeID schema.CommentMessageType,
 	itemID int64,
 	parentID int64,
 	userID int64,
@@ -574,9 +566,9 @@ func (s *Repository) Add(
 		}
 	}
 
-	ma := ModeratorAttentionNone
+	ma := schema.CommentMessageModeratorAttentionNone
 	if attention {
-		ma = ModeratorAttentionRequired
+		ma = schema.CommentMessageModeratorAttentionRequired
 	}
 
 	res, err := s.db.Insert(schema.CommentMessageTable).
@@ -649,7 +641,9 @@ func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID in
 	return err
 }
 
-func (s *Repository) UpdateTopicView(ctx context.Context, typeID CommentType, itemID int64, userID int64) error {
+func (s *Repository) UpdateTopicView(
+	ctx context.Context, typeID schema.CommentMessageType, itemID int64, userID int64,
+) error {
 	_, err := s.db.Insert(schema.CommentTopicViewTable).Rows(goqu.Record{
 		schema.CommentTopicViewTableUserIDColName:    userID,
 		schema.CommentTopicViewTableTypeIDColName:    typeID,
@@ -667,7 +661,7 @@ func (s *Repository) UpdateTopicView(ctx context.Context, typeID CommentType, it
 	return err
 }
 
-func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID int64) error {
+func (s *Repository) AssertItem(ctx context.Context, typeID schema.CommentMessageType, itemID int64) error {
 	var (
 		err     error
 		val     int
@@ -675,23 +669,23 @@ func (s *Repository) AssertItem(ctx context.Context, typeID CommentType, itemID 
 	)
 
 	switch typeID {
-	case TypeIDPictures:
+	case schema.CommentMessageTypeIDPictures:
 		success, err = s.db.Select(goqu.L("1")).From(schema.PictureTable).
 			Where(schema.PictureTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
-	case TypeIDItems:
+	case schema.CommentMessageTypeIDItems:
 		success, err = s.db.Select(goqu.L("1")).From(schema.ItemTable).
 			Where(schema.ItemTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
-	case TypeIDVotings:
+	case schema.CommentMessageTypeIDVotings:
 		success, err = s.db.Select(goqu.L("1")).From(schema.VotingTable).
 			Where(schema.VotingTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
-	case TypeIDArticles:
+	case schema.CommentMessageTypeIDArticles:
 		success, err = s.db.Select(goqu.L("1")).From(schema.ArticlesTable).
 			Where(schema.ArticlesTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
-	case TypeIDForums:
+	case schema.CommentMessageTypeIDForums:
 		success, err = s.db.Select(goqu.L("1")).From(schema.ForumsTopicsTable).
 			Where(schema.ForumsTopicsTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
@@ -796,9 +790,9 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 	var authorIdentity sql.NullString
 
 	st := struct {
-		ItemID   int64         `db:"item_id"`
-		TypeID   CommentType   `db:"type_id"`
-		AuthorID sql.NullInt64 `db:"author_id"`
+		ItemID   int64                     `db:"item_id"`
+		TypeID   schema.CommentMessageType `db:"type_id"`
+		AuthorID sql.NullInt64             `db:"author_id"`
 	}{}
 
 	success, err := s.db.Select(schema.CommentMessageTableItemIDCol, schema.CommentMessageTableTypeIDCol,
@@ -926,7 +920,7 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 
 func (s *Repository) getSubscribersIDs(
 	ctx context.Context,
-	typeID CommentType,
+	typeID schema.CommentMessageType,
 	itemID int64,
 	onlyAwaiting bool,
 ) ([]int64, error) {
@@ -948,7 +942,7 @@ func (s *Repository) getSubscribersIDs(
 
 func (s *Repository) SetSubscriptionSent(
 	ctx context.Context,
-	typeID CommentType,
+	typeID schema.CommentMessageType,
 	itemID int64,
 	subscriberID int64,
 	sent bool,
@@ -967,8 +961,8 @@ func (s *Repository) SetSubscriptionSent(
 
 func (s *Repository) messageURL(ctx context.Context, messageID int64, uri *url.URL) (string, error) {
 	st := struct {
-		ItemID int64       `db:"item_id"`
-		TypeID CommentType `db:"type_id"`
+		ItemID int64                     `db:"item_id"`
+		TypeID schema.CommentMessageType `db:"type_id"`
 	}{}
 
 	success, err := s.db.Select(schema.CommentMessageTableItemIDCol, schema.CommentMessageTableTypeIDCol).
@@ -1000,9 +994,11 @@ func (s *Repository) messageURL(ctx context.Context, messageID int64, uri *url.U
 	return uri.String(), nil
 }
 
-func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, itemID int64) ([]string, error) {
+func (s *Repository) messageRowRoute(
+	ctx context.Context, typeID schema.CommentMessageType, itemID int64,
+) ([]string, error) {
 	switch typeID {
-	case TypeIDPictures:
+	case schema.CommentMessageTypeIDPictures:
 		var identity string
 
 		success, err := s.db.Select(schema.PictureTableIdentityCol).
@@ -1019,7 +1015,7 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 
 		return []string{"/picture", identity}, nil
 
-	case TypeIDItems:
+	case schema.CommentMessageTypeIDItems:
 		var itemTypeID schema.ItemTableItemTypeID
 
 		success, err := s.db.Select(schema.ItemTableItemTypeIDCol).
@@ -1043,10 +1039,10 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
 		}
 
-	case TypeIDVotings:
+	case schema.CommentMessageTypeIDVotings:
 		return []string{"/voting", strconv.FormatInt(itemID, 10)}, nil
 
-	case TypeIDArticles:
+	case schema.CommentMessageTypeIDArticles:
 		var catname string
 
 		success, err := s.db.Select(schema.ArticlesTableCatnameCol).
@@ -1063,7 +1059,7 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 
 		return []string{"/articles", catname}, nil
 
-	case TypeIDForums:
+	case schema.CommentMessageTypeIDForums:
 		return []string{"/forums", "message", strconv.FormatInt(itemID, 10)}, nil
 	}
 
@@ -1100,7 +1096,7 @@ func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 		var (
 			id     int64
 			itemID int64
-			typeID CommentType
+			typeID schema.CommentMessageType
 		)
 
 		err = rows.Scan(&id, &itemID, &typeID)
@@ -1208,7 +1204,7 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		).
 		Where(
 			schema.PictureTableIDCol.IsNull(),
-			schema.CommentMessageTableTypeIDCol.Eq(TypeIDPictures),
+			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDPictures),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
@@ -1232,7 +1228,7 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		).
 		Where(
 			schema.ItemTableIDCol.IsNull(),
-			schema.CommentMessageTableTypeIDCol.Eq(TypeIDItems),
+			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDItems),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
@@ -1256,7 +1252,7 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		).
 		Where(
 			schema.VotingTableIDCol.IsNull(),
-			schema.CommentMessageTableTypeIDCol.Eq(TypeIDArticles),
+			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDArticles),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
@@ -1277,7 +1273,7 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		LeftJoin(schema.ArticlesTable, goqu.On(schema.CommentMessageTableItemIDCol.Eq(schema.ArticlesTableIDCol))).
 		Where(
 			schema.ArticlesTableIDCol.IsNull(),
-			schema.CommentMessageTableTypeIDCol.Eq(TypeIDArticles),
+			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDArticles),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
@@ -1301,7 +1297,7 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 		).
 		Where(
 			schema.ForumsTopicsTableIDCol.IsNull(),
-			schema.CommentMessageTableTypeIDCol.Eq(TypeIDForums),
+			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {
 		return 0, err
@@ -1320,7 +1316,7 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 }
 
 func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error) {
-	var typeID CommentType
+	var typeID schema.CommentMessageType
 
 	success, err := s.db.Select("type_id").
 		From(schema.CommentMessageTable).
@@ -1400,7 +1396,7 @@ func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 	return affected, nil
 }
 
-func (s *Repository) TopicStat(ctx context.Context, typeID CommentType, itemID int64) (int32, error) {
+func (s *Repository) TopicStat(ctx context.Context, typeID schema.CommentMessageType, itemID int64) (int32, error) {
 	sqSelect := s.db.Select(schema.CommentTopicTableMessagesCol).
 		From(schema.CommentTopicTable).
 		Where(
@@ -1423,7 +1419,7 @@ func (s *Repository) TopicStat(ctx context.Context, typeID CommentType, itemID i
 }
 
 func (s *Repository) MessagesCountFromTimestamp(
-	ctx context.Context, typeID CommentType, itemID int64, timestamp time.Time,
+	ctx context.Context, typeID schema.CommentMessageType, itemID int64, timestamp time.Time,
 ) (int32, error) {
 	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.CommentMessageTable).
 		Where(
@@ -1447,7 +1443,7 @@ func (s *Repository) MessagesCountFromTimestamp(
 }
 
 func (s *Repository) TopicStatForUser(
-	ctx context.Context, typeID CommentType, itemID int64, userID int64,
+	ctx context.Context, typeID schema.CommentMessageType, itemID int64, userID int64,
 ) (int32, int32, error) {
 	sqSelect := s.db.Select(schema.CommentTopicTableMessagesCol, schema.CommentTopicViewTableTimestampCol).
 		From(schema.CommentTopicTable).
@@ -1487,7 +1483,8 @@ func (s *Repository) TopicStatForUser(
 }
 
 func (s *Repository) Count(
-	ctx context.Context, attention ModeratorAttention, commentType CommentType, itemID int64,
+	ctx context.Context, attention schema.CommentMessageModeratorAttention, commentType schema.CommentMessageType,
+	itemID int64,
 ) (int32, error) {
 	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).
 		From(schema.CommentMessageTable).
@@ -1529,17 +1526,17 @@ func (s *Repository) Count(
 
 func (s *Repository) MessagePage(
 	ctx context.Context, messageID int64, perPage int32,
-) (int64, CommentType, int32, error) {
+) (int64, schema.CommentMessageType, int32, error) {
 	var (
 		err     error
 		success bool
 	)
 
 	row := struct {
-		TypeID   CommentType   `db:"type_id"`
-		ItemID   int64         `db:"item_id"`
-		ParentID sql.NullInt64 `db:"parent_id"`
-		Datetime time.Time     `db:"datetime"`
+		TypeID   schema.CommentMessageType `db:"type_id"`
+		ItemID   int64                     `db:"item_id"`
+		ParentID sql.NullInt64             `db:"parent_id"`
+		Datetime time.Time                 `db:"datetime"`
 	}{}
 
 	success, err = s.db.Select(
@@ -1638,7 +1635,7 @@ func (s *Repository) Message(
 }
 
 func (s *Repository) IsNewMessage(
-	ctx context.Context, typeID CommentType, itemID int64, msgTime time.Time, userID int64,
+	ctx context.Context, typeID schema.CommentMessageType, itemID int64, msgTime time.Time, userID int64,
 ) (bool, error) {
 	var success bool
 
@@ -1659,12 +1656,12 @@ func (s *Repository) IsNewMessage(
 }
 
 func (s *Repository) MessageRowRoute(
-	ctx context.Context, typeID CommentType, itemID int64, messageID int64,
+	ctx context.Context, typeID schema.CommentMessageType, itemID int64, messageID int64,
 ) ([]string, error) {
 	var result []string
 
 	switch typeID {
-	case TypeIDPictures:
+	case schema.CommentMessageTypeIDPictures:
 		var identity string
 
 		success, err := s.db.Select(schema.PictureTableIdentityCol).From(schema.PictureTable).
@@ -1680,7 +1677,7 @@ func (s *Repository) MessageRowRoute(
 
 		result = []string{"/picture", identity}
 
-	case TypeIDItems:
+	case schema.CommentMessageTypeIDItems:
 		var itemTypeID schema.ItemTableItemTypeID
 
 		success, err := s.db.Select(schema.ItemTableItemTypeIDCol).
@@ -1704,10 +1701,10 @@ func (s *Repository) MessageRowRoute(
 			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
 		}
 
-	case TypeIDVotings:
+	case schema.CommentMessageTypeIDVotings:
 		result = []string{"/voting", strconv.FormatInt(itemID, 10)}
 
-	case TypeIDArticles:
+	case schema.CommentMessageTypeIDArticles:
 		var catname string
 
 		success, err := s.db.Select(schema.ArticlesTableCatnameCol).
@@ -1724,7 +1721,7 @@ func (s *Repository) MessageRowRoute(
 
 		result = []string{"/articles", catname}
 
-	case TypeIDForums:
+	case schema.CommentMessageTypeIDForums:
 		result = []string{"/forums", "message", strconv.FormatInt(messageID, 10)}
 
 	default:
@@ -1767,7 +1764,7 @@ func (s *Repository) Paginator(request Request) *util.Paginator {
 				goqu.On(schema.PictureItemTableItemIDCol.Eq(schema.ItemParentCacheTableItemIDCol)),
 			).
 			Where(schema.ItemParentCacheTableParentIDCol.Eq(request.PicturesOfItemID)).
-			Where(schema.CommentMessageTableTypeIDCol.Eq(TypeIDPictures))
+			Where(schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDPictures))
 	}
 
 	if request.NoParents {

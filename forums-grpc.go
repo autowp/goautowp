@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/autowp/goautowp/comments"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
@@ -108,7 +109,7 @@ func (s *ForumsGRPCServer) CreateTopic(
 
 	_, err = s.commentsRepository.Add(
 		ctx,
-		comments.TypeIDForums,
+		schema.CommentMessageTypeIDForums,
 		topicID,
 		0,
 		userID,
@@ -121,7 +122,7 @@ func (s *ForumsGRPCServer) CreateTopic(
 	}
 
 	if in.GetSubscription() {
-		err = s.commentsRepository.Subscribe(ctx, userID, comments.TypeIDForums, topicID)
+		err = s.commentsRepository.Subscribe(ctx, userID, schema.CommentMessageTypeIDForums, topicID)
 		if err != nil {
 			return nil, err
 		}

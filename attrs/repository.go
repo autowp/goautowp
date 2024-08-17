@@ -10,20 +10,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 )
 
-type AttributeTypeID int32
-
 var errUnsupportedAttributeTypeID = errors.New("unsupported type for AttributeTypeID")
-
-const (
-	TypeUnknown AttributeTypeID = 0
-	TypeString  AttributeTypeID = 1
-	TypeInteger AttributeTypeID = 2
-	TypeFloat   AttributeTypeID = 3
-	TypeText    AttributeTypeID = 4
-	TypeBoolean AttributeTypeID = 5
-	TypeList    AttributeTypeID = 6
-	TypeTree    AttributeTypeID = 7
-)
 
 type TopUserBrand struct {
 	ID      int64  `db:"id"`
@@ -33,14 +20,14 @@ type TopUserBrand struct {
 }
 
 type NullAttributeTypeID struct {
-	AttributeTypeID AttributeTypeID
+	AttributeTypeID schema.AttrsTypesID
 	Valid           bool // Valid is true if AttributeTypeID is not NULL
 }
 
 // Scan implements the Scanner interface.
 func (n *NullAttributeTypeID) Scan(value any) error {
 	if value == nil {
-		n.AttributeTypeID, n.Valid = TypeUnknown, false
+		n.AttributeTypeID, n.Valid = schema.AttrsTypesIDUnknown, false
 
 		return nil
 	}
@@ -52,7 +39,7 @@ func (n *NullAttributeTypeID) Scan(value any) error {
 		return errUnsupportedAttributeTypeID
 	}
 
-	n.AttributeTypeID = AttributeTypeID(v)
+	n.AttributeTypeID = schema.AttrsTypesID(v)
 
 	return nil
 }
@@ -78,8 +65,8 @@ type Attribute struct {
 }
 
 type AttributeType struct {
-	ID   AttributeTypeID `db:"id"`
-	Name string          `db:"name"`
+	ID   schema.AttrsTypesID `db:"id"`
+	Name string              `db:"name"`
 }
 
 type ListOption struct {

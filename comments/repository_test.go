@@ -129,7 +129,7 @@ func TestAdd(t *testing.T) {
 	userID := createRandomUser(ctx, t, db)
 
 	var (
-		commentType       = TypeIDPictures
+		commentType       = schema.CommentMessageTypeIDPictures
 		itemID      int64 = 1
 	)
 

@@ -175,7 +175,8 @@ func (s *ItemExtractor) Extract(
 		}
 
 		if fields.GetCommentsAttentionsCount() {
-			cnt, err := s.commentsRepository.Count(ctx, comments.ModeratorAttentionRequired, comments.TypeIDPictures, row.ID)
+			cnt, err := s.commentsRepository.Count(ctx,
+				schema.CommentMessageModeratorAttentionRequired, schema.CommentMessageTypeIDPictures, row.ID)
 			if err != nil {
 				return nil, err
 			}

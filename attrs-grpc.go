@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/autowp/goautowp/attrs"
+	"github.com/autowp/goautowp/schema"
 	"github.com/casbin/casbin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,23 +34,23 @@ func convertNullTypeID(typeID attrs.NullAttributeTypeID) AttrAttributeType_ID {
 	return convertTypeID(typeID.AttributeTypeID)
 }
 
-func convertTypeID(typeID attrs.AttributeTypeID) AttrAttributeType_ID {
+func convertTypeID(typeID schema.AttrsTypesID) AttrAttributeType_ID {
 	switch typeID {
-	case attrs.TypeUnknown:
+	case schema.AttrsTypesIDUnknown:
 		return AttrAttributeType_UNKNOWN
-	case attrs.TypeString:
+	case schema.AttrsTypesIDString:
 		return AttrAttributeType_STRING
-	case attrs.TypeInteger:
+	case schema.AttrsTypesIDInteger:
 		return AttrAttributeType_INTEGER
-	case attrs.TypeFloat:
+	case schema.AttrsTypesIDFloat:
 		return AttrAttributeType_FLOAT
-	case attrs.TypeText:
+	case schema.AttrsTypesIDText:
 		return AttrAttributeType_TEXT
-	case attrs.TypeBoolean:
+	case schema.AttrsTypesIDBoolean:
 		return AttrAttributeType_BOOLEAN
-	case attrs.TypeList:
+	case schema.AttrsTypesIDList:
 		return AttrAttributeType_LIST
-	case attrs.TypeTree:
+	case schema.AttrsTypesIDTree:
 		return AttrAttributeType_TREE
 	}
 

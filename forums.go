@@ -78,8 +78,8 @@ func (s *Forums) GetUserSummary(ctx context.Context, userID int64) (int, error) 
 		).
 		Where(
 			schema.CommentTopicSubscribeTableUserIDCol.Eq(userID),
-			schema.CommentTopicTableTypeIDCol.Eq(comments.TypeIDForums),
-			schema.CommentTopicSubscribeTableTypeIDCol.Eq(comments.TypeIDForums),
+			schema.CommentTopicTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
+			schema.CommentTopicSubscribeTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
 		).ScanValContext(ctx, &result)
 	if err != nil {
 		return 0, err
@@ -164,7 +164,7 @@ func (s *Forums) updateThemeStat(ctx context.Context, themeID int64) error {
 			schema.CommentMessageTable,
 			goqu.On(schema.ForumsTopicsTableIDCol.Eq(schema.CommentMessageTableItemIDCol)),
 		).
-		Where(schema.CommentMessageTableTypeIDCol.Eq(comments.TypeIDForums))
+		Where(schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums))
 
 	_, err := s.db.Update(schema.ForumsThemesTable).Set(goqu.Record{
 		schema.ForumsThemesTableTopicsColName:   topicsSelect,
@@ -214,8 +214,8 @@ func (s *Forums) Delete(ctx context.Context, id int64) error {
 		From(schema.CommentMessageTable).
 		Where(
 			schema.CommentMessageTableItemIDCol.Eq(id),
-			schema.CommentMessageTableTypeIDCol.Eq(comments.TypeIDForums),
-			schema.CommentMessageTableModeratorAttentionCol.Eq(comments.ModeratorAttentionRequired),
+			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
+			schema.CommentMessageTableModeratorAttentionCol.Eq(schema.CommentMessageModeratorAttentionRequired),
 		).ScanValContext(ctx, &needAttention)
 	if err != nil {
 		return err
@@ -321,7 +321,9 @@ func (s *Forums) Themes(ctx context.Context, themeID int64, isModerator bool) ([
 
 func (s *Forums) prepareTopic(ctx context.Context, topic *ForumsTopic, userID int64) error {
 	if userID > 0 {
-		messages, newMessages, err := s.commentsRepository.TopicStatForUser(ctx, comments.TypeIDForums, topic.ID, userID)
+		messages, newMessages, err := s.commentsRepository.TopicStatForUser(
+			ctx, schema.CommentMessageTypeIDForums, topic.ID, userID,
+		)
 		if err != nil {
 			return err
 		}
@@ -329,7 +331,7 @@ func (s *Forums) prepareTopic(ctx context.Context, topic *ForumsTopic, userID in
 		topic.Messages = messages
 		topic.NewMessages = newMessages
 
-		topic.Subscription, err = s.commentsRepository.IsSubscribed(ctx, userID, comments.TypeIDForums, topic.ID)
+		topic.Subscription, err = s.commentsRepository.IsSubscribed(ctx, userID, schema.CommentMessageTypeIDForums, topic.ID)
 		if err != nil {
 			return err
 		}
@@ -337,7 +339,7 @@ func (s *Forums) prepareTopic(ctx context.Context, topic *ForumsTopic, userID in
 		return nil
 	}
 
-	messages, err := s.commentsRepository.TopicStat(ctx, comments.TypeIDForums, topic.ID)
+	messages, err := s.commentsRepository.TopicStat(ctx, schema.CommentMessageTypeIDForums, topic.ID)
 	if err != nil {
 		return err
 	}
@@ -355,7 +357,7 @@ func (s *Forums) topicsSelect(isModerator bool) *goqu.SelectDataset {
 		From(schema.ForumsTopicsTable).
 		Join(schema.CommentTopicTable, goqu.On(
 			schema.ForumsTopicsTableIDCol.Eq(schema.CommentTopicTableItemIDCol),
-			schema.CommentTopicTableTypeIDCol.Eq(comments.TypeIDForums),
+			schema.CommentTopicTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
 		)).
 		Where(schema.ForumsTopicsTableStatusCol.In([]string{TopicStatusNormal, TopicStatusClosed}))
 
@@ -437,7 +439,7 @@ func (s *Forums) LastMessage(ctx context.Context, topicID int64, isModerator boo
 		Where(
 			schema.ForumsTopicsTableStatusCol.In([]string{TopicStatusNormal, TopicStatusClosed}),
 			schema.ForumsTopicsTableIDCol.Eq(topicID),
-			schema.CommentMessageTableTypeIDCol.Eq(comments.TypeIDForums),
+			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
 		).
 		Order(schema.CommentMessageTableDatetimeCol.Desc()).
 		Limit(1)
@@ -481,7 +483,7 @@ func (s *Forums) Topics(
 			schema.CommentTopicSubscribeTable,
 			goqu.On(
 				schema.ForumsTopicsTableIDCol.Eq(schema.CommentTopicSubscribeTableItemIDCol),
-				schema.CommentTopicSubscribeTableTypeIDCol.Eq(comments.TypeIDForums),
+				schema.CommentTopicSubscribeTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
 			),
 		).
 			Where(schema.CommentTopicSubscribeTableUserIDCol.Eq(userID))

@@ -25,7 +25,7 @@ import (
 
 var (
 	errUnknownCommentType        = errors.New("unknown comments type identifier")
-	errUnknownModeratorAttention = errors.New("unknown ModeratorAttention value")
+	errUnknownModeratorAttention = errors.New("unknown CommentMessageModeratorAttention value")
 )
 
 const MaxReplies = 500
@@ -55,18 +55,18 @@ func reverseConvertPicturesStatus(status schema.PictureStatus) PictureStatus {
 	return PictureStatus_PICTURE_STATUS_UNKNOWN
 }
 
-func convertType(commentsType CommentsType) (comments.CommentType, error) {
+func convertType(commentsType CommentsType) (schema.CommentMessageType, error) {
 	switch commentsType {
 	case CommentsType_PICTURES_TYPE_ID:
-		return comments.TypeIDPictures, nil
+		return schema.CommentMessageTypeIDPictures, nil
 	case CommentsType_ITEM_TYPE_ID:
-		return comments.TypeIDItems, nil
+		return schema.CommentMessageTypeIDItems, nil
 	case CommentsType_VOTINGS_TYPE_ID:
-		return comments.TypeIDVotings, nil
+		return schema.CommentMessageTypeIDVotings, nil
 	case CommentsType_ARTICLES_TYPE_ID:
-		return comments.TypeIDArticles, nil
+		return schema.CommentMessageTypeIDArticles, nil
 	case CommentsType_FORUMS_TYPE_ID:
-		return comments.TypeIDForums, nil
+		return schema.CommentMessageTypeIDForums, nil
 	case CommentsType_UNKNOWN:
 		return 0, nil
 	}
@@ -74,44 +74,44 @@ func convertType(commentsType CommentsType) (comments.CommentType, error) {
 	return 0, fmt.Errorf("%w: `%v`", errUnknownCommentType, commentsType)
 }
 
-func reverseConvertType(commentsType comments.CommentType) (CommentsType, error) {
+func reverseConvertType(commentsType schema.CommentMessageType) (CommentsType, error) {
 	switch commentsType {
-	case comments.TypeIDPictures:
+	case schema.CommentMessageTypeIDPictures:
 		return CommentsType_PICTURES_TYPE_ID, nil
-	case comments.TypeIDItems:
+	case schema.CommentMessageTypeIDItems:
 		return CommentsType_ITEM_TYPE_ID, nil
-	case comments.TypeIDVotings:
+	case schema.CommentMessageTypeIDVotings:
 		return CommentsType_VOTINGS_TYPE_ID, nil
-	case comments.TypeIDArticles:
+	case schema.CommentMessageTypeIDArticles:
 		return CommentsType_ARTICLES_TYPE_ID, nil
-	case comments.TypeIDForums:
+	case schema.CommentMessageTypeIDForums:
 		return CommentsType_FORUMS_TYPE_ID, nil
 	}
 
 	return 0, fmt.Errorf("%w: `%v`", errUnknownCommentType, commentsType)
 }
 
-func convertModeratorAttention(value comments.ModeratorAttention) (ModeratorAttention, error) {
+func convertModeratorAttention(value schema.CommentMessageModeratorAttention) (ModeratorAttention, error) {
 	switch value {
-	case comments.ModeratorAttentionNone:
+	case schema.CommentMessageModeratorAttentionNone:
 		return ModeratorAttention_NONE, nil
-	case comments.ModeratorAttentionRequired:
+	case schema.CommentMessageModeratorAttentionRequired:
 		return ModeratorAttention_REQUIRED, nil
-	case comments.ModeratorAttentionCompleted:
+	case schema.CommentMessageModeratorAttentionCompleted:
 		return ModeratorAttention_COMPLETE, nil
 	}
 
 	return 0, fmt.Errorf("%w: `%v`", errUnknownModeratorAttention, value)
 }
 
-func reverseConvertModeratorAttention(value ModeratorAttention) (comments.ModeratorAttention, error) {
+func reverseConvertModeratorAttention(value ModeratorAttention) (schema.CommentMessageModeratorAttention, error) {
 	switch value {
 	case ModeratorAttention_NONE:
-		return comments.ModeratorAttentionNone, nil
+		return schema.CommentMessageModeratorAttentionNone, nil
 	case ModeratorAttention_REQUIRED:
-		return comments.ModeratorAttentionRequired, nil
+		return schema.CommentMessageModeratorAttentionRequired, nil
 	case ModeratorAttention_COMPLETE:
-		return comments.ModeratorAttentionCompleted, nil
+		return schema.CommentMessageModeratorAttentionCompleted, nil
 	}
 
 	return 0, fmt.Errorf("%w: `%v`", errUnknownModeratorAttention, value)
@@ -233,7 +233,7 @@ func extractMessage(
 		}
 
 		if fields.GetStatus() && isModer {
-			if row.TypeID == comments.TypeIDPictures {
+			if row.TypeID == schema.CommentMessageTypeIDPictures {
 				ps, err := picturesRepository.Status(ctx, row.ItemID)
 				if err != nil {
 					return nil, err
@@ -440,7 +440,7 @@ func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCo
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
 
-	if commentType != comments.TypeIDForums {
+	if commentType != schema.CommentMessageTypeIDForums {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 

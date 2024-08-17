@@ -30,3 +30,41 @@ const (
 	PictureItemAuthor     PictureItemType = 2
 	PictureItemCopyrights PictureItemType = 3
 )
+
+const (
+	ItemParentTypeDefault = 0
+	ItemParentTypeTuning  = 1
+	ItemParentTypeSport   = 2
+	ItemParentTypeDesign  = 3
+)
+
+type AttrsTypesID int32
+
+const (
+	AttrsTypesIDUnknown AttrsTypesID = 0
+	AttrsTypesIDString  AttrsTypesID = 1
+	AttrsTypesIDInteger AttrsTypesID = 2
+	AttrsTypesIDFloat   AttrsTypesID = 3
+	AttrsTypesIDText    AttrsTypesID = 4
+	AttrsTypesIDBoolean AttrsTypesID = 5
+	AttrsTypesIDList    AttrsTypesID = 6
+	AttrsTypesIDTree    AttrsTypesID = 7
+)
+
+type CommentMessageModeratorAttention int32
+
+const (
+	CommentMessageModeratorAttentionNone      CommentMessageModeratorAttention = 0
+	CommentMessageModeratorAttentionRequired  CommentMessageModeratorAttention = 1
+	CommentMessageModeratorAttentionCompleted CommentMessageModeratorAttention = 2
+)
+
+type CommentMessageType int32
+
+const (
+	CommentMessageTypeIDPictures CommentMessageType = 1
+	CommentMessageTypeIDItems    CommentMessageType = 2
+	CommentMessageTypeIDVotings  CommentMessageType = 3
+	CommentMessageTypeIDArticles CommentMessageType = 4
+	CommentMessageTypeIDForums   CommentMessageType = 5
+)

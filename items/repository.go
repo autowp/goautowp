@@ -67,13 +67,6 @@ var languagePriority = map[string][]string{
 	"he":    {"he", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
 }
 
-const (
-	ItemParentTypeDefault = 0
-	ItemParentTypeTuning  = 1
-	ItemParentTypeSport   = 2
-	ItemParentTypeDesign  = 3
-)
-
 // Repository Main Object.
 type Repository struct {
 	db                *goqu.Database
@@ -1408,9 +1401,9 @@ func (s *Repository) collectParentInfo(ctx context.Context, id int64, diff int64
 			return nil, err
 		}
 
-		isTuning := typeID == ItemParentTypeTuning
-		isSport := typeID == ItemParentTypeSport
-		isDesign := typeID == ItemParentTypeDesign
+		isTuning := typeID == schema.ItemParentTypeTuning
+		isSport := typeID == schema.ItemParentTypeSport
+		isDesign := typeID == schema.ItemParentTypeDesign
 		result[parentID] = parentInfo{
 			Diff:   diff,
 			Tuning: isTuning,
