@@ -3909,19 +3909,20 @@ var Map_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	Pictures_View_FullMethodName                    = "/goautowp.Pictures/View"
-	Pictures_Vote_FullMethodName                    = "/goautowp.Pictures/Vote"
-	Pictures_CreateModerVoteTemplate_FullMethodName = "/goautowp.Pictures/CreateModerVoteTemplate"
-	Pictures_DeleteModerVoteTemplate_FullMethodName = "/goautowp.Pictures/DeleteModerVoteTemplate"
-	Pictures_GetModerVoteTemplates_FullMethodName   = "/goautowp.Pictures/GetModerVoteTemplates"
-	Pictures_DeleteModerVote_FullMethodName         = "/goautowp.Pictures/DeleteModerVote"
-	Pictures_UpdateModerVote_FullMethodName         = "/goautowp.Pictures/UpdateModerVote"
-	Pictures_GetUserSummary_FullMethodName          = "/goautowp.Pictures/GetUserSummary"
-	Pictures_Normalize_FullMethodName               = "/goautowp.Pictures/Normalize"
-	Pictures_Flop_FullMethodName                    = "/goautowp.Pictures/Flop"
-	Pictures_DeleteSimilar_FullMethodName           = "/goautowp.Pictures/DeleteSimilar"
-	Pictures_Repair_FullMethodName                  = "/goautowp.Pictures/Repair"
-	Pictures_SetPictureItemArea_FullMethodName      = "/goautowp.Pictures/SetPictureItemArea"
+	Pictures_View_FullMethodName                      = "/goautowp.Pictures/View"
+	Pictures_Vote_FullMethodName                      = "/goautowp.Pictures/Vote"
+	Pictures_CreateModerVoteTemplate_FullMethodName   = "/goautowp.Pictures/CreateModerVoteTemplate"
+	Pictures_DeleteModerVoteTemplate_FullMethodName   = "/goautowp.Pictures/DeleteModerVoteTemplate"
+	Pictures_GetModerVoteTemplates_FullMethodName     = "/goautowp.Pictures/GetModerVoteTemplates"
+	Pictures_DeleteModerVote_FullMethodName           = "/goautowp.Pictures/DeleteModerVote"
+	Pictures_UpdateModerVote_FullMethodName           = "/goautowp.Pictures/UpdateModerVote"
+	Pictures_GetUserSummary_FullMethodName            = "/goautowp.Pictures/GetUserSummary"
+	Pictures_Normalize_FullMethodName                 = "/goautowp.Pictures/Normalize"
+	Pictures_Flop_FullMethodName                      = "/goautowp.Pictures/Flop"
+	Pictures_DeleteSimilar_FullMethodName             = "/goautowp.Pictures/DeleteSimilar"
+	Pictures_Repair_FullMethodName                    = "/goautowp.Pictures/Repair"
+	Pictures_SetPictureItemArea_FullMethodName        = "/goautowp.Pictures/SetPictureItemArea"
+	Pictures_SetPictureItemPerspective_FullMethodName = "/goautowp.Pictures/SetPictureItemPerspective"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -3941,6 +3942,7 @@ type PicturesClient interface {
 	DeleteSimilar(ctx context.Context, in *DeleteSimilarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Repair(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPictureItemArea(ctx context.Context, in *SetPictureItemAreaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SetPictureItemPerspective(ctx context.Context, in *SetPictureItemPerspectiveRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type picturesClient struct {
@@ -4081,6 +4083,16 @@ func (c *picturesClient) SetPictureItemArea(ctx context.Context, in *SetPictureI
 	return out, nil
 }
 
+func (c *picturesClient) SetPictureItemPerspective(ctx context.Context, in *SetPictureItemPerspectiveRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Pictures_SetPictureItemPerspective_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility
@@ -4098,6 +4110,7 @@ type PicturesServer interface {
 	DeleteSimilar(context.Context, *DeleteSimilarRequest) (*emptypb.Empty, error)
 	Repair(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	SetPictureItemArea(context.Context, *SetPictureItemAreaRequest) (*emptypb.Empty, error)
+	SetPictureItemPerspective(context.Context, *SetPictureItemPerspectiveRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -4143,6 +4156,9 @@ func (UnimplementedPicturesServer) Repair(context.Context, *PictureIDRequest) (*
 }
 func (UnimplementedPicturesServer) SetPictureItemArea(context.Context, *SetPictureItemAreaRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetPictureItemArea not implemented")
+}
+func (UnimplementedPicturesServer) SetPictureItemPerspective(context.Context, *SetPictureItemPerspectiveRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPictureItemPerspective not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 
@@ -4391,6 +4407,24 @@ func _Pictures_SetPictureItemArea_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_SetPictureItemPerspective_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPictureItemPerspectiveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).SetPictureItemPerspective(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_SetPictureItemPerspective_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).SetPictureItemPerspective(ctx, req.(*SetPictureItemPerspectiveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -4449,6 +4483,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetPictureItemArea",
 			Handler:    _Pictures_SetPictureItemArea_Handler,
+		},
+		{
+			MethodName: "SetPictureItemPerspective",
+			Handler:    _Pictures_SetPictureItemPerspective_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

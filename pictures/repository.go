@@ -13,7 +13,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
-var errCropIsAllowedForPictureItemContentOnly = errors.New("crop is allowed only for picture-item-content")
+var errIsAllowedForPictureItemContentOnly = errors.New("is allowed only for picture-item-content")
 
 const IdentityLength = 6
 
@@ -507,6 +507,10 @@ func (s *Repository) Repair(ctx context.Context, id int64) error {
 func (s *Repository) SetPictureItemArea(
 	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, area PictureItemArea,
 ) error {
+	if pictureItemType != schema.PictureItemContent {
+		return errIsAllowedForPictureItemContentOnly
+	}
+
 	pic := schema.PictureRow{}
 
 	success, err := s.db.Select(schema.PictureTableWidthCol, schema.PictureTableHeightCol).
@@ -539,10 +543,6 @@ func (s *Repository) SetPictureItemArea(
 
 	if !success {
 		return sql.ErrNoRows
-	}
-
-	if picItem.Type != schema.PictureItemContent {
-		return errCropIsAllowedForPictureItemContentOnly
 	}
 
 	area.Left = util.Max(0, area.Left)
@@ -589,9 +589,30 @@ func (s *Repository) SetPictureItemArea(
 			schema.PictureItemTableTypeCol.Eq(pictureItemType),
 		).
 		Executor().ExecContext(ctx)
-	if err != nil {
-		return err
+
+	return err
+}
+
+func (s *Repository) SetPictureItemPerspective(
+	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, perspective int32,
+) error {
+	if pictureItemType != schema.PictureItemContent {
+		return errIsAllowedForPictureItemContentOnly
 	}
 
-	return nil
+	_, err := s.db.Update(schema.PictureItemTable).
+		Set(goqu.Record{
+			schema.PictureItemTablePerspectiveIDColName: sql.NullInt32{
+				Valid: perspective > 0,
+				Int32: perspective,
+			},
+		}).
+		Where(
+			schema.PictureItemTablePictureIDCol.Eq(pictureID),
+			schema.PictureItemTableItemIDCol.Eq(itemID),
+			schema.PictureItemTableTypeCol.Eq(pictureItemType),
+		).
+		Executor().ExecContext(ctx)
+
+	return err
 }

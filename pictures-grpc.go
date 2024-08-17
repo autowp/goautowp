@@ -716,3 +716,48 @@ func (s *PicturesGRPCServer) SetPictureItemArea(
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *PicturesGRPCServer) SetPictureItemPerspective(
+	ctx context.Context, in *SetPictureItemPerspectiveRequest,
+) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+		pic, err := s.repository.Picture(ctx, in.GetPictureId())
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userID || pic.Status != schema.PictureStatusInbox {
+			return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+		}
+	}
+
+	pictureItemType := convertPictureItemType(in.GetType())
+
+	err = s.repository.SetPictureItemPerspective(
+		ctx, in.GetPictureId(), in.GetItemId(), pictureItemType, in.GetPerspectiveId(),
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID:   userID,
+		Message:  "Установка ракурса картинки",
+		Pictures: []int64{in.GetPictureId()},
+		Items:    []int64{in.GetItemId()},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
