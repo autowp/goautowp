@@ -369,7 +369,7 @@ func TestDeleteSimilar(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestPictureItemArea(t *testing.T) {
+func TestPictureItemAreaAndPerspective(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -447,6 +447,28 @@ func TestPictureItemArea(t *testing.T) {
 			CropTop:    0,
 			CropWidth:  0,
 			CropHeight: 10,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetPictureItemPerspective(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureItemPerspectiveRequest{
+			PictureId:     pictureID,
+			ItemId:        itemID,
+			Type:          PictureItemType_PICTURE_ITEM_CONTENT,
+			PerspectiveId: 1,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetPictureItemPerspective(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureItemPerspectiveRequest{
+			PictureId:     pictureID,
+			ItemId:        itemID,
+			Type:          PictureItemType_PICTURE_ITEM_CONTENT,
+			PerspectiveId: 0,
 		},
 	)
 	require.NoError(t, err)
