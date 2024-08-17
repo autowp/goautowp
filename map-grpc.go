@@ -142,7 +142,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				name              string
 				nullableBeginYear sql.NullInt32
 				nullableEndYear   sql.NullInt32
-				itemTypeID        items.ItemType
+				itemTypeID        schema.ItemTableItemTypeID
 				today             sql.NullBool
 			)
 
@@ -189,9 +189,9 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 
 			//nolint:exhaustive
 			switch itemTypeID {
-			case items.FACTORY:
+			case schema.ItemTableItemTypeIDFactory:
 				mapPoint.Url = []string{"/factories", strconv.FormatInt(id, decimal)}
-			case items.MUSEUM:
+			case schema.ItemTableItemTypeIDMuseum:
 				mapPoint.Url = []string{"/museums", strconv.FormatInt(id, decimal)}
 			}
 

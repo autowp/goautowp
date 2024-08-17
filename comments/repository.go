@@ -14,7 +14,6 @@ import (
 
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
-	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
@@ -1021,7 +1020,7 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 		return []string{"/picture", identity}, nil
 
 	case TypeIDItems:
-		var itemTypeID items.ItemType
+		var itemTypeID schema.ItemTableItemTypeID
 
 		success, err := s.db.Select(schema.ItemTableItemTypeIDCol).
 			From(schema.ItemTable).
@@ -1036,9 +1035,9 @@ func (s *Repository) messageRowRoute(ctx context.Context, typeID CommentType, it
 		}
 
 		switch itemTypeID { //nolint:exhaustive
-		case items.TWINS:
+		case schema.ItemTableItemTypeIDTwins:
 			return []string{"/twins", "group", strconv.FormatInt(itemID, 10)}, nil
-		case items.MUSEUM:
+		case schema.ItemTableItemTypeIDMuseum:
 			return []string{"/museums", strconv.FormatInt(itemID, 10)}, nil
 		default:
 			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
@@ -1682,7 +1681,7 @@ func (s *Repository) MessageRowRoute(
 		result = []string{"/picture", identity}
 
 	case TypeIDItems:
-		var itemTypeID items.ItemType
+		var itemTypeID schema.ItemTableItemTypeID
 
 		success, err := s.db.Select(schema.ItemTableItemTypeIDCol).
 			From(schema.ItemTable).
@@ -1697,9 +1696,9 @@ func (s *Repository) MessageRowRoute(
 		}
 
 		switch itemTypeID { //nolint:exhaustive
-		case items.TWINS:
+		case schema.ItemTableItemTypeIDTwins:
 			result = []string{"/twins", "group", strconv.FormatInt(itemID, 10)}
-		case items.MUSEUM:
+		case schema.ItemTableItemTypeIDMuseum:
 			result = []string{"/museums", strconv.FormatInt(itemID, 10)}
 		default:
 			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)

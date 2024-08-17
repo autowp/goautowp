@@ -218,15 +218,17 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 			NameOnly: true,
 		},
 		DescendantItems: &items.ListOptions{
-			ParentItems: &items.ListOptions{
-				TypeID: []items.ItemType{items.TWINS},
-				Fields: items.ListFields{
-					ItemsCount:    true,
-					NewItemsCount: true,
+			ParentItems: &items.ParentItemsListOptions{
+				ParentItems: &items.ListOptions{
+					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
+					Fields: items.ListFields{
+						ItemsCount:    true,
+						NewItemsCount: true,
+					},
 				},
 			},
 		},
-		TypeID:     []items.ItemType{items.BRAND},
+		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		SortByName: true,
 	}, false)
 	if err != nil {
@@ -270,6 +272,12 @@ func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
 	}
 }
 
+func mapItemParentsRequest(in *ListItemsRequest, options *items.ParentItemsListOptions) error {
+	options.ParentItems = &items.ListOptions{}
+
+	return mapItemsRequest(in, options.ParentItems)
+}
+
 func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
 	options.NoParents = in.GetNoParent()
 	options.Catname = in.GetCatname()
@@ -290,7 +298,7 @@ func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
 
 	itemTypeID := reverseConvertItemTypeID(in.GetTypeId())
 	if itemTypeID != 0 {
-		options.TypeID = []items.ItemType{itemTypeID}
+		options.TypeID = []schema.ItemTableItemTypeID{itemTypeID}
 	}
 
 	if in.GetDescendant() != nil {
@@ -303,9 +311,9 @@ func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
 	}
 
 	if in.GetParent() != nil {
-		options.ParentItems = &items.ListOptions{}
+		options.ParentItems = &items.ParentItemsListOptions{}
 
-		err := mapItemsRequest(in.GetParent(), options.ParentItems)
+		err := mapItemParentsRequest(in.GetParent(), options.ParentItems)
 		if err != nil {
 			return err
 		}
@@ -816,7 +824,9 @@ func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItem
 
 	success, err := s.db.Select(goqu.L("1")).From(schema.ItemTable).Where(
 		schema.ItemTableIDCol.Eq(in.GetItemId()),
-		schema.ItemTableItemTypeIDCol.In([]items.ItemType{items.VEHICLE, items.TWINS}),
+		schema.ItemTableItemTypeIDCol.In([]schema.ItemTableItemTypeID{
+			schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDTwins,
+		}),
 	).ScanValContext(ctx, &found)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -950,14 +960,14 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 	}
 
 	totalBrands, err := s.repository.Count(ctx, items.ListOptions{
-		TypeID: []items.ItemType{items.BRAND},
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	totalCars, err := s.repository.Count(ctx, items.ListOptions{
-		TypeID: []items.ItemType{items.VEHICLE},
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1005,7 +1015,7 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 
 	brandsWithLogo, err := s.repository.Count(ctx, items.ListOptions{
 		HasLogo: true,
-		TypeID:  []items.ItemType{items.BRAND},
+		TypeID:  []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1120,9 +1130,7 @@ func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemPar
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ItemsGRPCServer) GetBrandNewItems(
-	ctx context.Context, in *BrandNewItemsRequest,
-) (*BrandNewItemsResponse, error) {
+func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequest) (*NewItemsResponse, error) {
 	const (
 		newItemsLimit = 30
 		daysLimit     = 7
@@ -1131,12 +1139,9 @@ func (s *ItemsGRPCServer) GetBrandNewItems(
 	lang := in.GetLanguage()
 
 	brand, err := s.repository.Item(ctx, items.ListOptions{
-		TypeID:   []items.ItemType{items.BRAND},
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		ItemID:   in.GetItemId(),
 		Language: lang,
-		Fields: items.ListFields{
-			NameHTML: true,
-		},
 	})
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
@@ -1148,7 +1153,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(
 
 	localizer := s.i18n.Localizer(lang)
 
-	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{NameHtml: true}, localizer)
+	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, localizer)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1164,7 +1169,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(
 		},
 		CreatedInDays: daysLimit,
 		Limit:         newItemsLimit,
-		OrderBy:       []exp.OrderedExpression{goqu.T("i").Col("add_datetime").Desc()},
+		OrderBy:       []exp.OrderedExpression{goqu.T("i").Col(schema.ItemTableAddDatetimeColName).Desc()},
 	}, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1181,7 +1186,78 @@ func (s *ItemsGRPCServer) GetBrandNewItems(
 		extractedItems = append(extractedItems, extractedItem)
 	}
 
-	return &BrandNewItemsResponse{
+	return &NewItemsResponse{
+		Brand: extractedBrand,
+		Items: extractedItems,
+	}, nil
+}
+
+func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) (*NewItemsResponse, error) {
+	const (
+		newItemsLimit = 20
+		daysLimit     = 7
+	)
+
+	lang := in.GetLanguage()
+
+	category, err := s.repository.Item(ctx, items.ListOptions{
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
+		ItemID:   in.GetItemId(),
+		Language: lang,
+	})
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	localizer := s.i18n.Localizer(lang)
+
+	extractedBrand, err := s.extractor.Extract(ctx, category, nil, localizer)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	carList, _, err := s.repository.List(ctx, items.ListOptions{
+		Language: lang,
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
+		ParentItems: &items.ParentItemsListOptions{
+			LinkedInDays: daysLimit,
+			ParentItems: &items.ListOptions{
+				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDFactory},
+				AncestorItems: &items.ListOptions{
+					ItemID: category.ID,
+				},
+			},
+		},
+		AncestorItems: &items.ListOptions{
+			Language: lang,
+			ItemID:   category.ID,
+			Fields: items.ListFields{
+				NameHTML: true,
+			},
+		},
+		Limit:   newItemsLimit,
+		OrderBy: []exp.OrderedExpression{goqu.MAX(goqu.T("i_ipp").Col(schema.ItemParentTableTimestampColName)).Desc()},
+	}, false)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	extractedItems := make([]*APIItem, 0, len(carList))
+
+	for _, car := range carList {
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, localizer)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		extractedItems = append(extractedItems, extractedItem)
+	}
+
+	return &NewItemsResponse{
 		Brand: extractedBrand,
 		Items: extractedItems,
 	}, nil

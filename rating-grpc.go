@@ -79,7 +79,7 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 	ctx context.Context, in *UserRatingDetailsRequest,
 ) (*UserRatingBrandsResponse, error) {
 	brands, _, err := s.itemsRepository.List(ctx, items.ListOptions{
-		TypeID: []items.ItemType{items.BRAND},
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		DescendantPictures: &items.ItemPicturesOptions{
 			Pictures: &items.PicturesOptions{
 				OwnerID: in.GetUserId(),

@@ -8,6 +8,7 @@ import (
 
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/redis/go-redis/v9"
@@ -61,7 +62,7 @@ func (s *Index) GenerateBrandsCache(ctx context.Context, lang string) error {
 			DescendantsCount:    true,
 			NewDescendantsCount: true,
 		},
-		TypeID:     []items.ItemType{items.BRAND},
+		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:      topBrandsCount,
 		OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 		SortByName: true,
@@ -115,15 +116,17 @@ func (s *Index) GenerateTwinsCache(ctx context.Context, lang string) error {
 			NameOnly: true,
 		},
 		DescendantItems: &items.ListOptions{
-			ParentItems: &items.ListOptions{
-				TypeID: []items.ItemType{items.TWINS},
-				Fields: items.ListFields{
-					ItemsCount:    true,
-					NewItemsCount: true,
+			ParentItems: &items.ParentItemsListOptions{
+				ParentItems: &items.ListOptions{
+					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
+					Fields: items.ListFields{
+						ItemsCount:    true,
+						NewItemsCount: true,
+					},
 				},
 			},
 		},
-		TypeID:  []items.ItemType{items.BRAND},
+		TypeID:  []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:   topTwinsBrandsCount,
 		OrderBy: []exp.OrderedExpression{goqu.C("items_count").Desc()},
 	}, false)
@@ -133,11 +136,13 @@ func (s *Index) GenerateTwinsCache(ctx context.Context, lang string) error {
 
 	twinsData.Count, err = s.repository.CountDistinct(ctx, items.ListOptions{
 		DescendantItems: &items.ListOptions{
-			ParentItems: &items.ListOptions{
-				TypeID: []items.ItemType{items.TWINS},
+			ParentItems: &items.ParentItemsListOptions{
+				ParentItems: &items.ListOptions{
+					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
+				},
 			},
 		},
-		TypeID: []items.ItemType{items.BRAND},
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 	})
 	if err != nil {
 		return err
@@ -180,7 +185,7 @@ func (s *Index) GenerateCategoriesCache(ctx context.Context, lang string) error 
 			NewDescendantsCount: true,
 		},
 		NoParents: true,
-		TypeID:    []items.ItemType{items.CATEGORY},
+		TypeID:    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
 		Limit:     topCategoriesCount,
 		OrderBy:   []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 	}, false)
@@ -221,7 +226,7 @@ func (s *Index) GeneratePersonsCache(
 		Fields: items.ListFields{
 			NameOnly: true,
 		},
-		TypeID: []items.ItemType{items.PERSON},
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDPerson},
 		DescendantPictures: &items.ItemPicturesOptions{
 			TypeID: pictureItemType,
 			Pictures: &items.PicturesOptions{
@@ -273,9 +278,11 @@ func (s *Index) GenerateFactoriesCache(ctx context.Context, lang string) error {
 			ChildItemsCount:    true,
 			NewChildItemsCount: true,
 		},
-		TypeID: []items.ItemType{items.FACTORY},
-		ChildItems: &items.ListOptions{
-			TypeID: []items.ItemType{items.VEHICLE, items.ENGINE},
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDFactory},
+		ChildItems: &items.ParentItemsListOptions{
+			ChildItems: &items.ListOptions{
+				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
+			},
 		},
 		Limit:   topFactoriesCount,
 		OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},

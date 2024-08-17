@@ -11,7 +11,6 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/itemofday"
-	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
@@ -82,7 +81,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		schema.ItemTableNameColName:            fmt.Sprintf("item-of-day-%d", random.Int()),
 		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      items.BRAND,
+		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDBrand,
 		schema.ItemTableCatnameColName:         fmt.Sprintf("brand1-%d", random.Int()),
 		schema.ItemTableBodyColName:            "",
 		schema.ItemTableProducedExactlyColName: 0,

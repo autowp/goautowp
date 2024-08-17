@@ -160,11 +160,12 @@ const (
 	ItemLanguageTableTextIDColName     = "text_id"
 	ItemLanguageTableFullTextIDColName = "full_text_id"
 
-	ItemParentTableName            = "item_parent"
-	ItemParentTableParentIDColName = "parent_id"
-	ItemParentTableItemIDColName   = "item_id"
-	ItemParentTableTypeColName     = "type"
-	ItemParentTableCatnameColName  = "catname"
+	ItemParentTableName             = "item_parent"
+	ItemParentTableParentIDColName  = "parent_id"
+	ItemParentTableItemIDColName    = "item_id"
+	ItemParentTableTypeColName      = "type"
+	ItemParentTableCatnameColName   = "catname"
+	ItemParentTableTimestampColName = "timestamp"
 
 	ItemParentLanguageTableName            = "item_parent_language"
 	ItemParentLanguageTableItemIDColName   = "item_id"

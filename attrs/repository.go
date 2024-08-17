@@ -6,7 +6,6 @@ import (
 	"database/sql/driver"
 	"errors"
 
-	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 )
@@ -274,7 +273,7 @@ func (s *Repository) TopUserBrands(
 			goqu.On(schema.ItemParentCacheTableItemIDCol.Eq(schema.AttrsUserValuesTableItemIDCol)),
 		).
 		Where(
-			schema.ItemTableItemTypeIDCol.Eq(items.BRAND),
+			schema.ItemTableItemTypeIDCol.Eq(schema.ItemTableItemTypeIDBrand),
 			schema.AttrsUserValuesTableUserIDCol.Eq(userID),
 		).
 		GroupBy(schema.ItemTableIDCol).

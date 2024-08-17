@@ -103,7 +103,8 @@ service Items {
   rpc GetItemParentLanguages(APIGetItemParentLanguagesRequest) returns (ItemParentLanguages) {}
   rpc SetItemParentLanguage(ItemParentLanguage) returns (google.protobuf.Empty) {}
   rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
-  rpc GetBrandNewItems(BrandNewItemsRequest) returns (BrandNewItemsResponse) {}
+  rpc GetBrandNewItems(NewItemsRequest) returns (NewItemsResponse) {}
+  rpc GetNewItems(NewItemsRequest) returns (NewItemsResponse) {}
 }
 
 service Comments {
@@ -813,6 +814,7 @@ message ItemFields {
   bool mosts_active = 16;
   bool comments_attentions_count = 17;
   bool is_compiles_item_of_day = 18;
+  bool brandicon = 19;
 }
 
 message ItemRequest {
@@ -881,6 +883,7 @@ message APIItem {
   bool mosts_active = 20;
   int32 comments_attentions_count = 21;
   bool is_compiles_item_of_day = 22;
+  APIImage brandicon = 23;
 }
 
 message APIItemList {
@@ -1294,12 +1297,12 @@ message StatsValue {
   int32 value = 3;
 }
 
-message BrandNewItemsRequest {
+message NewItemsRequest {
   int64 item_id = 1;
   string language = 2;
 }
 
-message BrandNewItemsResponse {
+message NewItemsResponse {
   APIItem brand = 1;
   repeated APIItem items = 2;
 }

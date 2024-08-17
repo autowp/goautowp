@@ -49,7 +49,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 				NewItemsCount:              true,
 				DescendantTwinsGroupsCount: true,
 			},
-			TypeID:     []ItemType{BRAND},
+			TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 			Limit:      150,
 			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 			SortByName: true,
@@ -91,16 +91,20 @@ func TestListFilters(t *testing.T) {
 			NewItemsCount:              true,
 			DescendantTwinsGroupsCount: true,
 		},
-		TypeID: []ItemType{BRAND},
-		ChildItems: &ListOptions{
-			TypeID:       []ItemType{VEHICLE},
-			IsConcept:    true,
-			EngineItemID: 1,
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		ChildItems: &ParentItemsListOptions{
+			ChildItems: &ListOptions{
+				TypeID:       []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
+				IsConcept:    true,
+				EngineItemID: 1,
+			},
 		},
-		ParentItems: &ListOptions{
-			TypeID:    []ItemType{VEHICLE},
-			NoParents: true,
-			Catname:   "test",
+		ParentItems: &ParentItemsListOptions{
+			ParentItems: &ListOptions{
+				TypeID:    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
+				NoParents: true,
+				Catname:   "test",
+			},
 		},
 		Limit:   150,
 		OrderBy: []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
@@ -127,7 +131,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 			DescendantsCount: true,
 			ChildsCount:      true,
 		},
-		TypeID: []ItemType{BRAND},
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:  10,
 	}
 	_, _, err = repository.List(ctx, options, true)
@@ -180,7 +184,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	userID := createRandomUser(ctx, t, goquDB)
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableItemTypeIDColName:      BRAND,
+		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDBrand,
 		schema.ItemTableNameColName:            "",
 		schema.ItemTableBodyColName:            "",
 		schema.ItemTableProducedExactlyColName: 0,
@@ -191,7 +195,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err = goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableItemTypeIDColName:      VEHICLE,
+		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDVehicle,
 		schema.ItemTableNameColName:            "",
 		schema.ItemTableBodyColName:            "",
 		schema.ItemTableProducedExactlyColName: 0,
@@ -257,7 +261,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 				Status:  pictures.StatusAccepted,
 			},
 		},
-		TypeID:     []ItemType{BRAND},
+		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:      10,
 		SortByName: true,
 	}
@@ -285,7 +289,7 @@ func TestPaginator(t *testing.T) {
 
 	for i := range 10 {
 		res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-			schema.ItemTableItemTypeIDColName:      BRAND,
+			schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDBrand,
 			schema.ItemTableNameColName:            name + "_" + strconv.Itoa(i),
 			schema.ItemTableBodyColName:            "",
 			schema.ItemTableProducedExactlyColName: 0,

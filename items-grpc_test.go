@@ -10,7 +10,6 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -700,7 +699,7 @@ func TestSetItemParentLanguage(t *testing.T) {
 		r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 			schema.ItemTableNameColName:            childName,
 			schema.ItemTableIsGroupColName:         0,
-			schema.ItemTableItemTypeIDColName:      items.VEHICLE,
+			schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDVehicle,
 			schema.ItemTableCatnameColName:         nil,
 			schema.ItemTableBodyColName:            "",
 			schema.ItemTableProducedExactlyColName: 0,
@@ -725,7 +724,7 @@ func TestSetItemParentLanguage(t *testing.T) {
 		r2, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 			schema.ItemTableNameColName:            parentName,
 			schema.ItemTableIsGroupColName:         1,
-			schema.ItemTableItemTypeIDColName:      items.VEHICLE,
+			schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDVehicle,
 			schema.ItemTableCatnameColName:         nil,
 			schema.ItemTableBodyColName:            "",
 			schema.ItemTableProducedExactlyColName: 0,
@@ -809,7 +808,7 @@ func TestBrandNewItems(t *testing.T) {
 	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		schema.ItemTableNameColName:            fmt.Sprintf("brand-%d", random.Int()),
 		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      items.BRAND,
+		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDBrand,
 		schema.ItemTableCatnameColName:         fmt.Sprintf("brand-%d", random.Int()),
 		schema.ItemTableBodyColName:            "",
 		schema.ItemTableProducedExactlyColName: 0,
@@ -829,9 +828,74 @@ func TestBrandNewItems(t *testing.T) {
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
-	_, err = client.GetBrandNewItems(ctx, &BrandNewItemsRequest{
+	_, err = client.GetBrandNewItems(ctx, &NewItemsRequest{
 		ItemId:   itemID,
 		Language: "ru",
+	})
+	require.NoError(t, err)
+}
+
+func TestNewItems(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+		schema.ItemTableNameColName:            fmt.Sprintf("category-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDCategory,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("category-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDVehicle,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	childID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
+		schema.ItemParentTableItemIDColName:   childID,
+		schema.ItemParentTableParentIDColName: itemID,
+		schema.ItemParentTableCatnameColName:  "child-item",
+		schema.ItemParentTableTypeColName:     0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	_, err = client.GetNewItems(ctx, &NewItemsRequest{
+		ItemId:   itemID,
+		Language: "en",
 	})
 	require.NoError(t, err)
 }

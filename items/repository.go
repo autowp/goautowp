@@ -51,7 +51,7 @@ type TreeItem struct {
 	ID       int64
 	Name     string
 	Childs   []TreeItem
-	ItemType ItemType
+	ItemType schema.ItemTableItemTypeID
 }
 
 var languagePriority = map[string][]string{
@@ -68,20 +68,6 @@ var languagePriority = map[string][]string{
 	"he":    {"he", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
 }
 
-type ItemType int
-
-const (
-	VEHICLE   ItemType = 1
-	ENGINE    ItemType = 2
-	CATEGORY  ItemType = 3
-	TWINS     ItemType = 4
-	BRAND     ItemType = 5
-	FACTORY   ItemType = 6
-	MUSEUM    ItemType = 7
-	PERSON    ItemType = 8
-	COPYRIGHT ItemType = 9
-)
-
 const (
 	ItemParentTypeDefault = 0
 	ItemParentTypeTuning  = 1
@@ -96,15 +82,15 @@ type Repository struct {
 }
 
 type itemRow struct {
-	ID             int64         `db:"id"`
-	Name           string        `db:"name"`
-	ItemType       ItemType      `db:"item_type_id"`
-	Body           string        `db:"body"`
-	BeginYear      sql.NullInt32 `db:"begin_year"`
-	EndYear        sql.NullInt32 `db:"end_year"`
-	BeginModelYear sql.NullInt32 `db:"begin_model_year"`
-	EndModelYear   sql.NullInt32 `db:"end_model_year"`
-	SpecID         sql.NullInt32 `db:"spec_id"`
+	ID             int64                      `db:"id"`
+	Name           string                     `db:"name"`
+	ItemType       schema.ItemTableItemTypeID `db:"item_type_id"`
+	Body           string                     `db:"body"`
+	BeginYear      sql.NullInt32              `db:"begin_year"`
+	EndYear        sql.NullInt32              `db:"end_year"`
+	BeginModelYear sql.NullInt32              `db:"begin_model_year"`
+	EndModelYear   sql.NullInt32              `db:"end_model_year"`
+	SpecID         sql.NullInt32              `db:"spec_id"`
 }
 
 type Item struct {
@@ -131,7 +117,7 @@ type Item struct {
 	SpecName                   string
 	SpecShortName              string
 	EngineItemID               int64
-	ItemTypeID                 ItemType
+	ItemTypeID                 schema.ItemTableItemTypeID
 	Description                string
 	FullText                   string
 	IsConcept                  bool
@@ -224,16 +210,16 @@ type ListOptions struct {
 	Fields             ListFields
 	ItemID             int64
 	ItemIDExpr         goqu.Expression
-	TypeID             []ItemType
+	TypeID             []schema.ItemTableItemTypeID
 	DescendantPictures *ItemPicturesOptions
 	PreviewPictures    *ItemPicturesOptions
 	Limit              uint32
 	Page               uint32
 	OrderBy            []exp.OrderedExpression
 	SortByName         bool
-	ChildItems         *ListOptions
+	ChildItems         *ParentItemsListOptions
 	DescendantItems    *ListOptions
-	ParentItems        *ListOptions
+	ParentItems        *ParentItemsListOptions
 	AncestorItems      *ListOptions
 	NoParents          bool
 	Catname            string
@@ -246,6 +232,12 @@ type ListOptions struct {
 	HasEndMonth        bool
 	HasLogo            bool
 	CreatedInDays      int
+}
+
+type ParentItemsListOptions struct {
+	LinkedInDays int
+	ParentItems  *ListOptions
+	ChildItems   *ListOptions
 }
 
 func yearsPrefix(begin int32, end int32) string {
@@ -331,6 +323,40 @@ func applyItemPicture(
 	return sqSelect, piAlias
 }
 
+func (s *Repository) applyParentItem(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+	fields bool,
+	options *ParentItemsListOptions,
+) (*goqu.SelectDataset, error) {
+	var err error
+
+	if options.LinkedInDays > 0 {
+		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.ItemParentTableTimestampColName).Gt(
+			goqu.L("DATE_SUB(NOW(), INTERVAL ? DAY)", options.LinkedInDays),
+		))
+	}
+
+	if options.ParentItems != nil {
+		iAlias := alias + "_i"
+
+		sqSelect = sqSelect.
+			Join(
+				schema.ItemTable.As(iAlias),
+				goqu.On(goqu.T(alias).Col(schema.ItemParentTableParentIDColName).Eq(
+					goqu.T(iAlias).Col(schema.ItemTableIDColName),
+				)),
+			)
+
+		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ParentItems)
+		if err != nil {
+			return sqSelect, err
+		}
+	}
+
+	return sqSelect, nil
+}
+
 func (s *Repository) applyItem( //nolint:maintidx
 	alias string,
 	sqSelect *goqu.SelectDataset,
@@ -361,39 +387,26 @@ func (s *Repository) applyItem( //nolint:maintidx
 	}
 
 	ipcAlias := alias + "_ipc"
-
 	if options.ChildItems != nil {
-		iAlias := alias + "_ic"
-		sqSelect = sqSelect.
-			Join(
-				schema.ItemParentTable.As(ipcAlias),
-				goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col("parent_id"))),
-			).
-			Join(
-				schema.ItemTable.As(iAlias),
-				goqu.On(goqu.T(ipcAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
-			)
+		sqSelect = sqSelect.Join(
+			schema.ItemParentTable.As(ipcAlias),
+			goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col(schema.ItemParentTableParentIDColName))),
+		)
 
-		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ChildItems)
+		sqSelect, err = s.applyParentItem(ipcAlias, sqSelect, fields, options.ChildItems)
 		if err != nil {
 			return sqSelect, err
 		}
 	}
 
 	if options.ParentItems != nil {
-		iAlias := alias + "_ip"
 		ippAlias := alias + "_ipp"
-		sqSelect = sqSelect.
-			Join(
-				schema.ItemParentTable.As(ippAlias),
-				goqu.On(aliasIDCol.Eq(goqu.T(ippAlias).Col("item_id"))),
-			).
-			Join(
-				schema.ItemTable.As(iAlias),
-				goqu.On(goqu.T(ippAlias).Col("parent_id").Eq(goqu.T(iAlias).Col("id"))),
-			)
+		sqSelect = sqSelect.Join(
+			schema.ItemParentTable.As(ippAlias),
+			goqu.On(aliasIDCol.Eq(goqu.T(ippAlias).Col(schema.ItemParentTableItemIDColName))),
+		)
 
-		sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.ParentItems)
+		sqSelect, err = s.applyParentItem(ippAlias, sqSelect, fields, options.ParentItems)
 		if err != nil {
 			return sqSelect, err
 		}
@@ -669,7 +682,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		if options.Fields.DescendantTwinsGroupsCount {
 			subSelect, err := s.CountSelect(ListOptions{
 				Alias:  alias + "dtgc",
-				TypeID: []ItemType{TWINS},
+				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
 				DescendantItems: &ListOptions{
 					AncestorItems: &ListOptions{
 						ItemIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
@@ -689,7 +702,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		if options.Fields.InboxPicturesCount {
 			subSelect, err := s.CountSelect(ListOptions{
 				Alias:  alias + "ipc",
-				TypeID: []ItemType{TWINS},
+				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
 				AncestorItems: &ListOptions{
 					ItemIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 				},
@@ -1111,9 +1124,9 @@ func (s *Repository) List( //nolint:maintidx
 
 func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 	type row struct {
-		ID       int64    `db:"id"`
-		Name     string   `db:"name"`
-		ItemType ItemType `db:"item_type_id"`
+		ID       int64                      `db:"id"`
+		Name     string                     `db:"name"`
+		ItemType schema.ItemTableItemTypeID `db:"item_type_id"`
 	}
 
 	var item row

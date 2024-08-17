@@ -8,57 +8,58 @@ import (
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/schema"
 	"github.com/casbin/casbin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-func convertItemTypeID(itemTypeID items.ItemType) ItemType {
+func convertItemTypeID(itemTypeID schema.ItemTableItemTypeID) ItemType {
 	switch itemTypeID {
-	case items.VEHICLE:
+	case schema.ItemTableItemTypeIDVehicle:
 		return ItemType_ITEM_TYPE_VEHICLE
-	case items.ENGINE:
+	case schema.ItemTableItemTypeIDEngine:
 		return ItemType_ITEM_TYPE_ENGINE
-	case items.CATEGORY:
+	case schema.ItemTableItemTypeIDCategory:
 		return ItemType_ITEM_TYPE_CATEGORY
-	case items.TWINS:
+	case schema.ItemTableItemTypeIDTwins:
 		return ItemType_ITEM_TYPE_TWINS
-	case items.BRAND:
+	case schema.ItemTableItemTypeIDBrand:
 		return ItemType_ITEM_TYPE_BRAND
-	case items.FACTORY:
+	case schema.ItemTableItemTypeIDFactory:
 		return ItemType_ITEM_TYPE_FACTORY
-	case items.MUSEUM:
+	case schema.ItemTableItemTypeIDMuseum:
 		return ItemType_ITEM_TYPE_MUSEUM
-	case items.PERSON:
+	case schema.ItemTableItemTypeIDPerson:
 		return ItemType_ITEM_TYPE_PERSON
-	case items.COPYRIGHT:
+	case schema.ItemTableItemTypeIDCopyright:
 		return ItemType_ITEM_TYPE_COPYRIGHT
 	}
 
 	return ItemType_ITEM_TYPE_UNKNOWN
 }
 
-func reverseConvertItemTypeID(itemTypeID ItemType) items.ItemType {
+func reverseConvertItemTypeID(itemTypeID ItemType) schema.ItemTableItemTypeID {
 	switch itemTypeID {
 	case ItemType_ITEM_TYPE_UNKNOWN:
 		return 0
 	case ItemType_ITEM_TYPE_VEHICLE:
-		return items.VEHICLE
+		return schema.ItemTableItemTypeIDVehicle
 	case ItemType_ITEM_TYPE_ENGINE:
-		return items.ENGINE
+		return schema.ItemTableItemTypeIDEngine
 	case ItemType_ITEM_TYPE_CATEGORY:
-		return items.CATEGORY
+		return schema.ItemTableItemTypeIDCategory
 	case ItemType_ITEM_TYPE_TWINS:
-		return items.TWINS
+		return schema.ItemTableItemTypeIDTwins
 	case ItemType_ITEM_TYPE_BRAND:
-		return items.BRAND
+		return schema.ItemTableItemTypeIDBrand
 	case ItemType_ITEM_TYPE_FACTORY:
-		return items.FACTORY
+		return schema.ItemTableItemTypeIDFactory
 	case ItemType_ITEM_TYPE_MUSEUM:
-		return items.MUSEUM
+		return schema.ItemTableItemTypeIDMuseum
 	case ItemType_ITEM_TYPE_PERSON:
-		return items.PERSON
+		return schema.ItemTableItemTypeIDPerson
 	case ItemType_ITEM_TYPE_COPYRIGHT:
-		return items.COPYRIGHT
+		return schema.ItemTableItemTypeIDCopyright
 	}
 
 	return 0
@@ -123,6 +124,15 @@ func (s *ItemExtractor) Extract(
 		}
 
 		result.Logo120 = APIImageToGRPC(logo120)
+	}
+
+	if fields.GetBrandicon() && row.LogoID != 0 {
+		brandicon2, err := s.imageStorage.FormattedImage(ctx, int(row.LogoID), "brandicon2")
+		if err != nil {
+			return nil, err
+		}
+
+		result.Brandicon = APIImageToGRPC(brandicon2)
 	}
 
 	if fields.GetNameOnly() {
