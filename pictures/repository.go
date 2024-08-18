@@ -637,7 +637,7 @@ func (s *Repository) SetPictureItemItemID(
 		return errCombinationNotAllowed
 	}
 
-	_, err = s.db.Update(schema.PictureItemTable).
+	res, err := s.db.Update(schema.PictureItemTable).
 		Set(goqu.Record{
 			schema.PictureItemTableItemIDColName: dstItemID,
 		}).
@@ -647,8 +647,23 @@ func (s *Repository) SetPictureItemItemID(
 			schema.PictureItemTableTypeCol.Eq(pictureItemType),
 		).
 		Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
 
-	return err
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected > 0 {
+		err = s.updateContentCount(ctx, pictureID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *Repository) isAllowedTypeByItemID(
@@ -706,6 +721,74 @@ func (s *Repository) DeletePictureItem(
 	}
 
 	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
 
-	return affected > 0, err
+	if affected > 0 {
+		err = s.updateContentCount(ctx, pictureID)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return affected > 0, nil
+}
+
+func (s *Repository) CreatePictureItem(
+	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, perspective int32,
+) (bool, error) {
+	if pictureItemType != schema.PictureItemContent {
+		return false, errIsAllowedForPictureItemContentOnly
+	}
+
+	isAllowed, err := s.isAllowedTypeByItemID(ctx, itemID, pictureItemType)
+	if err != nil {
+		return false, err
+	}
+
+	if !isAllowed {
+		return false, errCombinationNotAllowed
+	}
+
+	res, err := s.db.Insert(schema.PictureItemTable).Rows(goqu.Record{
+		schema.PictureItemTablePictureIDColName: pictureID,
+		schema.PictureItemTableItemIDColName:    itemID,
+		schema.PictureItemTableTypeColName:      pictureItemType,
+		schema.PictureItemTablePerspectiveIDColName: sql.NullInt32{
+			Valid: perspective > 0,
+			Int32: perspective,
+		},
+	}).OnConflict(goqu.DoNothing()).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	if affected > 0 {
+		err = s.updateContentCount(ctx, pictureID)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return affected > 0, nil
+}
+
+func (s *Repository) updateContentCount(ctx context.Context, pictureID int64) error {
+	_, err := s.db.Update(schema.PictureTable).
+		Set(goqu.Record{
+			schema.PictureTableContentCountColName: s.db.Select(goqu.COUNT(goqu.Star())).Where(
+				schema.PictureItemTablePictureIDCol.Eq(pictureID),
+				schema.PictureItemTableTypeCol.Eq(schema.PictureItemContent),
+			),
+		}).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).
+		Executor().ExecContext(ctx)
+
+	return err
 }

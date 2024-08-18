@@ -245,6 +245,7 @@ const (
 	PictureTableChangeStatusUserIDColName = "change_status_user_id"
 	PictureTableWidthColName              = "width"
 	PictureTableHeightColName             = "height"
+	PictureTableContentCountColName       = "content_count"
 
 	PictureItemTableName                 = "picture_item"
 	PictureItemTablePictureIDColName     = "picture_id"
