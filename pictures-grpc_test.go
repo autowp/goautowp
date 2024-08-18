@@ -551,4 +551,24 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	_, err = client.DeletePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&DeletePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    itemID1,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		},
+	)
+	require.Error(t, err)
+
+	_, err = client.DeletePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&DeletePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    itemID2,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		},
+	)
+	require.NoError(t, err)
 }

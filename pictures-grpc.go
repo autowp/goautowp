@@ -802,3 +802,43 @@ func (s *PicturesGRPCServer) SetPictureItemItemID(
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *PicturesGRPCServer) DeletePictureItem(
+	ctx context.Context, in *DeletePictureItemRequest,
+) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "picture", "move"); !res {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	pictureItemType := convertPictureItemType(in.GetType())
+
+	success, err := s.repository.DeletePictureItem(ctx, in.GetPictureId(), in.GetItemId(), pictureItemType)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !success {
+		return nil, status.Errorf(codes.NotFound, "NotFound")
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID:   userID,
+		Message:  fmt.Sprintf("Картинка %d отвязана от %d", in.GetPictureId(), in.GetItemId()),
+		Pictures: []int64{in.GetPictureId()},
+		Items:    []int64{in.GetItemId()},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}

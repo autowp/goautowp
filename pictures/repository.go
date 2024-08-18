@@ -692,3 +692,20 @@ func (s *Repository) isAllowedType(itemTypeID schema.ItemTableItemTypeID, pictur
 
 	return util.Contains(pictureItemTypes, pictureItemType)
 }
+
+func (s *Repository) DeletePictureItem(
+	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType,
+) (bool, error) {
+	res, err := s.db.Delete(schema.PictureItemTable).Where(
+		schema.PictureItemTablePictureIDCol.Eq(pictureID),
+		schema.PictureItemTableItemIDCol.Eq(itemID),
+		schema.PictureItemTableTypeCol.Eq(pictureItemType),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+
+	return affected > 0, err
+}

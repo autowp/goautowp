@@ -3924,6 +3924,7 @@ const (
 	Pictures_SetPictureItemArea_FullMethodName        = "/goautowp.Pictures/SetPictureItemArea"
 	Pictures_SetPictureItemPerspective_FullMethodName = "/goautowp.Pictures/SetPictureItemPerspective"
 	Pictures_SetPictureItemItemID_FullMethodName      = "/goautowp.Pictures/SetPictureItemItemID"
+	Pictures_DeletePictureItem_FullMethodName         = "/goautowp.Pictures/DeletePictureItem"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -3945,6 +3946,7 @@ type PicturesClient interface {
 	SetPictureItemArea(ctx context.Context, in *SetPictureItemAreaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPictureItemPerspective(ctx context.Context, in *SetPictureItemPerspectiveRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPictureItemItemID(ctx context.Context, in *SetPictureItemItemIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeletePictureItem(ctx context.Context, in *DeletePictureItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type picturesClient struct {
@@ -4105,6 +4107,16 @@ func (c *picturesClient) SetPictureItemItemID(ctx context.Context, in *SetPictur
 	return out, nil
 }
 
+func (c *picturesClient) DeletePictureItem(ctx context.Context, in *DeletePictureItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Pictures_DeletePictureItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility
@@ -4124,6 +4136,7 @@ type PicturesServer interface {
 	SetPictureItemArea(context.Context, *SetPictureItemAreaRequest) (*emptypb.Empty, error)
 	SetPictureItemPerspective(context.Context, *SetPictureItemPerspectiveRequest) (*emptypb.Empty, error)
 	SetPictureItemItemID(context.Context, *SetPictureItemItemIDRequest) (*emptypb.Empty, error)
+	DeletePictureItem(context.Context, *DeletePictureItemRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -4175,6 +4188,9 @@ func (UnimplementedPicturesServer) SetPictureItemPerspective(context.Context, *S
 }
 func (UnimplementedPicturesServer) SetPictureItemItemID(context.Context, *SetPictureItemItemIDRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetPictureItemItemID not implemented")
+}
+func (UnimplementedPicturesServer) DeletePictureItem(context.Context, *DeletePictureItemRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeletePictureItem not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 
@@ -4459,6 +4475,24 @@ func _Pictures_SetPictureItemItemID_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_DeletePictureItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeletePictureItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).DeletePictureItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_DeletePictureItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).DeletePictureItem(ctx, req.(*DeletePictureItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -4525,6 +4559,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetPictureItemItemID",
 			Handler:    _Pictures_SetPictureItemItemID_Handler,
+		},
+		{
+			MethodName: "DeletePictureItem",
+			Handler:    _Pictures_DeletePictureItem_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
