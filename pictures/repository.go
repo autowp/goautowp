@@ -782,10 +782,12 @@ func (s *Repository) CreatePictureItem(
 func (s *Repository) updateContentCount(ctx context.Context, pictureID int64) error {
 	_, err := s.db.Update(schema.PictureTable).
 		Set(goqu.Record{
-			schema.PictureTableContentCountColName: s.db.Select(goqu.COUNT(goqu.Star())).Where(
-				schema.PictureItemTablePictureIDCol.Eq(pictureID),
-				schema.PictureItemTableTypeCol.Eq(schema.PictureItemContent),
-			),
+			schema.PictureTableContentCountColName: s.db.Select(goqu.COUNT(goqu.Star())).
+				From(schema.PictureItemTable).
+				Where(
+					schema.PictureItemTablePictureIDCol.Eq(pictureID),
+					schema.PictureItemTableTypeCol.Eq(schema.PictureItemContent),
+				),
 		}).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).
 		Executor().ExecContext(ctx)

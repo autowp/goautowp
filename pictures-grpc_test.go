@@ -409,19 +409,22 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 	itemID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.PictureItemTable).Rows(goqu.Record{
-		schema.PictureItemTablePictureIDColName: pictureID,
-		schema.PictureItemTableItemIDColName:    itemID,
-		schema.PictureItemTableTypeColName:      schema.PictureItemContent,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
 	client := NewPicturesClient(conn)
+
+	_, err = client.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&CreatePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    itemID,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		},
+	)
+	require.NoError(t, err)
 
 	_, err = client.SetPictureItemArea(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -527,19 +530,22 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 	itemID2, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.PictureItemTable).Rows(goqu.Record{
-		schema.PictureItemTablePictureIDColName: pictureID,
-		schema.PictureItemTableItemIDColName:    itemID1,
-		schema.PictureItemTableTypeColName:      schema.PictureItemContent,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
 	client := NewPicturesClient(conn)
+
+	_, err = client.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&CreatePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    itemID1,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		},
+	)
+	require.NoError(t, err)
 
 	_, err = client.SetPictureItemItemID(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
