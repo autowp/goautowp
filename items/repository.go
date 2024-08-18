@@ -368,7 +368,7 @@ func (s *Repository) applyItem( //nolint:maintidx
 		sqSelect = sqSelect.Where(aliasIDCol.Eq(options.ItemIDExpr))
 	}
 
-	if options.TypeID != nil && len(options.TypeID) > 0 {
+	if len(options.TypeID) > 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableItemTypeIDColName).Eq(options.TypeID))
 	}
 

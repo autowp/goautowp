@@ -1456,7 +1456,7 @@ func (s *Storage) ListUnlinkedObjects(
 				).
 				ScanValContext(ctx, &id)
 			if err != nil {
-				logrus.Errorf(err.Error())
+				logrus.Error(err.Error())
 
 				return false
 			}
@@ -1486,7 +1486,7 @@ func (s *Storage) ListUnlinkedObjects(
 					Limit(maxSameSizeObjectsToFetch).
 					ScanValsContext(ctx, &sameSizeKeys)
 				if err != nil {
-					logrus.Errorf(err.Error())
+					logrus.Error(err.Error())
 
 					return false
 				}
