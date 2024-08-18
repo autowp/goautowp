@@ -22,7 +22,7 @@ test:
   script:
     - go mod verify
     - go mod download
-    - golangci-lint run ./... -v --timeout 10m
+    - golangci-lint run ./... -v --timeout 1m
 
     - waitforit -address=tcp://docker:2375 -timeout=30
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u="$CI_REGISTRY_USER" --password-stdin
