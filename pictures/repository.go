@@ -13,11 +13,15 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
-var errIsAllowedForPictureItemContentOnly = errors.New("is allowed only for picture-item-content")
+var (
+	errIsAllowedForPictureItemContentOnly = errors.New("is allowed only for picture-item-content")
+	errCombinationNotAllowed              = errors.New("combination not allowed")
+)
 
-const IdentityLength = 6
-
-const ModerVoteTemplateMessageMaxLength = 80
+const (
+	IdentityLength                    = 6
+	ModerVoteTemplateMessageMaxLength = 80
+)
 
 type ModerVoteTemplate struct {
 	ID      int64
@@ -615,4 +619,76 @@ func (s *Repository) SetPictureItemPerspective(
 		Executor().ExecContext(ctx)
 
 	return err
+}
+
+func (s *Repository) SetPictureItemItemID(
+	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, dstItemID int64,
+) error {
+	if pictureItemType != schema.PictureItemContent {
+		return errIsAllowedForPictureItemContentOnly
+	}
+
+	isAllowed, err := s.isAllowedTypeByItemID(ctx, dstItemID, pictureItemType)
+	if err != nil {
+		return err
+	}
+
+	if !isAllowed {
+		return errCombinationNotAllowed
+	}
+
+	_, err = s.db.Update(schema.PictureItemTable).
+		Set(goqu.Record{
+			schema.PictureItemTableItemIDColName: dstItemID,
+		}).
+		Where(
+			schema.PictureItemTablePictureIDCol.Eq(pictureID),
+			schema.PictureItemTableItemIDCol.Eq(itemID),
+			schema.PictureItemTableTypeCol.Eq(pictureItemType),
+		).
+		Executor().ExecContext(ctx)
+
+	return err
+}
+
+func (s *Repository) isAllowedTypeByItemID(
+	ctx context.Context, itemID int64, pictureItemType schema.PictureItemType,
+) (bool, error) {
+	var itemTypeID schema.ItemTableItemTypeID
+
+	success, err := s.db.Select(schema.ItemTableItemTypeIDCol).
+		From(schema.ItemTable).Where(schema.ItemTableIDCol.Eq(itemID)).
+		ScanValContext(ctx, &itemTypeID)
+	if err != nil {
+		return false, err
+	}
+
+	if !success {
+		return false, sql.ErrNoRows
+	}
+
+	return s.isAllowedType(itemTypeID, pictureItemType), nil
+}
+
+func (s *Repository) isAllowedType(itemTypeID schema.ItemTableItemTypeID, pictureItemType schema.PictureItemType) bool {
+	allowed := map[schema.ItemTableItemTypeID][]schema.PictureItemType{
+		schema.ItemTableItemTypeIDBrand:    {schema.PictureItemContent, schema.PictureItemCopyrights},
+		schema.ItemTableItemTypeIDCategory: {schema.PictureItemContent},
+		schema.ItemTableItemTypeIDEngine:   {schema.PictureItemContent},
+		schema.ItemTableItemTypeIDFactory:  {schema.PictureItemContent},
+		schema.ItemTableItemTypeIDVehicle:  {schema.PictureItemContent},
+		schema.ItemTableItemTypeIDTwins:    {schema.PictureItemContent},
+		schema.ItemTableItemTypeIDMuseum:   {schema.PictureItemContent},
+		schema.ItemTableItemTypeIDPerson: {
+			schema.PictureItemContent, schema.PictureItemAuthor, schema.PictureItemCopyrights,
+		},
+		schema.ItemTableItemTypeIDCopyright: {schema.PictureItemCopyrights},
+	}
+
+	pictureItemTypes, ok := allowed[itemTypeID]
+	if !ok {
+		return false
+	}
+
+	return util.Contains(pictureItemTypes, pictureItemType)
 }

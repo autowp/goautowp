@@ -18,17 +18,7 @@ func Close(c io.Closer) {
 	}
 }
 
-func Contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-
-	return false
-}
-
-func ContainsInt32(s []int32, e int32) bool {
+func Contains[T constraints.Ordered](s []T, e T) bool {
 	for _, a := range s {
 		if a == e {
 			return true

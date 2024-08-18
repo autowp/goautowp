@@ -19,7 +19,7 @@ func (s *InArray) IsValidString(value string) ([]string, error) {
 
 // IsValidInt32 IsValidInt32.
 func (s *InArray) IsValidInt32(value int32) ([]string, error) {
-	if !util.ContainsInt32(s.HaystackInt32, value) {
+	if !util.Contains(s.HaystackInt32, value) {
 		return []string{NotInArray}, nil
 	}
 

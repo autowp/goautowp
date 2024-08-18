@@ -473,3 +473,82 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestPictureItemSetPictureItemItemID(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	pictureID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-1-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      ItemType_ITEM_TYPE_VEHICLE,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-1-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID1, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	res, err = goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
+		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-2-%d", random.Int()),
+		schema.ItemTableIsGroupColName:         0,
+		schema.ItemTableItemTypeIDColName:      ItemType_ITEM_TYPE_VEHICLE,
+		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-2-%d", random.Int()),
+		schema.ItemTableBodyColName:            "",
+		schema.ItemTableProducedExactlyColName: 0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID2, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = goquDB.Insert(schema.PictureItemTable).Rows(goqu.Record{
+		schema.PictureItemTablePictureIDColName: pictureID,
+		schema.PictureItemTableItemIDColName:    itemID1,
+		schema.PictureItemTableTypeColName:      schema.PictureItemContent,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	_, err = client.SetPictureItemItemID(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureItemItemIDRequest{
+			PictureId: pictureID,
+			ItemId:    itemID1,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+			NewItemId: itemID2,
+		},
+	)
+	require.NoError(t, err)
+}

@@ -761,3 +761,44 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *PicturesGRPCServer) SetPictureItemItemID(
+	ctx context.Context, in *SetPictureItemItemIDRequest,
+) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "picture", "move"); !res {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	pictureItemType := convertPictureItemType(in.GetType())
+
+	err = s.repository.SetPictureItemItemID(
+		ctx, in.GetPictureId(), in.GetItemId(), pictureItemType, in.GetNewItemId(),
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID: userID,
+		Message: fmt.Sprintf(
+			"Картинка %d перемещена из %d в %d",
+			in.GetPictureId(), in.GetItemId(), in.GetNewItemId(),
+		),
+		Pictures: []int64{in.GetPictureId()},
+		Items:    []int64{in.GetItemId(), in.GetNewItemId()},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
