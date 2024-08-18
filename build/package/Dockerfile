@@ -10,19 +10,17 @@ RUN apt-get update -qqy && \
         ca-certificates \
         gcc \
         git \
-        pkg-config \
-        gcc \
-        git \
         imagemagick \
-        libmagickwand-dev \
         libc-dev \
+        libmagickwand-dev \
+        pkg-config \
         wget \
     && \
     apt-get clean && \
     update-ca-certificates && \
-    wget -q https://go.dev/dl/go1.22.5.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.5.linux-amd64.tar.gz && \
-    rm go1.22.5.linux-amd64.tar.gz
+    wget -q https://go.dev/dl/go1.23.0.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz && \
+    rm go1.23.0.linux-amd64.tar.gz
 
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
 
