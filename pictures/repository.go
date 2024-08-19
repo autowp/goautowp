@@ -624,10 +624,6 @@ func (s *Repository) SetPictureItemPerspective(
 func (s *Repository) SetPictureItemItemID(
 	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, dstItemID int64,
 ) error {
-	if pictureItemType != schema.PictureItemContent {
-		return errIsAllowedForPictureItemContentOnly
-	}
-
 	isAllowed, err := s.isAllowedTypeByItemID(ctx, dstItemID, pictureItemType)
 	if err != nil {
 		return err
@@ -738,10 +734,6 @@ func (s *Repository) DeletePictureItem(
 func (s *Repository) CreatePictureItem(
 	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, perspective int32,
 ) (bool, error) {
-	if pictureItemType != schema.PictureItemContent {
-		return false, errIsAllowedForPictureItemContentOnly
-	}
-
 	isAllowed, err := s.isAllowedTypeByItemID(ctx, itemID, pictureItemType)
 	if err != nil {
 		return false, err
