@@ -38,7 +38,7 @@ func randomHexString(t *testing.T, length int) string {
 	return hex.EncodeToString(randBytes)
 }
 
-func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, filepath string) int64 {
+func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, filepath string) (int64, int) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -64,7 +64,7 @@ func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, 
 	pictureID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	return pictureID
+	return pictureID, imageID
 }
 
 //nolint:unparam

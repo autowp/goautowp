@@ -147,6 +147,7 @@ service Pictures {
   rpc SetPictureItemItemID(SetPictureItemItemIDRequest) returns (google.protobuf.Empty) {}
   rpc DeletePictureItem(DeletePictureItemRequest) returns (google.protobuf.Empty) {}
   rpc CreatePictureItem(CreatePictureItemRequest) returns (google.protobuf.Empty) {}
+  rpc SetPictureCrop(SetPictureCropRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {
@@ -1062,6 +1063,14 @@ message CreatePictureItemRequest {
   int64 item_id = 2;
   PictureItemType type = 3;
   int32 perspective_id = 4;
+}
+
+message SetPictureCropRequest {
+  int64 picture_id = 1;
+  uint32 crop_left = 4;
+  uint32 crop_top = 5;
+  uint32 crop_width = 6;
+  uint32 crop_height = 7;
 }
 
 message DeleteSimilarRequest {

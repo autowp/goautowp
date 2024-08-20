@@ -2,12 +2,15 @@ package goautowp
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
+	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
@@ -881,6 +884,55 @@ func (s *PicturesGRPCServer) CreatePictureItem(
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureCropRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "picture", "crop"); !res {
+		pic, err := s.repository.Picture(ctx, in.GetPictureId())
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, status.Errorf(codes.NotFound, "NotFound")
+			}
+
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userID || pic.Status != schema.PictureStatusInbox {
+			return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+		}
+	}
+
+	err = s.repository.SetPictureCrop(
+		ctx, in.GetPictureId(), sampler.Crop{
+			Left:   int(in.GetCropLeft()),
+			Top:    int(in.GetCropTop()),
+			Width:  int(in.GetCropWidth()),
+			Height: int(in.GetCropHeight()),
+		},
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID:   userID,
+		Message:  "Выделение области на картинке",
+		Pictures: []int64{in.GetPictureId()},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil

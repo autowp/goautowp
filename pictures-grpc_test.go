@@ -168,7 +168,7 @@ func TestModerVote(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -306,7 +306,7 @@ func TestFlopNormalizeAndRepair(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 
 	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
 		schema.PictureTableStatusColName: schema.PictureStatusInbox,
@@ -393,7 +393,7 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
@@ -501,7 +501,7 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
@@ -577,4 +577,68 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+}
+
+func TestPictureCrop(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	_, err = client.SetPictureCrop(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureCropRequest{
+			PictureId:  pictureID,
+			CropLeft:   0,
+			CropTop:    0,
+			CropWidth:  0,
+			CropHeight: 10,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetPictureCrop(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureCropRequest{
+			PictureId:  pictureID,
+			CropLeft:   0,
+			CropTop:    0,
+			CropWidth:  10,
+			CropHeight: 10,
+		},
+	)
+	require.NoError(t, err)
+
+	fmtImg, err := imageStorage.FormattedImage(ctx, imageID, "picture-gallery")
+	require.NoError(t, err)
+
+	require.Equal(t, 10, fmtImg.Width())
+	require.Equal(t, 10, fmtImg.Height())
 }

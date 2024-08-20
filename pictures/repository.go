@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -785,4 +786,13 @@ func (s *Repository) updateContentCount(ctx context.Context, pictureID int64) er
 		Executor().ExecContext(ctx)
 
 	return err
+}
+
+func (s *Repository) SetPictureCrop(ctx context.Context, pictureID int64, area sampler.Crop) error {
+	pic, err := s.Picture(ctx, pictureID)
+	if err != nil {
+		return err
+	}
+
+	return s.imageStorage.SetImageCrop(ctx, int(pic.ImageID), area)
 }
