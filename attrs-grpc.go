@@ -26,7 +26,7 @@ func NewAttrsGRPCServer(repository *attrs.Repository, enforcer *casbin.Enforcer,
 	}
 }
 
-func convertNullTypeID(typeID attrs.NullAttributeTypeID) AttrAttributeType_ID {
+func convertNullTypeID(typeID schema.NullAttributeTypeID) AttrAttributeType_ID {
 	if !typeID.Valid {
 		return AttrAttributeType_UNKNOWN
 	}
@@ -34,30 +34,30 @@ func convertNullTypeID(typeID attrs.NullAttributeTypeID) AttrAttributeType_ID {
 	return convertTypeID(typeID.AttributeTypeID)
 }
 
-func convertTypeID(typeID schema.AttrsTypesID) AttrAttributeType_ID {
+func convertTypeID(typeID schema.AttrsAttributeTypeID) AttrAttributeType_ID {
 	switch typeID {
-	case schema.AttrsTypesIDUnknown:
+	case schema.AttrsAttributeTypeIDUnknown:
 		return AttrAttributeType_UNKNOWN
-	case schema.AttrsTypesIDString:
+	case schema.AttrsAttributeTypeIDString:
 		return AttrAttributeType_STRING
-	case schema.AttrsTypesIDInteger:
+	case schema.AttrsAttributeTypeIDInteger:
 		return AttrAttributeType_INTEGER
-	case schema.AttrsTypesIDFloat:
+	case schema.AttrsAttributeTypeIDFloat:
 		return AttrAttributeType_FLOAT
-	case schema.AttrsTypesIDText:
+	case schema.AttrsAttributeTypeIDText:
 		return AttrAttributeType_TEXT
-	case schema.AttrsTypesIDBoolean:
+	case schema.AttrsAttributeTypeIDBoolean:
 		return AttrAttributeType_BOOLEAN
-	case schema.AttrsTypesIDList:
+	case schema.AttrsAttributeTypeIDList:
 		return AttrAttributeType_LIST
-	case schema.AttrsTypesIDTree:
+	case schema.AttrsAttributeTypeIDTree:
 		return AttrAttributeType_TREE
 	}
 
 	return AttrAttributeType_UNKNOWN
 }
 
-func convertAttribute(row attrs.Attribute) *AttrAttribute {
+func convertAttribute(row schema.AttrsAttributeRow) *AttrAttribute {
 	var parentID int64
 	if row.ParentID.Valid {
 		parentID = row.ParentID.Int64

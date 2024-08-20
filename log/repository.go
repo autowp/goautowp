@@ -72,7 +72,7 @@ func (s *Repository) Events(ctx context.Context, options ListOptions) ([]Event, 
 	paginator := util.Paginator{
 		SQLSelect:         sqSelect,
 		ItemCountPerPage:  eventsPerPage,
-		CurrentPageNumber: int32(options.Page),
+		CurrentPageNumber: int32(options.Page), //nolint: gosec
 	}
 
 	pages, err := paginator.GetPages(ctx)

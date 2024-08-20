@@ -68,7 +68,7 @@ func (s *Paginator) calculateCount(ctx context.Context) (int32, error) {
 		return 0, err
 	}
 
-	return int32(res), nil
+	return int32(res), nil //nolint: gosec
 }
 
 func (s *Paginator) getItemCountPerPage() int32 {

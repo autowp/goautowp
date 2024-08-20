@@ -4,10 +4,7 @@ import "github.com/doug-martin/goqu/v9"
 
 const (
 	ArticlesTableName         = "articles"
-	AttrsAttributesTableName  = "attrs_attributes"
 	AttrsListOptionsTableName = "attrs_list_options"
-	AttrsTypesTableName       = "attrs_types"
-	AttrsUnitsTableName       = "attrs_units"
 
 	AttrsUserValuesTableName          = "attrs_user_values"
 	AttrsUserValuesTableUserIDColName = "user_id"
@@ -22,19 +19,6 @@ const (
 	BrandAliasTableNameColName   = "name"
 
 	CarTypesTableName = "car_types"
-
-	CommentMessageTableName                      = "comment_message"
-	CommentMessageTableIDColName                 = "id"
-	CommentMessageTableParentIDColName           = "parent_id"
-	CommentMessageTableTypeIDColName             = "type_id"
-	CommentMessageTableItemIDColName             = "item_id"
-	CommentMessageTableAuthorIDColName           = "author_id"
-	CommentMessageTableModeratorAttentionColName = "moderator_attention"
-	CommentMessageTableDeletedColName            = "deleted"
-	CommentMessageTableDeletedByColName          = "deleted_by"
-	CommentMessageTableDeleteDateColName         = "delete_date"
-	CommentMessageTableRepliesCountColName       = "replies_count"
-	CommentMessageTableVoteColName               = "vote"
 
 	CommentTopicTableName              = "comment_topic"
 	CommentTopicTableItemIDColName     = "item_id"
@@ -116,31 +100,6 @@ const (
 	ImageTableCropHeightColName = "crop_height"
 	ImageTableS3ColName         = "s3"
 
-	ItemTableName                          = "item"
-	ItemTableNameColName                   = "name"
-	ItemTableCatnameColName                = "catname"
-	ItemTableEngineItemIDColName           = "engine_item_id"
-	ItemTableItemTypeIDColName             = "item_type_id"
-	ItemTableIsConceptColName              = "is_concept"
-	ItemTableIsConceptInheritColName       = "is_concept_inherit"
-	ItemTableSpecIDColName                 = "spec_id"
-	ItemTableIDColName                     = "id"
-	ItemTableFullNameColName               = "full_name"
-	ItemTableLogoIDColName                 = "logo_id"
-	ItemTableBeginYearColName              = "begin_year"
-	ItemTableEndYearColName                = "end_year"
-	ItemTableBeginMonthColName             = "begin_month"
-	ItemTableEndMonthColName               = "end_month"
-	ItemTableBeginModelYearColName         = "begin_model_year"
-	ItemTableEndModelYearColName           = "end_model_year"
-	ItemTableBeginModelYearFractionColName = "begin_model_year_fraction"
-	ItemTableEndModelYearFractionColName   = "end_model_year_fraction"
-	ItemTableTodayColName                  = "today"
-	ItemTableBodyColName                   = "body"
-	ItemTableIsGroupColName                = "is_group"
-	ItemTableProducedExactlyColName        = "produced_exactly"
-	ItemTableAddDatetimeColName            = "add_datetime"
-
 	ItemPointTableName          = "item_point"
 	ItemPointTableItemIDColName = "item_id"
 	ItemPointTablePointColName  = "point"
@@ -159,13 +118,6 @@ const (
 	ItemLanguageTableNameColName       = "name"
 	ItemLanguageTableTextIDColName     = "text_id"
 	ItemLanguageTableFullTextIDColName = "full_text_id"
-
-	ItemParentTableName             = "item_parent"
-	ItemParentTableParentIDColName  = "parent_id"
-	ItemParentTableItemIDColName    = "item_id"
-	ItemParentTableTypeColName      = "type"
-	ItemParentTableCatnameColName   = "catname"
-	ItemParentTableTimestampColName = "timestamp"
 
 	ItemParentLanguageTableName            = "item_parent_language"
 	ItemParentLanguageTableItemIDColName   = "item_id"
@@ -234,28 +186,6 @@ const (
 	PictureModerVoteTemplateTableReasonColName = "reason"
 	PictureModerVoteTemplateTableVoteColName   = "vote"
 	PictureModerVoteTemplateTableUserIDColName = "user_id"
-
-	PictureTableName                      = "pictures"
-	PictureTableIDColName                 = "id"
-	PictureTableImageIDColName            = "image_id"
-	PictureTableIdentityColName           = "identity"
-	PictureTableIPColName                 = "ip"
-	PictureTableOwnerIDColName            = "owner_id"
-	PictureTableStatusColName             = "status"
-	PictureTableChangeStatusUserIDColName = "change_status_user_id"
-	PictureTableWidthColName              = "width"
-	PictureTableHeightColName             = "height"
-	PictureTableContentCountColName       = "content_count"
-
-	PictureItemTableName                 = "picture_item"
-	PictureItemTablePictureIDColName     = "picture_id"
-	PictureItemTableItemIDColName        = "item_id"
-	PictureItemTableTypeColName          = "type"
-	PictureItemTableCropLeftColName      = "crop_left"
-	PictureItemTableCropTopColName       = "crop_top"
-	PictureItemTableCropWidthColName     = "crop_width"
-	PictureItemTableCropHeightColName    = "crop_height"
-	PictureItemTablePerspectiveIDColName = "perspective_id"
 
 	PictureViewTableName             = "picture_view"
 	PictureViewTablePictureIDColName = "picture_id"
@@ -347,32 +277,12 @@ var (
 	ArticlesTableDescriptionCol     = ArticlesTable.Col("description")
 	ArticlesTableHTMLIDCol          = ArticlesTable.Col("html_id")
 
-	AttrsAttributesTable               = goqu.T(AttrsAttributesTableName)
-	AttrsAttributesTableIDCol          = AttrsAttributesTable.Col("id")
-	AttrsAttributesTableNameCol        = AttrsAttributesTable.Col("name")
-	AttrsAttributesTableDescriptionCol = AttrsAttributesTable.Col("description")
-	AttrsAttributesTableTypeIDCol      = AttrsAttributesTable.Col("type_id")
-	AttrsAttributesTableUnitIDCol      = AttrsAttributesTable.Col("unit_id")
-	AttrsAttributesTableMultipleCol    = AttrsAttributesTable.Col("multiple")
-	AttrsAttributesTablePrecisionCol   = AttrsAttributesTable.Col("precision")
-	AttrsAttributesTableParentIDCol    = AttrsAttributesTable.Col("parent_id")
-	AttrsAttributesTablePositionCol    = AttrsAttributesTable.Col("position")
-
 	AttrsListOptionsTable               = goqu.T(AttrsListOptionsTableName)
 	AttrsListOptionsTableIDCol          = AttrsListOptionsTable.Col("id")
 	AttrsListOptionsTableNameCol        = AttrsListOptionsTable.Col("name")
 	AttrsListOptionsTableAttributeIDCol = AttrsListOptionsTable.Col("attribute_id")
 	AttrsListOptionsTableParentIDCol    = AttrsListOptionsTable.Col("parent_id")
 	AttrsListOptionsTablePositionCol    = AttrsListOptionsTable.Col("position")
-
-	AttrsTypesTable        = goqu.T(AttrsTypesTableName)
-	AttrsTypesTableIDCol   = AttrsTypesTable.Col("id")
-	AttrsTypesTableNameCol = AttrsTypesTable.Col("name")
-
-	AttrsUnitsTable        = goqu.T(AttrsUnitsTableName)
-	AttrsUnitsTableIDCol   = AttrsUnitsTable.Col("id")
-	AttrsUnitsTableNameCol = AttrsUnitsTable.Col("name")
-	AttrsUnitsTableAbbrCol = AttrsUnitsTable.Col("abbr")
 
 	AttrsUserValuesTable          = goqu.T(AttrsUserValuesTableName)
 	AttrsUserValuesTableUserIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
@@ -400,19 +310,6 @@ var (
 	CarTypesTableCatnameCol  = CarTypesTable.Col("catname")
 	CarTypesTablePositionCol = CarTypesTable.Col("position")
 	CarTypesTableParentIDCol = CarTypesTable.Col("parent_id")
-
-	CommentMessageTable                      = goqu.T(CommentMessageTableName)
-	CommentMessageTableIDCol                 = CommentMessageTable.Col(CommentMessageTableIDColName)
-	CommentMessageTableTypeIDCol             = CommentMessageTable.Col(CommentMessageTableTypeIDColName)
-	CommentMessageTableItemIDCol             = CommentMessageTable.Col(CommentMessageTableItemIDColName)
-	CommentMessageTableAuthorIDCol           = CommentMessageTable.Col(CommentMessageTableAuthorIDColName)
-	CommentMessageTableDatetimeCol           = CommentMessageTable.Col("datetime")
-	CommentMessageTableVoteCol               = CommentMessageTable.Col(CommentMessageTableVoteColName)
-	CommentMessageTableParentIDCol           = CommentMessageTable.Col(CommentMessageTableParentIDColName)
-	CommentMessageTableMessageCol            = CommentMessageTable.Col("message")
-	CommentMessageTableIPCol                 = CommentMessageTable.Col("ip")
-	CommentMessageTableDeletedCol            = CommentMessageTable.Col(CommentMessageTableDeletedColName)
-	CommentMessageTableModeratorAttentionCol = CommentMessageTable.Col(CommentMessageTableModeratorAttentionColName)
 
 	CommentTopicTable              = goqu.T(CommentTopicTableName)
 	CommentTopicTableItemIDCol     = CommentTopicTable.Col("item_id")
@@ -504,12 +401,6 @@ var (
 	ItemLanguageTableTextIDCol     = ItemLanguageTable.Col(ItemLanguageTableTextIDColName)
 	ItemLanguageTableFullTextIDCol = ItemLanguageTable.Col(ItemLanguageTableFullTextIDColName)
 
-	ItemParentTable            = goqu.T(ItemParentTableName)
-	ItemParentTableParentIDCol = ItemParentTable.Col(ItemParentTableParentIDColName)
-	ItemParentTableItemIDCol   = ItemParentTable.Col(ItemParentTableItemIDColName)
-	ItemParentTableTypeCol     = ItemParentTable.Col(ItemParentTableTypeColName)
-	ItemParentTableCatnameCol  = ItemParentTable.Col(ItemParentTableCatnameColName)
-
 	ItemParentCacheTable            = goqu.T(ItemParentCacheTableName)
 	ItemParentCacheTableItemIDCol   = ItemParentCacheTable.Col(ItemParentCacheTableItemIDColName)
 	ItemParentCacheTableParentIDCol = ItemParentCacheTable.Col(ItemParentCacheTableParentIDColName)
@@ -523,20 +414,6 @@ var (
 	ItemPointTable          = goqu.T(ItemPointTableName)
 	ItemPointTablePointCol  = ItemPointTable.Col(ItemPointTablePointColName)
 	ItemPointTableItemIDCol = ItemPointTable.Col(ItemPointTableItemIDColName)
-
-	ItemTable                  = goqu.T(ItemTableName)
-	ItemTableIDCol             = ItemTable.Col(ItemTableIDColName)
-	ItemTableBodyCol           = ItemTable.Col(ItemTableBodyColName)
-	ItemTableSpecIDCol         = ItemTable.Col(ItemTableSpecIDColName)
-	ItemTableCatnameCol        = ItemTable.Col(ItemTableCatnameColName)
-	ItemTableNameCol           = ItemTable.Col(ItemTableNameColName)
-	ItemTableBeginYearCol      = ItemTable.Col(ItemTableBeginYearColName)
-	ItemTableEndYearCol        = ItemTable.Col(ItemTableEndYearColName)
-	ItemTableBeginModelYearCol = ItemTable.Col(ItemTableBeginModelYearColName)
-	ItemTableEndModelYearCol   = ItemTable.Col(ItemTableEndModelYearColName)
-	ItemTableIsGroupCol        = ItemTable.Col(ItemTableIsGroupColName)
-	ItemTableItemTypeIDCol     = ItemTable.Col(ItemTableItemTypeIDColName)
-	ItemTableTodayCol          = ItemTable.Col(ItemTableTodayColName)
 
 	LinksTable          = goqu.T(LinksTableName)
 	LinksTableIDCol     = LinksTable.Col("id")
@@ -611,25 +488,6 @@ var (
 	PicturesModerVotesTable             = goqu.T(PicturesModerVotesTableName)
 	PicturesModerVotesTableUserIDCol    = PicturesModerVotesTable.Col(PicturesModerVotesTableUserIDColName)
 	PicturesModerVotesTablePictureIDCol = PicturesModerVotesTable.Col(PicturesModerVotesTablePictureIDColName)
-
-	PictureTable                      = goqu.T(PictureTableName)
-	PictureTableIDCol                 = PictureTable.Col(PictureTableIDColName)
-	PictureTableIdentityCol           = PictureTable.Col(PictureTableIdentityColName)
-	PictureTableOwnerIDCol            = PictureTable.Col(PictureTableOwnerIDColName)
-	PictureTableStatusCol             = PictureTable.Col(PictureTableStatusColName)
-	PictureTableImageIDCol            = PictureTable.Col(PictureTableImageIDColName)
-	PictureTableChangeStatusUserIDCol = PictureTable.Col(PictureTableChangeStatusUserIDColName)
-	PictureTableWidthCol              = PictureTable.Col(PictureTableWidthColName)
-	PictureTableHeightCol             = PictureTable.Col(PictureTableHeightColName)
-
-	PictureItemTable              = goqu.T(PictureItemTableName)
-	PictureItemTablePictureIDCol  = PictureItemTable.Col(PictureItemTablePictureIDColName)
-	PictureItemTableItemIDCol     = PictureItemTable.Col(PictureItemTableItemIDColName)
-	PictureItemTableTypeCol       = PictureItemTable.Col(PictureItemTableTypeColName)
-	PictureItemTableCropLeftCol   = PictureItemTable.Col(PictureItemTableCropLeftColName)
-	PictureItemTableCropTopCol    = PictureItemTable.Col(PictureItemTableCropTopColName)
-	PictureItemTableCropWidthCol  = PictureItemTable.Col(PictureItemTableCropWidthColName)
-	PictureItemTableCropHeightCol = PictureItemTable.Col(PictureItemTableCropHeightColName)
 
 	PictureViewTable             = goqu.T(PictureViewTableName)
 	PictureViewTablePictureIDCol = PictureViewTable.Col(PictureViewTablePictureIDColName)

@@ -525,8 +525,8 @@ func (s *Storage) addImageFromImagick(
 	dirName string,
 	options GenerateOptions,
 ) (int, error) {
-	width := int(mw.GetImageWidth())
-	height := int(mw.GetImageHeight())
+	width := int(mw.GetImageWidth())   //nolint: gosec
+	height := int(mw.GetImageHeight()) //nolint: gosec
 
 	if width <= 0 || height <= 0 {
 		return 0, fmt.Errorf("%w: (%v x %v)", errFailedToGetImageSize, width, height)

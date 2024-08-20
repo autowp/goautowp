@@ -96,7 +96,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 
 	return &APITopBrandsList{
 		Brands: brands,
-		Total:  int32(cache.Total),
+		Total:  int32(cache.Total), //nolint: gosec
 	}, nil
 }
 
@@ -204,7 +204,7 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 
 	return &APITopTwinsBrandsList{
 		Items: is,
-		Count: int32(twinsData.Count),
+		Count: int32(twinsData.Count), //nolint: gosec
 	}, nil
 }
 
@@ -1038,38 +1038,38 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		Values: []*StatsValue{
 			{
 				Name:  "moder/statistics/photos-with-copyrights",
-				Total: int32(totalPictures),
-				Value: int32(picturesWithCopyrights),
+				Total: int32(totalPictures),          //nolint: gosec
+				Value: int32(picturesWithCopyrights), //nolint: gosec
 			},
 			{
 				Name:  "moder/statistics/vehicles-with-4-or-more-photos",
-				Total: int32(totalCars),
+				Total: int32(totalCars), //nolint: gosec
 				Value: carsWith4OrMorePictures,
 			},
 			{
 				Name:  "moder/statistics/specifications-values",
-				Total: int32(totalCars) * totalCarAttrs,
+				Total: int32(totalCars) * totalCarAttrs, //nolint: gosec
 				Value: carAttrsValues,
 			},
 			{
 				Name:  "moder/statistics/brand-logos",
-				Total: int32(totalBrands),
-				Value: int32(brandsWithLogo),
+				Total: int32(totalBrands),    //nolint: gosec
+				Value: int32(brandsWithLogo), //nolint: gosec
 			},
 			{
 				Name:  "moder/statistics/from-years",
-				Total: int32(totalCars),
-				Value: int32(itemsWithBeginYear),
+				Total: int32(totalCars),          //nolint: gosec
+				Value: int32(itemsWithBeginYear), //nolint: gosec
 			},
 			{
 				Name:  "moder/statistics/from-and-to-years",
-				Total: int32(totalCars),
-				Value: int32(itemsWithBeginAndEndYears),
+				Total: int32(totalCars),                 //nolint: gosec
+				Value: int32(itemsWithBeginAndEndYears), //nolint: gosec
 			},
 			{
 				Name:  "moder/statistics/from-and-to-years-and-months",
-				Total: int32(totalCars),
-				Value: int32(itemsWithBeginAndEndYearsAndMonths),
+				Total: int32(totalCars),                          //nolint: gosec
+				Value: int32(itemsWithBeginAndEndYearsAndMonths), //nolint: gosec
 			},
 		},
 	}, nil

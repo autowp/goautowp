@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -53,20 +52,6 @@ type RatingFan struct {
 type GetVotesResult struct {
 	PositiveVotes []users.DBUser
 	NegativeVotes []users.DBUser
-}
-
-type CommentMessage struct {
-	ID                 int64                                   `db:"id"`
-	TypeID             schema.CommentMessageType               `db:"type_id"`
-	ItemID             int64                                   `db:"item_id"`
-	ParentID           sql.NullInt64                           `db:"parent_id"`
-	CreatedAt          time.Time                               `db:"datetime"`
-	Deleted            bool                                    `db:"deleted"`
-	ModeratorAttention schema.CommentMessageModeratorAttention `db:"moderator_attention"`
-	AuthorID           sql.NullInt64                           `db:"author_id"`
-	IP                 net.IP                                  `db:"ip"`
-	Message            string                                  `db:"message"`
-	Vote               int32                                   `db:"vote"`
 }
 
 type Request struct {
@@ -1614,8 +1599,8 @@ func (s *Repository) columns(fetchMessage bool, fetchVote bool, fetchIP bool) []
 
 func (s *Repository) Message(
 	ctx context.Context, messageID int64, fetchMessage bool, fetchVote bool, canViewIP bool,
-) (*CommentMessage, error) {
-	row := CommentMessage{}
+) (*schema.CommentMessageRow, error) {
+	row := schema.CommentMessageRow{}
 
 	columns := s.columns(fetchMessage, fetchVote, canViewIP)
 

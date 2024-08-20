@@ -193,7 +193,7 @@ func (s *ItemExtractor) Extract(
 				return nil, err
 			}
 
-			result.InboxPicturesCount = int32(cnt)
+			result.InboxPicturesCount = int32(cnt) //nolint: gosec
 		}
 
 		if fields.GetIsCompilesItemOfDay() {

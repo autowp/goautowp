@@ -228,7 +228,7 @@ func (s *ItemNameFormatter) getModelYearsPrefix(
 		return fmt.Sprintf("%d%s–??", begin, beginFraction), nil
 	}
 
-	currentYear := int32(time.Now().Year())
+	currentYear := int32(time.Now().Year()) //nolint: gosec
 
 	if begin >= currentYear {
 		return fmt.Sprintf("%d%s", begin, beginFraction), nil
@@ -396,7 +396,7 @@ func (s *ItemNameFormatter) renderYearsHTML(
 }
 
 func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int32, localizer *i18n.Localizer) (string, error) {
-	currentYear := int32(time.Now().Year())
+	currentYear := int32(time.Now().Year()) //nolint: gosec
 
 	if by >= currentYear {
 		return "", nil

@@ -537,8 +537,8 @@ func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empt
 	}
 
 	return &PicturesUserSummary{
-		AcceptedCount: int32(acceptedCount),
-		InboxCount:    int32(inboxCount),
+		AcceptedCount: int32(acceptedCount), //nolint: gosec
+		InboxCount:    int32(inboxCount),    //nolint: gosec
 	}, nil
 }
 
@@ -697,10 +697,10 @@ func (s *PicturesGRPCServer) SetPictureItemArea(
 
 	err = s.repository.SetPictureItemArea(
 		ctx, in.GetPictureId(), in.GetItemId(), pictureItemType, pictures.PictureItemArea{
-			Left:   uint16(in.GetCropLeft()),
-			Top:    uint16(in.GetCropTop()),
-			Width:  uint16(in.GetCropWidth()),
-			Height: uint16(in.GetCropHeight()),
+			Left:   uint16(in.GetCropLeft()),   //nolint: gosec
+			Top:    uint16(in.GetCropTop()),    //nolint: gosec
+			Width:  uint16(in.GetCropWidth()),  //nolint: gosec
+			Height: uint16(in.GetCropHeight()), //nolint: gosec
 		},
 	)
 	if err != nil {

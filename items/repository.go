@@ -73,18 +73,6 @@ type Repository struct {
 	mostsMinCarsCount int
 }
 
-type itemRow struct {
-	ID             int64                      `db:"id"`
-	Name           string                     `db:"name"`
-	ItemType       schema.ItemTableItemTypeID `db:"item_type_id"`
-	Body           string                     `db:"body"`
-	BeginYear      sql.NullInt32              `db:"begin_year"`
-	EndYear        sql.NullInt32              `db:"end_year"`
-	BeginModelYear sql.NullInt32              `db:"begin_model_year"`
-	EndModelYear   sql.NullInt32              `db:"end_model_year"`
-	SpecID         sql.NullInt32              `db:"spec_id"`
-}
-
 type Item struct {
 	ID                         int64
 	Catname                    string
@@ -823,8 +811,8 @@ func (s *Repository) List( //nolint:maintidx
 	if options.Limit > 0 {
 		paginator := util.Paginator{
 			SQLSelect:         sqSelect,
-			ItemCountPerPage:  int32(options.Limit),
-			CurrentPageNumber: int32(options.Page),
+			ItemCountPerPage:  int32(options.Limit), //nolint: gosec
+			CurrentPageNumber: int32(options.Page),  //nolint: gosec
 		}
 
 		if pagination {
@@ -1394,7 +1382,10 @@ func (s *Repository) collectParentInfo(ctx context.Context, id int64, diff int64
 	result := make(map[int64]parentInfo, 0)
 
 	for rows.Next() {
-		var parentID, typeID int64
+		var (
+			parentID int64
+			typeID   schema.ItemParentType
+		)
 
 		err = rows.Scan(&parentID, &typeID)
 		if err != nil {
@@ -1692,8 +1683,8 @@ func (s *Repository) SetItemParentLanguage(
 	}
 
 	if len(newName) == 0 {
-		parentRow := itemRow{}
-		itmRow := itemRow{}
+		parentRow := schema.ItemRow{}
+		itmRow := schema.ItemRow{}
 
 		success, err = s.db.Select(
 			schema.ItemTableIDCol, schema.ItemTableNameCol, schema.ItemTableBodyCol, schema.ItemTableSpecIDCol,
@@ -1763,7 +1754,7 @@ func (s *Repository) SetItemParentLanguage(
 }
 
 func (s *Repository) extractName(
-	ctx context.Context, parentRow itemRow, vehicleRow itemRow, language string,
+	ctx context.Context, parentRow schema.ItemRow, vehicleRow schema.ItemRow, language string,
 ) (string, error) {
 	langName, err := s.getName(ctx, vehicleRow.ID, language)
 	if err != nil {

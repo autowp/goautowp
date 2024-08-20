@@ -118,7 +118,7 @@ func reverseConvertModeratorAttention(value ModeratorAttention) (schema.CommentM
 }
 
 func extractMessage(
-	ctx context.Context, row *comments.CommentMessage, repository *comments.Repository,
+	ctx context.Context, row *schema.CommentMessageRow, repository *comments.Repository,
 	picturesRepository *pictures.Repository, enforcer *casbin.Enforcer, userID int64, role string, canViewIP bool,
 	fields *CommentMessageFields,
 ) (*APICommentsMessage, error) {
@@ -212,7 +212,7 @@ func extractMessage(
 				return nil, err
 			}
 
-			rows := make([]*comments.CommentMessage, 0)
+			rows := make([]*schema.CommentMessageRow, 0)
 
 			err = sqSelect.ScanStructsContext(ctx, &rows)
 			if err != nil {
@@ -769,7 +769,7 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 			return nil, err
 		}
 
-		rows := make([]*comments.CommentMessage, 0)
+		rows := make([]*schema.CommentMessageRow, 0)
 
 		err = sqSelect.ScanStructsContext(ctx, &rows)
 		if err != nil {

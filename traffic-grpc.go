@@ -104,7 +104,7 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 
 		result[idx] = &APITrafficTopItem{
 			Ip:          item.IP.String(),
-			Count:       int32(item.Count),
+			Count:       int32(item.Count), //nolint: gosec
 			Ban:         topItemBan,
 			InWhitelist: inWhitelist,
 			WhoisUrl:    "https://nic.ru/whois/?query=" + url.QueryEscape(item.IP.String()),

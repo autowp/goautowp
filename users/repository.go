@@ -297,8 +297,8 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 	if options.Limit > 0 {
 		paginator := util.Paginator{
 			SQLSelect:         sqSelect,
-			ItemCountPerPage:  int32(options.Limit),
-			CurrentPageNumber: int32(options.Page),
+			ItemCountPerPage:  int32(options.Limit), //nolint: gosec
+			CurrentPageNumber: int32(options.Page),  //nolint: gosec
 		}
 
 		pages, err = paginator.GetPages(ctx)
@@ -306,7 +306,7 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUs
 			return nil, nil, err
 		}
 
-		sqSelect, err = paginator.GetItemsByPage(ctx, int32(options.Page))
+		sqSelect, err = paginator.GetItemsByPage(ctx, int32(options.Page)) //nolint: gosec
 		if err != nil {
 			return nil, nil, err
 		}

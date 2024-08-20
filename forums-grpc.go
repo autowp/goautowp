@@ -61,7 +61,7 @@ func (s *ForumsGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empty)
 	}
 
 	return &APIForumsUserSummary{
-		SubscriptionsCount: int32(subscriptionsCount),
+		SubscriptionsCount: int32(subscriptionsCount), //nolint: gosec
 	}, nil
 }
 

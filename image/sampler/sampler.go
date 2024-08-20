@@ -167,8 +167,8 @@ func (s Sampler) cropImage(mw *imagick.MagickWand, crop Crop, format Format) err
 	cropLeft := crop.Left
 	cropTop := crop.Top
 
-	width := int(mw.GetImageWidth())
-	height := int(mw.GetImageHeight())
+	width := int(mw.GetImageWidth())   //nolint: gosec
+	height := int(mw.GetImageHeight()) //nolint: gosec
 
 	if cropLeft < 0 || cropLeft >= width {
 		return fmt.Errorf("%w: %v", errCropLeftOutOfBounds, cropLeft)
@@ -264,8 +264,8 @@ func (s Sampler) crop(mw *imagick.MagickWand, width int, height int, left int, t
 }
 
 func (s Sampler) cropToWidest(mw *imagick.MagickWand, widestRatio float64) error {
-	srcWidth := int(mw.GetImageWidth())
-	srcHeight := int(mw.GetImageHeight())
+	srcWidth := int(mw.GetImageWidth())   //nolint: gosec
+	srcHeight := int(mw.GetImageHeight()) //nolint: gosec
 
 	srcRatio := float64(srcWidth) / float64(srcHeight)
 
@@ -281,8 +281,8 @@ func (s Sampler) cropToWidest(mw *imagick.MagickWand, widestRatio float64) error
 }
 
 func (s Sampler) cropToHighest(mw *imagick.MagickWand, highestRatio float64) error {
-	srcWidth := int(mw.GetImageWidth())
-	srcHeight := int(mw.GetImageHeight())
+	srcWidth := int(mw.GetImageWidth())   //nolint: gosec
+	srcHeight := int(mw.GetImageHeight()) //nolint: gosec
 
 	srcRatio := float64(srcWidth) / float64(srcHeight)
 
@@ -300,8 +300,8 @@ func (s Sampler) cropToHighest(mw *imagick.MagickWand, highestRatio float64) err
 func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 	fRatio := float64(format.Width()) / float64(format.Height())
 
-	srcWidth := int(mw.GetImageWidth())
-	srcHeight := int(mw.GetImageHeight())
+	srcWidth := int(mw.GetImageWidth())   //nolint: gosec
+	srcHeight := int(mw.GetImageHeight()) //nolint: gosec
 
 	topColor := s.extendTopColor(mw)
 	if topColor != nil {
@@ -379,8 +379,8 @@ func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 func (s Sampler) extendHorizontal(mw *imagick.MagickWand, format Format) error {
 	fRatio := float64(format.Width()) / float64(format.Height())
 
-	srcWidth := int(mw.GetImageWidth())
-	srcHeight := int(mw.GetImageHeight())
+	srcWidth := int(mw.GetImageWidth())   //nolint: gosec
+	srcHeight := int(mw.GetImageHeight()) //nolint: gosec
 
 	leftColor := s.extendLeftColor(mw)
 	if leftColor != nil {
@@ -441,7 +441,7 @@ func (s Sampler) extendHorizontal(mw *imagick.MagickWand, format Format) error {
 			draw.SetFillColor(rightColor)
 			draw.SetStrokeColor(rightColor)
 			draw.Rectangle(
-				float64(int(mw.GetImageWidth())-rightWidth),
+				float64(int(mw.GetImageWidth())-rightWidth), //nolint: gosec
 				0,
 				float64(mw.GetImageWidth()),
 				float64(mw.GetImageHeight()),
@@ -462,7 +462,7 @@ func (s Sampler) extendTopColor(mw *imagick.MagickWand) *imagick.PixelWand {
 }
 
 func (s Sampler) extendBottomColor(mw *imagick.MagickWand) *imagick.PixelWand {
-	iterator := mw.NewPixelRegionIterator(0, int(mw.GetImageHeight())-1, mw.GetImageWidth(), 1)
+	iterator := mw.NewPixelRegionIterator(0, int(mw.GetImageHeight())-1, mw.GetImageWidth(), 1) //nolint: gosec
 	defer iterator.Destroy()
 
 	return s.extendEdgeColor(iterator)
@@ -476,7 +476,7 @@ func (s Sampler) extendLeftColor(mw *imagick.MagickWand) *imagick.PixelWand {
 }
 
 func (s Sampler) extendRightColor(mw *imagick.MagickWand) *imagick.PixelWand {
-	iterator := mw.NewPixelRegionIterator(int(mw.GetImageWidth())-1, 0, 1, mw.GetImageHeight())
+	iterator := mw.NewPixelRegionIterator(int(mw.GetImageWidth())-1, 0, 1, mw.GetImageHeight()) //nolint: gosec
 	defer iterator.Destroy()
 
 	return s.extendEdgeColor(iterator)
@@ -537,8 +537,8 @@ func arraySum(values []float64) float64 {
 }
 
 func (s Sampler) convertByInnerFit(mw *imagick.MagickWand, format Format) error {
-	srcWidth := int(mw.GetImageWidth())
-	srcHeight := int(mw.GetImageHeight())
+	srcWidth := int(mw.GetImageWidth())   //nolint: gosec
+	srcHeight := int(mw.GetImageHeight()) //nolint: gosec
 	srcRatio := float64(srcWidth) / float64(srcHeight)
 
 	formatWidth := format.Width()
@@ -606,8 +606,8 @@ func (s Sampler) convertByInnerFit(mw *imagick.MagickWand, format Format) error 
 }
 
 func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error {
-	srcWidth := int(mw.GetImageWidth())
-	srcHeight := int(mw.GetImageHeight())
+	srcWidth := int(mw.GetImageWidth())   //nolint: gosec
+	srcHeight := int(mw.GetImageHeight()) //nolint: gosec
 	srcRatio := float64(srcWidth) / float64(srcHeight)
 
 	formatWidth := format.Width()
@@ -663,8 +663,8 @@ func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error 
 	}
 
 	// extend by bg-space
-	borderLeft := (formatWidth - int(mw.GetImageWidth())) / 2
-	borderTop := (formatHeight - int(mw.GetImageHeight())) / 2
+	borderLeft := (formatWidth - int(mw.GetImageWidth())) / 2  //nolint: gosec
+	borderTop := (formatHeight - int(mw.GetImageHeight())) / 2 //nolint: gosec
 
 	return mw.ExtentImage(
 		uint(formatWidth),
@@ -675,8 +675,8 @@ func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error 
 }
 
 func (s Sampler) convertByMaximumFit(mw *imagick.MagickWand, format Format) error {
-	srcWidth := int(mw.GetImageWidth())
-	srcHeight := int(mw.GetImageHeight())
+	srcWidth := int(mw.GetImageWidth())   //nolint: gosec
+	srcHeight := int(mw.GetImageHeight()) //nolint: gosec
 	srcRatio := float64(srcWidth) / float64(srcHeight)
 
 	formatWidth := format.Width()
@@ -722,7 +722,7 @@ func (s Sampler) convertByMaximumFit(mw *imagick.MagickWand, format Format) erro
 }
 
 func (s Sampler) convertByWidth(mw *imagick.MagickWand, format Format) error {
-	srcWidth := int(mw.GetImageWidth())
+	srcWidth := int(mw.GetImageWidth()) //nolint: gosec
 	srcRatio := float64(srcWidth) / float64(mw.GetImageHeight())
 
 	widthLess := srcWidth < format.Width()
@@ -738,7 +738,7 @@ func (s Sampler) convertByWidth(mw *imagick.MagickWand, format Format) error {
 }
 
 func (s Sampler) convertByHeight(mw *imagick.MagickWand, format Format) error {
-	srcHeight := int(mw.GetImageHeight())
+	srcHeight := int(mw.GetImageHeight()) //nolint: gosec
 	srcRatio := float64(mw.GetImageWidth()) / float64(srcHeight)
 
 	heightLess := format.Height() > 0 && (srcHeight < format.Height())
