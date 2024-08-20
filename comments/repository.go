@@ -50,8 +50,8 @@ type RatingFan struct {
 }
 
 type GetVotesResult struct {
-	PositiveVotes []users.DBUser
-	NegativeVotes []users.DBUser
+	PositiveVotes []schema.UsersRow
+	NegativeVotes []schema.UsersRow
 }
 
 type Request struct {
@@ -117,12 +117,12 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 
 	defer util.Close(rows)
 
-	positiveVotes := make([]users.DBUser, 0)
-	negativeVotes := make([]users.DBUser, 0)
+	positiveVotes := make([]schema.UsersRow, 0)
+	negativeVotes := make([]schema.UsersRow, 0)
 
 	for rows.Next() {
 		var (
-			rUser users.DBUser
+			rUser schema.UsersRow
 			vote  int
 		)
 

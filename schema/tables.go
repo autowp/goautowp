@@ -160,15 +160,6 @@ const (
 	OfDayTableUserIDColName  = "user_id"
 	OfDayTableDayDateColName = "day_date"
 
-	PersonalMessagesTableName                 = "personal_messages"
-	PersonalMessagesTableAddDatetimeColName   = "add_datetime"
-	PersonalMessagesTableContentsColName      = "contents"
-	PersonalMessagesTableDeletedByFromColName = "deleted_by_from"
-	PersonalMessagesTableDeletedByToColName   = "deleted_by_to"
-	PersonalMessagesTableFromUserIDColName    = "from_user_id"
-	PersonalMessagesTableToUserIDColName      = "to_user_id"
-	PersonalMessagesTableReadenColName        = "readen"
-
 	PerspectivesTableName                   = "perspectives"
 	PerspectivesGroupsTableName             = "perspectives_groups"
 	PerspectivesGroupsPerspectivesTableName = "perspectives_groups_perspectives"
@@ -226,36 +217,6 @@ const (
 	TextstorageTextTableRevisionColName    = "revision"
 
 	UserAccountTableName = "user_account"
-
-	UserTableName                     = "users"
-	UserTableIDColName                = "id"
-	UserTableSpecsVolumeColName       = "specs_volume"
-	UserTableSpecsVolumeValidColName  = "specs_volume_valid"
-	UserTableVotesLeftColName         = "votes_left"
-	UserTableVotesPerDayColName       = "votes_per_day"
-	UserTableLanguageColName          = "language"
-	UserTablePicturesTotalColName     = "pictures_total"
-	UserTableRoleColName              = "role"
-	UserTableDeletedColName           = "deleted"
-	UserTableUUIDColName              = "uuid"
-	UserTableEmailColName             = "e_mail"
-	UserTableEmailToCheckColName      = "email_to_check"
-	UserTableHideEmailColName         = "hide_e_mail"
-	UserTablePasswordColName          = "password"
-	UserTableEmailCheckCodeColName    = "email_check_code"
-	UserTableLastOnlineColName        = "last_online"
-	UserTableTimezoneColName          = "timezone"
-	UserTableLastIPColName            = "last_ip"
-	UserTableRegDateColName           = "reg_date"
-	UserTableLastMessageTimeColName   = "last_message_time"
-	UserTableMessagingIntervalColName = "messaging_interval"
-	UserTableIdentityColName          = "identity"
-	UserTableNameColName              = "name"
-	UserTableSpecsWeightColName       = "specs_weight"
-	UserTableLoginColName             = "login"
-	UserTableForumsMessagesColName    = "forums_messages"
-	UserTableForumsTopicsColName      = "forums_topics"
-	UserTablePicturesAddedColName     = "pictures_added"
 
 	VehicleVehicleTypeTableName                 = "vehicle_vehicle_type"
 	VehicleVehicleTypeTableVehicleTypeIDColName = "vehicle_type_id"
@@ -450,15 +411,6 @@ var (
 	OfDayTableDayDateCol = OfDayTable.Col(OfDayTableDayDateColName)
 	OfDayTableItemIDCol  = OfDayTable.Col(OfDayTableItemIDColName)
 
-	PersonalMessagesTable                 = goqu.T(PersonalMessagesTableName)
-	PersonalMessagesTableIDCol            = PersonalMessagesTable.Col("id")
-	PersonalMessagesTableAddDatetimeCol   = PersonalMessagesTable.Col(PersonalMessagesTableAddDatetimeColName)
-	PersonalMessagesTableDeletedByFromCol = PersonalMessagesTable.Col(PersonalMessagesTableDeletedByFromColName)
-	PersonalMessagesTableDeletedByToCol   = PersonalMessagesTable.Col(PersonalMessagesTableDeletedByToColName)
-	PersonalMessagesTableFromUserIDCol    = PersonalMessagesTable.Col(PersonalMessagesTableFromUserIDColName)
-	PersonalMessagesTableToUserIDCol      = PersonalMessagesTable.Col(PersonalMessagesTableToUserIDColName)
-	PersonalMessagesTableReadenCol        = PersonalMessagesTable.Col(PersonalMessagesTableReadenColName)
-
 	PerspectivesTable            = goqu.T(PerspectivesTableName)
 	PerspectivesTableIDCol       = PerspectivesTable.Col("id")
 	PerspectivesTablePositionCol = PerspectivesTable.Col("position")
@@ -535,33 +487,6 @@ var (
 
 	UserItemSubscribeTable          = goqu.T("user_item_subscribe")
 	UserItemSubscribeTableUserIDCol = UserItemSubscribeTable.Col("user_id")
-
-	UserTable                     = goqu.T(UserTableName)
-	UserTableIDCol                = UserTable.Col(UserTableIDColName)
-	UserTableRoleCol              = UserTable.Col(UserTableRoleColName)
-	UserTableDeletedCol           = UserTable.Col(UserTableDeletedColName)
-	UserTableNameCol              = UserTable.Col(UserTableNameColName)
-	UserTableIdentityCol          = UserTable.Col(UserTableIdentityColName)
-	UserTableLanguageCol          = UserTable.Col(UserTableLanguageColName)
-	UserTablePicturesTotalCol     = UserTable.Col(UserTablePicturesTotalColName)
-	UserTableSpecsVolumeCol       = UserTable.Col(UserTableSpecsVolumeColName)
-	UserTableSpecsVolumeValidCol  = UserTable.Col(UserTableSpecsVolumeValidColName)
-	UserTableVotesLeftCol         = UserTable.Col(UserTableVotesLeftColName)
-	UserTableVotesPerDayCol       = UserTable.Col(UserTableVotesPerDayColName)
-	UserTableUUIDCol              = UserTable.Col(UserTableUUIDColName)
-	UserTableLastOnlineCol        = UserTable.Col(UserTableLastOnlineColName)
-	UserTableLastIPCol            = UserTable.Col(UserTableLastIPColName)
-	UserTableSpecsWeightCol       = UserTable.Col(UserTableSpecsWeightColName)
-	UserTableImgCol               = UserTable.Col("img")
-	UserTableEmailCol             = UserTable.Col(UserTableEmailColName)
-	UserTableEmailToCheckCol      = UserTable.Col(UserTableEmailToCheckColName)
-	UserTableRegDateCol           = UserTable.Col(UserTableRegDateColName)
-	UserTableLastMessageTimeCol   = UserTable.Col(UserTableLastMessageTimeColName)
-	UserTableMessagingIntervalCol = UserTable.Col(UserTableMessagingIntervalColName)
-	UserTableLoginCol             = UserTable.Col(UserTableLoginColName)
-	UserTablePasswordCol          = UserTable.Col(UserTablePasswordColName)
-	UserTableTimezoneCol          = UserTable.Col(UserTableTimezoneColName)
-	UserTablePicturesAddedCol     = UserTable.Col(UserTablePicturesAddedColName)
 
 	VehicleVehicleTypeTable                 = goqu.T(VehicleVehicleTypeTableName)
 	VehicleVehicleTypeTableVehicleTypeIDCol = VehicleVehicleTypeTable.Col(VehicleVehicleTypeTableVehicleTypeIDColName)

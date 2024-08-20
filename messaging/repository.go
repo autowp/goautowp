@@ -32,15 +32,6 @@ type Repository struct {
 	telegramService *telegram.Service
 }
 
-type messageRow struct {
-	ID          int64         `db:"id"`
-	FromUserID  sql.NullInt64 `db:"from_user_id"`
-	ToUserID    int64         `db:"to_user_id"`
-	Readen      bool          `db:"readen"`
-	Contents    string        `db:"contents"`
-	AddDatetime time.Time     `db:"add_datetime"`
-}
-
 type Message struct {
 	ID               int64
 	AuthorID         *int64
@@ -208,7 +199,7 @@ func (s *Repository) markReaden(ids []int64) error {
 	return err
 }
 
-func (s *Repository) markReadenRows(rows []messageRow, userID int64) error {
+func (s *Repository) markReadenRows(rows []schema.PersonalMessageRow, userID int64) error {
 	ids := make([]int64, 0)
 
 	for _, msg := range rows {
@@ -231,7 +222,7 @@ func (s *Repository) getBox(
 		return nil, nil, err
 	}
 
-	var msgs []messageRow
+	var msgs []schema.PersonalMessageRow
 
 	err = ds.ScanStructsContext(ctx, &msgs)
 	if err != nil {
@@ -351,7 +342,7 @@ func (s *Repository) getDialogSelect(userID int64, withUserID int64) *goqu.Selec
 func (s *Repository) prepareList(
 	ctx context.Context,
 	userID int64,
-	rows []messageRow,
+	rows []schema.PersonalMessageRow,
 	options Options,
 ) ([]Message, error) {
 	var err error

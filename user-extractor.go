@@ -8,7 +8,6 @@ import (
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/drexedam/gravatar"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -36,7 +35,7 @@ func NewUserExtractor(
 }
 
 func (s *UserExtractor) Extract(
-	ctx context.Context, row *users.DBUser, fields *UserFields, currentUserID int64, currentUserRole string,
+	ctx context.Context, row *schema.UsersRow, fields *UserFields, currentUserID int64, currentUserRole string,
 ) (*APIUser, error) {
 	longAway := true
 

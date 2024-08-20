@@ -81,29 +81,6 @@ type GetUsersOptions struct {
 	Fields      UserFields
 }
 
-// DBUser DBUser.
-type DBUser struct {
-	ID            int64      `db:"id"`
-	Name          string     `db:"name"`
-	Deleted       bool       `db:"deleted"`
-	Identity      *string    `db:"identity"`
-	LastOnline    *time.Time `db:"last_online"`
-	Role          string     `db:"role"`
-	EMail         *string    `db:"email"`
-	Img           *int       `db:"img"`
-	SpecsWeight   float64    `db:"specs_weight"`
-	SpecsVolume   int64      `db:"specs_volume"`
-	PicturesTotal int64      `db:"pictures_total"`
-	VotesLeft     int64      `db:"votes_left"`
-	VotesPerDay   int64      `db:"votes_per_day"`
-	Language      string     `db:"language"`
-	Timezone      string     `db:"timezone"`
-	RegDate       *time.Time `db:"reg_date"`
-	PicturesAdded int64      `db:"pictures_added"`
-	LastIP        string     `db:"last_ip"`
-	Login         *string    `db:"login"`
-}
-
 // CreateUserOptions CreateUserOptions.
 type CreateUserOptions struct {
 	UserName        string `json:"user_name"`
@@ -154,7 +131,7 @@ func NewRepository(
 	}
 }
 
-func (s *Repository) User(ctx context.Context, options GetUsersOptions) (*DBUser, error) {
+func (s *Repository) User(ctx context.Context, options GetUsersOptions) (*schema.UsersRow, error) {
 	users, _, err := s.Users(ctx, options)
 	if err != nil {
 		return nil, err
@@ -184,12 +161,12 @@ func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int
 	return userID, nil
 }
 
-func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]DBUser, *util.Pages, error) {
+func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]schema.UsersRow, *util.Pages, error) {
 	var err error
 
-	result := make([]DBUser, 0)
+	result := make([]schema.UsersRow, 0)
 
-	var row DBUser
+	var row schema.UsersRow
 	valuePtrs := []interface{}{
 		&row.ID, &row.Name, &row.Deleted, &row.Identity, &row.LastOnline, &row.Role,
 		&row.SpecsWeight, &row.Img, &row.EMail, &row.PicturesTotal, &row.SpecsVolume,

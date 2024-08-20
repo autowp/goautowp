@@ -10,7 +10,6 @@ import (
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/traffic"
-	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"google.golang.org/grpc/codes"
@@ -70,7 +69,7 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 		}
 
 		var (
-			user       *users.DBUser
+			user       *schema.UsersRow
 			topItemBan *APIBanItem
 		)
 
@@ -258,8 +257,8 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 	}, nil
 }
 
-func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*users.DBUser, error) {
-	var userRow users.DBUser
+func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*schema.UsersRow, error) {
+	var userRow schema.UsersRow
 
 	success, err := s.db.Select(
 		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
