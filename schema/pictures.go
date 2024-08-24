@@ -25,6 +25,7 @@ const (
 	PictureTableWidthColName              = "width"
 	PictureTableHeightColName             = "height"
 	PictureTableContentCountColName       = "content_count"
+	PictureTableReplacePictureIDColName   = "replace_picture_id"
 )
 
 var (
@@ -37,6 +38,7 @@ var (
 	PictureTableChangeStatusUserIDCol = PictureTable.Col(PictureTableChangeStatusUserIDColName)
 	PictureTableWidthCol              = PictureTable.Col(PictureTableWidthColName)
 	PictureTableHeightCol             = PictureTable.Col(PictureTableHeightColName)
+	PictureTableReplacePictureIDCol   = PictureTable.Col(PictureTableReplacePictureIDColName)
 )
 
 type PictureRow struct {

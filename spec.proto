@@ -148,6 +148,7 @@ service Pictures {
   rpc DeletePictureItem(DeletePictureItemRequest) returns (google.protobuf.Empty) {}
   rpc CreatePictureItem(CreatePictureItemRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureCrop(SetPictureCropRequest) returns (google.protobuf.Empty) {}
+  rpc ClearReplacePicture(PictureIDRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {

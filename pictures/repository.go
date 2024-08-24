@@ -796,3 +796,19 @@ func (s *Repository) SetPictureCrop(ctx context.Context, pictureID int64, area s
 
 	return s.imageStorage.SetImageCrop(ctx, int(pic.ImageID), area)
 }
+
+func (s *Repository) ClearReplacePicture(ctx context.Context, pictureID int64) (bool, error) {
+	res, err := s.db.Update(schema.PictureTable).
+		Set(goqu.Record{
+			schema.PictureTableReplacePictureIDColName: nil,
+		}).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+
+	return affected > 0, err
+}
