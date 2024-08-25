@@ -766,8 +766,8 @@ func TestSetPicturePoint(t *testing.T) {
 	pic, err = repo.Picture(ctx, pictureID)
 	require.NoError(t, err)
 	require.True(t, pic.Point.Valid)
-	require.InEpsilon(t, float64(10), pic.Point.Point.Lat(), 0.001)
-	require.InEpsilon(t, float64(0), pic.Point.Point.Lng(), 0.001)
+	require.InDelta(t, float64(10), pic.Point.Point.Lat(), 0.001)
+	require.InDelta(t, float64(0), pic.Point.Point.Lng(), 0.001)
 
 	_, err = client.SetPicturePoint(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -784,8 +784,8 @@ func TestSetPicturePoint(t *testing.T) {
 	pic, err = repo.Picture(ctx, pictureID)
 	require.NoError(t, err)
 	require.True(t, pic.Point.Valid)
-	require.InEpsilon(t, float64(0), pic.Point.Point.Lat(), 0.001)
-	require.InEpsilon(t, float64(10), pic.Point.Point.Lng(), 0.001)
+	require.InDelta(t, float64(0), pic.Point.Point.Lat(), 0.001)
+	require.InDelta(t, float64(10), pic.Point.Point.Lng(), 0.001)
 
 	_, err = client.SetPicturePoint(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -802,8 +802,8 @@ func TestSetPicturePoint(t *testing.T) {
 	pic, err = repo.Picture(ctx, pictureID)
 	require.NoError(t, err)
 	require.True(t, pic.Point.Valid)
-	require.InEpsilon(t, float64(-10), pic.Point.Point.Lat(), 0.001)
-	require.InEpsilon(t, float64(10), pic.Point.Point.Lng(), 0.001)
+	require.InDelta(t, float64(-10), pic.Point.Point.Lat(), 0.001)
+	require.InDelta(t, float64(10), pic.Point.Point.Lng(), 0.001)
 
 	_, err = client.SetPicturePoint(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
