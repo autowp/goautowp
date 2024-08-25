@@ -58,12 +58,6 @@ const (
 	DfHashTableHashColName      = "hash"
 	DfHashTablePictureIDColName = "picture_id"
 
-	FormattedImageTableName                    = "formated_image"
-	FormattedImageTableStatusColName           = "status"
-	FormattedImageTableImageIDColName          = "image_id"
-	FormattedImageTableFormatColName           = "format"
-	FormattedImageTableFormattedImageIDColName = "formated_image_id"
-
 	ForumsThemesTableName            = "forums_themes"
 	ForumsThemesTableTopicsColName   = "topics"
 	ForumsThemesTableMessagesColName = "messages"
@@ -81,24 +75,6 @@ const (
 	ForumsTopicsTableViewsColName       = "views"
 
 	HtmlsTableName = "htmls"
-
-	ImageDirTableName         = "image_dir"
-	ImageDirTableCountColName = "count"
-	ImageDirTableDirColName   = "dir"
-
-	ImageTableName              = "image"
-	ImageTableIDColName         = "id"
-	ImageTableFilepathColName   = "filepath"
-	ImageTableFilesizeColName   = "filesize"
-	ImageTableWidthColName      = "width"
-	ImageTableHeightColName     = "height"
-	ImageTableDirColName        = "dir"
-	ImageTableDateAddColName    = "date_add"
-	ImageTableCropLeftColName   = "crop_left"
-	ImageTableCropTopColName    = "crop_top"
-	ImageTableCropWidthColName  = "crop_width"
-	ImageTableCropHeightColName = "crop_height"
-	ImageTableS3ColName         = "s3"
 
 	ItemPointTableName          = "item_point"
 	ItemPointTableItemIDColName = "item_id"
@@ -308,12 +284,6 @@ var (
 	DfHashTableHashCol      = DfHashTable.Col(DfHashTableHashColName)
 	DfHashTablePictureIDCol = DfHashTable.Col(DfHashTablePictureIDColName)
 
-	FormattedImageTable                    = goqu.T(FormattedImageTableName)
-	FormattedImageTableStatusCol           = FormattedImageTable.Col(FormattedImageTableStatusColName)
-	FormattedImageTableImageIDCol          = FormattedImageTable.Col(FormattedImageTableImageIDColName)
-	FormattedImageTableFormatCol           = FormattedImageTable.Col(FormattedImageTableFormatColName)
-	FormattedImageTableFormattedImageIDCol = FormattedImageTable.Col(FormattedImageTableFormattedImageIDColName)
-
 	ForumsThemesTable                 = goqu.T(ForumsThemesTableName)
 	ForumsThemesTableIDCol            = ForumsThemesTable.Col("id")
 	ForumsThemesTableNameCol          = ForumsThemesTable.Col("name")
@@ -338,22 +308,6 @@ var (
 	ForumsTopicsTableAuthorIDCol    = ForumsTopicsTable.Col(ForumsTopicsTableAuthorIDColName)
 	ForumsTopicsTableAuthorIPCol    = ForumsTopicsTable.Col(ForumsTopicsTableAuthorIPColName)
 	ForumsTopicsTableViewsCol       = ForumsTopicsTable.Col(ForumsTopicsTableViewsColName)
-
-	ImageTable              = goqu.T(ImageTableName)
-	ImageTableIDCol         = ImageTable.Col(ImageTableIDColName)
-	ImageTableWidthCol      = ImageTable.Col(ImageTableWidthColName)
-	ImageTableHeightCol     = ImageTable.Col(ImageTableHeightColName)
-	ImageTableFilesizeCol   = ImageTable.Col(ImageTableFilesizeColName)
-	ImageTableFilepathCol   = ImageTable.Col(ImageTableFilepathColName)
-	ImageTableDirCol        = ImageTable.Col(ImageTableDirColName)
-	ImageTableCropLeftCol   = ImageTable.Col(ImageTableCropLeftColName)
-	ImageTableCropTopCol    = ImageTable.Col(ImageTableCropTopColName)
-	ImageTableCropWidthCol  = ImageTable.Col(ImageTableCropWidthColName)
-	ImageTableCropHeightCol = ImageTable.Col(ImageTableCropHeightColName)
-
-	ImageDirTable         = goqu.T(ImageDirTableName)
-	ImageDirTableCountCol = ImageDirTable.Col(ImageDirTableCountColName)
-	ImageDirTableDirCol   = ImageDirTable.Col(ImageDirTableDirColName)
 
 	ItemLanguageTable              = goqu.T(ItemLanguageTableName)
 	ItemLanguageTableItemIDCol     = ItemLanguageTable.Col(ItemLanguageTableItemIDColName)

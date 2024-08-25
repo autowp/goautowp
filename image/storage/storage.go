@@ -83,26 +83,6 @@ type Storage struct {
 	sampler               *sampler.Sampler
 }
 
-type imageRow struct {
-	ID         int    `db:"id"`
-	Width      int    `db:"width"`
-	Height     int    `db:"height"`
-	Filesize   int    `db:"filesize"`
-	Filepath   string `db:"filepath"`
-	Dir        string `db:"dir"`
-	CropLeft   int    `db:"crop_left"`
-	CropTop    int    `db:"crop_top"`
-	CropWidth  int    `db:"crop_width"`
-	CropHeight int    `db:"crop_height"`
-}
-
-type formattedImageRow struct {
-	ImageID          int           `db:"image_id"`
-	Format           string        `db:"format"`
-	FormattedImageID sql.NullInt32 `db:"formated_image_id"`
-	Status           int           `db:"status"`
-}
-
 type FlushOptions struct {
 	Image  int
 	Format string
@@ -213,7 +193,7 @@ func (s *Storage) populateSrc(img *Image) error {
 }
 
 func (s *Storage) FormattedImage(ctx context.Context, id int, formatName string) (*Image, error) {
-	var row imageRow
+	var row schema.ImageRow
 
 	success, err := s.db.Select(
 		schema.ImageTableIDCol, schema.ImageTableWidthCol, schema.ImageTableHeightCol, schema.ImageTableFilesizeCol,
@@ -276,7 +256,7 @@ func (s *Storage) s3Client() *s3.S3 {
 	return svc
 }
 
-func getCropSuffix(i imageRow) string {
+func getCropSuffix(i schema.ImageRow) string {
 	result := ""
 
 	if i.CropWidth <= 0 || i.CropHeight <= 0 {
@@ -302,7 +282,7 @@ func fileNameWithoutExtension(fileName string) string {
 
 func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName string) (int, error) {
 	// find source image
-	var iRow imageRow
+	var iRow schema.ImageRow
 
 	success, err := s.db.Select(
 		schema.ImageTableIDCol,
@@ -379,7 +359,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 
 		var (
 			done  = false
-			fiRow formattedImageRow
+			fiRow schema.FormattedImageRow
 		)
 
 		for i := 0; i < maxInsertAttempts && !done; i++ {
@@ -417,7 +397,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 		}
 
 		if !fiRow.FormattedImageID.Valid {
-			return 0, errFailedToFormatImage
+			return 0, fmt.Errorf("doFormatImage(%d, %s): %w", imageID, formatName, errFailedToFormatImage)
 		}
 
 		return int(fiRow.FormattedImageID.Int32), nil
@@ -759,7 +739,7 @@ func imageFormatContentType(format string) (string, error) {
 }
 
 func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
-	var row imageRow
+	var row schema.ImageRow
 
 	success, err := s.db.Select(schema.ImageTableIDCol, schema.ImageTableDirCol, schema.ImageTableFilepathCol).
 		From(schema.ImageTable).
@@ -874,7 +854,7 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 }
 
 func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options GenerateOptions) error {
-	var img imageRow
+	var img schema.ImageRow
 
 	success, err := s.db.Select(schema.ImageTableIDCol, schema.ImageTableDirCol, schema.ImageTableFilepathCol).
 		From(schema.ImageTable).
@@ -1073,7 +1053,7 @@ func (s *Storage) AddImageFromBlob(
 }
 
 func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback func(*imagick.MagickWand) error) error {
-	var img imageRow
+	var img schema.ImageRow
 
 	success, err := s.db.Select(schema.ImageTableDirCol, schema.ImageTableFilepathCol).
 		From(schema.ImageTable).
