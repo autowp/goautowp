@@ -842,9 +842,18 @@ func (s *Repository) UpdatePicture(ctx context.Context, pictureID int64, name st
 				String: name,
 				Valid:  len(name) > 0,
 			},
-			schema.PictureTableTakenYearCol:  taken.Year(),
-			schema.PictureTableTakenMonthCol: taken.Month(),
-			schema.PictureTableTakenDayCol:   taken.Day(),
+			schema.PictureTableTakenYearCol: sql.NullInt16{
+				Int16: int16(taken.Year()),
+				Valid: taken.Year() > 0,
+			},
+			schema.PictureTableTakenMonthCol: sql.NullInt16{
+				Int16: int16(taken.Month()),
+				Valid: taken.Month() > 0,
+			},
+			schema.PictureTableTakenDayCol: sql.NullInt16{
+				Int16: int16(taken.Day()),
+				Valid: taken.Day() > 0,
+			},
 		}).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).
 		Executor().ExecContext(ctx)
