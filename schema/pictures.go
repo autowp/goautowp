@@ -26,6 +26,7 @@ const (
 	PictureTableHeightColName             = "height"
 	PictureTableContentCountColName       = "content_count"
 	PictureTableReplacePictureIDColName   = "replace_picture_id"
+	PictureTablePointColName              = "point"
 )
 
 var (
@@ -39,6 +40,7 @@ var (
 	PictureTableWidthCol              = PictureTable.Col(PictureTableWidthColName)
 	PictureTableHeightCol             = PictureTable.Col(PictureTableHeightColName)
 	PictureTableReplacePictureIDCol   = PictureTable.Col(PictureTableReplacePictureIDColName)
+	PictureTablePointCol              = PictureTable.Col(PictureTablePointColName)
 )
 
 type PictureRow struct {
@@ -49,4 +51,5 @@ type PictureRow struct {
 	ImageID            int64         `db:"image_id"`
 	Width              uint16        `db:"width"`
 	Height             uint16        `db:"height"`
+	Point              *NullPoint    `db:"point"`
 }

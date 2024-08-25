@@ -11,6 +11,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/paulmach/orb"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
@@ -459,7 +460,7 @@ func (s *Repository) Picture(ctx context.Context, id int64) (*schema.PictureRow,
 
 	success, err := s.db.Select(
 		schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol, schema.PictureTableIdentityCol,
-		schema.PictureTableStatusCol, schema.PictureTableImageIDCol,
+		schema.PictureTableStatusCol, schema.PictureTableImageIDCol, schema.PictureTablePointCol,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(id)).
@@ -802,6 +803,26 @@ func (s *Repository) ClearReplacePicture(ctx context.Context, pictureID int64) (
 		Set(goqu.Record{
 			schema.PictureTableReplacePictureIDColName: nil,
 		}).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+
+	return affected > 0, err
+}
+
+func (s *Repository) SetPicturePoint(ctx context.Context, pictureID int64, point *orb.Point) (bool, error) {
+	var pointExpr goqu.Expression
+
+	if point != nil {
+		pointExpr = goqu.Func("Point", point.Lon(), point.Lat())
+	}
+
+	res, err := s.db.Update(schema.PictureTable).
+		Set(goqu.Record{schema.PictureTablePointColName: pointExpr}).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).
 		Executor().ExecContext(ctx)
 	if err != nil {

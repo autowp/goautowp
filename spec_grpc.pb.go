@@ -4049,6 +4049,7 @@ const (
 	Pictures_CreatePictureItem_FullMethodName         = "/goautowp.Pictures/CreatePictureItem"
 	Pictures_SetPictureCrop_FullMethodName            = "/goautowp.Pictures/SetPictureCrop"
 	Pictures_ClearReplacePicture_FullMethodName       = "/goautowp.Pictures/ClearReplacePicture"
+	Pictures_SetPicturePoint_FullMethodName           = "/goautowp.Pictures/SetPicturePoint"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -4074,6 +4075,7 @@ type PicturesClient interface {
 	CreatePictureItem(ctx context.Context, in *CreatePictureItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPictureCrop(ctx context.Context, in *SetPictureCropRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ClearReplacePicture(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SetPicturePoint(ctx context.Context, in *SetPicturePointRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type picturesClient struct {
@@ -4274,6 +4276,16 @@ func (c *picturesClient) ClearReplacePicture(ctx context.Context, in *PictureIDR
 	return out, nil
 }
 
+func (c *picturesClient) SetPicturePoint(ctx context.Context, in *SetPicturePointRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Pictures_SetPicturePoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility.
@@ -4297,6 +4309,7 @@ type PicturesServer interface {
 	CreatePictureItem(context.Context, *CreatePictureItemRequest) (*emptypb.Empty, error)
 	SetPictureCrop(context.Context, *SetPictureCropRequest) (*emptypb.Empty, error)
 	ClearReplacePicture(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
+	SetPicturePoint(context.Context, *SetPicturePointRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -4363,6 +4376,9 @@ func (UnimplementedPicturesServer) SetPictureCrop(context.Context, *SetPictureCr
 }
 func (UnimplementedPicturesServer) ClearReplacePicture(context.Context, *PictureIDRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearReplacePicture not implemented")
+}
+func (UnimplementedPicturesServer) SetPicturePoint(context.Context, *SetPicturePointRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPicturePoint not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 func (UnimplementedPicturesServer) testEmbeddedByValue()                  {}
@@ -4727,6 +4743,24 @@ func _Pictures_ClearReplacePicture_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_SetPicturePoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPicturePointRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).SetPicturePoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_SetPicturePoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).SetPicturePoint(ctx, req.(*SetPicturePointRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -4809,6 +4843,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClearReplacePicture",
 			Handler:    _Pictures_ClearReplacePicture_Handler,
+		},
+		{
+			MethodName: "SetPicturePoint",
+			Handler:    _Pictures_SetPicturePoint_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

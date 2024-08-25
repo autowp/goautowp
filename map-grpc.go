@@ -14,8 +14,8 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/paulmach/orb"
-	"github.com/paulmach/orb/encoding/wkb"
+	geo "github.com/paulmach/go.geo"
+	"google.golang.org/genproto/googleapis/type/latlng"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -85,7 +85,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 		latLo,
 	)
 
-	sqSelect := s.db.Select(goqu.Func("ST_AsBinary", schema.ItemPointTablePointCol)).
+	sqSelect := s.db.Select(schema.ItemPointTablePointCol).
 		From(schema.ItemPointTable).
 		Where(goqu.Func("ST_Contains", goqu.Func("ST_GeomFromText", polygon), schema.ItemPointTablePointCol))
 
@@ -98,17 +98,17 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 		defer util.Close(rows)
 
 		for rows.Next() {
-			var point orb.Point
+			var point geo.Point
 
-			err = rows.Scan(wkb.Scanner(&point))
+			err = rows.Scan(&point)
 			if err != nil {
 				return nil, status.Error(codes.InvalidArgument, err.Error())
 			}
 
 			mapPoints = append(mapPoints, &MapPoint{
-				Location: &Point{
-					Lat: point.Lat(),
-					Lng: point.Lon(),
+				Location: &latlng.LatLng{
+					Latitude:  point.Lat(),
+					Longitude: point.Lng(),
 				},
 			})
 		}
@@ -136,7 +136,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 
 		for rows.Next() {
 			var (
-				point             orb.Point
+				point             geo.Point
 				id                int64
 				name              string
 				nullableBeginYear sql.NullInt32
@@ -145,7 +145,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				today             sql.NullBool
 			)
 
-			err = rows.Scan(wkb.Scanner(&point), &id, &name, &nullableBeginYear, &nullableEndYear, &itemTypeID, &today)
+			err = rows.Scan(&point, &id, &name, &nullableBeginYear, &nullableEndYear, &itemTypeID, &today)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -177,9 +177,9 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 
 			mapPoint := &MapPoint{
 				Id: fmt.Sprintf("factory%d", id),
-				Location: &Point{
-					Lat: point.Lat(),
-					Lng: point.Lon(),
+				Location: &latlng.LatLng{
+					Latitude:  point.Lat(),
+					Longitude: point.Lng(),
 				},
 				Name: nameText,
 			}

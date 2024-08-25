@@ -18,6 +18,7 @@ import (
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/paulmach/orb"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -960,8 +961,50 @@ func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *Pictur
 	if success {
 		err = s.events.Add(ctx, Event{
 			UserID:   userID,
-			Message:  "Замена для %s отклонена",
+			Message:  fmt.Sprintf("Замена для %d отклонена", in.GetId()),
 			Pictures: []int64{in.GetId()},
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicturePointRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	var (
+		point    = in.GetPoint()
+		orbPoint *orb.Point
+	)
+
+	if point.GetLatitude() != 0 || point.GetLongitude() != 0 {
+		orbPoint = &orb.Point{point.GetLongitude(), point.GetLatitude()}
+	}
+
+	success, err := s.repository.SetPicturePoint(ctx, in.GetPictureId(), orbPoint)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if success {
+		err = s.events.Add(ctx, Event{
+			UserID:   userID,
+			Message:  "Изменена точка для изображения",
+			Pictures: []int64{in.GetPictureId()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())

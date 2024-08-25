@@ -3,7 +3,7 @@ package goautowp;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
-//import "google/rpc/status.proto";
+import "google/type/latlng.proto";
 //import "google/protobuf/any.proto";
 import "google/rpc/error_details.proto";
 
@@ -149,6 +149,7 @@ service Pictures {
   rpc CreatePictureItem(CreatePictureItemRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureCrop(SetPictureCropRequest) returns (google.protobuf.Empty) {}
   rpc ClearReplacePicture(PictureIDRequest) returns (google.protobuf.Empty) {}
+  rpc SetPicturePoint(SetPicturePointRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {
@@ -966,17 +967,12 @@ message MapGetPointsRequest {
   string language = 3;
 }
 
-message Point {
-  double lat = 1;
-  double lng = 2;
-}
-
 message MapPoints {
   repeated MapPoint points = 1;
 }
 
 message MapPoint {
-  Point location = 1;
+  google.type.LatLng location = 1;
   string id = 2;
   string name = 3;
   repeated string url = 4;
@@ -1072,6 +1068,11 @@ message SetPictureCropRequest {
   uint32 crop_top = 5;
   uint32 crop_width = 6;
   uint32 crop_height = 7;
+}
+
+message SetPicturePointRequest {
+  int64 picture_id = 1;
+  google.type.LatLng point = 2;
 }
 
 message DeleteSimilarRequest {
