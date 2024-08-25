@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"time"
 
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
@@ -835,7 +834,9 @@ func (s *Repository) SetPicturePoint(ctx context.Context, pictureID int64, point
 	return affected > 0, err
 }
 
-func (s *Repository) UpdatePicture(ctx context.Context, pictureID int64, name string, taken time.Time) (bool, error) {
+func (s *Repository) UpdatePicture(
+	ctx context.Context, pictureID int64, name string, takenYear int16, takenMonth int8, takenDay int8,
+) (bool, error) {
 	res, err := s.db.Update(schema.PictureTable).
 		Set(goqu.Record{
 			schema.PictureTableNameCol: sql.NullString{
@@ -843,16 +844,16 @@ func (s *Repository) UpdatePicture(ctx context.Context, pictureID int64, name st
 				Valid:  len(name) > 0,
 			},
 			schema.PictureTableTakenYearCol: sql.NullInt16{
-				Int16: int16(taken.Year()), //nolint: gosec
-				Valid: taken.Year() > 0,
+				Int16: takenYear,
+				Valid: takenYear > 0,
 			},
 			schema.PictureTableTakenMonthCol: sql.NullInt16{
-				Int16: int16(taken.Month()), //nolint: gosec
-				Valid: taken.Month() > 0,
+				Int16: int16(takenMonth),
+				Valid: takenMonth > 0,
 			},
 			schema.PictureTableTakenDayCol: sql.NullInt16{
-				Int16: int16(taken.Day()), //nolint: gosec
-				Valid: taken.Day() > 0,
+				Int16: int16(takenDay),
+				Valid: takenDay > 0,
 			},
 		}).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).

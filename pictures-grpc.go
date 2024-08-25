@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
@@ -1030,9 +1029,11 @@ func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictur
 	}
 
 	inDate := in.GetTakenDate()
-	date := time.Date(int(inDate.GetYear()), time.Month(inDate.GetMonth()), int(inDate.GetDay()), 0, 0, 0, 0, time.UTC)
 
-	success, err := s.repository.UpdatePicture(ctx, in.GetId(), in.GetName(), date)
+	success, err := s.repository.UpdatePicture(
+		ctx, in.GetId(), in.GetName(),
+		int16(inDate.GetYear()), int8(inDate.GetMonth()), int8(inDate.GetDay()), //nolint: gosec
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

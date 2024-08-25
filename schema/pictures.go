@@ -56,4 +56,7 @@ type PictureRow struct {
 	Width              uint16        `db:"width"`
 	Height             uint16        `db:"height"`
 	Point              *NullPoint    `db:"point"`
+	TakenYear          sql.NullInt16 `db:"taken_year"`
+	TakenMonth         sql.NullByte  `db:"taken_month"`
+	TakenDay           sql.NullByte  `db:"taken_day"`
 }

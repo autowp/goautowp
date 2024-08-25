@@ -865,4 +865,48 @@ func TestUpdatePicture(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	var pic schema.PictureRow
+
+	success, err := goquDB.Select(
+		schema.PictureTableTakenYearCol, schema.PictureTableTakenMonthCol, schema.PictureTableTakenDayCol,
+	).
+		From(schema.PictureTable).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).ScanStructContext(ctx, &pic)
+	require.NoError(t, err)
+	require.True(t, success)
+
+	require.Equal(t, int16(2020), pic.TakenYear.Int16)
+	require.True(t, pic.TakenYear.Valid)
+	require.Equal(t, byte(2), pic.TakenMonth.Byte)
+	require.True(t, pic.TakenMonth.Valid)
+	require.Equal(t, byte(1), pic.TakenDay.Byte)
+	require.True(t, pic.TakenDay.Valid)
+
+	_, err = client.UpdatePicture(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&UpdatePictureRequest{
+			Id:   pictureID,
+			Name: "Foo",
+			TakenDate: &date.Date{
+				Year:  2020,
+				Month: 2,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	success, err = goquDB.Select(
+		schema.PictureTableTakenYearCol, schema.PictureTableTakenMonthCol, schema.PictureTableTakenDayCol,
+	).
+		From(schema.PictureTable).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).ScanStructContext(ctx, &pic)
+	require.NoError(t, err)
+	require.True(t, success)
+
+	require.Equal(t, int16(2020), pic.TakenYear.Int16)
+	require.True(t, pic.TakenYear.Valid)
+	require.Equal(t, byte(2), pic.TakenMonth.Byte)
+	require.True(t, pic.TakenMonth.Valid)
+	require.False(t, pic.TakenDay.Valid)
 }
