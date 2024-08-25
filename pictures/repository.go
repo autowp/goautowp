@@ -843,15 +843,15 @@ func (s *Repository) UpdatePicture(ctx context.Context, pictureID int64, name st
 				Valid:  len(name) > 0,
 			},
 			schema.PictureTableTakenYearCol: sql.NullInt16{
-				Int16: int16(taken.Year()),
+				Int16: int16(taken.Year()), //nolint: gosec
 				Valid: taken.Year() > 0,
 			},
 			schema.PictureTableTakenMonthCol: sql.NullInt16{
-				Int16: int16(taken.Month()),
+				Int16: int16(taken.Month()), //nolint: gosec
 				Valid: taken.Month() > 0,
 			},
 			schema.PictureTableTakenDayCol: sql.NullInt16{
-				Int16: int16(taken.Day()),
+				Int16: int16(taken.Day()), //nolint: gosec
 				Valid: taken.Day() > 0,
 			},
 		}).
