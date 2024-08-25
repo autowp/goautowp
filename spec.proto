@@ -4,7 +4,7 @@ package goautowp;
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "google/type/latlng.proto";
-//import "google/protobuf/any.proto";
+import "google/type/date.proto";
 import "google/rpc/error_details.proto";
 
 option go_package = "github.com/autowp/goautowp";
@@ -150,6 +150,7 @@ service Pictures {
   rpc SetPictureCrop(SetPictureCropRequest) returns (google.protobuf.Empty) {}
   rpc ClearReplacePicture(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc SetPicturePoint(SetPicturePointRequest) returns (google.protobuf.Empty) {}
+  rpc UpdatePicture(UpdatePictureRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {
@@ -1073,6 +1074,12 @@ message SetPictureCropRequest {
 message SetPicturePointRequest {
   int64 picture_id = 1;
   google.type.LatLng point = 2;
+}
+
+message UpdatePictureRequest {
+  int64 id = 1;
+  google.type.Date taken_date = 2;
+  string name = 3;
 }
 
 message DeleteSimilarRequest {

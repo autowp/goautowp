@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
@@ -1005,6 +1006,42 @@ func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicture
 			UserID:   userID,
 			Message:  "Изменена точка для изображения",
 			Pictures: []int64{in.GetPictureId()},
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictureRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	inDate := in.GetTakenDate()
+	date := time.Date(int(inDate.GetYear()), time.Month(inDate.GetMonth()), int(inDate.GetDay()), 0, 0, 0, 0, time.UTC)
+
+	success, err := s.repository.UpdatePicture(ctx, in.GetId(), in.GetName(), date)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if success {
+		err = s.events.Add(ctx, Event{
+			UserID:   userID,
+			Message:  "Редактирование изображения (дата, особое название)",
+			Pictures: []int64{in.GetId()},
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())

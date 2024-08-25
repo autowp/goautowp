@@ -17,6 +17,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/genproto/googleapis/type/latlng"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -816,4 +817,52 @@ func TestSetPicturePoint(t *testing.T) {
 	pic, err = repo.Picture(ctx, pictureID)
 	require.NoError(t, err)
 	require.Nil(t, pic.Point)
+}
+
+func TestUpdatePicture(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	_, err = client.UpdatePicture(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&UpdatePictureRequest{
+			Id:   pictureID,
+			Name: "Foo",
+			TakenDate: &date.Date{
+				Year:  2020,
+				Month: 2,
+				Day:   1,
+			},
+		},
+	)
+	require.NoError(t, err)
 }

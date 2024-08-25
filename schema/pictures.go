@@ -27,6 +27,10 @@ const (
 	PictureTableContentCountColName       = "content_count"
 	PictureTableReplacePictureIDColName   = "replace_picture_id"
 	PictureTablePointColName              = "point"
+	PictureTableNameCol                   = "name"
+	PictureTableTakenDayCol               = "taken_day"
+	PictureTableTakenMonthCol             = "taken_month"
+	PictureTableTakenYearCol              = "taken_year"
 )
 
 var (

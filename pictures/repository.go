@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
@@ -823,6 +824,28 @@ func (s *Repository) SetPicturePoint(ctx context.Context, pictureID int64, point
 
 	res, err := s.db.Update(schema.PictureTable).
 		Set(goqu.Record{schema.PictureTablePointColName: pointExpr}).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+
+	return affected > 0, err
+}
+
+func (s *Repository) UpdatePicture(ctx context.Context, pictureID int64, name string, taken time.Time) (bool, error) {
+	res, err := s.db.Update(schema.PictureTable).
+		Set(goqu.Record{
+			schema.PictureTableNameCol: sql.NullString{
+				String: name,
+				Valid:  len(name) > 0,
+			},
+			schema.PictureTableTakenYearCol:  taken.Year(),
+			schema.PictureTableTakenMonthCol: taken.Month(),
+			schema.PictureTableTakenDayCol:   taken.Day(),
+		}).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).
 		Executor().ExecContext(ctx)
 	if err != nil {
