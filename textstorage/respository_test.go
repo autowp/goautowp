@@ -30,14 +30,16 @@ func TestGetText(t *testing.T) {
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	id, err := res.LastInsertId()
+	lastInsertID, err := res.LastInsertId()
 	require.NoError(t, err)
+
+	id := int32(lastInsertID) //nolint:gosec
 
 	repository := New(goquDB)
 
 	_, err = repository.Text(ctx, id)
 	require.NoError(t, err)
 
-	_, err = repository.FirstText(ctx, []int64{id})
+	_, err = repository.FirstText(ctx, []int32{id})
 	require.NoError(t, err)
 }

@@ -4051,6 +4051,7 @@ const (
 	Pictures_ClearReplacePicture_FullMethodName       = "/goautowp.Pictures/ClearReplacePicture"
 	Pictures_SetPicturePoint_FullMethodName           = "/goautowp.Pictures/SetPicturePoint"
 	Pictures_UpdatePicture_FullMethodName             = "/goautowp.Pictures/UpdatePicture"
+	Pictures_SetPictureCopyrights_FullMethodName      = "/goautowp.Pictures/SetPictureCopyrights"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -4078,6 +4079,7 @@ type PicturesClient interface {
 	ClearReplacePicture(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPicturePoint(ctx context.Context, in *SetPicturePointRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdatePicture(ctx context.Context, in *UpdatePictureRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SetPictureCopyrights(ctx context.Context, in *SetPictureCopyrightsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type picturesClient struct {
@@ -4298,6 +4300,16 @@ func (c *picturesClient) UpdatePicture(ctx context.Context, in *UpdatePictureReq
 	return out, nil
 }
 
+func (c *picturesClient) SetPictureCopyrights(ctx context.Context, in *SetPictureCopyrightsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Pictures_SetPictureCopyrights_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility.
@@ -4323,6 +4335,7 @@ type PicturesServer interface {
 	ClearReplacePicture(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	SetPicturePoint(context.Context, *SetPicturePointRequest) (*emptypb.Empty, error)
 	UpdatePicture(context.Context, *UpdatePictureRequest) (*emptypb.Empty, error)
+	SetPictureCopyrights(context.Context, *SetPictureCopyrightsRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -4395,6 +4408,9 @@ func (UnimplementedPicturesServer) SetPicturePoint(context.Context, *SetPictureP
 }
 func (UnimplementedPicturesServer) UpdatePicture(context.Context, *UpdatePictureRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePicture not implemented")
+}
+func (UnimplementedPicturesServer) SetPictureCopyrights(context.Context, *SetPictureCopyrightsRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPictureCopyrights not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 func (UnimplementedPicturesServer) testEmbeddedByValue()                  {}
@@ -4795,6 +4811,24 @@ func _Pictures_UpdatePicture_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_SetPictureCopyrights_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPictureCopyrightsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).SetPictureCopyrights(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_SetPictureCopyrights_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).SetPictureCopyrights(ctx, req.(*SetPictureCopyrightsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -4885,6 +4919,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdatePicture",
 			Handler:    _Pictures_UpdatePicture_Handler,
+		},
+		{
+			MethodName: "SetPictureCopyrights",
+			Handler:    _Pictures_SetPictureCopyrights_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

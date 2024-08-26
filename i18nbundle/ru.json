@@ -5,5 +5,6 @@
   "carlist/years": "года выпуска",
   "present-time-abbr": "н.в.",
   "pm/new-picture-%s-vote-%s/accept": "Подана заявка на принятие добавленной вами картинки\n{{.Picture}}\nПричина: {{.Reason}}",
-  "pm/new-picture-%s-vote-%s/delete": "Подана заявка на удаление добавленной вами картинки\n{{.Picture}}\nПричина: {{.Reason}}"
+  "pm/new-picture-%s-vote-%s/delete": "Подана заявка на удаление добавленной вами картинки\n{{.Picture}}\nПричина: {{.Reason}}",
+  "pm/user-%s-edited-picture-copyrights-%s-%s": "Пользователь {{.User}} редактировал текст копирайтов изображения\n{{.PictureURL}}"
 }

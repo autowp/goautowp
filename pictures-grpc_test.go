@@ -14,6 +14,7 @@ import (
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -725,7 +726,8 @@ func TestSetPicturePoint(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	repo := pictures.NewRepository(goquDB, imageStorage)
+	textStorageRepository := textstorage.New(goquDB)
+	repo := pictures.NewRepository(goquDB, imageStorage, textStorageRepository)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 
@@ -869,7 +871,7 @@ func TestUpdatePicture(t *testing.T) {
 	var pic schema.PictureRow
 
 	success, err := goquDB.Select(
-		schema.PictureTableTakenYearCol, schema.PictureTableTakenMonthCol, schema.PictureTableTakenDayCol,
+		schema.PictureTableTakenYearColName, schema.PictureTableTakenMonthColName, schema.PictureTableTakenDayColName,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).ScanStructContext(ctx, &pic)
@@ -897,7 +899,7 @@ func TestUpdatePicture(t *testing.T) {
 	require.NoError(t, err)
 
 	success, err = goquDB.Select(
-		schema.PictureTableTakenYearCol, schema.PictureTableTakenMonthCol, schema.PictureTableTakenDayCol,
+		schema.PictureTableTakenYearColName, schema.PictureTableTakenMonthColName, schema.PictureTableTakenDayColName,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).ScanStructContext(ctx, &pic)
@@ -909,4 +911,93 @@ func TestUpdatePicture(t *testing.T) {
 	require.Equal(t, byte(2), pic.TakenMonth.Byte)
 	require.True(t, pic.TakenMonth.Valid)
 	require.False(t, pic.TakenDay.Valid)
+}
+
+func TestSetPictureCopyrights(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	textStorageRepository := textstorage.New(goquDB)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repo := pictures.NewRepository(goquDB, imageStorage, textStorageRepository)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	_, err = client.SetPictureCopyrights(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureCopyrightsRequest{
+			Id:         pictureID,
+			Copyrights: "First",
+		},
+	)
+	require.NoError(t, err)
+
+	pic, err := repo.Picture(ctx, pictureID)
+	require.NoError(t, err)
+	require.True(t, pic.CopyrightsTextID.Valid)
+	require.NotEmpty(t, pic.CopyrightsTextID.Int32)
+
+	text, err := textStorageRepository.Text(ctx, pic.CopyrightsTextID.Int32)
+	require.NoError(t, err)
+	require.Equal(t, "First", text)
+
+	_, err = client.SetPictureCopyrights(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureCopyrightsRequest{
+			Id:         pictureID,
+			Copyrights: "Second",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetPictureCopyrights(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureCopyrightsRequest{
+			Id:         pictureID2,
+			Copyrights: "Third",
+		},
+	)
+	require.NoError(t, err)
+
+	text, err = textStorageRepository.Text(ctx, pic.CopyrightsTextID.Int32)
+	require.NoError(t, err)
+	require.Equal(t, "Second", text)
+
+	pic2, err := repo.Picture(ctx, pictureID2)
+	require.NoError(t, err)
+	require.True(t, pic2.CopyrightsTextID.Valid)
+	require.NotEmpty(t, pic2.CopyrightsTextID.Int32)
+	require.NotEqual(t, pic.CopyrightsTextID.Int32, pic2.CopyrightsTextID.Int32)
+
+	text, err = textStorageRepository.Text(ctx, pic2.CopyrightsTextID.Int32)
+	require.NoError(t, err)
+	require.Equal(t, "Third", text)
 }

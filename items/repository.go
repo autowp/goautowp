@@ -115,8 +115,8 @@ type ItemLanguage struct {
 	ItemID     int64
 	Language   string
 	Name       string
-	TextID     int64
-	FullTextID int64
+	TextID     int32
+	FullTextID int32
 }
 
 type ItemParentLanguage struct {
@@ -1550,8 +1550,8 @@ func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLang
 		var (
 			row            ItemLanguage
 			nullName       sql.NullString
-			nullTextID     sql.NullInt64
-			nullFullTextID sql.NullInt64
+			nullTextID     sql.NullInt32
+			nullFullTextID sql.NullInt32
 		)
 
 		err = rows.Scan(&row.ItemID, &row.Language, &nullName, &nullTextID, &nullFullTextID)
@@ -1566,12 +1566,12 @@ func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLang
 
 		row.TextID = 0
 		if nullTextID.Valid {
-			row.TextID = nullTextID.Int64
+			row.TextID = nullTextID.Int32
 		}
 
 		row.FullTextID = 0
 		if nullFullTextID.Valid {
-			row.FullTextID = nullFullTextID.Int64
+			row.FullTextID = nullFullTextID.Int32
 		}
 
 		result = append(result, row)

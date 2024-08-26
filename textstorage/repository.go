@@ -17,15 +17,13 @@ type Repository struct {
 }
 
 // New constructor.
-func New(
-	db *goqu.Database,
-) *Repository {
+func New(db *goqu.Database) *Repository {
 	return &Repository{
 		db: db,
 	}
 }
 
-func (s *Repository) Text(ctx context.Context, id int64) (string, error) {
+func (s *Repository) Text(ctx context.Context, id int32) (string, error) {
 	sqlSelect := s.db.From(schema.TextstorageTextTable).
 		Select(schema.TextstorageTextTableTextCol).
 		Where(schema.TextstorageTextTableIDCol.Eq(id))
@@ -44,7 +42,7 @@ func (s *Repository) Text(ctx context.Context, id int64) (string, error) {
 	return result, nil
 }
 
-func (s *Repository) FirstText(ctx context.Context, ids []int64) (string, error) {
+func (s *Repository) FirstText(ctx context.Context, ids []int32) (string, error) {
 	if len(ids) == 0 {
 		return "", nil
 	}
@@ -70,4 +68,87 @@ func (s *Repository) FirstText(ctx context.Context, ids []int64) (string, error)
 	}
 
 	return result, nil
+}
+
+func (s *Repository) CreateText(ctx context.Context, text string, userID int64) (int32, error) {
+	res, err := s.db.Insert(schema.TextstorageTextTable).Rows(goqu.Record{
+		schema.TextstorageTextTableRevisionColName:    0,
+		schema.TextstorageTextTableTextColName:        "",
+		schema.TextstorageTextTableLastUpdatedColName: goqu.Func("NOW"),
+	}).Executor().ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	lastInsertID, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	id := int32(lastInsertID) //nolint: gosec
+	err = s.SetText(ctx, id, text, userID)
+
+	return id, err
+}
+
+func (s *Repository) SetText(ctx context.Context, textID int32, text string, userID int64) error {
+	res, err := s.db.Update(schema.TextstorageTextTable).
+		Set(goqu.Record{
+			schema.TextstorageTextTableRevisionColName:    goqu.L("? + 1", goqu.C(schema.TextstorageTextTableRevisionColName)),
+			schema.TextstorageTextTableTextColName:        text,
+			schema.TextstorageTextTableLastUpdatedColName: goqu.Func("NOW"),
+		}).
+		Where(
+			schema.TextstorageTextTableIDCol.Eq(textID),
+			schema.TextstorageTextTableTextCol.Neq(text),
+		).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected > 0 {
+		_, err = s.db.Insert(schema.TextstorageRevisionTable).
+			Cols(
+				schema.TextstorageRevisionTableTextIDColName,
+				schema.TextstorageRevisionTableRevisionColName,
+				schema.TextstorageRevisionTableTextColName,
+				schema.TextstorageRevisionTableTimestampColName,
+				schema.TextstorageRevisionTableUserIDColName,
+			).
+			FromQuery(
+				s.db.Select(
+					schema.TextstorageTextTableIDCol,
+					schema.TextstorageTextTableRevisionCol,
+					schema.TextstorageTextTableTextCol,
+					schema.TextstorageTextTableLastUpdatedCol,
+					goqu.V(userID),
+				).
+					From(schema.TextstorageTextTable).
+					Where(schema.TextstorageTextTableIDCol.Eq(textID)),
+			).Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) TextUserIDs(ctx context.Context, textID int32) ([]int64, error) {
+	userIDs := make([]int64, 0)
+
+	err := s.db.Select(schema.TextstorageRevisionTableUserIDCol).Distinct().
+		From(schema.TextstorageRevisionTable).
+		Where(
+			schema.TextstorageRevisionTableUserIDCol.IsNotNull(),
+			schema.TextstorageRevisionTableTextIDCol.Eq(textID),
+		).ScanValsContext(ctx, &userIDs)
+
+	return userIDs, err
 }

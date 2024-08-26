@@ -5,5 +5,6 @@
   "carlist/years": "года выпуску",
   "present-time-abbr": "н.ч.",
   "pm/new-picture-%s-vote-%s/accept": "Пададзена заяўка на прыняцце дададзенай вамі карцінкі\n{{.Picture}}\nПрычына: {{.Reason}}",
-  "pm/new-picture-%s-vote-%s/delete": "Пададзена заяўка на выдаленне дададзенай вамі карцінкі\n{{.Picture}}\nПрычына: {{.Reason}}"
+  "pm/new-picture-%s-vote-%s/delete": "Пададзена заяўка на выдаленне дададзенай вамі карцінкі\n{{.Picture}}\nПрычына: {{.Reason}}",
+  "pm/user-%s-edited-picture-copyrights-%s-%s": "Карыстальнік {{.User}} рэдагаваў тэкст капірайтаў выявы\n{{.PictureURL}}"
 }

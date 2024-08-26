@@ -151,6 +151,7 @@ service Pictures {
   rpc ClearReplacePicture(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc SetPicturePoint(SetPicturePointRequest) returns (google.protobuf.Empty) {}
   rpc UpdatePicture(UpdatePictureRequest) returns (google.protobuf.Empty) {}
+  rpc SetPictureCopyrights(SetPictureCopyrightsRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {
@@ -1082,6 +1083,11 @@ message UpdatePictureRequest {
   string name = 3;
 }
 
+message SetPictureCopyrightsRequest {
+  int64 id = 1;
+  string copyrights = 2;
+}
+
 message DeleteSimilarRequest {
   int64 id = 1;
   int64 similar_picture_id = 2;
@@ -1319,9 +1325,9 @@ message ItemLanguage {
   int64 item_id = 1;
   string language = 2;
   string name = 3;
-  int64 text_id = 4;
+  int32 text_id = 4;
   string text = 5;
-  int64 full_text_id = 6;
+  int32 full_text_id = 6;
   string full_text = 7;
 }
 

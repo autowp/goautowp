@@ -14,7 +14,9 @@ import (
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -42,32 +44,34 @@ func convertPictureItemType(pictureItemType PictureItemType) schema.PictureItemT
 
 type PicturesGRPCServer struct {
 	UnimplementedPicturesServer
-	repository          *pictures.Repository
-	auth                *Auth
-	enforcer            *casbin.Enforcer
-	events              *Events
-	hostManager         *hosts.Manager
-	messagingRepository *messaging.Repository
-	userRepository      *users.Repository
-	i18n                *i18nbundle.I18n
-	duplicateFinder     *DuplicateFinder
+	repository            *pictures.Repository
+	auth                  *Auth
+	enforcer              *casbin.Enforcer
+	events                *Events
+	hostManager           *hosts.Manager
+	messagingRepository   *messaging.Repository
+	userRepository        *users.Repository
+	i18n                  *i18nbundle.I18n
+	duplicateFinder       *DuplicateFinder
+	textStorageRepository *textstorage.Repository
 }
 
 func NewPicturesGRPCServer(
 	repository *pictures.Repository, auth *Auth, enforcer *casbin.Enforcer, events *Events, hostManager *hosts.Manager,
 	messagingRepository *messaging.Repository, userRepository *users.Repository, i18n *i18nbundle.I18n,
-	duplicateFinder *DuplicateFinder,
+	duplicateFinder *DuplicateFinder, textStorageRepository *textstorage.Repository,
 ) *PicturesGRPCServer {
 	return &PicturesGRPCServer{
-		repository:          repository,
-		auth:                auth,
-		enforcer:            enforcer,
-		events:              events,
-		hostManager:         hostManager,
-		messagingRepository: messagingRepository,
-		userRepository:      userRepository,
-		i18n:                i18n,
-		duplicateFinder:     duplicateFinder,
+		repository:            repository,
+		auth:                  auth,
+		enforcer:              enforcer,
+		events:                events,
+		hostManager:           hostManager,
+		messagingRepository:   messagingRepository,
+		userRepository:        userRepository,
+		i18n:                  i18n,
+		duplicateFinder:       duplicateFinder,
+		textStorageRepository: textStorageRepository,
 	}
 }
 
@@ -435,7 +439,7 @@ func (s *PicturesGRPCServer) unaccept(ctx context.Context, pictureID int64, user
 			return err
 		}
 
-		uri.Path = "/picture/" + url.QueryEscape(picture.Identity)
+		uri.Path = s.pictureURLPath(picture.Identity)
 		message := fmt.Sprintf(
 			`С картинки %s снят статус "принято"`,
 			uri.String(),
@@ -1050,4 +1054,129 @@ func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictur
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) SetPictureCopyrights(
+	ctx context.Context, in *SetPictureCopyrightsRequest,
+) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	pictureID := in.GetId()
+
+	success, textID, err := s.repository.SetPictureCopyrights(ctx, pictureID, in.GetCopyrights(), userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "NotFound")
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if success {
+		err = s.events.Add(ctx, Event{
+			UserID:   userID,
+			Message:  "Редактирование текста копирайтов изображения",
+			Pictures: []int64{in.GetId()},
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.notifyCopyrightsEdited(ctx, pictureID, textID, userID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) notifyCopyrightsEdited(
+	ctx context.Context, pictureID int64, textID int32, userID int64,
+) error {
+	revUserIDs, err := s.textStorageRepository.TextUserIDs(ctx, textID)
+	if err != nil {
+		return err
+	}
+
+	revUserIDs = util.RemoveValueFromArray(revUserIDs, userID)
+	if len(revUserIDs) == 0 {
+		return nil
+	}
+
+	userRows, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{IDs: revUserIDs})
+	if err != nil {
+		return err
+	}
+
+	picture, err := s.repository.Picture(ctx, pictureID)
+	if err != nil {
+		return err
+	}
+
+	pictureURLPath := s.pictureURLPath(picture.Identity)
+
+	for _, userRow := range userRows {
+		pictureURL, err := s.hostManager.URIByLanguage(userRow.Language)
+		if err != nil {
+			return err
+		}
+
+		pictureURL.Path = pictureURLPath
+
+		userURL, err := s.hostManager.URIByLanguage(userRow.Language)
+		if err != nil {
+			return err
+		}
+
+		userURL.Path = s.userURLPath(userRow.ID, userRow.Identity)
+
+		localizer := s.i18n.Localizer(userRow.Language)
+
+		message, err := localizer.Localize(&i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{
+				ID: "pm/user-%s-edited-picture-copyrights-%s-%s",
+			},
+			TemplateData: map[string]interface{}{
+				"User":       userURL.String(),
+				"PictureURL": pictureURL.String(),
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		err = s.messagingRepository.CreateMessage(ctx, 0, userRow.ID, message)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *PicturesGRPCServer) userURLPath(userID int64, identity *string) string {
+	var resIdentity string
+	if identity == nil || len(*identity) == 0 {
+		resIdentity = "user" + strconv.FormatInt(userID, 10)
+	} else {
+		resIdentity = *identity
+	}
+
+	return "/users/" + url.QueryEscape(resIdentity)
+}
+
+func (s *PicturesGRPCServer) pictureURLPath(identity string) string {
+	return "/picture/" + url.QueryEscape(identity)
 }

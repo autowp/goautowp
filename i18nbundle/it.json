@@ -5,5 +5,6 @@
   "carlist/years": "anni di produzione",
   "present-time-abbr": "pr.",
   "pm/new-picture-%s-vote-%s/accept": "Voto accettato della nuova immagine\n{{.Picture}}\nRagione: {{.Reason}}",
-  "pm/new-picture-%s-vote-%s/delete": "Voto eliminato della nuova foto\n{{.Picture}}\nRagione: {{.Reason}}"
+  "pm/new-picture-%s-vote-%s/delete": "Voto eliminato della nuova foto\n{{.Picture}}\nRagione: {{.Reason}}",
+  "pm/user-%s-edited-picture-copyrights-%s-%s": "L'utente {{.User}} ha modificato i diritti d'autore dell'immagine\n{{.PictureURL}}"
 }

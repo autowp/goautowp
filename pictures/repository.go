@@ -8,6 +8,7 @@ import (
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9"
@@ -56,14 +57,18 @@ type RatingFan struct {
 }
 
 type Repository struct {
-	db           *goqu.Database
-	imageStorage *storage.Storage
+	db                    *goqu.Database
+	imageStorage          *storage.Storage
+	textStorageRepository *textstorage.Repository
 }
 
-func NewRepository(db *goqu.Database, imageStorage *storage.Storage) *Repository {
+func NewRepository(
+	db *goqu.Database, imageStorage *storage.Storage, textStorageRepository *textstorage.Repository,
+) *Repository {
 	return &Repository{
-		db:           db,
-		imageStorage: imageStorage,
+		db:                    db,
+		imageStorage:          imageStorage,
+		textStorageRepository: textStorageRepository,
 	}
 }
 
@@ -461,6 +466,7 @@ func (s *Repository) Picture(ctx context.Context, id int64) (*schema.PictureRow,
 	success, err := s.db.Select(
 		schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol, schema.PictureTableIdentityCol,
 		schema.PictureTableStatusCol, schema.PictureTableImageIDCol, schema.PictureTablePointCol,
+		schema.PictureTableCopyrightsTextIDCol,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(id)).
@@ -839,19 +845,19 @@ func (s *Repository) UpdatePicture(
 ) (bool, error) {
 	res, err := s.db.Update(schema.PictureTable).
 		Set(goqu.Record{
-			schema.PictureTableNameCol: sql.NullString{
+			schema.PictureTableNameColName: sql.NullString{
 				String: name,
 				Valid:  len(name) > 0,
 			},
-			schema.PictureTableTakenYearCol: sql.NullInt16{
+			schema.PictureTableTakenYearColName: sql.NullInt16{
 				Int16: takenYear,
 				Valid: takenYear > 0,
 			},
-			schema.PictureTableTakenMonthCol: sql.NullInt16{
+			schema.PictureTableTakenMonthColName: sql.NullInt16{
 				Int16: int16(takenMonth),
 				Valid: takenMonth > 0,
 			},
-			schema.PictureTableTakenDayCol: sql.NullInt16{
+			schema.PictureTableTakenDayColName: sql.NullInt16{
 				Int16: int16(takenDay),
 				Valid: takenDay > 0,
 			},
@@ -865,4 +871,45 @@ func (s *Repository) UpdatePicture(
 	affected, err := res.RowsAffected()
 
 	return affected > 0, err
+}
+
+func (s *Repository) SetPictureCopyrights(
+	ctx context.Context, pictureID int64, text string, userID int64,
+) (bool, int32, error) {
+	picture, err := s.Picture(ctx, pictureID)
+	if err != nil {
+		return false, 0, err
+	}
+
+	if picture.CopyrightsTextID.Valid {
+		textID := picture.CopyrightsTextID.Int32
+
+		err = s.textStorageRepository.SetText(ctx, textID, text, userID)
+		if err != nil {
+			return false, 0, err
+		}
+
+		return true, textID, nil
+	}
+
+	if text == "" {
+		return false, 0, nil
+	}
+
+	textID, err := s.textStorageRepository.CreateText(ctx, text, userID)
+	if err != nil {
+		return false, 0, err
+	}
+
+	_, err = s.db.Update(schema.PictureTable).
+		Set(goqu.Record{
+			schema.PictureTableCopyrightsTextIDColName: textID,
+		}).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return false, 0, err
+	}
+
+	return true, textID, nil
 }

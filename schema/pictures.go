@@ -27,10 +27,11 @@ const (
 	PictureTableContentCountColName       = "content_count"
 	PictureTableReplacePictureIDColName   = "replace_picture_id"
 	PictureTablePointColName              = "point"
-	PictureTableNameCol                   = "name"
-	PictureTableTakenDayCol               = "taken_day"
-	PictureTableTakenMonthCol             = "taken_month"
-	PictureTableTakenYearCol              = "taken_year"
+	PictureTableNameColName               = "name"
+	PictureTableTakenDayColName           = "taken_day"
+	PictureTableTakenMonthColName         = "taken_month"
+	PictureTableTakenYearColName          = "taken_year"
+	PictureTableCopyrightsTextIDColName   = "copyrights_text_id"
 )
 
 var (
@@ -45,6 +46,7 @@ var (
 	PictureTableHeightCol             = PictureTable.Col(PictureTableHeightColName)
 	PictureTableReplacePictureIDCol   = PictureTable.Col(PictureTableReplacePictureIDColName)
 	PictureTablePointCol              = PictureTable.Col(PictureTablePointColName)
+	PictureTableCopyrightsTextIDCol   = PictureTable.Col(PictureTableCopyrightsTextIDColName)
 )
 
 type PictureRow struct {
@@ -59,4 +61,5 @@ type PictureRow struct {
 	TakenYear          sql.NullInt16 `db:"taken_year"`
 	TakenMonth         sql.NullByte  `db:"taken_month"`
 	TakenDay           sql.NullByte  `db:"taken_day"`
+	CopyrightsTextID   sql.NullInt32 `db:"copyrights_text_id"`
 }

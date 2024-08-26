@@ -3,8 +3,7 @@ package schema
 import "github.com/doug-martin/goqu/v9"
 
 const (
-	ArticlesTableName         = "articles"
-	AttrsListOptionsTableName = "attrs_list_options"
+	ArticlesTableName = "articles"
 
 	AttrsUserValuesTableName          = "attrs_user_values"
 	AttrsUserValuesTableUserIDColName = "user_id"
@@ -179,19 +178,6 @@ const (
 
 	TelegramChatTableName = "telegram_chat"
 
-	TextstorageRevisionTableName             = "textstorage_revision"
-	TextstorageRevisionTableTextIDColName    = "text_id"
-	TextstorageRevisionTableRevisionColName  = "revision"
-	TextstorageRevisionTableTextColName      = "text"
-	TextstorageRevisionTableTimestampColName = "timestamp"
-	TextstorageRevisionTableUserIDColName    = "user_id"
-
-	TextstorageTextTableName               = "textstorage_text"
-	TextstorageTextTableIDColName          = "id"
-	TextstorageTextTableTextColName        = "text"
-	TextstorageTextTableLastUpdatedColName = "last_updated"
-	TextstorageTextTableRevisionColName    = "revision"
-
 	UserAccountTableName = "user_account"
 
 	VehicleVehicleTypeTableName                 = "vehicle_vehicle_type"
@@ -213,13 +199,6 @@ var (
 	ArticlesTablePreviewFilenameCol = ArticlesTable.Col("preview_filename")
 	ArticlesTableDescriptionCol     = ArticlesTable.Col("description")
 	ArticlesTableHTMLIDCol          = ArticlesTable.Col("html_id")
-
-	AttrsListOptionsTable               = goqu.T(AttrsListOptionsTableName)
-	AttrsListOptionsTableIDCol          = AttrsListOptionsTable.Col("id")
-	AttrsListOptionsTableNameCol        = AttrsListOptionsTable.Col("name")
-	AttrsListOptionsTableAttributeIDCol = AttrsListOptionsTable.Col("attribute_id")
-	AttrsListOptionsTableParentIDCol    = AttrsListOptionsTable.Col("parent_id")
-	AttrsListOptionsTablePositionCol    = AttrsListOptionsTable.Col("position")
 
 	AttrsUserValuesTable          = goqu.T(AttrsUserValuesTableName)
 	AttrsUserValuesTableUserIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
@@ -422,18 +401,6 @@ var (
 	TelegramChatTableChatIDCol   = TelegramChatTable.Col("chat_id")
 	TelegramChatTableUserIDCol   = TelegramChatTable.Col("user_id")
 	TelegramChatTableMessagesCol = TelegramChatTable.Col("messages")
-
-	TextstorageRevisionTable             = goqu.T(TextstorageRevisionTableName)
-	TextstorageRevisionTableTextIDCol    = TextstorageRevisionTable.Col(TextstorageRevisionTableTextIDColName)
-	TextstorageRevisionTableRevisionCol  = TextstorageRevisionTable.Col(TextstorageRevisionTableRevisionColName)
-	TextstorageRevisionTableTextCol      = TextstorageRevisionTable.Col(TextstorageRevisionTableTextColName)
-	TextstorageRevisionTableTimestampCol = TextstorageRevisionTable.Col(TextstorageRevisionTableTimestampColName)
-	TextstorageRevisionTableUserIDCol    = TextstorageRevisionTable.Col(TextstorageRevisionTableUserIDColName)
-
-	TextstorageTextTable            = goqu.T(TextstorageTextTableName)
-	TextstorageTextTableIDCol       = TextstorageTextTable.Col(TextstorageTextTableIDColName)
-	TextstorageTextTableTextCol     = TextstorageTextTable.Col(TextstorageTextTableTextColName)
-	TextstorageTextTableRevisionCol = TextstorageTextTable.Col(TextstorageTextTableRevisionColName)
 
 	UserAccountTable             = goqu.T(UserAccountTableName)
 	UserAccountTableUserIDCol    = UserAccountTable.Col("user_id")

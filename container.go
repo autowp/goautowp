@@ -427,7 +427,12 @@ func (s *Container) PicturesRepository() (*pictures.Repository, error) {
 			return nil, err
 		}
 
-		s.picturesRepository = pictures.NewRepository(db, is)
+		textStorageRepository, err := s.TextStorageRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.picturesRepository = pictures.NewRepository(db, is, textStorageRepository)
 	}
 
 	return s.picturesRepository, nil
@@ -1236,8 +1241,13 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
+		textStorageRepository, err := s.TextStorageRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer(), events, s.HostsManager(),
-			messagingRepository, userRepository, i18n, duplicateFinder)
+			messagingRepository, userRepository, i18n, duplicateFinder, textStorageRepository)
 	}
 
 	return s.picturesGrpcServer, nil
