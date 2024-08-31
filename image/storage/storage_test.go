@@ -179,7 +179,7 @@ func TestAddImageAndCrop(t *testing.T) {
 	err = mw.SetImageCrop(ctx, imageID, crop)
 	require.NoError(t, err)
 
-	c, err := mw.imageCrop(ctx, imageID)
+	c, err := mw.ImageCrop(ctx, imageID)
 	require.NoError(t, err)
 
 	require.EqualValues(t, crop, *c)

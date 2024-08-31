@@ -557,15 +557,12 @@ func (s *Repository) SetPictureItemArea(
 		return sql.ErrNoRows
 	}
 
-	area.Left = util.Max(0, area.Left)
-	area.Left = util.Min(pic.Width, area.Left)
-	area.Width = util.Max(0, area.Width)
-	area.Width = util.Min(pic.Width, area.Width)
-
-	area.Top = util.Max(0, area.Top)
-	area.Top = util.Min(pic.Height, area.Top)
-	area.Height = util.Max(0, area.Height)
-	area.Height = util.Min(pic.Height, area.Height)
+	area = PictureItemArea(util.IntersectBounds(util.Rect[uint16](area), util.Rect[uint16]{
+		Left:   0,
+		Top:    0,
+		Width:  pic.Width,
+		Height: pic.Height,
+	}))
 
 	isFull := area.Left == 0 && area.Top == 0 && area.Width == pic.Width && area.Height == pic.Height
 	isEmpty := area.Height == 0 || area.Width == 0

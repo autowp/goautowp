@@ -143,3 +143,26 @@ func RemoveValueFromArray[T comparable](l []T, item T) []T {
 
 	return out
 }
+
+type Rect[T constraints.Ordered] struct {
+	Left   T
+	Top    T
+	Width  T
+	Height T
+}
+
+func IntersectBounds[T constraints.Integer](rect1 Rect[T], rect2 Rect[T]) Rect[T] {
+	rect1.Left = Max(rect2.Left, rect1.Left)
+	rect1.Left = Min(rect2.Width, rect1.Left)
+
+	rect1.Width = Max(T(0), rect1.Width)
+	rect1.Width = Min(rect2.Width-rect1.Left, rect1.Width)
+
+	rect1.Top = Max(rect2.Top, rect1.Top)
+	rect1.Top = Min(rect2.Height, rect1.Top)
+
+	rect1.Height = Max(T(0), rect1.Height)
+	rect1.Height = Min(rect2.Height-rect2.Top, rect1.Height)
+
+	return rect1
+}

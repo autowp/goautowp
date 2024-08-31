@@ -1153,6 +1153,26 @@ func (s *Storage) SetImageCrop(ctx context.Context, imageID int, crop sampler.Cr
 		crop.Top = 0
 		crop.Width = 0
 		crop.Height = 0
+	} else {
+		img, err := s.Image(ctx, imageID)
+		if err != nil {
+			return err
+		}
+
+		crop = sampler.Crop(util.IntersectBounds(util.Rect[int](crop), util.Rect[int]{
+			Left:   0,
+			Top:    0,
+			Width:  img.Width(),
+			Height: img.Height(),
+		}))
+
+		isFull := crop.Left == 0 && crop.Top == 0 && crop.Width == img.Width() && crop.Height == img.Height()
+		if isFull {
+			crop.Left = 0
+			crop.Top = 0
+			crop.Width = 0
+			crop.Height = 0
+		}
 	}
 
 	_, err := s.db.Update(schema.ImageTable).
@@ -1183,7 +1203,7 @@ func (s *Storage) SetImageCrop(ctx context.Context, imageID int, crop sampler.Cr
 	return nil
 }
 
-func (s *Storage) imageCrop(ctx context.Context, imageID int) (*sampler.Crop, error) {
+func (s *Storage) ImageCrop(ctx context.Context, imageID int) (*sampler.Crop, error) {
 	var crop sampler.Crop
 
 	success, err := s.db.Select(
