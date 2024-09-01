@@ -8,6 +8,4 @@ const (
 	LogEventsUserTableUserIDColName     = "user_id"
 )
 
-var (
-	LogEventsUserTable = goqu.T(LogEventsUserTableName)
-)
+var LogEventsUserTable = goqu.T(LogEventsUserTableName)

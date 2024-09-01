@@ -6,6 +6,4 @@ const (
 	AttrsValuesTableName = "attrs_values"
 )
 
-var (
-	AttrsValuesTable = goqu.T(AttrsValuesTableName)
-)
+var AttrsValuesTable = goqu.T(AttrsValuesTableName)
