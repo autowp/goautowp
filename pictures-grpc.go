@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
@@ -58,13 +59,14 @@ type PicturesGRPCServer struct {
 	textStorageRepository *textstorage.Repository
 	telegramService       *telegram.Service
 	itemRepository        *items.Repository
+	commentRepository     *comments.Repository
 }
 
 func NewPicturesGRPCServer(
 	repository *pictures.Repository, auth *Auth, enforcer *casbin.Enforcer, events *Events, hostManager *hosts.Manager,
 	messagingRepository *messaging.Repository, userRepository *users.Repository, i18n *i18nbundle.I18n,
 	duplicateFinder *DuplicateFinder, textStorageRepository *textstorage.Repository, telegramService *telegram.Service,
-	itemRepository *items.Repository,
+	itemRepository *items.Repository, commentRepository *comments.Repository,
 ) *PicturesGRPCServer {
 	return &PicturesGRPCServer{
 		repository:            repository,
@@ -79,6 +81,7 @@ func NewPicturesGRPCServer(
 		textStorageRepository: textStorageRepository,
 		telegramService:       telegramService,
 		itemRepository:        itemRepository,
+		commentRepository:     commentRepository,
 	}
 }
 
@@ -131,7 +134,7 @@ func (s *PicturesGRPCServer) CreateModerVoteTemplate(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -965,6 +968,125 @@ func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *Pictur
 	return &emptypb.Empty{}, nil
 }
 
+func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	pic, err := s.repository.Picture(ctx, in.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !pic.ReplacePictureID.Valid {
+		return nil, status.Errorf(codes.NotFound, "NotFound")
+	}
+
+	replacePicture, err := s.repository.Picture(ctx, pic.ReplacePictureID.Int64)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.canReplace(pic, replacePicture, role) {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	// statuses
+	if pic.Status != schema.PictureStatusAccepted {
+		_, success, err := s.repository.Accept(ctx, pic.ID, userID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Accept error: "+err.Error())
+		}
+
+		if success && pic.OwnerID.Valid {
+			err = s.userRepository.RefreshPicturesCount(ctx, pic.OwnerID.Int64)
+			if err != nil {
+				return nil, status.Error(codes.Internal, "RefreshPicturesCount error: "+err.Error())
+			}
+		}
+	}
+
+	if replacePicture.Status != schema.PictureStatusRemoving && replacePicture.Status != schema.PictureStatusRemoved {
+		success, err := s.repository.QueueRemove(ctx, replacePicture.ID, userID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "QueueRemove error: "+err.Error())
+		}
+
+		if success && replacePicture.OwnerID.Valid {
+			err = s.userRepository.RefreshPicturesCount(ctx, replacePicture.OwnerID.Int64)
+			if err != nil {
+				return nil, status.Error(codes.Internal, "RefreshPicturesCount error: "+err.Error())
+			}
+		}
+	}
+
+	// comments
+	err = s.commentRepository.MoveMessages(ctx,
+		schema.CommentMessageTypeIDPictures, replacePicture.ID,
+		schema.CommentMessageTypeIDPictures, pic.ID,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// pms
+	recipients := make(map[int64]sql.NullInt64)
+
+	if pic.OwnerID.Valid {
+		recipients[pic.OwnerID.Int64] = pic.OwnerID
+	}
+
+	if replacePicture.OwnerID.Valid {
+		recipients[replacePicture.OwnerID.Int64] = replacePicture.OwnerID
+	}
+
+	user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: userID})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	for _, recipient := range recipients {
+		err = s.sendLocalizedMessage(
+			ctx, userID, recipient, "pm/user-%s-accept-replace-%s-%s",
+			func(language string) (map[string]interface{}, error) {
+				uri, err := s.hostManager.URIByLanguage(language)
+				if err != nil {
+					return nil, err
+				}
+
+				return map[string]interface{}{
+					"ModeratorURL":          frontend.UserURL(uri, userID, user.Identity),
+					"PictureURL":            frontend.PictureURL(uri, pic.Identity),
+					"ReplacementPictureURL": frontend.PictureURL(uri, replacePicture.Identity),
+				}, nil
+			})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	// log
+	err = s.events.Add(ctx, Event{
+		UserID:   userID,
+		Message:  fmt.Sprintf("Замена %d на %d", replacePicture.ID, pic.ID),
+		Pictures: []int64{replacePicture.ID, pic.ID},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
 func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicturePointRequest) (*emptypb.Empty, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
@@ -1499,4 +1621,17 @@ func (s *PicturesGRPCServer) pictureCanDelete(
 	}
 
 	return false, nil
+}
+
+func (s *PicturesGRPCServer) canReplace(picture, replacedPicture *schema.PictureRow, role string) bool {
+	return (picture.Status == schema.PictureStatusAccepted ||
+		picture.Status == schema.PictureStatusInbox && s.enforcer.Enforce(role, "picture", "accept")) &&
+		(replacedPicture.Status == schema.PictureStatusRemoving ||
+			replacedPicture.Status == schema.PictureStatusRemoved ||
+			replacedPicture.Status == schema.PictureStatusInbox &&
+				s.enforcer.Enforce(role, "picture", "remove_by_vote") ||
+			replacedPicture.Status == schema.PictureStatusAccepted &&
+				s.enforcer.Enforce(role, "picture", "unaccept") &&
+				s.enforcer.Enforce(role, "picture", "remove_by_vote")) &&
+		s.enforcer.Enforce(role, "picture", "move")
 }

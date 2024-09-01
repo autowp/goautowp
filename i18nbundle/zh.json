@@ -8,5 +8,6 @@
   "pm/new-picture-%s-vote-%s/delete": "收到删除图片表决\n{{.Picture}}\nReason: {{.Reason}}",
   "pm/user-%s-edited-picture-copyrights-%s-%s": "用户{{.User}}编辑了图片版权\n{{.PictureURL}}",
   "pm/your-picture-accepted-%s": "您的图片已通过\n{{.PictureURL}}",
-  "pm/your-picture-%s-enqueued-to-remove-%s": "您的图片{{.PictureURL}}已被删除\n{{.Reasons}}"
+  "pm/your-picture-%s-enqueued-to-remove-%s": "您的图片{{.PictureURL}}已被删除\n{{.Reasons}}",
+  "pm/user-%s-accept-replace-%s-%s": "{{.ModeratorURL}}接受了替换申请{{.PictureURL}} to {{.ReplacementPictureURL}}"
 }

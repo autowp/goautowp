@@ -4049,6 +4049,7 @@ const (
 	Pictures_CreatePictureItem_FullMethodName         = "/goautowp.Pictures/CreatePictureItem"
 	Pictures_SetPictureCrop_FullMethodName            = "/goautowp.Pictures/SetPictureCrop"
 	Pictures_ClearReplacePicture_FullMethodName       = "/goautowp.Pictures/ClearReplacePicture"
+	Pictures_AcceptReplacePicture_FullMethodName      = "/goautowp.Pictures/AcceptReplacePicture"
 	Pictures_SetPicturePoint_FullMethodName           = "/goautowp.Pictures/SetPicturePoint"
 	Pictures_UpdatePicture_FullMethodName             = "/goautowp.Pictures/UpdatePicture"
 	Pictures_SetPictureCopyrights_FullMethodName      = "/goautowp.Pictures/SetPictureCopyrights"
@@ -4078,6 +4079,7 @@ type PicturesClient interface {
 	CreatePictureItem(ctx context.Context, in *CreatePictureItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPictureCrop(ctx context.Context, in *SetPictureCropRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ClearReplacePicture(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	AcceptReplacePicture(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPicturePoint(ctx context.Context, in *SetPicturePointRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdatePicture(ctx context.Context, in *UpdatePictureRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPictureCopyrights(ctx context.Context, in *SetPictureCopyrightsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -4282,6 +4284,16 @@ func (c *picturesClient) ClearReplacePicture(ctx context.Context, in *PictureIDR
 	return out, nil
 }
 
+func (c *picturesClient) AcceptReplacePicture(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Pictures_AcceptReplacePicture_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *picturesClient) SetPicturePoint(ctx context.Context, in *SetPicturePointRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -4345,6 +4357,7 @@ type PicturesServer interface {
 	CreatePictureItem(context.Context, *CreatePictureItemRequest) (*emptypb.Empty, error)
 	SetPictureCrop(context.Context, *SetPictureCropRequest) (*emptypb.Empty, error)
 	ClearReplacePicture(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
+	AcceptReplacePicture(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	SetPicturePoint(context.Context, *SetPicturePointRequest) (*emptypb.Empty, error)
 	UpdatePicture(context.Context, *UpdatePictureRequest) (*emptypb.Empty, error)
 	SetPictureCopyrights(context.Context, *SetPictureCopyrightsRequest) (*emptypb.Empty, error)
@@ -4415,6 +4428,9 @@ func (UnimplementedPicturesServer) SetPictureCrop(context.Context, *SetPictureCr
 }
 func (UnimplementedPicturesServer) ClearReplacePicture(context.Context, *PictureIDRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearReplacePicture not implemented")
+}
+func (UnimplementedPicturesServer) AcceptReplacePicture(context.Context, *PictureIDRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AcceptReplacePicture not implemented")
 }
 func (UnimplementedPicturesServer) SetPicturePoint(context.Context, *SetPicturePointRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetPicturePoint not implemented")
@@ -4791,6 +4807,24 @@ func _Pictures_ClearReplacePicture_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_AcceptReplacePicture_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PictureIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).AcceptReplacePicture(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_AcceptReplacePicture_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).AcceptReplacePicture(ctx, req.(*PictureIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Pictures_SetPicturePoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetPicturePointRequest)
 	if err := dec(in); err != nil {
@@ -4945,6 +4979,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClearReplacePicture",
 			Handler:    _Pictures_ClearReplacePicture_Handler,
+		},
+		{
+			MethodName: "AcceptReplacePicture",
+			Handler:    _Pictures_AcceptReplacePicture_Handler,
 		},
 		{
 			MethodName: "SetPicturePoint",

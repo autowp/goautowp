@@ -8,5 +8,6 @@
   "pm/new-picture-%s-vote-%s/delete": "Пададзена заяўка на выдаленне дададзенай вамі карцінкі\n{{.Picture}}\nПрычына: {{.Reason}}",
   "pm/user-%s-edited-picture-copyrights-%s-%s": "Карыстальнік {{.User}} рэдагаваў тэкст капірайтаў выявы\n{{.PictureURL}}",
   "pm/your-picture-accepted-%s": "Дададзеная вамі карцінка прынятая на сайт\n{{.PictureURL}}",
-  "pm/your-picture-%s-enqueued-to-remove-%s": "Дададзеная вамі карцінка {{.PictureURL}} пастаўлена ў чаргу на выдаленне\n{{.Reasons}}"
+  "pm/your-picture-%s-enqueued-to-remove-%s": "Дададзеная вамі карцінка {{.PictureURL}} пастаўлена ў чаргу на выдаленне\n{{.Reasons}}",
+  "pm/user-%s-accept-replace-%s-%s": "{{.ModeratorURL}} прыняў замену {{.PictureURL}} на {{.ReplacementPictureURL}}"
 }

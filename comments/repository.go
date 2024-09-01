@@ -1797,3 +1797,29 @@ func (s *Repository) AuthorsFans(ctx context.Context, userID int64, limit uint) 
 
 	return rows, err
 }
+
+func (s *Repository) MoveMessages(
+	ctx context.Context, srcTypeID schema.CommentMessageType, srcItemID int64,
+	dstTypeID schema.CommentMessageType, dstItemID int64,
+) error {
+	_, err := s.db.Update(schema.CommentMessageTable).
+		Set(goqu.Record{
+			schema.CommentMessageTableTypeIDColName: dstTypeID,
+			schema.CommentMessageTableItemIDColName: dstItemID,
+		}).
+		Where(
+			schema.CommentMessageTableTypeIDCol.Eq(srcTypeID),
+			schema.CommentMessageTableItemIDCol.Eq(srcItemID),
+		).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = s.updateTopicStat(ctx, srcTypeID, srcItemID)
+	if err != nil {
+		return err
+	}
+
+	return s.updateTopicStat(ctx, dstTypeID, dstItemID)
+}

@@ -149,6 +149,7 @@ service Pictures {
   rpc CreatePictureItem(CreatePictureItemRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureCrop(SetPictureCropRequest) returns (google.protobuf.Empty) {}
   rpc ClearReplacePicture(PictureIDRequest) returns (google.protobuf.Empty) {}
+  rpc AcceptReplacePicture(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc SetPicturePoint(SetPicturePointRequest) returns (google.protobuf.Empty) {}
   rpc UpdatePicture(UpdatePictureRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureCopyrights(SetPictureCopyrightsRequest) returns (google.protobuf.Empty) {}

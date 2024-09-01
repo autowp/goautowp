@@ -8,5 +8,6 @@
   "pm/new-picture-%s-vote-%s/delete": "Vote pour suppression de la nouvelle image\n{{.Picture}}\nRaison: {{.Reason}}",
   "pm/user-%s-edited-picture-copyrights-%s-%s": "L'utilisateur {{.User}} a modifié les droits d'auteur de l'image\n{{.PictureURL}}",
   "pm/your-picture-accepted-%s": "Votre image a été acceptée\n{{.PictureURL}}",
-  "pm/your-picture-%s-enqueued-to-remove-%s": "Votre image {{.PictureURL}} est en attente de suppression\n{{.Reasons}}"
+  "pm/your-picture-%s-enqueued-to-remove-%s": "Votre image {{.PictureURL}} est en attente de suppression\n{{.Reasons}}",
+  "pm/user-%s-accept-replace-%s-%s": "{{.ModeratorURL}} a accepté le remplacement de {{.PictureURL}} par {{.ReplacementPictureURL}}"
 }

@@ -67,4 +67,5 @@ type PictureRow struct {
 	TakenDay           sql.NullByte  `db:"taken_day"`
 	CopyrightsTextID   sql.NullInt32 `db:"copyrights_text_id"`
 	AcceptDatetime     sql.NullTime  `db:"accept_datetime"`
+	ReplacePictureID   sql.NullInt64 `db:"replace_picture_id"`
 }

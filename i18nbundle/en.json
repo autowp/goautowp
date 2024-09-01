@@ -8,5 +8,6 @@
   "pm/new-picture-%s-vote-%s/delete": "New picture delete vote\n{{.Picture}}\nReason: {{.Reason}}",
   "pm/user-%s-edited-picture-copyrights-%s-%s": "User {{.User}} edited picture copyrights\n{{.PictureURL}}",
   "pm/your-picture-accepted-%s": "Your picture was accepted\n{{.PictureURL}}",
-  "pm/your-picture-%s-enqueued-to-remove-%s": "Your picture {{.PictureURL}} enqueued to remove\n{{.Reasons}}"
+  "pm/your-picture-%s-enqueued-to-remove-%s": "Your picture {{.PictureURL}} enqueued to remove\n{{.Reasons}}",
+  "pm/user-%s-accept-replace-%s-%s": "{{.ModeratorURL}} accept replacement {{.PictureURL}} to {{.ReplacementPictureURL}}"
 }

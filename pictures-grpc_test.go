@@ -1295,3 +1295,108 @@ func TestSetPictureStatus(t *testing.T) {
 	)
 	require.Error(t, err)
 }
+
+func TestReplacePicture(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	// tester
+	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	require.NoError(t, err)
+	require.NotNil(t, testerToken)
+
+	// tester (me)
+	usersClient := NewUsersClient(conn)
+	tester, err := usersClient.Me(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		&APIMeRequest{},
+	)
+	require.NoError(t, err)
+
+	client := NewPicturesClient(conn)
+
+	var picStatus schema.PictureStatus
+
+	// accept
+	_, err = client.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
+		},
+	)
+	require.NoError(t, err)
+
+	success, err := goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, schema.PictureStatusAccepted, picStatus)
+
+	// set replace
+	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
+		schema.PictureTableReplacePictureIDColName: pictureID,
+		schema.PictureTableOwnerIDColName:          tester.GetId(),
+	}).Where(schema.PictureTableIDCol.Eq(pictureID2)).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	// accept replace
+	_, err = client.AcceptReplacePicture(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PictureIDRequest{
+			Id: pictureID,
+		},
+	)
+	require.Error(t, err)
+
+	_, err = client.AcceptReplacePicture(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PictureIDRequest{
+			Id: pictureID2,
+		},
+	)
+	require.NoError(t, err)
+
+	success, err = goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, schema.PictureStatusRemoving, picStatus)
+
+	success, err = goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID2)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, schema.PictureStatusAccepted, picStatus)
+}

@@ -467,6 +467,7 @@ func (s *Repository) Picture(ctx context.Context, id int64) (*schema.PictureRow,
 		schema.PictureTableIDCol, schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol,
 		schema.PictureTableIdentityCol, schema.PictureTableStatusCol, schema.PictureTableImageIDCol,
 		schema.PictureTablePointCol, schema.PictureTableCopyrightsTextIDCol, schema.PictureTableAcceptDatetimeCol,
+		schema.PictureTableReplacePictureIDCol,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(id)).
