@@ -15,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/textstorage"
@@ -510,7 +511,7 @@ func (s *PicturesGRPCServer) notifyVote(
 		return nil
 	}
 
-	owner, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: picture.OwnerID.Int64})
+	owner, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: picture.OwnerID.Int64}, users.UserFields{})
 	if err != nil {
 		return err
 	}
@@ -1081,7 +1082,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		recipients[replacePicture.OwnerID.Int64] = replacePicture.OwnerID
 	}
 
-	user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: userID})
+	user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: userID}, users.UserFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1258,7 +1259,7 @@ func (s *PicturesGRPCServer) notifyCopyrightsEdited(
 		return nil
 	}
 
-	userRows, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{IDs: revUserIDs})
+	userRows, _, err := s.userRepository.Users(ctx, query.ListUsersOptions{IDs: revUserIDs}, users.UserFields{})
 	if err != nil {
 		return err
 	}
@@ -1454,7 +1455,7 @@ func (s *PicturesGRPCServer) sendMessage(
 
 	notDeleted := false
 
-	receiver, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted})
+	receiver, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted}, users.UserFields{})
 	if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 		return err
 	}
@@ -1481,7 +1482,7 @@ func (s *PicturesGRPCServer) sendLocalizedMessage(
 
 	notDeleted := false
 
-	receiver, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted})
+	receiver, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted}, users.UserFields{})
 	if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 		return err
 	}
@@ -1582,7 +1583,7 @@ func (s *PicturesGRPCServer) notifyRemoving(ctx context.Context, pic *schema.Pic
 			reasons := make([]string, 0, len(deleteRequests))
 
 			for _, request := range deleteRequests {
-				user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: request.UserID})
+				user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: request.UserID}, users.UserFields{})
 				if err != nil {
 					return nil, err
 				}

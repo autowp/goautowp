@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/autowp/goautowp/ban"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"github.com/sirupsen/logrus"
@@ -73,7 +74,7 @@ func (s *IPExtractor) Extract(
 					Reason:   banItem.Reason,
 				}
 
-				user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: banItem.ByUserID})
+				user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: banItem.ByUserID}, users.UserFields{})
 				if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 					return nil, err
 				}

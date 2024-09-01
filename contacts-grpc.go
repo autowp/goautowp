@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9/exp"
@@ -49,7 +50,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 
 	deleted := false
 
-	user, err := s.userRepository.User(ctx, users.GetUsersOptions{ID: in.GetUserId(), Deleted: &deleted})
+	user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: in.GetUserId(), Deleted: &deleted}, users.UserFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -122,13 +123,13 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	userRows, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{
+	userRows, _, err := s.userRepository.Users(ctx, query.ListUsersOptions{
 		InContacts: userID,
 		Order: []exp.OrderedExpression{
 			schema.UserTableDeletedCol.Asc(),
 			schema.UserTableNameCol.Asc(),
 		},
-	})
+	}, users.UserFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

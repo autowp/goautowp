@@ -7,6 +7,7 @@ import (
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9"
@@ -52,12 +53,12 @@ func (s *RatingGRPCServer) GetUserPicturesRating(
 	falseRef := false
 	trueRef := true
 
-	rows, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{
+	rows, _, err := s.userRepository.Users(ctx, query.ListUsersOptions{
 		Deleted:     &falseRef,
 		Limit:       usersRatingLimit,
 		Order:       []exp.OrderedExpression{schema.UserTablePicturesTotalCol.Desc()},
 		HasPictures: &trueRef,
-	})
+	}, users.UserFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -202,12 +203,12 @@ func (s *RatingGRPCServer) GetUserSpecsRating(
 	falseRef := false
 	trueRef := true
 
-	ratingUsers, _, err := s.userRepository.Users(ctx, users.GetUsersOptions{
+	ratingUsers, _, err := s.userRepository.Users(ctx, query.ListUsersOptions{
 		Deleted:  &falseRef,
 		HasSpecs: &trueRef,
 		Limit:    usersRatingLimit,
 		Order:    []exp.OrderedExpression{schema.UserTableSpecsVolumeCol.Desc()},
-	})
+	}, users.UserFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

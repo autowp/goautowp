@@ -14,10 +14,10 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/Nerzal/gocloak/v13/pkg/jwx"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -51,6 +51,19 @@ type AutowpResourceAccess struct {
 
 const KeycloakExternalAccountID = "keycloak"
 
+// CreateUserOptions CreateUserOptions.
+type CreateUserOptions struct {
+	UserName        string `json:"user_name"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	Email           string `json:"email"`
+	Timezone        string `json:"timezone"`
+	Language        string `json:"language"`
+	Password        string `json:"password"`
+	PasswordConfirm string `json:"password_confirm"`
+	Captcha         string `json:"captcha"`
+}
+
 type UserFields struct {
 	Email         bool
 	Timezone      bool
@@ -63,35 +76,6 @@ type UserFields struct {
 	PicturesAdded bool
 	LastIP        bool
 	Login         bool
-}
-
-type GetUsersOptions struct {
-	ID          int64
-	IDs         []int64
-	Identity    string
-	InContacts  int64
-	Order       []exp.OrderedExpression
-	Deleted     *bool
-	HasSpecs    *bool
-	IsOnline    bool
-	HasPictures *bool
-	Limit       uint64
-	Page        uint64
-	Search      string
-	Fields      UserFields
-}
-
-// CreateUserOptions CreateUserOptions.
-type CreateUserOptions struct {
-	UserName        string `json:"user_name"`
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"last_name"`
-	Email           string `json:"email"`
-	Timezone        string `json:"timezone"`
-	Language        string `json:"language"`
-	Password        string `json:"password"`
-	PasswordConfirm string `json:"password_confirm"`
-	Captcha         string `json:"captcha"`
 }
 
 // Repository Main Object.
@@ -131,8 +115,8 @@ func NewRepository(
 	}
 }
 
-func (s *Repository) User(ctx context.Context, options GetUsersOptions) (*schema.UsersRow, error) {
-	users, _, err := s.Users(ctx, options)
+func (s *Repository) User(ctx context.Context, options query.ListUsersOptions, fields UserFields) (*schema.UsersRow, error) {
+	users, _, err := s.Users(ctx, options, fields)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +145,7 @@ func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int
 	return userID, nil
 }
 
-func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]schema.UsersRow, *util.Pages, error) {
+func (s *Repository) Users(ctx context.Context, options query.ListUsersOptions, fields UserFields) ([]schema.UsersRow, *util.Pages, error) {
 	var err error
 
 	result := make([]schema.UsersRow, 0)
@@ -179,94 +163,49 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]sche
 		schema.UserTableLanguageCol,
 	}
 
-	if options.Fields.VotesLeft {
+	if fields.VotesLeft {
 		valuePtrs = append(valuePtrs, &row.VotesLeft)
 		columns = append(columns, schema.UserTableVotesLeftCol)
 	}
 
-	if options.Fields.VotesPerDay {
+	if fields.VotesPerDay {
 		valuePtrs = append(valuePtrs, &row.VotesPerDay)
 		columns = append(columns, schema.UserTableVotesPerDayCol)
 	}
 
-	if options.Fields.Language {
+	if fields.Language {
 		valuePtrs = append(valuePtrs, &row.Language)
 		columns = append(columns, schema.UserTableLanguageCol)
 	}
 
-	if options.Fields.Timezone {
+	if fields.Timezone {
 		valuePtrs = append(valuePtrs, &row.Timezone)
 		columns = append(columns, schema.UserTableTimezoneCol)
 	}
 
-	if options.Fields.RegDate {
+	if fields.RegDate {
 		valuePtrs = append(valuePtrs, &row.RegDate)
 		columns = append(columns, schema.UserTableRegDateCol)
 	}
 
-	if options.Fields.PicturesAdded {
+	if fields.PicturesAdded {
 		valuePtrs = append(valuePtrs, &row.PicturesAdded)
 		columns = append(columns, schema.UserTablePicturesAddedCol)
 	}
 
-	if options.Fields.LastIP {
+	if fields.LastIP {
 		valuePtrs = append(valuePtrs, &row.LastIP)
 		columns = append(columns, goqu.Func("INET6_NTOA", schema.UserTableLastIPCol))
 	}
 
-	if options.Fields.Login {
+	if fields.Login {
 		valuePtrs = append(valuePtrs, &row.Login)
 		columns = append(columns, schema.UserTableLoginCol)
 	}
 
 	sqSelect := s.autowpDB.From(schema.UserTable)
 
-	if options.ID != 0 {
-		sqSelect = sqSelect.Where(schema.UserTableIDCol.Eq(options.ID))
-	}
-
-	if len(options.IDs) != 0 {
-		sqSelect = sqSelect.Where(schema.UserTableIDCol.In(options.IDs))
-	}
-
-	if len(options.Identity) > 0 {
-		sqSelect = sqSelect.Where(schema.UserTableIdentityCol.Eq(options.Identity))
-	}
-
-	if len(options.Search) > 0 {
-		sqSelect = sqSelect.Where(schema.UserTableNameCol.ILike(options.Search + "%"))
-	}
-
-	if options.InContacts != 0 {
-		sqSelect = sqSelect.Join(
-			schema.ContactTable,
-			goqu.On(schema.UserTableIDCol.Eq(schema.ContactTableContactUserIDCol))).
-			Where(schema.ContactTableUserIDCol.Eq(options.InContacts))
-	}
-
-	if options.Deleted != nil {
-		if *options.Deleted {
-			sqSelect = sqSelect.Where(schema.UserTableDeletedCol.IsTrue())
-		} else {
-			sqSelect = sqSelect.Where(schema.UserTableDeletedCol.IsFalse())
-		}
-	}
-
-	if options.HasSpecs != nil {
-		if *options.HasSpecs {
-			sqSelect = sqSelect.Where(schema.UserTableSpecsVolumeCol.Gt(0))
-		} else {
-			sqSelect = sqSelect.Where(schema.UserTableSpecsVolumeCol.Eq(0))
-		}
-	}
-
-	if options.IsOnline {
-		sqSelect = sqSelect.Where(schema.UserTableLastOnlineCol.Gte(goqu.L("DATE_SUB(NOW(), INTERVAL 5 MINUTE)")))
-	}
-
-	if len(options.Order) > 0 {
-		sqSelect = sqSelect.Order(options.Order...)
-	}
+	sqSelect = options.Apply(sqSelect)
 
 	sqSelect = sqSelect.Select(columns...)
 
@@ -858,7 +797,7 @@ func (s *Repository) SetDisableUserCommentsNotifications(
 	toUserID int64,
 	disabled bool,
 ) error {
-	query := s.db.Insert(schema.UserUserPreferencesTable).
+	_, err := s.db.Insert(schema.UserUserPreferencesTable).
 		Rows(goqu.Record{
 			schema.UserUserPreferencesTableUserIDColName:   userID,
 			schema.UserUserPreferencesTableToUserIDColName: toUserID,
@@ -871,9 +810,7 @@ func (s *Repository) SetDisableUserCommentsNotifications(
 					schema.UserUserPreferencesTableDCNColName: schema.Excluded(schema.UserUserPreferencesTableDCNColName),
 				},
 			),
-		)
-
-	_, err := query.Executor().ExecContext(ctx)
+		).Executor().ExecContext(ctx)
 
 	return err
 }

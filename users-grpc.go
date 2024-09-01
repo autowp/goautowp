@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/users"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -90,11 +91,10 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	dbUser, err := s.userRepository.User(ctx, users.GetUsersOptions{
+	dbUser, err := s.userRepository.User(ctx, query.ListUsersOptions{
 		ID:       in.GetUserId(),
 		Identity: in.GetIdentity(),
-		Fields:   convertUserFields(in.GetFields(), s.enforcer, role),
-	})
+	}, convertUserFields(in.GetFields(), s.enforcer, role))
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -246,14 +246,13 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	rows, pages, err := s.userRepository.Users(ctx, users.GetUsersOptions{
+	rows, pages, err := s.userRepository.Users(ctx, query.ListUsersOptions{
 		IsOnline: in.GetIsOnline(),
 		Limit:    in.GetLimit(),
 		Page:     in.GetPage(),
 		Search:   in.GetSearch(),
-		Fields:   convertUserFields(in.GetFields(), s.enforcer, role),
 		IDs:      in.GetId(),
-	})
+	}, convertUserFields(in.GetFields(), s.enforcer, role))
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
