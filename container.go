@@ -1246,8 +1246,18 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
+		tg, err := s.TelegramService()
+		if err != nil {
+			return nil, err
+		}
+
+		itemRepository, err := s.ItemsRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer(), events, s.HostsManager(),
-			messagingRepository, userRepository, i18n, duplicateFinder, textStorageRepository)
+			messagingRepository, userRepository, i18n, duplicateFinder, textStorageRepository, tg, itemRepository)
 	}
 
 	return s.picturesGrpcServer, nil

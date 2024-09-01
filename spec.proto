@@ -152,6 +152,7 @@ service Pictures {
   rpc SetPicturePoint(SetPicturePointRequest) returns (google.protobuf.Empty) {}
   rpc UpdatePicture(UpdatePictureRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureCopyrights(SetPictureCopyrightsRequest) returns (google.protobuf.Empty) {}
+  rpc SetPictureStatus(SetPictureStatusRequest) returns (google.protobuf.Empty) {}
 }
 
 service Messaging {
@@ -1086,6 +1087,11 @@ message UpdatePictureRequest {
 message SetPictureCopyrightsRequest {
   int64 id = 1;
   string copyrights = 2;
+}
+
+message SetPictureStatusRequest {
+  int64 id = 1;
+  PictureStatus status = 2;
 }
 
 message DeleteSimilarRequest {

@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -24,7 +26,9 @@ type Service struct {
 	botAPI       *tgbotapi.BotAPI
 }
 
-func NewService(config config.TelegramConfig, db *goqu.Database, hostsManager *hosts.Manager) *Service {
+func NewService(
+	config config.TelegramConfig, db *goqu.Database, hostsManager *hosts.Manager,
+) *Service {
 	return &Service{
 		accessToken:  config.AccessToken,
 		db:           db,
@@ -97,6 +101,52 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 		)
 
 		err = s.sendMessage(ctx, telegramMessage, chatID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) NotifyPicture(
+	ctx context.Context, picture *schema.PictureRow, itemRepository *items.Repository,
+) error {
+	itemIDsSelect, err := itemRepository.IDsSelect(items.ListOptions{
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		DescendantPictures: &items.ItemPicturesOptions{
+			Pictures: &items.PicturesOptions{
+				ID: picture.ID,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	var chatIDs []int64
+
+	err = s.db.Select(schema.TelegramBrandTableChatIDCol).From(schema.TelegramBrandTable).Where(
+		schema.TelegramBrandTableItemIDCol.In(itemIDsSelect),
+		schema.TelegramBrandTableNewCol.IsTrue(),
+		schema.TelegramBrandTableChatIDCol.NotIn(
+			s.db.Select(schema.TelegramChatTableChatIDCol).
+				From(schema.TelegramChatTable).
+				Join(schema.PictureTable, goqu.On(schema.TelegramChatTableUserIDCol.Eq(schema.PictureTableOwnerIDCol))).
+				Where(schema.PictureTableIDCol.Eq(picture.ID)),
+		),
+	).ScanValsContext(ctx, &chatIDs)
+	if err != nil {
+		return err
+	}
+
+	for _, chatID := range chatIDs {
+		uri, err := s.getURIByChatID(ctx, chatID)
+		if err != nil {
+			return err
+		}
+
+		err = s.sendMessage(ctx, frontend.PictureURL(uri, picture.Identity), chatID)
 		if err != nil {
 			return err
 		}

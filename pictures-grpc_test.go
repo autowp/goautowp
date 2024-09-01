@@ -1164,3 +1164,134 @@ func TestSetPictureCopyrights(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Third", text)
 }
+
+func TestSetPictureStatus(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	var picStatus schema.PictureStatus
+
+	// accept
+	_, err = client.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
+		},
+	)
+	require.NoError(t, err)
+
+	success, err := goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, schema.PictureStatusAccepted, picStatus)
+
+	// unaccept
+	_, err = client.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_INBOX,
+		},
+	)
+	require.NoError(t, err)
+
+	success, err = goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, schema.PictureStatusInbox, picStatus)
+
+	// remove without vote
+	_, err = client.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_REMOVING,
+		},
+	)
+	require.ErrorContains(t, err, "PermissionDenied")
+
+	// vote for remove
+	_, err = client.UpdateModerVote(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&UpdateModerVoteRequest{PictureId: pictureID, Reason: "test", Vote: -1},
+	)
+	require.NoError(t, err)
+
+	// remove with vote
+	_, err = client.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_REMOVING,
+		},
+	)
+	require.NoError(t, err)
+
+	success, err = goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, schema.PictureStatusRemoving, picStatus)
+
+	// restore
+	_, err = client.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_INBOX,
+		},
+	)
+	require.NoError(t, err)
+
+	success, err = goquDB.Select(schema.PictureTableStatusCol).
+		From(schema.PictureTable).Where(schema.PictureTableIDCol.Eq(pictureID)).
+		ScanValContext(ctx, &picStatus)
+	require.NoError(t, err)
+	require.True(t, success)
+	require.Equal(t, schema.PictureStatusInbox, picStatus)
+
+	// accept
+	_, err = client.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
+		},
+	)
+	require.Error(t, err)
+}

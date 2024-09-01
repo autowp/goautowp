@@ -32,6 +32,8 @@ const (
 	PictureTableTakenMonthColName         = "taken_month"
 	PictureTableTakenYearColName          = "taken_year"
 	PictureTableCopyrightsTextIDColName   = "copyrights_text_id"
+	PictureTableAcceptDatetimeColName     = "accept_datetime"
+	PictureTableRemovingDateColName       = "removing_date"
 )
 
 var (
@@ -47,9 +49,11 @@ var (
 	PictureTableReplacePictureIDCol   = PictureTable.Col(PictureTableReplacePictureIDColName)
 	PictureTablePointCol              = PictureTable.Col(PictureTablePointColName)
 	PictureTableCopyrightsTextIDCol   = PictureTable.Col(PictureTableCopyrightsTextIDColName)
+	PictureTableAcceptDatetimeCol     = PictureTable.Col(PictureTableAcceptDatetimeColName)
 )
 
 type PictureRow struct {
+	ID                 int64         `db:"id"`
 	OwnerID            sql.NullInt64 `db:"owner_id"`
 	ChangeStatusUserID sql.NullInt64 `db:"change_status_user_id"`
 	Identity           string        `db:"identity"`
@@ -62,4 +66,5 @@ type PictureRow struct {
 	TakenMonth         sql.NullByte  `db:"taken_month"`
 	TakenDay           sql.NullByte  `db:"taken_day"`
 	CopyrightsTextID   sql.NullInt32 `db:"copyrights_text_id"`
+	AcceptDatetime     sql.NullTime  `db:"accept_datetime"`
 }

@@ -24,7 +24,7 @@ func (s *Manager) URIByLanguage(language string) (*url.URL, error) {
 	langConfig, ok := s.languages[language]
 
 	if !ok {
-		return nil, fmt.Errorf("%w: %s", errHostForLanguageNotFound, language)
+		return nil, fmt.Errorf("%w: `%s`", errHostForLanguageNotFound, language)
 	}
 
 	return url.Parse("https://" + langConfig.Hostname)

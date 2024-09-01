@@ -140,13 +140,6 @@ const (
 	PerspectivesGroupsPerspectivesTableName = "perspectives_groups_perspectives"
 	PerspectivesPagesTableName              = "perspectives_pages"
 
-	PicturesModerVotesTableName             = "pictures_moder_votes"
-	PicturesModerVotesTableUserIDColName    = "user_id"
-	PicturesModerVotesTablePictureIDColName = "picture_id"
-	PicturesModerVotesTableVoteColName      = "vote"
-	PicturesModerVotesTableReasonColName    = "reason"
-	PicturesModerVotesTableDayDateColName   = "day_date"
-
 	PictureModerVoteTemplateTableName          = "picture_moder_vote_template"
 	PictureModerVoteTemplateTableIDColName     = "id"
 	PictureModerVoteTemplateTableReasonColName = "reason"
@@ -173,10 +166,6 @@ const (
 	SpecTableNameColName      = "name"
 	SpecTableShortNameColName = "short_name"
 	SpecTableParentIDColName  = "parent_id"
-
-	TelegramBrandTableName = "telegram_brand"
-
-	TelegramChatTableName = "telegram_chat"
 
 	UserAccountTableName = "user_account"
 
@@ -370,10 +359,6 @@ var (
 	PictureModerVoteTemplateTableVoteCol   = PictureModerVoteTemplateTable.Col(PictureModerVoteTemplateTableVoteColName)
 	PictureModerVoteTemplateTableUserIDCol = PictureModerVoteTemplateTable.Col(PictureModerVoteTemplateTableUserIDColName)
 
-	PicturesModerVotesTable             = goqu.T(PicturesModerVotesTableName)
-	PicturesModerVotesTableUserIDCol    = PicturesModerVotesTable.Col(PicturesModerVotesTableUserIDColName)
-	PicturesModerVotesTablePictureIDCol = PicturesModerVotesTable.Col(PicturesModerVotesTablePictureIDColName)
-
 	PictureViewTable             = goqu.T(PictureViewTableName)
 	PictureViewTablePictureIDCol = PictureViewTable.Col(PictureViewTablePictureIDColName)
 	PictureViewTableViewsCol     = PictureViewTable.Col(PictureViewTableViewsColName)
@@ -393,14 +378,6 @@ var (
 	SpecTableNameCol      = SpecTable.Col(SpecTableNameColName)
 	SpecTableShortNameCol = SpecTable.Col(SpecTableShortNameColName)
 	SpecTableParentIDCol  = SpecTable.Col(SpecTableParentIDColName)
-
-	TelegramBrandTable          = goqu.T(TelegramBrandTableName)
-	TelegramBrandTableChatIDCol = TelegramBrandTable.Col("chat_id")
-
-	TelegramChatTable            = goqu.T(TelegramChatTableName)
-	TelegramChatTableChatIDCol   = TelegramChatTable.Col("chat_id")
-	TelegramChatTableUserIDCol   = TelegramChatTable.Col("user_id")
-	TelegramChatTableMessagesCol = TelegramChatTable.Col("messages")
 
 	UserAccountTable             = goqu.T(UserAccountTableName)
 	UserAccountTableUserIDCol    = UserAccountTable.Col("user_id")

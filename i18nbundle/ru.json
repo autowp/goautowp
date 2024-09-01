@@ -6,5 +6,7 @@
   "present-time-abbr": "н.в.",
   "pm/new-picture-%s-vote-%s/accept": "Подана заявка на принятие добавленной вами картинки\n{{.Picture}}\nПричина: {{.Reason}}",
   "pm/new-picture-%s-vote-%s/delete": "Подана заявка на удаление добавленной вами картинки\n{{.Picture}}\nПричина: {{.Reason}}",
-  "pm/user-%s-edited-picture-copyrights-%s-%s": "Пользователь {{.User}} редактировал текст копирайтов изображения\n{{.PictureURL}}"
+  "pm/user-%s-edited-picture-copyrights-%s-%s": "Пользователь {{.User}} редактировал текст копирайтов изображения\n{{.PictureURL}}",
+  "pm/your-picture-accepted-%s": "Добавленная вами картинка принята на сайт\n{{.PictureURL}}",
+  "pm/your-picture-%s-enqueued-to-remove-%s": "Добавленная вами картинка {{.PictureURL}} поставлена в очередь на удаление\n{{.Reasons}}"
 }

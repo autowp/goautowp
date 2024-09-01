@@ -6,5 +6,7 @@
   "present-time-abbr": "pr.",
   "pm/new-picture-%s-vote-%s/accept": "La nueva imagen acepta votos\n{{.Picture}}\nmotivo: {{.Reason}}",
   "pm/new-picture-%s-vote-%s/delete": "nueva imagen votada para borrar\n{{.Picture}}\nMotivo: {{.Reason}}",
-  "pm/user-%s-edited-picture-copyrights-%s-%s": "El usuario {{.User}}, ha editado los derechos de autor de la imagen\n{{.PictureURL}}"
+  "pm/user-%s-edited-picture-copyrights-%s-%s": "El usuario {{.User}}, ha editado los derechos de autor de la imagen\n{{.PictureURL}}",
+  "pm/your-picture-accepted-%s": "Su imagen fué aceptada\n{{.PictureURL}}",
+  "pm/your-picture-%s-enqueued-to-remove-%s": "Su imagen {{.PictureURL}}, fué marcada para remover\n{{.Reasons}}"
 }

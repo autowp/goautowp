@@ -464,9 +464,9 @@ func (s *Repository) Picture(ctx context.Context, id int64) (*schema.PictureRow,
 	st := schema.PictureRow{}
 
 	success, err := s.db.Select(
-		schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol, schema.PictureTableIdentityCol,
-		schema.PictureTableStatusCol, schema.PictureTableImageIDCol, schema.PictureTablePointCol,
-		schema.PictureTableCopyrightsTextIDCol,
+		schema.PictureTableIDCol, schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol,
+		schema.PictureTableIdentityCol, schema.PictureTableStatusCol, schema.PictureTableImageIDCol,
+		schema.PictureTablePointCol, schema.PictureTableCopyrightsTextIDCol, schema.PictureTableAcceptDatetimeCol,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(id)).
@@ -909,4 +909,121 @@ func (s *Repository) SetPictureCopyrights(
 	}
 
 	return true, textID, nil
+}
+
+func (s *Repository) CanAccept(ctx context.Context, row *schema.PictureRow) (bool, error) {
+	if row.Status != schema.PictureStatusInbox {
+		return false, nil
+	}
+
+	votes, err := s.NegativeVotesCount(ctx, row.ID)
+
+	return votes <= 0, err
+}
+
+func (s *Repository) CanDelete(ctx context.Context, row *schema.PictureRow) (bool, error) {
+	if row.Status != schema.PictureStatusInbox {
+		return false, nil
+	}
+
+	votes, err := s.PositiveVotesCount(ctx, row.ID)
+
+	return votes <= 0, err
+}
+
+func (s *Repository) NegativeVotes(ctx context.Context, pictureID int64) ([]schema.PictureModerVoteRow, error) {
+	var sts []schema.PictureModerVoteRow
+
+	err := s.db.Select(schema.PicturesModerVotesTableUserIDCol, schema.PicturesModerVotesTableReasonCol).
+		From(schema.PicturesModerVotesTable).Where(
+		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
+		schema.PicturesModerVotesTableVoteCol.Eq(0),
+	).ScanStructsContext(ctx, &sts)
+
+	return sts, err
+}
+
+func (s *Repository) NegativeVotesCount(ctx context.Context, pictureID int64) (int, error) {
+	var count int
+	success, err := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.PicturesModerVotesTable).Where(
+		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
+		schema.PicturesModerVotesTableVoteCol.Eq(0),
+	).ScanValContext(ctx, &count)
+
+	if !success {
+		return 0, sql.ErrNoRows
+	}
+
+	return count, err
+}
+
+func (s *Repository) PositiveVotesCount(ctx context.Context, pictureID int64) (int, error) {
+	var count int
+	success, err := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.PicturesModerVotesTable).Where(
+		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
+		schema.PicturesModerVotesTableVoteCol.Gt(0),
+	).ScanValContext(ctx, &count)
+
+	if !success {
+		return 0, sql.ErrNoRows
+	}
+
+	return count, err
+}
+
+func (s *Repository) HasVote(ctx context.Context, pictureID int64, userID int64) (bool, error) {
+	var exists bool
+	success, err := s.db.Select(goqu.V(true)).From(schema.PicturesModerVotesTable).Where(
+		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
+		schema.PicturesModerVotesTableUserIDCol.Eq(userID),
+	).ScanValContext(ctx, &exists)
+
+	return success && exists, err
+}
+
+func (s *Repository) Accept(ctx context.Context, pictureID int64, userID int64) (bool, bool, error) {
+	isFirstTimeAccepted := false
+
+	picture, err := s.Picture(ctx, pictureID)
+	if err != nil {
+		return false, false, err
+	}
+
+	rec := goqu.Record{
+		schema.PictureTableStatusColName:             schema.PictureStatusAccepted,
+		schema.PictureTableChangeStatusUserIDColName: userID,
+	}
+
+	if !picture.AcceptDatetime.Valid {
+		rec[schema.PictureTableAcceptDatetimeColName] = goqu.Func("NOW")
+		isFirstTimeAccepted = true
+	}
+
+	res, err := s.db.Update(schema.PictureTable).Set(rec).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return false, false, err
+	}
+
+	affected, err := res.RowsAffected()
+
+	return isFirstTimeAccepted, affected > 0, err
+}
+
+func (s *Repository) QueueRemove(ctx context.Context, pictureID int64, userID int64) (bool, error) {
+	res, err := s.db.Update(schema.PictureTable).Set(goqu.Record{
+		schema.PictureTableStatusColName:             schema.PictureStatusRemoving,
+		schema.PictureTableRemovingDateColName:       goqu.Func("CURDATE"),
+		schema.PictureTableChangeStatusUserIDColName: userID,
+	}).
+		Where(schema.PictureTableIDCol.Eq(pictureID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+
+	return affected > 0, err
 }

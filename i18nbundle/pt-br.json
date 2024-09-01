@@ -6,5 +6,7 @@
   "present-time-abbr": "pr.",
   "pm/new-picture-%s-vote-%s/accept": "Novo voto positivo\n{{.Picture}}\nMotivo: {{.Reason}}",
   "pm/new-picture-%s-vote-%s/delete": "Novo voto negativo\n{{.Picture}}\nMotivo: {{.Reason}}",
-  "pm/user-%s-edited-picture-copyrights-%s-%s": "Usuário {{.User}} editou os direitos autorais da imagem\n{{.PictureURL}}"
+  "pm/user-%s-edited-picture-copyrights-%s-%s": "Usuário {{.User}} editou os direitos autorais da imagem\n{{.PictureURL}}",
+  "pm/your-picture-accepted-%s": "Sua imagem foi aceita\n{{.PictureURL}}",
+  "pm/your-picture-%s-enqueued-to-remove-%s": "Sua imagem {{.PictureURL}} foi colocada na fila de remoção\n{{.Reasons}}"
 }

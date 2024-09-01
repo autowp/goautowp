@@ -169,13 +169,14 @@ func (s *Repository) Users(ctx context.Context, options GetUsersOptions) ([]sche
 	var row schema.UsersRow
 	valuePtrs := []interface{}{
 		&row.ID, &row.Name, &row.Deleted, &row.Identity, &row.LastOnline, &row.Role,
-		&row.SpecsWeight, &row.Img, &row.EMail, &row.PicturesTotal, &row.SpecsVolume,
+		&row.SpecsWeight, &row.Img, &row.EMail, &row.PicturesTotal, &row.SpecsVolume, &row.Language,
 	}
 
 	columns := []interface{}{
 		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
 		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol, schema.UserTableImgCol,
 		schema.UserTableEmailCol, schema.UserTablePicturesTotalCol, schema.UserTableSpecsVolumeCol,
+		schema.UserTableLanguageCol,
 	}
 
 	if options.Fields.VotesLeft {

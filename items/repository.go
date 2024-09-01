@@ -141,6 +141,7 @@ type PicturesOptions struct {
 	Status      schema.PictureStatus
 	OwnerID     int64
 	ItemPicture *ItemPicturesOptions
+	ID          int64
 }
 
 type ItemPicturesOptions struct {
@@ -257,19 +258,27 @@ func applyPicture(alias string, sqSelect *goqu.SelectDataset, options *PicturesO
 	if options.Status != "" || options.ItemPicture != nil || options.OwnerID != 0 {
 		sqSelect = sqSelect.Join(
 			schema.PictureTable.As(pAlias),
-			goqu.On(goqu.T(alias).Col("picture_id").Eq(goqu.T(pAlias).Col("id"))),
+			goqu.On(
+				goqu.T(alias).Col(schema.PictureItemTablePictureIDColName).Eq(
+					goqu.T(pAlias).Col(schema.PictureTableIDColName),
+				),
+			),
 		)
 
+		if options.ID != 0 {
+			sqSelect = sqSelect.Where(goqu.T(pAlias).Col(schema.PictureTableIDColName).Eq(options.Status))
+		}
+
 		if options.Status != "" {
-			sqSelect = sqSelect.Where(goqu.T(pAlias).Col("status").Eq(options.Status))
+			sqSelect = sqSelect.Where(goqu.T(pAlias).Col(schema.PictureTableStatusColName).Eq(options.Status))
 		}
 
 		if options.OwnerID != 0 {
-			sqSelect = sqSelect.Where(goqu.T(pAlias).Col("owner_id").Eq(options.OwnerID))
+			sqSelect = sqSelect.Where(goqu.T(pAlias).Col(schema.PictureTableOwnerIDColName).Eq(options.OwnerID))
 		}
 
 		if options.ItemPicture != nil {
-			sqSelect, _ = applyItemPicture(pAlias, "id", sqSelect, options.ItemPicture)
+			sqSelect, _ = applyItemPicture(pAlias, schema.PictureTableIDColName, sqSelect, options.ItemPicture)
 		}
 	}
 
@@ -399,14 +408,14 @@ func (s *Repository) applyItem( //nolint:maintidx
 		iAlias := alias + "_id"
 		sqSelect = sqSelect.Join(
 			schema.ItemParentCacheTable.As(ipcdAlias),
-			goqu.On(aliasIDCol.Eq(goqu.T(ipcdAlias).Col("parent_id"))),
+			goqu.On(aliasIDCol.Eq(goqu.T(ipcdAlias).Col(schema.ItemParentCacheTableParentIDColName))),
 		)
 
 		if options.DescendantItems != nil {
 			sqSelect = sqSelect.
 				Join(
 					schema.ItemTable.As(iAlias),
-					goqu.On(goqu.T(ipcdAlias).Col("item_id").Eq(goqu.T(iAlias).Col("id"))),
+					goqu.On(goqu.T(ipcdAlias).Col(schema.ItemParentCacheTableItemIDColName).Eq(goqu.T(iAlias).Col("id"))),
 				)
 
 			sqSelect, err = s.applyItem(iAlias, sqSelect, fields, options.DescendantItems)
@@ -417,7 +426,9 @@ func (s *Repository) applyItem( //nolint:maintidx
 
 		if options.DescendantPictures != nil || options.Fields.CurrentPicturesCount {
 			var piAlias string
-			sqSelect, piAlias = applyItemPicture(ipcdAlias, "item_id", sqSelect, options.DescendantPictures)
+			sqSelect, piAlias = applyItemPicture(
+				ipcdAlias, schema.ItemParentCacheTableItemIDColName, sqSelect, options.DescendantPictures,
+			)
 
 			if options.Fields.CurrentPicturesCount {
 				columns = append(columns, goqu.COUNT(goqu.DISTINCT(goqu.T(piAlias).Col("picture_id"))).As(colCurrentPicturesCount))
@@ -701,6 +712,42 @@ func (s *Repository) applyItem( //nolint:maintidx
 	}
 
 	return sqSelect, nil
+}
+
+func (s *Repository) IDsSelect(options ListOptions) (*goqu.SelectDataset, error) {
+	var err error
+
+	alias := "i"
+	if options.Alias != "" {
+		alias = options.Alias
+	}
+
+	sqSelect := s.db.Select(goqu.I(alias).Col(schema.ItemTableIDColName)).From(schema.ItemTable.As(alias))
+
+	sqSelect, err = s.applyItem(alias, sqSelect, false, &options)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect, nil
+}
+
+func (s *Repository) IDs(ctx context.Context, options ListOptions) ([]int64, error) {
+	var err error
+
+	sqSelect, err := s.IDsSelect(options)
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []int64
+
+	err = sqSelect.Executor().ScanValsContext(ctx, &ids)
+	if err != nil {
+		return nil, err
+	}
+
+	return ids, nil
 }
 
 func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, error) {

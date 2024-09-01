@@ -2,9 +2,9 @@ package goautowp
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
@@ -46,11 +46,6 @@ func (s *UserExtractor) Extract(
 
 	isGreen := row.Role != "" && s.enforcer.Enforce(row.Role, "status", "be-green")
 
-	route := []string{"/users", fmt.Sprintf("user%d", row.ID)}
-	if row.Identity != nil {
-		route = []string{"/users", *row.Identity}
-	}
-
 	identity := ""
 	if row.Identity != nil {
 		identity = *row.Identity
@@ -62,7 +57,7 @@ func (s *UserExtractor) Extract(
 		Deleted:       row.Deleted,
 		LongAway:      longAway,
 		Green:         isGreen,
-		Route:         route,
+		Route:         frontend.UserRoute(row.ID, row.Identity),
 		Identity:      identity,
 		SpecsWeight:   row.SpecsWeight,
 		PicturesAdded: row.PicturesAdded,

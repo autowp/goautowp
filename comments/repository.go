@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/messaging"
@@ -733,9 +734,9 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 		return nil
 	}
 
-	ai := ""
+	var ai *string
 	if st.AuthorIdentity.Valid {
-		ai = st.AuthorIdentity.String
+		ai = &st.AuthorIdentity.String
 	}
 
 	userURL, err := s.userURL(st.AuthorID, ai, st.ParentLanguage)
@@ -808,9 +809,9 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		return sql.ErrNoRows
 	}
 
-	au := ""
+	var au *string
 	if authorIdentity.Valid {
-		au = authorIdentity.String
+		au = &authorIdentity.String
 	}
 
 	ids, err := s.getSubscribersIDs(ctx, st.TypeID, st.ItemID, true)
@@ -998,7 +999,7 @@ func (s *Repository) messageRowRoute(
 			return nil, sql.ErrNoRows
 		}
 
-		return []string{"/picture", identity}, nil
+		return frontend.PictureRoute(identity), nil
 
 	case schema.CommentMessageTypeIDItems:
 		var itemTypeID schema.ItemTableItemTypeID
@@ -1146,19 +1147,13 @@ func (s *Repository) RefreshRepliesCount(ctx context.Context) (int64, error) {
 	return affected, nil
 }
 
-func (s *Repository) userURL(userID int64, identity string, language string) (string, error) {
-	if len(identity) == 0 {
-		identity = "user" + strconv.FormatInt(userID, 10)
-	}
-
+func (s *Repository) userURL(userID int64, identity *string, language string) (string, error) {
 	uri, err := s.hostManager.URIByLanguage(language)
 	if err != nil {
 		return "", err
 	}
 
-	uri.Path = "/users/" + url.QueryEscape(identity)
-
-	return uri.String(), nil
+	return frontend.UserURL(uri, userID, identity), nil
 }
 
 func (s *Repository) NeedWait(ctx context.Context, userID int64) (bool, error) {
@@ -1660,7 +1655,7 @@ func (s *Repository) MessageRowRoute(
 			return nil, fmt.Errorf("%w: `%v`", errPictureNotFound, itemID)
 		}
 
-		result = []string{"/picture", identity}
+		result = frontend.PictureRoute(identity)
 
 	case schema.CommentMessageTypeIDItems:
 		var itemTypeID schema.ItemTableItemTypeID

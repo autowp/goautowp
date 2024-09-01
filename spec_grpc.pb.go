@@ -4052,6 +4052,7 @@ const (
 	Pictures_SetPicturePoint_FullMethodName           = "/goautowp.Pictures/SetPicturePoint"
 	Pictures_UpdatePicture_FullMethodName             = "/goautowp.Pictures/UpdatePicture"
 	Pictures_SetPictureCopyrights_FullMethodName      = "/goautowp.Pictures/SetPictureCopyrights"
+	Pictures_SetPictureStatus_FullMethodName          = "/goautowp.Pictures/SetPictureStatus"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -4080,6 +4081,7 @@ type PicturesClient interface {
 	SetPicturePoint(ctx context.Context, in *SetPicturePointRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdatePicture(ctx context.Context, in *UpdatePictureRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPictureCopyrights(ctx context.Context, in *SetPictureCopyrightsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SetPictureStatus(ctx context.Context, in *SetPictureStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type picturesClient struct {
@@ -4310,6 +4312,16 @@ func (c *picturesClient) SetPictureCopyrights(ctx context.Context, in *SetPictur
 	return out, nil
 }
 
+func (c *picturesClient) SetPictureStatus(ctx context.Context, in *SetPictureStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Pictures_SetPictureStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility.
@@ -4336,6 +4348,7 @@ type PicturesServer interface {
 	SetPicturePoint(context.Context, *SetPicturePointRequest) (*emptypb.Empty, error)
 	UpdatePicture(context.Context, *UpdatePictureRequest) (*emptypb.Empty, error)
 	SetPictureCopyrights(context.Context, *SetPictureCopyrightsRequest) (*emptypb.Empty, error)
+	SetPictureStatus(context.Context, *SetPictureStatusRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -4411,6 +4424,9 @@ func (UnimplementedPicturesServer) UpdatePicture(context.Context, *UpdatePicture
 }
 func (UnimplementedPicturesServer) SetPictureCopyrights(context.Context, *SetPictureCopyrightsRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetPictureCopyrights not implemented")
+}
+func (UnimplementedPicturesServer) SetPictureStatus(context.Context, *SetPictureStatusRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPictureStatus not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 func (UnimplementedPicturesServer) testEmbeddedByValue()                  {}
@@ -4829,6 +4845,24 @@ func _Pictures_SetPictureCopyrights_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_SetPictureStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPictureStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).SetPictureStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_SetPictureStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).SetPictureStatus(ctx, req.(*SetPictureStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -4923,6 +4957,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetPictureCopyrights",
 			Handler:    _Pictures_SetPictureCopyrights_Handler,
+		},
+		{
+			MethodName: "SetPictureStatus",
+			Handler:    _Pictures_SetPictureStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

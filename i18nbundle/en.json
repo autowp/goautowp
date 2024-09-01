@@ -6,5 +6,7 @@
   "present-time-abbr": "pr.",
   "pm/new-picture-%s-vote-%s/accept": "New picture accept vote\n{{.Picture}}\nReason: {{.Reason}}",
   "pm/new-picture-%s-vote-%s/delete": "New picture delete vote\n{{.Picture}}\nReason: {{.Reason}}",
-  "pm/user-%s-edited-picture-copyrights-%s-%s": "User {{.User}} edited picture copyrights\n{{.PictureURL}}"
+  "pm/user-%s-edited-picture-copyrights-%s-%s": "User {{.User}} edited picture copyrights\n{{.PictureURL}}",
+  "pm/your-picture-accepted-%s": "Your picture was accepted\n{{.PictureURL}}",
+  "pm/your-picture-%s-enqueued-to-remove-%s": "Your picture {{.PictureURL}} enqueued to remove\n{{.Reasons}}"
 }

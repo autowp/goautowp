@@ -6,5 +6,7 @@
   "present-time-abbr": "至今",
   "pm/new-picture-%s-vote-%s/accept": "收到接受图片表决\n{{.Picture}}\nReason: {{.Reason}}",
   "pm/new-picture-%s-vote-%s/delete": "收到删除图片表决\n{{.Picture}}\nReason: {{.Reason}}",
-  "pm/user-%s-edited-picture-copyrights-%s-%s": "用户{{.User}}编辑了图片版权\n{{.PictureURL}}"
+  "pm/user-%s-edited-picture-copyrights-%s-%s": "用户{{.User}}编辑了图片版权\n{{.PictureURL}}",
+  "pm/your-picture-accepted-%s": "您的图片已通过\n{{.PictureURL}}",
+  "pm/your-picture-%s-enqueued-to-remove-%s": "您的图片{{.PictureURL}}已被删除\n{{.Reasons}}"
 }

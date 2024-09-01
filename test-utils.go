@@ -58,6 +58,7 @@ func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, 
 		schema.PictureTableOwnerIDColName:  nil,
 		schema.PictureTableWidthColName:    img.Width(),
 		schema.PictureTableHeightColName:   img.Height(),
+		schema.PictureTableStatusColName:   schema.PictureStatusInbox,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
