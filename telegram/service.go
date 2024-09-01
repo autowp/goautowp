@@ -157,22 +157,13 @@ func (s *Service) NotifyPicture(
 }
 
 func (s *Service) getURIByChatID(ctx context.Context, chatID int64) (*url.URL, error) {
-	var userID int64
-
-	success, err := s.db.Select(schema.TelegramChatTableUserIDCol).
-		From(schema.TelegramChatTable).
-		Where(schema.TelegramChatTableChatIDCol.Eq(chatID)).
-		ScanValContext(ctx, &userID)
-	if err != nil {
-		return nil, err
-	}
-
-	if success && chatID > 0 && userID > 0 {
+	if chatID > 0 {
 		language := ""
 
-		success, err = s.db.Select(schema.UserTableLanguageCol).
+		success, err := s.db.Select(schema.UserTableLanguageCol).
 			From(schema.UserTable).
-			Where(schema.UserTableIDCol.Eq(userID)).
+			Join(schema.TelegramChatTable, goqu.On(schema.UserTableIDCol.Eq(schema.TelegramChatTableUserIDCol))).
+			Where(schema.TelegramChatTableChatIDCol.Eq(chatID)).
 			ScanValContext(ctx, &language)
 		if err != nil {
 			return nil, err
