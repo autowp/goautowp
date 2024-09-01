@@ -177,7 +177,7 @@ func (s *PicturesGRPCServer) CreateModerVoteTemplate(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if s.enforcer.Enforce(role, "global", "moderate") {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -217,7 +217,7 @@ func (s *PicturesGRPCServer) DeleteModerVoteTemplate(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -239,7 +239,7 @@ func (s *PicturesGRPCServer) GetModerVoteTemplates(ctx context.Context, _ *empty
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -268,7 +268,7 @@ func (s *PicturesGRPCServer) DeleteModerVote(ctx context.Context, in *DeleteMode
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -303,7 +303,7 @@ func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateMode
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "picture", "moder_vote"); !res {
+	if !s.enforcer.Enforce(role, "picture", "moder_vote") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -584,7 +584,7 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(
 		return 0, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -665,7 +665,7 @@ func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimila
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -695,7 +695,7 @@ func (s *PicturesGRPCServer) Repair(ctx context.Context, in *PictureIDRequest) (
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -719,7 +719,7 @@ func (s *PicturesGRPCServer) SetPictureItemArea(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -762,7 +762,7 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		pic, err := s.repository.Picture(ctx, in.GetPictureId())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -807,7 +807,7 @@ func (s *PicturesGRPCServer) SetPictureItemItemID(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "picture", "move"); !res {
+	if !s.enforcer.Enforce(role, "picture", "move") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -848,7 +848,7 @@ func (s *PicturesGRPCServer) DeletePictureItem(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "picture", "move"); !res {
+	if !s.enforcer.Enforce(role, "picture", "move") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -888,7 +888,7 @@ func (s *PicturesGRPCServer) CreatePictureItem(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "picture", "move"); !res {
+	if !s.enforcer.Enforce(role, "picture", "move") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -929,7 +929,7 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "picture", "crop"); !res {
+	if !s.enforcer.Enforce(role, "picture", "crop") {
 		pic, err := s.repository.Picture(ctx, in.GetPictureId())
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -978,7 +978,7 @@ func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *Pictur
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "picture", "move"); !res {
+	if !s.enforcer.Enforce(role, "picture", "move") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1130,7 +1130,7 @@ func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicture
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1172,7 +1172,7 @@ func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictur
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1212,7 +1212,7 @@ func (s *PicturesGRPCServer) SetPictureCopyrights(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1336,7 +1336,7 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
