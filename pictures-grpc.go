@@ -1373,16 +1373,16 @@ func (s *PicturesGRPCServer) NotifyAccepted(
 				}, nil
 			})
 		if err != nil {
-			return err
+			return fmt.Errorf("sendLocalizedMessage: %w", err)
 		}
 
 		err = s.telegramService.NotifyPicture(ctx, pic, s.itemRepository)
 		if err != nil {
-			return err
+			return fmt.Errorf("NotifyPicture: %w", err)
 		}
 	}
 
-	return s.sendMessage(
+	err := s.sendMessage(
 		ctx, userID, pic.ChangeStatusUserID, func(language string) (string, error) {
 			pictureURL, err := s.pictureURL(pic.Identity, language)
 			if err != nil {
@@ -1391,6 +1391,11 @@ func (s *PicturesGRPCServer) NotifyAccepted(
 
 			return "Принята картинка " + pictureURL, nil
 		})
+	if err != nil {
+		return fmt.Errorf("sendMessage: %w", err)
+	}
+
+	return nil
 }
 
 func (s *PicturesGRPCServer) NotifyInboxed(ctx context.Context, pic *schema.PictureRow, userID int64) error {
