@@ -10,28 +10,14 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
-	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/paulmach/orb"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
 var (
 	errIsAllowedForPictureItemContentOnly = errors.New("is allowed only for picture-item-content")
 	errCombinationNotAllowed              = errors.New("combination not allowed")
 )
-
-const (
-	IdentityLength                    = 6
-	ModerVoteTemplateMessageMaxLength = 80
-)
-
-type ModerVoteTemplate struct {
-	ID      int64
-	UserID  int64
-	Message string
-	Vote    int32
-}
 
 type VoteSummary struct {
 	Value    int32
@@ -184,7 +170,9 @@ func (s *Repository) Vote(ctx context.Context, id int64, value int32, userID int
 	return s.updatePictureSummary(ctx, id)
 }
 
-func (s *Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteTemplate) (ModerVoteTemplate, error) {
+func (s *Repository) CreateModerVoteTemplate(
+	ctx context.Context, tpl schema.PictureModerVoteTemplateRow,
+) (schema.PictureModerVoteTemplateRow, error) {
 	if tpl.Vote < 0 {
 		tpl.Vote = -1
 	}
@@ -193,19 +181,12 @@ func (s *Repository) CreateModerVoteTemplate(ctx context.Context, tpl ModerVoteT
 		tpl.Vote = 1
 	}
 
-	res, err := s.db.Insert(schema.PictureModerVoteTemplateTable).Rows(goqu.Record{
-		schema.PictureModerVoteTemplateTableUserIDColName: tpl.UserID,
-		schema.PictureModerVoteTemplateTableReasonColName: tpl.Message,
-		schema.PictureModerVoteTemplateTableVoteColName:   tpl.Vote,
-	}).Executor().ExecContext(ctx)
+	res, err := s.db.Insert(schema.PictureModerVoteTemplateTable).Rows(tpl).Executor().ExecContext(ctx)
 	if err != nil {
 		return tpl, err
 	}
 
 	tpl.ID, err = res.LastInsertId()
-	if err != nil {
-		return tpl, err
-	}
 
 	return tpl, err
 }
@@ -234,8 +215,12 @@ func (s *Repository) IsModerVoteTemplateExists(ctx context.Context, userID int64
 	return success, err
 }
 
-func (s *Repository) GetModerVoteTemplates(ctx context.Context, userID int64) ([]ModerVoteTemplate, error) {
-	rows, err := s.db.Select(
+func (s *Repository) GetModerVoteTemplates(
+	ctx context.Context, userID int64,
+) ([]schema.PictureModerVoteTemplateRow, error) {
+	var items []schema.PictureModerVoteTemplateRow
+
+	err := s.db.Select(
 		schema.PictureModerVoteTemplateTableIDCol,
 		schema.PictureModerVoteTemplateTableReasonCol,
 		schema.PictureModerVoteTemplateTableVoteCol,
@@ -243,31 +228,9 @@ func (s *Repository) GetModerVoteTemplates(ctx context.Context, userID int64) ([
 		From(schema.PictureModerVoteTemplateTable).
 		Where(schema.PictureModerVoteTemplateTableUserIDCol.Eq(userID)).
 		Order(schema.PictureModerVoteTemplateTableReasonCol.Asc()).
-		Executor().QueryContext(ctx) //nolint:sqlclosecheck
-	if err != nil {
-		return nil, err
-	}
+		Executor().ScanStructsContext(ctx, &items)
 
-	defer util.Close(rows)
-
-	var items []ModerVoteTemplate
-
-	for rows.Next() {
-		var row ModerVoteTemplate
-
-		err = rows.Scan(&row.ID, &row.Message, &row.Vote)
-		if err != nil {
-			return nil, err
-		}
-
-		items = append(items, row)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return items, nil
+	return items, err
 }
 
 func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
@@ -289,37 +252,6 @@ func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
 	})).Executor().ExecContext(ctx)
 
 	return err
-}
-
-func (s *ModerVoteTemplate) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
-	result := make([]*errdetails.BadRequest_FieldViolation, 0)
-
-	var (
-		problems []string
-		err      error
-	)
-
-	messageInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{
-			&validation.NotEmpty{},
-			&validation.StringLength{Max: ModerVoteTemplateMessageMaxLength},
-		},
-	}
-
-	s.Message, problems, err = messageInputFilter.IsValidString(s.Message)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, fv := range problems {
-		result = append(result, &errdetails.BadRequest_FieldViolation{
-			Field:       "message",
-			Description: fv,
-		})
-	}
-
-	return result, nil
 }
 
 func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, error) {

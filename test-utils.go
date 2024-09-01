@@ -9,7 +9,6 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -49,7 +48,7 @@ func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, 
 	img, err := imageStorage.Image(ctx, imageID)
 	require.NoError(t, err)
 
-	identity := randomHexString(t, pictures.IdentityLength/2)
+	identity := randomHexString(t, schema.PicturesTableIdentityLength/2)
 
 	res, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
 		schema.PictureTableImageIDColName:  imageID,

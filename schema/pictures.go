@@ -34,6 +34,8 @@ const (
 	PictureTableCopyrightsTextIDColName   = "copyrights_text_id"
 	PictureTableAcceptDatetimeColName     = "accept_datetime"
 	PictureTableRemovingDateColName       = "removing_date"
+
+	PicturesTableIdentityLength = 6
 )
 
 var (

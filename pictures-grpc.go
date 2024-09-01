@@ -30,6 +30,15 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+func extractPictureModerVoteTemplate(tpl *schema.PictureModerVoteTemplateRow) *ModerVoteTemplate {
+	return &ModerVoteTemplate{
+		Id:      tpl.ID,
+		UserId:  tpl.UserID,
+		Message: tpl.Message,
+		Vote:    int32(tpl.Vote),
+	}
+}
+
 func convertPictureItemType(pictureItemType PictureItemType) schema.PictureItemType {
 	switch pictureItemType {
 	case PictureItemType_PICTURE_ITEM_UNKNOWN:
@@ -121,6 +130,39 @@ func (s *PicturesGRPCServer) Vote(ctx context.Context, in *PicturesVoteRequest) 
 	}, nil
 }
 
+func (s *PicturesGRPCServer) ValidatePictureModerVoteTemplateRow(
+	tpl *schema.PictureModerVoteTemplateRow,
+) ([]*errdetails.BadRequest_FieldViolation, error) {
+	result := make([]*errdetails.BadRequest_FieldViolation, 0)
+
+	var (
+		problems []string
+		err      error
+	)
+
+	messageInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.StringLength{Max: schema.ModerVoteTemplateMessageMaxLength},
+		},
+	}
+
+	tpl.Message, problems, err = messageInputFilter.IsValidString(tpl.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "message",
+			Description: fv,
+		})
+	}
+
+	return result, nil
+}
+
 func (s *PicturesGRPCServer) CreateModerVoteTemplate(
 	ctx context.Context,
 	in *ModerVoteTemplate,
@@ -138,13 +180,13 @@ func (s *PicturesGRPCServer) CreateModerVoteTemplate(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	tpl := pictures.ModerVoteTemplate{
+	tpl := schema.PictureModerVoteTemplateRow{
 		UserID:  userID,
 		Message: in.GetMessage(),
-		Vote:    in.GetVote(),
+		Vote:    int8(in.GetVote()), //nolint: gosec
 	}
 
-	fvs, err := tpl.Validate()
+	fvs, err := s.ValidatePictureModerVoteTemplateRow(&tpl)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -158,12 +200,7 @@ func (s *PicturesGRPCServer) CreateModerVoteTemplate(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &ModerVoteTemplate{
-		Id:      tpl.ID,
-		UserId:  tpl.UserID,
-		Message: tpl.Message,
-		Vote:    tpl.Vote,
-	}, nil
+	return extractPictureModerVoteTemplate(&tpl), nil
 }
 
 func (s *PicturesGRPCServer) DeleteModerVoteTemplate(
@@ -212,12 +249,7 @@ func (s *PicturesGRPCServer) GetModerVoteTemplates(ctx context.Context, _ *empty
 
 	result := make([]*ModerVoteTemplate, len(rows))
 	for idx, item := range rows {
-		result[idx] = &ModerVoteTemplate{
-			Id:      item.ID,
-			Message: item.Message,
-			Vote:    item.Vote,
-			UserId:  item.UserID,
-		}
+		result[idx] = extractPictureModerVoteTemplate(&item)
 	}
 
 	return &ModerVoteTemplates{
@@ -322,10 +354,10 @@ func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateMode
 		}
 
 		if !exists {
-			tpl := pictures.ModerVoteTemplate{
+			tpl := schema.PictureModerVoteTemplateRow{
 				UserID:  userID,
 				Message: reason,
-				Vote:    in.GetVote(),
+				Vote:    int8(in.GetVote()), //nolint: gosec
 			}
 
 			_, err = s.repository.CreateModerVoteTemplate(ctx, tpl)
