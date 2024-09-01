@@ -1203,7 +1203,7 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 
 		isFirstTimeAccepted, success, err := s.repository.Accept(ctx, pic.ID, userID)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, "Accept error: "+err.Error())
 		}
 
 		if success {
@@ -1219,13 +1219,13 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 			if pic.OwnerID.Valid {
 				err = s.userRepository.RefreshPicturesCount(ctx, pic.OwnerID.Int64)
 				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
+					return nil, status.Error(codes.Internal, "RefreshPicturesCount error: "+err.Error())
 				}
 			}
 
 			err = s.NotifyAccepted(ctx, pic, userID, isFirstTimeAccepted)
 			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
+				return nil, status.Error(codes.Internal, "NotifyAccepted error: "+err.Error())
 			}
 		}
 	case PictureStatus_PICTURE_STATUS_INBOX:

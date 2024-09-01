@@ -935,10 +935,11 @@ func (s *Repository) NegativeVotes(ctx context.Context, pictureID int64) ([]sche
 	var sts []schema.PictureModerVoteRow
 
 	err := s.db.Select(schema.PicturesModerVotesTableUserIDCol, schema.PicturesModerVotesTableReasonCol).
-		From(schema.PicturesModerVotesTable).Where(
-		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
-		schema.PicturesModerVotesTableVoteCol.Eq(0),
-	).ScanStructsContext(ctx, &sts)
+		From(schema.PicturesModerVotesTable).
+		Where(
+			schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
+			schema.PicturesModerVotesTableVoteCol.Eq(0),
+		).ScanStructsContext(ctx, &sts)
 
 	return sts, err
 }
