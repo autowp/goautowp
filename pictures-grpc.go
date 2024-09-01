@@ -1455,7 +1455,8 @@ func (s *PicturesGRPCServer) sendMessage(
 
 	notDeleted := false
 
-	receiver, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted}, users.UserFields{})
+	receiver, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted},
+		users.UserFields{})
 	if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 		return err
 	}
@@ -1482,7 +1483,8 @@ func (s *PicturesGRPCServer) sendLocalizedMessage(
 
 	notDeleted := false
 
-	receiver, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted}, users.UserFields{})
+	receiver, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted},
+		users.UserFields{})
 	if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 		return err
 	}

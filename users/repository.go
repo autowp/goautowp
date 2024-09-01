@@ -115,7 +115,9 @@ func NewRepository(
 	}
 }
 
-func (s *Repository) User(ctx context.Context, options query.ListUsersOptions, fields UserFields) (*schema.UsersRow, error) {
+func (s *Repository) User(
+	ctx context.Context, options query.ListUsersOptions, fields UserFields,
+) (*schema.UsersRow, error) {
 	users, _, err := s.Users(ctx, options, fields)
 	if err != nil {
 		return nil, err
@@ -145,7 +147,9 @@ func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int
 	return userID, nil
 }
 
-func (s *Repository) Users(ctx context.Context, options query.ListUsersOptions, fields UserFields) ([]schema.UsersRow, *util.Pages, error) {
+func (s *Repository) Users(
+	ctx context.Context, options query.ListUsersOptions, fields UserFields,
+) ([]schema.UsersRow, *util.Pages, error) {
 	var err error
 
 	result := make([]schema.UsersRow, 0)

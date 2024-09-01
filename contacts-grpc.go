@@ -50,7 +50,8 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 
 	deleted := false
 
-	user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: in.GetUserId(), Deleted: &deleted}, users.UserFields{})
+	user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: in.GetUserId(), Deleted: &deleted},
+		users.UserFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
