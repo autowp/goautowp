@@ -135,6 +135,7 @@ func (s *Service) NotifyPicture(
 				Join(schema.PictureTable, goqu.On(schema.TelegramChatTableUserIDCol.Eq(schema.PictureTableOwnerIDCol))).
 				Where(schema.PictureTableIDCol.Eq(picture.ID)),
 		),
+		schema.TelegramBrandTableChatIDCol.IsNotNull(),
 	).ScanValsContext(ctx, &chatIDs)
 	if err != nil {
 		return err
