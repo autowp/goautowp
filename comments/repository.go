@@ -15,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/messaging"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
@@ -1462,33 +1463,8 @@ func (s *Repository) TopicStatForUser(
 	return messages.Messages, newMessages, nil
 }
 
-func (s *Repository) Count(
-	ctx context.Context, attention schema.CommentMessageModeratorAttention, commentType schema.CommentMessageType,
-	itemID int64,
-) (int32, error) {
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(schema.CommentMessageTable).
-		Where(
-			schema.CommentMessageTableModeratorAttentionCol.Eq(attention),
-			schema.CommentMessageTableTypeIDCol.Eq(commentType),
-		)
-
-	if itemID != 0 {
-		sqSelect = sqSelect.
-			Join(
-				schema.PictureTable,
-				goqu.On(schema.CommentMessageTableItemIDCol.Eq(schema.PictureTableIDCol)),
-			).
-			Join(
-				schema.PictureItemTable,
-				goqu.On(schema.PictureTableIDCol.Eq(schema.PictureItemTablePictureIDCol)),
-			).
-			Join(
-				schema.ItemParentCacheTable,
-				goqu.On(schema.PictureItemTableItemIDCol.Eq(schema.ItemParentCacheTableItemIDCol)),
-			).
-			Where(schema.ItemParentCacheTableParentIDCol.Eq(itemID))
-	}
+func (s *Repository) Count(ctx context.Context, options query.CommentMessageListOptions) (int32, error) {
+	sqSelect := options.CountSelect(s.db)
 
 	var cnt int32
 

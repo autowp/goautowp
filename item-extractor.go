@@ -115,6 +115,7 @@ func (s *ItemExtractor) Extract(
 		InboxPicturesCount:         row.InboxPicturesCount,
 		FullName:                   row.FullName,
 		MostsActive:                row.MostsActive,
+		CommentsAttentionsCount:    row.CommentsAttentionsCount,
 	}
 
 	if fields.GetLogo120() && row.LogoID != 0 {
@@ -172,28 +173,6 @@ func (s *ItemExtractor) Extract(
 			}
 
 			result.NameHtml = nameHTML
-		}
-
-		if fields.GetCommentsAttentionsCount() {
-			cnt, err := s.commentsRepository.Count(ctx,
-				schema.CommentMessageModeratorAttentionRequired, schema.CommentMessageTypeIDPictures, row.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			result.CommentsAttentionsCount = cnt
-		}
-
-		if fields.GetInboxPicturesCount() {
-			cnt, err := s.picturesRepository.Count(ctx, pictures.ListOptions{
-				Status:         schema.PictureStatusInbox,
-				AncestorItemID: row.ID,
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			result.InboxPicturesCount = int32(cnt) //nolint: gosec
 		}
 
 		if fields.GetIsCompilesItemOfDay() {

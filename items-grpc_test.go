@@ -565,9 +565,11 @@ func TestCatalogueMenuList(t *testing.T) {
 			NameText:         true,
 			DescendantsCount: true,
 		},
-		Limit:    20,
-		NoParent: true,
-		TypeId:   ItemType_ITEM_TYPE_CATEGORY,
+		Limit: 20,
+		Options: &ItemListOptions{
+			NoParent: true,
+			TypeId:   ItemType_ITEM_TYPE_CATEGORY,
+		},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, res)

@@ -91,7 +91,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	dbUser, err := s.userRepository.User(ctx, query.ListUsersOptions{
+	dbUser, err := s.userRepository.User(ctx, query.UserListOptions{
 		ID:       in.GetUserId(),
 		Identity: in.GetIdentity(),
 	}, convertUserFields(in.GetFields(), s.enforcer, role))
@@ -246,7 +246,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	rows, pages, err := s.userRepository.Users(ctx, query.ListUsersOptions{
+	rows, pages, err := s.userRepository.Users(ctx, query.UserListOptions{
 		IsOnline: in.GetIsOnline(),
 		Limit:    in.GetLimit(),
 		Page:     in.GetPage(),

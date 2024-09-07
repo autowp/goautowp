@@ -779,15 +779,9 @@ message APITopFactoriesListItem {
   int32 new_count = 4;
 }
 
-message ItemPicturesRequest {
-  PictureItemType type_id = 1;
-  PicturesRequest pictures = 2;
-  int32 perspective_id = 3;
-}
-
-message PicturesRequest {
+message PicturesOptions {
   PictureStatus status = 1;
-  ItemPicturesRequest item_picture = 2;
+  PictureItemOptions picture_item = 2;
   int64 owner_id = 3;
 }
 
@@ -810,7 +804,7 @@ message ItemFields {
   PreviewPicturesFields preview_pictures = 7;
   bool total_pictures = 8;
   bool descendants_count = 9;
-  bool current_pictures_count = 10;
+  bool descendant_pictures_count = 10;
   bool childs_count = 11;
   bool descendant_twins_groups_count = 12;
   bool inbox_pictures_count = 13;
@@ -834,23 +828,44 @@ message ListItemsRequest {
     NAME_NAT = 1;
     NAME = 2;
   }
-
   string language = 1;
   ItemFields fields = 2;
-  ItemType type_id = 3;
-  ItemPicturesRequest descendant_pictures = 4;
-  ItemPicturesRequest preview_pictures = 5;
+  ItemListOptions options = 3;
   uint32 limit = 6;
+  Order order = 9;
+  uint32 page = 11;
+}
+
+message PictureItemOptions {
+  PictureItemType type_id = 1;
+  PicturesOptions pictures = 2;
+  int32 perspective_id = 3;
+}
+
+message ItemParentListOptions {
+  int64 parent_id = 1;
+  ItemListOptions parent = 2;
+}
+
+message ItemParentCacheListOptions {
+  int64 item_id = 1;
+  int64 parent_id = 2;
+  ItemListOptions items_by_item_id = 3;
+  PictureItemOptions picture_items_by_item_id = 4;
+  ItemParentListOptions item_parent_by_item_id = 5;
+}
+
+message ItemListOptions {
+  ItemType type_id = 3;
+  PictureItemOptions preview_pictures = 5;
   bool no_parent = 7;
   string catname = 8;
-  Order order = 9;
   string name = 10;
-  uint32 page = 11;
   int64 id = 12;
-  int64 ancestor_id = 13;
   bool is_concept = 14;
-  ListItemsRequest descendant = 15;
-  ListItemsRequest parent = 16;
+  ItemParentCacheListOptions descendant = 15;
+  ItemParentCacheListOptions ancestor = 13;
+  ItemParentListOptions parent = 16;
   int64 engine_id = 17;
 }
 

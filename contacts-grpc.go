@@ -50,7 +50,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 
 	deleted := false
 
-	user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: in.GetUserId(), Deleted: &deleted},
+	user, err := s.userRepository.User(ctx, query.UserListOptions{ID: in.GetUserId(), Deleted: &deleted},
 		users.UserFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -124,7 +124,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	userRows, _, err := s.userRepository.Users(ctx, query.ListUsersOptions{
+	userRows, _, err := s.userRepository.Users(ctx, query.UserListOptions{
 		InContacts: userID,
 		Order: []exp.OrderedExpression{
 			schema.UserTableDeletedCol.Asc(),

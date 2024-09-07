@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
-	"github.com/doug-martin/goqu/v9/exp"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -33,29 +33,25 @@ func TestTopBrandsListRuZh(t *testing.T) {
 	langs := []string{"ru", "zh"}
 
 	for _, lang := range langs {
-		options := ListOptions{
-			Language: lang,
-			Fields: ListFields{
-				NameOnly:                   true,
-				DescendantsCount:           true,
-				NewDescendantsCount:        true,
-				Description:                true,
-				FullText:                   true,
-				NameHTML:                   true,
-				NameText:                   true,
-				NameDefault:                true,
-				ItemsCount:                 true,
-				NewItemsCount:              true,
-				DescendantTwinsGroupsCount: true,
-			},
+		options := query.ItemsListOptions{
+			Language:   lang,
 			TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 			Limit:      150,
-			OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 			SortByName: true,
 		}
-		r, _, err := repository.List(ctx, options, true)
+		res, _, err := repository.List(ctx, options, ListFields{
+			NameOnly:                   true,
+			DescendantsCount:           true,
+			NewDescendantsCount:        true,
+			Description:                true,
+			FullText:                   true,
+			NameHTML:                   true,
+			NameText:                   true,
+			NameDefault:                true,
+			DescendantTwinsGroupsCount: true,
+		}, OrderByNone, true)
 		require.NoError(t, err)
-		require.NotEmpty(t, r)
+		require.NotEmpty(t, res)
 
 		c, err := repository.Count(ctx, options)
 		require.NoError(t, err)
@@ -75,40 +71,36 @@ func TestListFilters(t *testing.T) {
 
 	repository := NewRepository(goquDB, 200)
 
-	options := ListOptions{
+	options := query.ItemsListOptions{
 		Language: "en",
-		Fields: ListFields{
-			NameOnly:                   true,
-			DescendantsCount:           true,
-			NewDescendantsCount:        true,
-			Description:                true,
-			FullText:                   true,
-			NameHTML:                   true,
-			NameText:                   true,
-			NameDefault:                true,
-			ItemsCount:                 true,
-			NewItemsCount:              true,
-			DescendantTwinsGroupsCount: true,
-		},
-		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
-		ChildItems: &ParentItemsListOptions{
-			ChildItems: &ListOptions{
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		ItemParentChild: &query.ItemParentListOptions{
+			ChildItems: &query.ItemsListOptions{
 				TypeID:       []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
 				IsConcept:    true,
 				EngineItemID: 1,
 			},
 		},
-		ParentItems: &ParentItemsListOptions{
-			ParentItems: &ListOptions{
+		ItemParentParent: &query.ItemParentListOptions{
+			ParentItems: &query.ItemsListOptions{
 				TypeID:    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
 				NoParents: true,
 				Catname:   "test",
 			},
 		},
-		Limit:   150,
-		OrderBy: []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
+		Limit: 150,
 	}
-	_, _, err = repository.List(ctx, options, true)
+	_, _, err = repository.List(ctx, options, ListFields{
+		NameOnly:                   true,
+		DescendantsCount:           true,
+		NewDescendantsCount:        true,
+		Description:                true,
+		FullText:                   true,
+		NameHTML:                   true,
+		NameText:                   true,
+		NameDefault:                true,
+		DescendantTwinsGroupsCount: true,
+	}, OrderByDescendantsCount, true)
 	require.NoError(t, err)
 }
 
@@ -123,17 +115,16 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	ctx := context.Background()
 
 	repository := NewRepository(goquDB, 200)
-	options := ListOptions{
+	options := query.ItemsListOptions{
 		Language: "en",
-		Fields: ListFields{
-			NameOnly:         true,
-			DescendantsCount: true,
-			ChildsCount:      true,
-		},
-		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
-		Limit:  10,
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		Limit:    10,
 	}
-	_, _, err = repository.List(ctx, options, true)
+	_, _, err = repository.List(ctx, options, ListFields{
+		NameOnly:         true,
+		DescendantsCount: true,
+		ChildsCount:      true,
+	}, OrderByNone, true)
 	require.NoError(t, err)
 }
 
@@ -247,28 +238,29 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	require.NoError(t, err)
 
 	repository := NewRepository(goquDB, 200)
-	options := ListOptions{
+	options := query.ItemsListOptions{
 		Language: "en",
-		Fields: ListFields{
-			NameOnly:             true,
-			CurrentPicturesCount: true,
-			ChildsCount:          true,
-		},
-		DescendantPictures: &ItemPicturesOptions{
-			Pictures: &PicturesOptions{
-				OwnerID: userID,
-				Status:  schema.PictureStatusAccepted,
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			PictureItemsByItemID: &query.PictureItemListOptions{
+				Pictures: &query.PictureListOptions{
+					OwnerID: userID,
+					Status:  schema.PictureStatusAccepted,
+				},
 			},
 		},
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:      10,
 		SortByName: true,
 	}
-	r, _, err := repository.List(ctx, options, true)
+	res2, _, err := repository.List(ctx, options, ListFields{
+		NameOnly:                true,
+		DescendantPicturesCount: true,
+		ChildsCount:             true,
+	}, OrderByNone, true)
 	require.NoError(t, err)
-	require.NotEmpty(t, r)
+	require.NotEmpty(t, res2)
 
-	for _, i := range r {
+	for _, i := range res2 {
 		require.Equal(t, int32(1), i.CurrentPicturesCount)
 	}
 }
@@ -307,13 +299,13 @@ func TestPaginator(t *testing.T) {
 	}
 
 	repository := NewRepository(goquDB, 200)
-	options := ListOptions{
+	options := query.ItemsListOptions{
 		Language: "en",
 		Limit:    2,
 		Page:     2,
 		Name:     name + "%",
 	}
-	r, pages, err := repository.List(ctx, options, true)
+	r, pages, err := repository.List(ctx, options, ListFields{}, OrderByNone, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 	require.Len(t, r, 2)

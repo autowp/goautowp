@@ -279,7 +279,7 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 		return nil, err
 	}
 
-	result := []*BrandVehicleType{}
+	var result []*BrandVehicleType
 
 	for rows.Next() {
 		var bvType BrandVehicleType

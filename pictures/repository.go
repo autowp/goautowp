@@ -7,6 +7,7 @@ import (
 
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
@@ -23,13 +24,6 @@ type VoteSummary struct {
 	Value    int32
 	Positive int32
 	Negative int32
-}
-
-type ListOptions struct {
-	Status         schema.PictureStatus
-	AncestorItemID int64
-	HasCopyrights  bool
-	UserID         int64
 }
 
 type RatingUser struct {
@@ -254,65 +248,19 @@ func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
 	return err
 }
 
-func (s *Repository) CountSelect(options ListOptions) (*goqu.SelectDataset, error) {
-	alias := "p"
+func (s *Repository) Count(ctx context.Context, options *query.PictureListOptions) (int, error) {
+	var count int
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.DISTINCT(goqu.T(alias).Col("id")))).
-		From(schema.PictureTable.As(alias))
-
-	sqSelect = s.applyPicture(alias, sqSelect, &options)
-
-	return sqSelect, nil
-}
-
-func (s *Repository) Count(ctx context.Context, options ListOptions) (int, error) {
-	var err error
-
-	sqSelect, err := s.CountSelect(options)
+	success, err := options.CountSelect(s.db).Executor().ScanValContext(ctx, &count)
 	if err != nil {
 		return 0, err
 	}
 
-	var count int
-
-	_, err = sqSelect.Executor().ScanValContext(ctx, &count)
-	if err != nil {
-		return 0, err
+	if !success {
+		return 0, sql.ErrNoRows
 	}
 
 	return count, nil
-}
-
-func (s *Repository) applyPicture(
-	alias string,
-	sqSelect *goqu.SelectDataset,
-	options *ListOptions,
-) *goqu.SelectDataset {
-	aliasTable := goqu.T(alias)
-
-	if options.Status != "" {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableStatusColName).Eq(options.Status))
-	}
-
-	if options.AncestorItemID != 0 {
-		sqSelect = sqSelect.
-			Join(schema.PictureItemTable, goqu.On(aliasTable.Col("id").Eq(schema.PictureItemTablePictureIDCol))).
-			Join(
-				schema.ItemParentCacheTable,
-				goqu.On(schema.PictureItemTableItemIDCol.Eq(schema.ItemParentCacheTableItemIDCol)),
-			).
-			Where(schema.ItemParentCacheTableParentIDCol.Eq(options.AncestorItemID))
-	}
-
-	if options.HasCopyrights {
-		sqSelect = sqSelect.Where(aliasTable.Col("copyrights_text_id").IsNotNull())
-	}
-
-	if options.UserID > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableOwnerIDColName).Eq(options.UserID))
-	}
-
-	return sqSelect
 }
 
 func (s *Repository) TopLikes(ctx context.Context, limit uint) ([]RatingUser, error) {

@@ -7,9 +7,8 @@ import (
 	"fmt"
 
 	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
-	"github.com/doug-martin/goqu/v9"
-	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
@@ -54,20 +53,18 @@ func (s *Index) GenerateBrandsCache(ctx context.Context, lang string) error {
 
 	var cache BrandsCache
 
-	options := items.ListOptions{
-		Language: lang,
-		Fields: items.ListFields{
-			NameOnly:            true,
-			DescendantsCount:    true,
-			NewDescendantsCount: true,
-		},
+	options := query.ItemsListOptions{
+		Language:   lang,
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:      topBrandsCount,
-		OrderBy:    []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
 		SortByName: true,
 	}
 
-	list, _, err := s.repository.List(ctx, options, false)
+	list, _, err := s.repository.List(ctx, options, items.ListFields{
+		NameOnly:            true,
+		DescendantsCount:    true,
+		NewDescendantsCount: true,
+	}, items.OrderByDescendantsCount, false)
 	if err != nil {
 		return err
 	}
@@ -109,34 +106,30 @@ func (s *Index) GenerateTwinsCache(ctx context.Context, lang string) error {
 		twinsData TwinsCache
 	)
 
-	twinsData.Res, _, err = s.repository.List(ctx, items.ListOptions{
+	twinsData.Res, _, err = s.repository.List(ctx, query.ItemsListOptions{
 		Language: lang,
-		Fields: items.ListFields{
-			NameOnly: true,
-		},
-		DescendantItems: &items.ListOptions{
-			ParentItems: &items.ParentItemsListOptions{
-				ParentItems: &items.ListOptions{
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			ItemParentByItemID: &query.ItemParentListOptions{
+				ParentItems: &query.ItemsListOptions{
 					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
-					Fields: items.ListFields{
-						ItemsCount:    true,
-						NewItemsCount: true,
-					},
 				},
 			},
 		},
-		TypeID:  []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
-		Limit:   topTwinsBrandsCount,
-		OrderBy: []exp.OrderedExpression{goqu.C("items_count").Desc()},
-	}, false)
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		Limit:  topTwinsBrandsCount,
+	}, items.ListFields{
+		NameOnly:                   true,
+		DescendantsParentsCount:    true,
+		NewDescendantsParentsCount: true,
+	}, items.OrderByDescendantsParentsCount, false)
 	if err != nil {
 		return err
 	}
 
-	twinsData.Count, err = s.repository.CountDistinct(ctx, items.ListOptions{
-		DescendantItems: &items.ListOptions{
-			ParentItems: &items.ParentItemsListOptions{
-				ParentItems: &items.ListOptions{
+	twinsData.Count, err = s.repository.CountDistinct(ctx, query.ItemsListOptions{
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			ItemParentByItemID: &query.ItemParentListOptions{
+				ParentItems: &query.ItemsListOptions{
 					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
 				},
 			},
@@ -176,18 +169,16 @@ func (s *Index) GenerateCategoriesCache(ctx context.Context, lang string) error 
 		res []items.Item
 	)
 
-	res, _, err = s.repository.List(ctx, items.ListOptions{
-		Language: lang,
-		Fields: items.ListFields{
-			NameOnly:            true,
-			DescendantsCount:    true,
-			NewDescendantsCount: true,
-		},
+	res, _, err = s.repository.List(ctx, query.ItemsListOptions{
+		Language:  lang,
 		NoParents: true,
 		TypeID:    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
 		Limit:     topCategoriesCount,
-		OrderBy:   []exp.OrderedExpression{goqu.C("descendants_count").Desc()},
-	}, false)
+	}, items.ListFields{
+		NameOnly:            true,
+		DescendantsCount:    true,
+		NewDescendantsCount: true,
+	}, items.OrderByDescendantsCount, false)
 	if err != nil {
 		return err
 	}
@@ -220,21 +211,21 @@ func (s *Index) GeneratePersonsCache(
 
 	var res []items.Item
 
-	res, _, err := s.repository.List(ctx, items.ListOptions{
+	res, _, err := s.repository.List(ctx, query.ItemsListOptions{
 		Language: lang,
-		Fields: items.ListFields{
-			NameOnly: true,
-		},
-		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDPerson},
-		DescendantPictures: &items.ItemPicturesOptions{
-			TypeID: pictureItemType,
-			Pictures: &items.PicturesOptions{
-				Status: schema.PictureStatusAccepted,
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDPerson},
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			PictureItemsByItemID: &query.PictureItemListOptions{
+				TypeID: pictureItemType,
+				Pictures: &query.PictureListOptions{
+					Status: schema.PictureStatusAccepted,
+				},
 			},
 		},
-		Limit:   topPersonsCount,
-		OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},
-	}, false)
+		Limit: topPersonsCount,
+	}, items.ListFields{
+		NameOnly: true,
+	}, items.OrderByStarCount, false)
 	if err != nil {
 		return err
 	}
@@ -270,22 +261,20 @@ func (s *Index) GenerateFactoriesCache(ctx context.Context, lang string) error {
 		err error
 	)
 
-	res, _, err = s.repository.List(ctx, items.ListOptions{
+	res, _, err = s.repository.List(ctx, query.ItemsListOptions{
 		Language: lang,
-		Fields: items.ListFields{
-			NameOnly:           true,
-			ChildItemsCount:    true,
-			NewChildItemsCount: true,
-		},
-		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDFactory},
-		ChildItems: &items.ParentItemsListOptions{
-			ChildItems: &items.ListOptions{
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDFactory},
+		ItemParentChild: &query.ItemParentListOptions{
+			ChildItems: &query.ItemsListOptions{
 				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
 			},
 		},
-		Limit:   topFactoriesCount,
-		OrderBy: []exp.OrderedExpression{goqu.L("COUNT(1)").Desc()},
-	}, false)
+		Limit: topFactoriesCount,
+	}, items.ListFields{
+		NameOnly:           true,
+		ChildItemsCount:    true,
+		NewChildItemsCount: true,
+	}, items.OrderByStarCount, false)
 	if err != nil {
 		return err
 	}

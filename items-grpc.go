@@ -10,13 +10,13 @@ import (
 	"github.com/autowp/goautowp/index"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/doug-martin/goqu/v9/exp"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -212,25 +212,22 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	ctx context.Context,
 	in *GetTwinsBrandsListRequest,
 ) (*APITwinsBrandsList, error) {
-	twinsData, _, err := s.repository.List(ctx, items.ListOptions{
+	twinsData, _, err := s.repository.List(ctx, query.ItemsListOptions{
 		Language: in.GetLanguage(),
-		Fields: items.ListFields{
-			NameOnly: true,
-		},
-		DescendantItems: &items.ListOptions{
-			ParentItems: &items.ParentItemsListOptions{
-				ParentItems: &items.ListOptions{
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			ItemParentByItemID: &query.ItemParentListOptions{
+				ParentItems: &query.ItemsListOptions{
 					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
-					Fields: items.ListFields{
-						ItemsCount:    true,
-						NewItemsCount: true,
-					},
 				},
 			},
 		},
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		SortByName: true,
-	}, false)
+	}, items.ListFields{
+		NameOnly:                   true,
+		DescendantsParentsCount:    true,
+		NewDescendantsParentsCount: true,
+	}, items.OrderByNone, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -251,7 +248,7 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	}, nil
 }
 
-func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
+func mapPicturesRequest(request *PicturesOptions, dest *query.PictureListOptions) {
 	dest.OwnerID = request.GetOwnerId()
 
 	switch request.GetStatus() {
@@ -266,19 +263,59 @@ func mapPicturesRequest(request *PicturesRequest, dest *items.PicturesOptions) {
 		dest.Status = schema.PictureStatusRemoved
 	}
 
-	if request.GetItemPicture() != nil {
-		dest.ItemPicture = &items.ItemPicturesOptions{}
-		mapItemPicturesRequest(request.GetItemPicture(), dest.ItemPicture)
+	if request.GetPictureItem() != nil {
+		dest.PictureItem = &query.PictureItemListOptions{}
+		mapPictureItemRequest(request.GetPictureItem(), dest.PictureItem)
 	}
 }
 
-func mapItemParentsRequest(in *ListItemsRequest, options *items.ParentItemsListOptions) error {
-	options.ParentItems = &items.ListOptions{}
+func mapItemParentListOptions(in *ItemParentListOptions, options *query.ItemParentListOptions) error {
+	options.ParentID = in.GetParentId()
 
-	return mapItemsRequest(in, options.ParentItems)
+	if in.GetParent() != nil {
+		options.ParentItems = &query.ItemsListOptions{}
+
+		err := mapItemListOptions(in.GetParent(), options.ParentItems)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
+func mapItemParentCacheListOptions(in *ItemParentCacheListOptions, options *query.ItemParentCacheListOptions) error {
+	options.ItemID = in.GetItemId()
+	options.ParentID = in.GetParentId()
+
+	if in.GetItemsByItemId() != nil {
+		options.ItemsByItemID = &query.ItemsListOptions{}
+
+		err := mapItemListOptions(in.GetItemsByItemId(), options.ItemsByItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if in.GetPictureItemsByItemId() != nil {
+		options.PictureItemsByItemID = &query.PictureItemListOptions{}
+
+		mapPictureItemRequest(in.GetPictureItemsByItemId(), options.PictureItemsByItemID)
+	}
+
+	if in.GetItemParentByItemId() != nil {
+		options.ItemParentByItemID = &query.ItemParentListOptions{}
+
+		err := mapItemParentListOptions(in.GetItemParentByItemId(), options.ItemParentByItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func mapItemListOptions(in *ItemListOptions, options *query.ItemsListOptions) error {
 	options.NoParents = in.GetNoParent()
 	options.Catname = in.GetCatname()
 	options.IsConcept = in.GetIsConcept()
@@ -286,14 +323,13 @@ func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
 	options.ItemID = in.GetId()
 	options.EngineItemID = in.GetEngineId()
 
-	if in.GetAncestorId() != 0 {
-		options.AncestorItems = &items.ListOptions{
-			ItemID: in.GetAncestorId(),
-		}
-	}
+	if in.GetAncestor() != nil {
+		options.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
 
-	if in.GetOrder() == ListItemsRequest_NAME_NAT {
-		options.SortByName = true
+		err := mapItemParentCacheListOptions(in.GetAncestor(), options.ItemParentCacheAncestor)
+		if err != nil {
+			return err
+		}
 	}
 
 	itemTypeID := reverseConvertItemTypeID(in.GetTypeId())
@@ -302,39 +338,34 @@ func mapItemsRequest(in *ListItemsRequest, options *items.ListOptions) error {
 	}
 
 	if in.GetDescendant() != nil {
-		options.DescendantItems = &items.ListOptions{}
+		options.ItemParentCacheDescendant = &query.ItemParentCacheListOptions{}
 
-		err := mapItemsRequest(in.GetDescendant(), options.DescendantItems)
+		err := mapItemParentCacheListOptions(in.GetDescendant(), options.ItemParentCacheDescendant)
 		if err != nil {
 			return err
 		}
 	}
 
 	if in.GetParent() != nil {
-		options.ParentItems = &items.ParentItemsListOptions{}
+		options.ItemParentParent = &query.ItemParentListOptions{}
 
-		err := mapItemParentsRequest(in.GetParent(), options.ParentItems)
+		err := mapItemParentListOptions(in.GetParent(), options.ItemParentParent)
 		if err != nil {
 			return err
 		}
 	}
 
-	if in.GetDescendantPictures() != nil {
-		options.DescendantPictures = &items.ItemPicturesOptions{}
-		mapItemPicturesRequest(in.GetDescendantPictures(), options.DescendantPictures)
-	}
-
 	if in.GetPreviewPictures() != nil {
-		options.PreviewPictures = &items.ItemPicturesOptions{}
-		mapItemPicturesRequest(in.GetPreviewPictures(), options.PreviewPictures)
+		options.PreviewPictures = &query.PictureItemListOptions{}
+		mapPictureItemRequest(in.GetPreviewPictures(), options.PreviewPictures)
 	}
 
 	return nil
 }
 
-func mapItemPicturesRequest(request *ItemPicturesRequest, dest *items.ItemPicturesOptions) {
+func mapPictureItemRequest(request *PictureItemOptions, dest *query.PictureItemListOptions) {
 	if request.GetPictures() != nil {
-		dest.Pictures = &items.PicturesOptions{}
+		dest.Pictures = &query.PictureListOptions{}
 		mapPicturesRequest(request.GetPictures(), dest.Pictures)
 	}
 
@@ -374,7 +405,7 @@ func convertFields(fields *ItemFields) items.ListFields {
 		PreviewPictures:            previewPictures,
 		TotalPictures:              fields.GetTotalPictures(),
 		DescendantsCount:           fields.GetDescendantsCount(),
-		CurrentPicturesCount:       fields.GetCurrentPicturesCount(),
+		DescendantPicturesCount:    fields.GetDescendantPicturesCount(),
 		ChildsCount:                fields.GetChildsCount(),
 		DescendantTwinsGroupsCount: fields.GetDescendantTwinsGroupsCount(),
 		InboxPicturesCount:         fields.GetInboxPicturesCount(),
@@ -388,11 +419,10 @@ func convertFields(fields *ItemFields) items.ListFields {
 }
 
 func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, error) {
-	res, err := s.repository.Item(ctx, items.ListOptions{
+	res, err := s.repository.Item(ctx, query.ItemsListOptions{
 		ItemID:   in.GetId(),
 		Language: in.GetLanguage(),
-		Fields:   convertFields(in.GetFields()),
-	})
+	}, convertFields(in.GetFields()))
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -407,26 +437,22 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 }
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
-	options := items.ListOptions{
+	options := query.ItemsListOptions{
 		Language: in.GetLanguage(),
 		Limit:    in.GetLimit(),
 		Page:     in.GetPage(),
-		Fields:   convertFields(in.GetFields()),
-		OrderBy: []exp.OrderedExpression{
-			goqu.T("i").Col("name").Asc(),
-			goqu.T("i").Col("body").Asc(),
-			goqu.T("i").Col("spec_id").Asc(),
-			goqu.T("i").Col("begin_order_cache").Asc(),
-			goqu.T("i").Col("end_order_cache").Asc(),
-		},
 	}
 
-	err := mapItemsRequest(in, &options)
+	if in.GetOrder() == ListItemsRequest_NAME_NAT {
+		options.SortByName = true
+	}
+
+	err := mapItemListOptions(in.GetOptions(), &options)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	res, pages, err := s.repository.List(ctx, options, true)
+	res, pages, err := s.repository.List(ctx, options, convertFields(in.GetFields()), items.OrderByName, true)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -821,19 +847,17 @@ func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItem
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	var found bool
-
-	success, err := s.db.Select(goqu.L("1")).From(schema.ItemTable).Where(
-		schema.ItemTableIDCol.Eq(in.GetItemId()),
-		schema.ItemTableItemTypeIDCol.In([]schema.ItemTableItemTypeID{
+	count, err := s.repository.Count(ctx, query.ItemsListOptions{
+		ItemID: in.GetItemId(),
+		TypeID: []schema.ItemTableItemTypeID{
 			schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDTwins,
-		}),
-	).ScanValContext(ctx, &found)
+		},
+	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !success {
+	if count == 0 {
 		return nil, status.Error(codes.NotFound, sql.ErrNoRows.Error())
 	}
 
@@ -960,14 +984,14 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	totalBrands, err := s.repository.Count(ctx, items.ListOptions{
+	totalBrands, err := s.repository.Count(ctx, query.ItemsListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	totalCars, err := s.repository.Count(ctx, items.ListOptions{
+	totalCars, err := s.repository.Count(ctx, query.ItemsListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
 	})
 	if err != nil {
@@ -989,14 +1013,14 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	itemsWithBeginYear, err := s.repository.Count(ctx, items.ListOptions{
+	itemsWithBeginYear, err := s.repository.Count(ctx, query.ItemsListOptions{
 		HasBeginYear: true,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	itemsWithBeginAndEndYears, err := s.repository.Count(ctx, items.ListOptions{
+	itemsWithBeginAndEndYears, err := s.repository.Count(ctx, query.ItemsListOptions{
 		HasBeginYear: true,
 		HasEndYear:   true,
 	})
@@ -1004,7 +1028,7 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	itemsWithBeginAndEndYearsAndMonths, err := s.repository.Count(ctx, items.ListOptions{
+	itemsWithBeginAndEndYearsAndMonths, err := s.repository.Count(ctx, query.ItemsListOptions{
 		HasBeginYear:  true,
 		HasEndYear:    true,
 		HasBeginMonth: true,
@@ -1014,7 +1038,7 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	brandsWithLogo, err := s.repository.Count(ctx, items.ListOptions{
+	brandsWithLogo, err := s.repository.Count(ctx, query.ItemsListOptions{
 		HasLogo: true,
 		TypeID:  []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 	})
@@ -1022,12 +1046,12 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	totalPictures, err := s.picturesRepository.Count(ctx, pictures.ListOptions{})
+	totalPictures, err := s.picturesRepository.Count(ctx, &query.PictureListOptions{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	picturesWithCopyrights, err := s.picturesRepository.Count(ctx, pictures.ListOptions{
+	picturesWithCopyrights, err := s.picturesRepository.Count(ctx, &query.PictureListOptions{
 		HasCopyrights: true,
 	})
 	if err != nil {
@@ -1139,12 +1163,11 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 
 	lang := in.GetLanguage()
 
-	brand, err := s.repository.Item(ctx, items.ListOptions{
+	brand, err := s.repository.Item(ctx, query.ItemsListOptions{
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		ItemID:   in.GetItemId(),
 		Language: lang,
-		Fields:   items.ListFields{Logo: true},
-	})
+	}, items.ListFields{Logo: true})
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -1160,19 +1183,19 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	carList, _, err := s.repository.List(ctx, items.ListOptions{
+	carList, _, err := s.repository.List(ctx, query.ItemsListOptions{
 		Language: lang,
-		AncestorItems: &items.ListOptions{
-			Language: lang,
-			ItemID:   brand.ID,
+		ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+			ItemsByParentID: &query.ItemsListOptions{
+				Language: lang,
+				ItemID:   brand.ID,
+			},
 		},
 		CreatedInDays: daysLimit,
 		Limit:         newItemsLimit,
-		OrderBy:       []exp.OrderedExpression{goqu.T("i").Col(schema.ItemTableAddDatetimeColName).Desc()},
-		Fields: items.ListFields{
-			NameHTML: true,
-		},
-	}, false)
+	}, items.ListFields{
+		NameHTML: true,
+	}, items.OrderByAddDatetime, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1202,11 +1225,11 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 
 	lang := in.GetLanguage()
 
-	category, err := s.repository.Item(ctx, items.ListOptions{
+	category, err := s.repository.Item(ctx, query.ItemsListOptions{
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
 		ItemID:   in.GetItemId(),
 		Language: lang,
-	})
+	}, items.ListFields{})
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -1222,28 +1245,30 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	carList, _, err := s.repository.List(ctx, items.ListOptions{
+	carList, _, err := s.repository.List(ctx, query.ItemsListOptions{
 		Language: lang,
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
-		ParentItems: &items.ParentItemsListOptions{
+		ItemParentParent: &query.ItemParentListOptions{
 			LinkedInDays: daysLimit,
-			ParentItems: &items.ListOptions{
+			ParentItems: &query.ItemsListOptions{
 				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDFactory},
-				AncestorItems: &items.ListOptions{
-					ItemID: category.ID,
+				ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+					ItemsByParentID: &query.ItemsListOptions{
+						ItemID: category.ID,
+					},
 				},
 			},
 		},
-		AncestorItems: &items.ListOptions{
-			Language: lang,
-			ItemID:   category.ID,
+		ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+			ItemsByParentID: &query.ItemsListOptions{
+				Language: lang,
+				ItemID:   category.ID,
+			},
 		},
-		Fields: items.ListFields{
-			NameHTML: true,
-		},
-		Limit:   newItemsLimit,
-		OrderBy: []exp.OrderedExpression{goqu.MAX(goqu.T("i_ipp").Col(schema.ItemParentTableTimestampColName)).Desc()},
-	}, false)
+		Limit: newItemsLimit,
+	}, items.ListFields{
+		NameHTML: true,
+	}, items.OrderByItemParentParentTimestamp, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

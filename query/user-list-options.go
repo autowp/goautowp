@@ -6,7 +6,7 @@ import (
 	"github.com/doug-martin/goqu/v9/exp"
 )
 
-type ListUsersOptions struct {
+type UserListOptions struct {
 	ID          int64
 	IDs         []int64
 	Identity    string
@@ -21,7 +21,7 @@ type ListUsersOptions struct {
 	Search      string
 }
 
-func (s *ListUsersOptions) Apply(sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *UserListOptions) Apply(sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
 	if s.ID != 0 {
 		sqSelect = sqSelect.Where(schema.UserTableIDCol.Eq(s.ID))
 	}
@@ -70,7 +70,9 @@ func (s *ListUsersOptions) Apply(sqSelect *goqu.SelectDataset) *goqu.SelectDatas
 	}
 
 	if s.IsOnline {
-		sqSelect = sqSelect.Where(schema.UserTableLastOnlineCol.Gte(goqu.L("DATE_SUB(NOW(), INTERVAL 5 MINUTE)")))
+		sqSelect = sqSelect.Where(schema.UserTableLastOnlineCol.Gte(
+			goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL 5 MINUTE")),
+		))
 	}
 
 	if len(s.Order) > 0 {

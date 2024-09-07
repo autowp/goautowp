@@ -511,7 +511,7 @@ func (s *PicturesGRPCServer) notifyVote(
 		return nil
 	}
 
-	owner, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: picture.OwnerID.Int64}, users.UserFields{})
+	owner, err := s.userRepository.User(ctx, query.UserListOptions{ID: picture.OwnerID.Int64}, users.UserFields{})
 	if err != nil {
 		return err
 	}
@@ -550,17 +550,17 @@ func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empt
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	acceptedCount, err := s.repository.Count(ctx, pictures.ListOptions{
-		Status: schema.PictureStatusAccepted,
-		UserID: userID,
+	acceptedCount, err := s.repository.Count(ctx, &query.PictureListOptions{
+		Status:  schema.PictureStatusAccepted,
+		OwnerID: userID,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	inboxCount, err := s.repository.Count(ctx, pictures.ListOptions{
-		Status: schema.PictureStatusInbox,
-		UserID: userID,
+	inboxCount, err := s.repository.Count(ctx, &query.PictureListOptions{
+		Status:  schema.PictureStatusInbox,
+		OwnerID: userID,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1082,7 +1082,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		recipients[replacePicture.OwnerID.Int64] = replacePicture.OwnerID
 	}
 
-	user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: userID}, users.UserFields{})
+	user, err := s.userRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1259,7 +1259,7 @@ func (s *PicturesGRPCServer) notifyCopyrightsEdited(
 		return nil
 	}
 
-	userRows, _, err := s.userRepository.Users(ctx, query.ListUsersOptions{IDs: revUserIDs}, users.UserFields{})
+	userRows, _, err := s.userRepository.Users(ctx, query.UserListOptions{IDs: revUserIDs}, users.UserFields{})
 	if err != nil {
 		return err
 	}
@@ -1455,7 +1455,7 @@ func (s *PicturesGRPCServer) sendMessage(
 
 	notDeleted := false
 
-	receiver, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted},
+	receiver, err := s.userRepository.User(ctx, query.UserListOptions{ID: receiverID.Int64, Deleted: &notDeleted},
 		users.UserFields{})
 	if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 		return err
@@ -1483,7 +1483,7 @@ func (s *PicturesGRPCServer) sendLocalizedMessage(
 
 	notDeleted := false
 
-	receiver, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: receiverID.Int64, Deleted: &notDeleted},
+	receiver, err := s.userRepository.User(ctx, query.UserListOptions{ID: receiverID.Int64, Deleted: &notDeleted},
 		users.UserFields{})
 	if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 		return err
@@ -1585,7 +1585,7 @@ func (s *PicturesGRPCServer) notifyRemoving(ctx context.Context, pic *schema.Pic
 			reasons := make([]string, 0, len(deleteRequests))
 
 			for _, request := range deleteRequests {
-				user, err := s.userRepository.User(ctx, query.ListUsersOptions{ID: request.UserID}, users.UserFields{})
+				user, err := s.userRepository.User(ctx, query.UserListOptions{ID: request.UserID}, users.UserFields{})
 				if err != nil {
 					return nil, err
 				}

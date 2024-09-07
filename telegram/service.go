@@ -12,6 +12,7 @@ import (
 	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -112,11 +113,11 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 func (s *Service) NotifyPicture(
 	ctx context.Context, picture *schema.PictureRow, itemRepository *items.Repository,
 ) error {
-	itemIDsSelect, err := itemRepository.IDsSelect(items.ListOptions{
+	itemIDsSelect, err := itemRepository.IDsSelect(query.ItemsListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
-		DescendantPictures: &items.ItemPicturesOptions{
-			Pictures: &items.PicturesOptions{
-				ID: picture.ID,
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			PictureItemsByItemID: &query.PictureItemListOptions{
+				PictureID: picture.ID,
 			},
 		},
 	})

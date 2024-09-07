@@ -43,6 +43,8 @@ const (
 	ItemTableIsGroupColName                = "is_group"
 	ItemTableProducedExactlyColName        = "produced_exactly"
 	ItemTableAddDatetimeColName            = "add_datetime"
+	ItemTableBeginOrderCacheColName        = "begin_order_cache"
+	ItemTableEndOrderCacheColName          = "end_order_cache"
 )
 
 var (

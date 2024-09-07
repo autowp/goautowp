@@ -10,7 +10,6 @@ import (
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -53,7 +52,7 @@ func (s *RatingGRPCServer) GetUserPicturesRating(
 	falseRef := false
 	trueRef := true
 
-	rows, _, err := s.userRepository.Users(ctx, query.ListUsersOptions{
+	rows, _, err := s.userRepository.Users(ctx, query.UserListOptions{
 		Deleted:     &falseRef,
 		Limit:       usersRatingLimit,
 		Order:       []exp.OrderedExpression{schema.UserTablePicturesTotalCol.Desc()},
@@ -79,22 +78,22 @@ func (s *RatingGRPCServer) GetUserPicturesRating(
 func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 	ctx context.Context, in *UserRatingDetailsRequest,
 ) (*UserRatingBrandsResponse, error) {
-	brands, _, err := s.itemsRepository.List(ctx, items.ListOptions{
+	brands, _, err := s.itemsRepository.List(ctx, query.ItemsListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
-		DescendantPictures: &items.ItemPicturesOptions{
-			Pictures: &items.PicturesOptions{
-				OwnerID: in.GetUserId(),
-				Status:  schema.PictureStatusAccepted,
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			PictureItemsByItemID: &query.PictureItemListOptions{
+				Pictures: &query.PictureListOptions{
+					OwnerID: in.GetUserId(),
+					Status:  schema.PictureStatusAccepted,
+				},
 			},
 		},
-		OrderBy: []exp.OrderedExpression{goqu.COUNT(goqu.DISTINCT(goqu.T("i_ipcd_pi_p").Col("id"))).Desc()},
-		Limit:   numOfItemsInDetails,
-		Fields: items.ListFields{
-			NameOnly:             true,
-			CurrentPicturesCount: true,
-		},
+		Limit:    numOfItemsInDetails,
 		Language: in.GetLanguage(),
-	}, false)
+	}, items.ListFields{
+		NameOnly:                true,
+		DescendantPicturesCount: true,
+	}, items.OrderByDescendantPicturesCount, false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -203,7 +202,7 @@ func (s *RatingGRPCServer) GetUserSpecsRating(
 	falseRef := false
 	trueRef := true
 
-	ratingUsers, _, err := s.userRepository.Users(ctx, query.ListUsersOptions{
+	ratingUsers, _, err := s.userRepository.Users(ctx, query.UserListOptions{
 		Deleted:  &falseRef,
 		HasSpecs: &trueRef,
 		Limit:    usersRatingLimit,

@@ -116,7 +116,7 @@ func NewRepository(
 }
 
 func (s *Repository) User(
-	ctx context.Context, options query.ListUsersOptions, fields UserFields,
+	ctx context.Context, options query.UserListOptions, fields UserFields,
 ) (*schema.UsersRow, error) {
 	users, _, err := s.Users(ctx, options, fields)
 	if err != nil {
@@ -148,7 +148,7 @@ func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int
 }
 
 func (s *Repository) Users(
-	ctx context.Context, options query.ListUsersOptions, fields UserFields,
+	ctx context.Context, options query.UserListOptions, fields UserFields,
 ) ([]schema.UsersRow, *util.Pages, error) {
 	var err error
 
