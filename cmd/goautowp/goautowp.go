@@ -165,32 +165,34 @@ func mainReturnWithCode() int {
 				},
 			},
 			{
-				Name: "autoban",
-				Action: func(ctx context.Context, _ *cli.Command) error {
-					quit := captureOsInterrupt()
-
-					return autowpApp.Autoban(ctx, quit)
+				Name: "serve",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:     "df-amqp",
+						Required: false,
+					},
+					&cli.BoolFlag{
+						Name:     "monitoring-amqp",
+						Required: false,
+					},
+					&cli.BoolFlag{
+						Name:     "grpc",
+						Required: false,
+					},
+					&cli.BoolFlag{
+						Name:     "public",
+						Required: false,
+					},
+					&cli.BoolFlag{
+						Name:     "private",
+						Required: false,
+					},
+					&cli.BoolFlag{
+						Name:     "autoban",
+						Required: false,
+					},
 				},
-			},
-			{
-				Name: "listen-df-amqp",
-				Action: func(ctx context.Context, _ *cli.Command) error {
-					quit := captureOsInterrupt()
-
-					return autowpApp.ListenDuplicateFinderAMQP(ctx, quit)
-				},
-			},
-			{
-				Name: "listen-monitoring-amqp",
-				Action: func(ctx context.Context, _ *cli.Command) error {
-					quit := captureOsInterrupt()
-
-					return autowpApp.ListenMonitoringAMQP(ctx, quit)
-				},
-			},
-			{
-				Name: "serve-grpc",
-				Action: func(ctx context.Context, _ *cli.Command) error {
+				Action: func(ctx context.Context, cli *cli.Command) error {
 					err := autowpApp.MigrateAutowp(ctx)
 					if err != nil {
 						return err
@@ -203,33 +205,14 @@ func mainReturnWithCode() int {
 
 					quit := captureOsInterrupt()
 
-					return autowpApp.ServeGRPC(quit)
-				},
-			},
-			{
-				Name: "serve-public",
-				Action: func(ctx context.Context, _ *cli.Command) error {
-					err := autowpApp.MigrateAutowp(ctx)
-					if err != nil {
-						return err
-					}
-
-					err = autowpApp.MigratePostgres(ctx)
-					if err != nil {
-						return err
-					}
-
-					quit := captureOsInterrupt()
-
-					return autowpApp.ServePublic(ctx, quit)
-				},
-			},
-			{
-				Name: "serve-private",
-				Action: func(ctx context.Context, _ *cli.Command) error {
-					quit := captureOsInterrupt()
-
-					return autowpApp.ServePrivate(ctx, quit)
+					return autowpApp.Serve(ctx, goautowp.ServeOptions{
+						DuplicateFinderAMQP: cli.Bool("df-amqp"),
+						MonitoringAMQP:      cli.Bool("monitoring-amqp"),
+						GRPC:                cli.Bool("grpc"),
+						Public:              cli.Bool("public"),
+						Private:             cli.Bool("private"),
+						Autoban:             cli.Bool("autoban"),
+					}, quit)
 				},
 			},
 			{

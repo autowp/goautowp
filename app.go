@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/autowp/goautowp/config"
@@ -19,8 +21,18 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // enable postgres migrations
 	_ "github.com/golang-migrate/migrate/v4/source/file"       // enable file migration source
 	_ "github.com/lib/pq"                                      // enable postgres driver
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 )
+
+type ServeOptions struct {
+	DuplicateFinderAMQP bool
+	MonitoringAMQP      bool
+	GRPC                bool
+	Public              bool
+	Private             bool
+	Autoban             bool
+}
 
 // Application is Service Main Object.
 type Application struct {
@@ -84,6 +96,132 @@ func (s *Application) ServeGRPC(quit chan bool) error {
 	return nil
 }
 
+func (s *Application) Serve(ctx context.Context, options ServeOptions, quit chan bool) error {
+	wg := sync.WaitGroup{}
+
+	if options.DuplicateFinderAMQP {
+		wg.Add(1)
+
+		go func() {
+			err := s.ListenDuplicateFinderAMQP(ctx, quit)
+			if err != nil {
+				logrus.Errorln(err.Error())
+			}
+
+			wg.Done()
+		}()
+	}
+
+	if options.MonitoringAMQP {
+		wg.Add(1)
+
+		go func() {
+			err := s.ListenMonitoringAMQP(ctx, quit)
+			if err != nil {
+				logrus.Errorln(err.Error())
+			}
+
+			wg.Done()
+		}()
+	}
+
+	if options.GRPC {
+		wg.Add(1)
+
+		go func() {
+			err := s.ServeGRPC(quit)
+			if err != nil {
+				logrus.Errorln(err.Error())
+			}
+
+			wg.Done()
+		}()
+	}
+
+	if options.Public {
+		wg.Add(1)
+
+		go func() {
+			err := s.ServePublic(ctx, quit)
+			if err != nil {
+				logrus.Errorln(err.Error())
+			}
+
+			wg.Done()
+		}()
+	}
+
+	if options.Private {
+		wg.Add(1)
+
+		go func() {
+			err := s.ServePrivate(ctx, quit)
+			if err != nil {
+				logrus.Errorln(err.Error())
+			}
+
+			wg.Done()
+		}()
+	}
+
+	if options.Autoban {
+		wg.Add(1)
+
+		go func() {
+			err := s.Autoban(ctx, quit)
+			if err != nil {
+				logrus.Errorln(err.Error())
+			}
+
+			wg.Done()
+		}()
+	}
+
+	wg.Add(1)
+
+	go func() {
+		err := s.ServeMetrics(ctx, quit)
+		if err != nil {
+			logrus.Errorln(err.Error())
+		}
+
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	return nil
+}
+
+func (s *Application) ServeMetrics(ctx context.Context, quit chan bool) error {
+	httpServer := &http.Server{
+		Addr:              ":2112",
+		Handler:           promhttp.Handler(),
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
+
+	go func(ctx context.Context) {
+		<-quit
+
+		if err := httpServer.Shutdown(ctx); err != nil {
+			logrus.Error(err.Error())
+		}
+	}(ctx)
+
+	logrus.Infoln("metrics HTTP listener started")
+
+	err := httpServer.ListenAndServe()
+	if err != nil {
+		if !errors.Is(err, http.ErrServerClosed) {
+			logrus.Infof("metrics HTTP listener: ListenAndServe() error: %s\n", err)
+		}
+	}
+
+	logrus.Infoln("metrics HTTP listener stopped")
+
+	return nil
+}
+
 func (s *Application) ServePublic(ctx context.Context, quit chan bool) error {
 	httpServer, err := s.container.PublicHTTPServer(ctx)
 	if err != nil {
@@ -98,15 +236,16 @@ func (s *Application) ServePublic(ctx context.Context, quit chan bool) error {
 		}
 	}(ctx)
 
-	logrus.Println("public HTTP listener started")
+	logrus.Infoln("public HTTP listener started")
 
 	err = httpServer.ListenAndServe()
 	if err != nil {
-		// cannot panic, because this probably is an intentional close
-		logrus.Printf("Httpserver: ListenAndServe() error: %s", err)
+		if !errors.Is(err, http.ErrServerClosed) {
+			logrus.Infof("public HTTP listener: ListenAndServe() error: %s\n", err)
+		}
 	}
 
-	logrus.Println("public HTTP listener stopped")
+	logrus.Infoln("public HTTP listener stopped")
 
 	return nil
 }
@@ -208,8 +347,9 @@ func (s *Application) ServePrivate(ctx context.Context, quit chan bool) error {
 	logrus.Info("HTTP server started")
 
 	if err = httpServer.ListenAndServe(); err != nil {
-		// cannot panic, because this probably is an intentional close
-		logrus.Infof("Httpserver: ListenAndServe() error: %s", err)
+		if !errors.Is(err, http.ErrServerClosed) {
+			logrus.Infof("Httpserver: ListenAndServe() error: %s", err)
+		}
 	}
 
 	logrus.Info("HTTP server stopped")

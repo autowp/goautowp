@@ -86,7 +86,7 @@ func TestServeGRPC(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestServePublic(t *testing.T) {
+func TestServe(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
@@ -100,7 +100,14 @@ func TestServePublic(t *testing.T) {
 		done <- false
 	}()
 
-	err := app.ServePublic(ctx, done)
+	err := app.Serve(ctx, ServeOptions{
+		DuplicateFinderAMQP: true,
+		MonitoringAMQP:      true,
+		GRPC:                true,
+		Public:              true,
+		Private:             true,
+		Autoban:             true,
+	}, done)
 	require.NoError(t, err)
 }
 
