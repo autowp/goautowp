@@ -53,10 +53,12 @@ func (s *PictureListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *
 
 		sqSelect = sqSelect.Join(
 			schema.PictureItemTable.As(piAlias),
-			goqu.On(aliasTable.Col(schema.PictureTableIDColName).Eq(goqu.T(piAlias).Col(schema.PictureItemTableItemIDColName))),
+			goqu.On(aliasTable.Col(schema.PictureTableIDColName).Eq(
+				goqu.T(piAlias).Col(schema.PictureItemTablePictureIDColName),
+			)),
 		)
 
-		sqSelect = s.PictureItem.Apply(alias, sqSelect)
+		sqSelect = s.PictureItem.Apply(piAlias, sqSelect)
 	}
 
 	if s.HasCopyrights {

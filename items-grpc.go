@@ -419,10 +419,21 @@ func convertFields(fields *ItemFields) items.ListFields {
 }
 
 func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	fields := convertFields(in.GetFields())
+
+	if (fields.InboxPicturesCount || fields.CommentsAttentionsCount) && !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
 	res, err := s.repository.Item(ctx, query.ItemsListOptions{
 		ItemID:   in.GetId(),
 		Language: in.GetLanguage(),
-	}, convertFields(in.GetFields()))
+	}, fields)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -437,6 +448,16 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 }
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	fields := convertFields(in.GetFields())
+	if (fields.InboxPicturesCount || fields.CommentsAttentionsCount) && !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
 	options := query.ItemsListOptions{
 		Language: in.GetLanguage(),
 		Limit:    in.GetLimit(),
@@ -447,12 +468,12 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		options.SortByName = true
 	}
 
-	err := mapItemListOptions(in.GetOptions(), &options)
+	err = mapItemListOptions(in.GetOptions(), &options)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	res, pages, err := s.repository.List(ctx, options, convertFields(in.GetFields()), items.OrderByName, true)
+	res, pages, err := s.repository.List(ctx, options, fields, items.OrderByName, true)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

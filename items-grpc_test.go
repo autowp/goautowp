@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -57,65 +59,65 @@ func TestGetTwinsBrandsList(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("brand1-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      5,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("brand1-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("brand1-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      5,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("brand1-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	brand1, err := r1.LastInsertId()
 	require.NoError(t, err)
 
-	r2, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("brand2-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      5,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("brand2-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("brand2-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      5,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("brand2-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	brand2, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	r3, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("vehicle1-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      1,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle1-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r3, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("vehicle1-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      1,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("vehicle1-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	vehicle1, err := r3.LastInsertId()
 	require.NoError(t, err)
 
-	r4, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("vehicle2-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      1,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle2-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r4, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("vehicle2-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      1,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("vehicle2-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	vehicle2, err := r4.LastInsertId()
 	require.NoError(t, err)
 
-	r5, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("twins-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      4,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("twins-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r5, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("twins-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      4,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("twins-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -530,13 +532,13 @@ func TestCatalogueMenuList(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := goquDB.Insert(schema.ItemTableName).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("category-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      3,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("category-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("category-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      3,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("category-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -632,60 +634,76 @@ func TestSetItemParentLanguage(t *testing.T) {
 
 	cases := []struct {
 		ParentName           string
-		ParentBeginYear      int32
-		ParentEndYear        int32
-		ParentBeginModelYear int32
-		ParentEndModelYear   int32
+		ParentBeginYear      sql.NullInt32
+		ParentEndYear        sql.NullInt32
+		ParentBeginModelYear sql.NullInt32
+		ParentEndModelYear   sql.NullInt32
 		ParentSpecID         sql.NullInt32
 		ChildName            string
-		ChildBeginYear       int32
-		ChildEndYear         int32
-		ChildBeginModelYear  int32
-		ChildEndModelYear    int32
+		ChildBeginYear       sql.NullInt32
+		ChildEndYear         sql.NullInt32
+		ChildBeginModelYear  sql.NullInt32
+		ChildEndModelYear    sql.NullInt32
 		ChildSpecID          sql.NullInt32
 		Result               string
 	}{
 		{
 			"Peugeot %d",
-			2000, 2010,
-			0, 0,
+			sql.NullInt32{Valid: true, Int32: 2000},
+			sql.NullInt32{Valid: true, Int32: 2010},
+			sql.NullInt32{Valid: true, Int32: 0},
+			sql.NullInt32{Valid: true, Int32: 0},
 			sql.NullInt32{},
 			"Peugeot %d",
-			2000, 2005,
-			0, 0,
+			sql.NullInt32{Valid: true, Int32: 2000},
+			sql.NullInt32{Valid: true, Int32: 2005},
+			sql.NullInt32{Valid: true, Int32: 0},
+			sql.NullInt32{Valid: true, Int32: 0},
 			sql.NullInt32{},
 			"2000–05",
 		},
 		{
 			"Peugeot %d",
-			2000, 2010,
-			0, 0,
+			sql.NullInt32{Valid: true, Int32: 2000},
+			sql.NullInt32{Valid: true, Int32: 2010},
+			sql.NullInt32{Valid: true, Int32: 0},
+			sql.NullInt32{Valid: true, Int32: 0},
 			sql.NullInt32{},
 			"Peugeot %d Coupe",
-			2000, 2010,
-			0, 0,
+			sql.NullInt32{Valid: true, Int32: 2000},
+			sql.NullInt32{Valid: true, Int32: 2010},
+			sql.NullInt32{Valid: true, Int32: 0},
+			sql.NullInt32{Valid: true, Int32: 0},
 			sql.NullInt32{},
 			"Coupe",
 		},
 		{
 			"Peugeot %d",
-			2000, 2010,
-			0, 0,
+			sql.NullInt32{Valid: true, Int32: 2000},
+			sql.NullInt32{Valid: true, Int32: 2010},
+			sql.NullInt32{Valid: true, Int32: 0},
+			sql.NullInt32{Valid: true, Int32: 0},
 			sql.NullInt32{},
 			"Peugeot %d",
-			2000, 2010,
-			0, 0,
+			sql.NullInt32{Valid: true, Int32: 2000},
+			sql.NullInt32{Valid: true, Int32: 2010},
+			sql.NullInt32{Valid: true, Int32: 0},
+			sql.NullInt32{Valid: true, Int32: 0},
 			sql.NullInt32{Valid: true, Int32: 29},
 			"Worldwide",
 		},
 		{
 			"Peugeot %d",
-			2000, 2010,
-			2001, 2010,
+			sql.NullInt32{Valid: true, Int32: 2000},
+			sql.NullInt32{Valid: true, Int32: 2010},
+			sql.NullInt32{Valid: true, Int32: 2001},
+			sql.NullInt32{Valid: true, Int32: 2010},
 			sql.NullInt32{},
 			"Peugeot %d",
-			2000, 2010,
-			2001, 2005,
+			sql.NullInt32{Valid: true, Int32: 2000},
+			sql.NullInt32{Valid: true, Int32: 2010},
+			sql.NullInt32{Valid: true, Int32: 2001},
+			sql.NullInt32{Valid: true, Int32: 2005},
 			sql.NullInt32{},
 			"2001–05",
 		},
@@ -698,61 +716,61 @@ func TestSetItemParentLanguage(t *testing.T) {
 		childName := fmt.Sprintf(testCase.ChildName, randomInt)
 		parentName := fmt.Sprintf(testCase.ParentName, randomInt)
 
-		r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-			schema.ItemTableNameColName:            childName,
-			schema.ItemTableIsGroupColName:         0,
-			schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDVehicle,
-			schema.ItemTableCatnameColName:         nil,
-			schema.ItemTableBodyColName:            "",
-			schema.ItemTableProducedExactlyColName: 0,
-			schema.ItemTableBeginYearColName:       testCase.ChildBeginYear,
-			schema.ItemTableEndYearColName:         testCase.ChildEndYear,
-			schema.ItemTableBeginModelYearColName:  testCase.ChildBeginModelYear,
-			schema.ItemTableEndModelYearColName:    testCase.ChildEndModelYear,
-			schema.ItemTableSpecIDColName:          testCase.ChildSpecID,
+		r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+			Name:            childName,
+			IsGroup:         false,
+			ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+			Catname:         sql.NullString{Valid: false},
+			Body:            "",
+			ProducedExactly: false,
+			BeginYear:       testCase.ChildBeginYear,
+			EndYear:         testCase.ChildEndYear,
+			BeginModelYear:  testCase.ChildBeginModelYear,
+			EndModelYear:    testCase.ChildEndModelYear,
+			SpecID:          testCase.ChildSpecID,
 		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 
 		itemID, err := r1.LastInsertId()
 		require.NoError(t, err)
 
-		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(goqu.Record{
-			schema.ItemLanguageTableItemIDColName:   itemID,
-			schema.ItemLanguageTableLanguageColName: "xx",
-			schema.ItemLanguageTableNameColName:     childName,
+		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
+			ItemID:   itemID,
+			Language: "xx",
+			Name:     sql.NullString{Valid: true, String: childName},
 		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 
-		r2, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-			schema.ItemTableNameColName:            parentName,
-			schema.ItemTableIsGroupColName:         1,
-			schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDVehicle,
-			schema.ItemTableCatnameColName:         nil,
-			schema.ItemTableBodyColName:            "",
-			schema.ItemTableProducedExactlyColName: 0,
-			schema.ItemTableBeginYearColName:       testCase.ParentBeginYear,
-			schema.ItemTableEndYearColName:         testCase.ParentEndYear,
-			schema.ItemTableBeginModelYearColName:  testCase.ParentBeginModelYear,
-			schema.ItemTableEndModelYearColName:    testCase.ParentEndModelYear,
-			schema.ItemTableSpecIDColName:          testCase.ParentSpecID,
+		r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+			Name:            parentName,
+			IsGroup:         true,
+			ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+			Catname:         sql.NullString{Valid: false},
+			Body:            "",
+			ProducedExactly: false,
+			BeginYear:       testCase.ParentBeginYear,
+			EndYear:         testCase.ParentEndYear,
+			BeginModelYear:  testCase.ParentBeginModelYear,
+			EndModelYear:    testCase.ParentEndModelYear,
+			SpecID:          testCase.ParentSpecID,
 		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 
 		parentID, err := r2.LastInsertId()
 		require.NoError(t, err)
 
-		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(goqu.Record{
-			schema.ItemLanguageTableItemIDColName:   parentID,
-			schema.ItemLanguageTableLanguageColName: "xx",
-			schema.ItemLanguageTableNameColName:     parentName,
+		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
+			ItemID:   parentID,
+			Language: "xx",
+			Name:     sql.NullString{Valid: true, String: parentName},
 		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 
-		_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
-			schema.ItemParentTableItemIDColName:   itemID,
-			schema.ItemParentTableParentIDColName: parentID,
-			schema.ItemParentTableCatnameColName:  "child-item",
-			schema.ItemParentTableTypeColName:     0,
+		_, err = goquDB.Insert(schema.ItemParentTable).Rows(schema.ItemParentRow{
+			ItemID:   itemID,
+			ParentID: parentID,
+			Catname:  "child-item",
+			Type:     schema.ItemParentTypeDefault,
 		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 
@@ -807,13 +825,13 @@ func TestBrandNewItems(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("brand-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDBrand,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("brand-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("brand-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDBrand,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("brand-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -851,37 +869,37 @@ func TestNewItems(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("category-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDCategory,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("category-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("category-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDCategory,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("category-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	itemID, err := r1.LastInsertId()
 	require.NoError(t, err)
 
-	r2, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDVehicle,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("vehicle-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	childID, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
-		schema.ItemParentTableItemIDColName:   childID,
-		schema.ItemParentTableParentIDColName: itemID,
-		schema.ItemParentTableCatnameColName:  "child-item",
-		schema.ItemParentTableTypeColName:     0,
+	_, err = goquDB.Insert(schema.ItemParentTable).Rows(schema.ItemParentRow{
+		ItemID:   childID,
+		ParentID: itemID,
+		Catname:  "child-item",
+		Type:     schema.ItemParentTypeDefault,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -900,4 +918,152 @@ func TestNewItems(t *testing.T) {
 		Language: "en",
 	})
 	require.NoError(t, err)
+}
+
+func TestInboxPicturesCount(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+	repository := items.NewRepository(goquDB, 200)
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	// create brand
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("brand-%d", random.Int()),
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDBrand,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("brand-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	brandID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = repository.RebuildCache(ctx, brandID)
+	require.NoError(t, err)
+
+	// create vehicle
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("vehicle-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	childID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = goquDB.Insert(schema.ItemParentTable).Rows(schema.ItemParentRow{
+		ItemID:   childID,
+		ParentID: brandID,
+		Catname:  "child-item",
+		Type:     schema.ItemParentTypeDefault,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	_, err = repository.RebuildCache(ctx, childID)
+	require.NoError(t, err)
+
+	// create inbox pictures
+	for i := range 10 {
+		identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
+
+		status := schema.PictureStatusInbox
+		if i >= 5 {
+			status = schema.PictureStatusAccepted
+		}
+
+		res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
+			Identity: identity,
+			Status:   status,
+		}).Executor().ExecContext(ctx)
+		require.NoError(t, err)
+
+		pictureID, err := res.LastInsertId()
+		require.NoError(t, err)
+
+		_, err = goquDB.Insert(schema.PictureItemTable).Rows(schema.PictureItemRow{
+			PictureID: pictureID,
+			ItemID:    childID,
+		}).Executor().ExecContext(ctx)
+		require.NoError(t, err)
+	}
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	_, err = client.List(ctx, &ListItemsRequest{
+		Fields: &ItemFields{
+			InboxPicturesCount: true,
+		},
+		Options: &ItemListOptions{
+			Id: brandID,
+		},
+		Language: "en",
+	})
+	require.ErrorContains(t, err, "PermissionDenied")
+
+	_, err = client.Item(ctx, &ItemRequest{
+		Id: brandID,
+		Fields: &ItemFields{
+			InboxPicturesCount: true,
+		},
+		Language: "en",
+	})
+	require.ErrorContains(t, err, "PermissionDenied")
+
+	// login with admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	list, err := client.List(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ListItemsRequest{
+			Fields: &ItemFields{
+				InboxPicturesCount: true,
+			},
+			Options: &ItemListOptions{
+				Id: brandID,
+			},
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, list.GetItems(), 1)
+	require.Equal(t, int32(5), list.GetItems()[0].GetInboxPicturesCount())
+
+	item, err := client.Item(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemRequest{
+			Id: brandID,
+			Fields: &ItemFields{
+				InboxPicturesCount: true,
+			},
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, int32(5), item.GetInboxPicturesCount())
 }

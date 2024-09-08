@@ -27,7 +27,8 @@ var (
 )
 
 type ItemParentRow struct {
-	ItemID   int64  `db:"item_id"`
-	ParentID int64  `db:"parent_id"`
-	Catname  string `db:"catname"`
+	ItemID   int64          `db:"item_id"`
+	ParentID int64          `db:"parent_id"`
+	Catname  string         `db:"catname"`
+	Type     ItemParentType `db:"type"`
 }
