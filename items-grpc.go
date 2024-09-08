@@ -87,7 +87,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 	for idx, brand := range cache.Items {
 		brands[idx] = &APITopBrandsListItem{
 			Id:            brand.ID,
-			Catname:       brand.Catname,
+			Catname:       util.NullStringToString(brand.Catname),
 			Name:          brand.NameOnly,
 			ItemsCount:    brand.DescendantsCount,
 			NewItemsCount: brand.NewDescendantsCount,
@@ -171,7 +171,7 @@ func (s *ItemsGRPCServer) GetTopCategoriesList(
 		is[idx] = &APITopCategoriesListItem{
 			Id:       itm.ID,
 			Name:     itm.NameOnly,
-			Catname:  itm.Catname,
+			Catname:  util.NullStringToString(itm.Catname),
 			Count:    itm.DescendantsCount,
 			NewCount: itm.NewDescendantsCount,
 		}
@@ -195,10 +195,10 @@ func (s *ItemsGRPCServer) GetTopTwinsBrandsList(
 	for idx, twin := range twinsData.Res {
 		is[idx] = &APITwinsBrandsListItem{
 			Id:       twin.ID,
-			Catname:  twin.Catname,
+			Catname:  util.NullStringToString(twin.Catname),
 			Name:     twin.NameOnly,
-			Count:    twin.ItemsCount,
-			NewCount: twin.NewItemsCount,
+			Count:    twin.DescendantsParentsCount,
+			NewCount: twin.NewDescendantsParentsCount,
 		}
 	}
 
@@ -236,10 +236,10 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	for idx, brand := range twinsData {
 		is[idx] = &APITwinsBrandsListItem{
 			Id:       brand.ID,
-			Catname:  brand.Catname,
+			Catname:  util.NullStringToString(brand.Catname),
 			Name:     brand.NameOnly,
-			Count:    brand.ItemsCount,
-			NewCount: brand.NewItemsCount,
+			Count:    brand.DescendantsParentsCount,
+			NewCount: brand.NewDescendantsParentsCount,
 		}
 	}
 
@@ -1250,19 +1250,11 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
 		ItemParentParent: &query.ItemParentListOptions{
 			LinkedInDays: daysLimit,
-			ParentItems: &query.ItemsListOptions{
-				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDFactory},
-				ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
-					ItemsByParentID: &query.ItemsListOptions{
-						ItemID: category.ID,
-					},
+			ItemParentCacheAncestorByParentID: &query.ItemParentCacheListOptions{
+				ItemsByParentID: &query.ItemsListOptions{
+					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDFactory},
+					ItemID: category.ID,
 				},
-			},
-		},
-		ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
-			ItemsByParentID: &query.ItemsListOptions{
-				Language: lang,
-				ItemID:   category.ID,
 			},
 		},
 		Limit: newItemsLimit,

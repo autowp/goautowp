@@ -1,6 +1,10 @@
 package schema
 
-import "github.com/doug-martin/goqu/v9"
+import (
+	"database/sql"
+
+	"github.com/doug-martin/goqu/v9"
+)
 
 const (
 	ItemLanguageTableName              = "item_language"
@@ -19,3 +23,9 @@ var (
 	ItemLanguageTableTextIDCol     = ItemLanguageTable.Col(ItemLanguageTableTextIDColName)
 	ItemLanguageTableFullTextIDCol = ItemLanguageTable.Col(ItemLanguageTableFullTextIDColName)
 )
+
+type ItemLanguageRow struct {
+	ItemID   int64          `db:"item_id"`
+	Language string         `db:"language"`
+	Name     sql.NullString `db:"name"`
+}

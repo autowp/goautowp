@@ -35,18 +35,20 @@ const (
 	colSpecShortName              = "spec_short_name"
 	colDescription                = "description"
 	colFullText                   = "full_text"
-	ColDescendantsParentsCount    = "descendants_parents_count"
+	colDescendantsParentsCount    = "descendants_parents_count"
 	colNewDescendantsParentsCount = "new_descendants_parents_count"
-	ColDescendantsCount           = "descendants_count"
+	colDescendantsCount           = "descendants_count"
 	colNewDescendantsCount        = "new_descendants_count"
 	colChildItemsCount            = "child_items_count"
 	colNewChildItemsCount         = "new_child_items_count"
-	ColDescendantPicturesCount    = "descendant_pictures_count"
+	colDescendantPicturesCount    = "descendant_pictures_count"
 	colChildsCount                = "childs_count"
 	colDescendantTwinsGroupsCount = "descendant_twins_groups_count"
 	colInboxPicturesCount         = "inbox_pictures_count"
 	colMostsActive                = "mosts_active"
 	colCommentsAttentionsCount    = "comments_attentions_count"
+	colStarCount                  = "star_count"
+	colItemParentParentTimestamp  = "item_parent_parent_timestamp"
 )
 
 type OrderBy int
@@ -85,45 +87,70 @@ var languagePriority = map[string][]string{
 
 // Repository Main Object.
 type Repository struct {
-	db                *goqu.Database
-	mostsMinCarsCount int
+	db                               *goqu.Database
+	mostsMinCarsCount                int
+	descendantsCountColumn           *DescendantsCountColumn
+	newDescendantsCountColumn        *NewDescendantsCountColumn
+	descendantTwinsGroupsCountColumn *DescendantTwinsGroupsCountColumn
+	descendantPicturesCountColumn    *DescendantPicturesCountColumn
+	childsCountColumn                *ChildsCountColumn
+	descriptionColumn                *TextstorageRefColumn
+	fullTextColumn                   *TextstorageRefColumn
+	nameOnlyColumn                   *NameOnlyColumn
+	commentsAttentionsCountColumn    *CommentsAttentionsCountColumn
+	inboxPicturesCountColumn         *InboxPicturesCountColumn
+	mostsActiveColumn                *MostsActiveColumn
+	descendantsParentsCountColumn    *DescendantsParentsCountColumn
+	newDescendantsParentsCountColumn *NewDescendantsParentsCountColumn
+	childItemsCountColumn            *ChildItemsCountColumn
+	newChildItemsCountColumn         *NewChildItemsCountColumn
+	logoColumn                       *SimpleColumn
+	fullNameColumn                   *SimpleColumn
+	idColumn                         *SimpleColumn
+	catnameColumn                    *SimpleColumn
+	engineItemIDColumn               *SimpleColumn
+	itemTypeIDColumn                 *SimpleColumn
+	isConceptColumn                  *SimpleColumn
+	isConceptInheritColumn           *SimpleColumn
+	specIDColumn                     *SimpleColumn
+	beginYearColumn                  *SimpleColumn
+	endYearColumn                    *SimpleColumn
+	beginMonthColumn                 *SimpleColumn
+	endMonthColumn                   *SimpleColumn
+	beginModelYearColumn             *SimpleColumn
+	endModelYearColumn               *SimpleColumn
+	beginModelYearFractionColumn     *SimpleColumn
+	endModelYearFractionColumn       *SimpleColumn
+	todayColumn                      *SimpleColumn
+	bodyColumn                       *SimpleColumn
+	addDatetimeColumn                *SimpleColumn
+	beginOrderCacheColumn            *SimpleColumn
+	endOrderCacheColumn              *SimpleColumn
+	nameColumn                       *SimpleColumn
+	specNameColumn                   *SpecNameColumn
+	specShortNameColumn              *SpecShortNameColumn
+	starCountColumn                  *StarCountColumn
+	itemParentParentTimestampColumn  *ItemParentParentTimestampColumn
 }
 
 type Item struct {
-	ID                         int64
-	Catname                    string
+	schema.ItemRow
 	NameOnly                   string
-	Body                       string
-	ItemsCount                 int32
-	NewItemsCount              int32
+	DescendantsParentsCount    int32
+	NewDescendantsParentsCount int32
 	ChildItemsCount            int32
 	NewChildItemsCount         int32
 	DescendantsCount           int32
 	NewDescendantsCount        int32
-	BeginYear                  int32
-	EndYear                    int32
-	BeginMonth                 int16
-	EndMonth                   int16
-	Today                      *bool
-	BeginModelYear             int32
-	EndModelYear               int32
-	BeginModelYearFraction     string
-	EndModelYearFraction       string
-	SpecID                     int64
 	SpecName                   string
 	SpecShortName              string
-	EngineItemID               int64
-	ItemTypeID                 schema.ItemTableItemTypeID
 	Description                string
 	FullText                   string
-	IsConcept                  bool
-	IsConceptInherit           bool
-	CurrentPicturesCount       int32
+	DescendantPicturesCount    int32
 	ChildsCount                int32
 	DescendantTwinsGroupsCount int32
 	InboxPicturesCount         int32
 	FullName                   string
-	LogoID                     int64
 	MostsActive                bool
 	CommentsAttentionsCount    int32
 }
@@ -149,8 +176,59 @@ func NewRepository(
 	mostsMinCarsCount int,
 ) *Repository {
 	return &Repository{
-		db:                db,
-		mostsMinCarsCount: mostsMinCarsCount,
+		db:                               db,
+		mostsMinCarsCount:                mostsMinCarsCount,
+		descendantsCountColumn:           &DescendantsCountColumn{db: db},
+		newDescendantsCountColumn:        &NewDescendantsCountColumn{db: db},
+		descendantTwinsGroupsCountColumn: &DescendantTwinsGroupsCountColumn{db: db},
+		descendantPicturesCountColumn:    &DescendantPicturesCountColumn{},
+		childsCountColumn:                &ChildsCountColumn{db: db},
+		descriptionColumn: &TextstorageRefColumn{
+			db:  db,
+			col: schema.ItemLanguageTableTextIDColName,
+		},
+		fullTextColumn: &TextstorageRefColumn{
+			db:  db,
+			col: schema.ItemLanguageTableFullTextIDColName,
+		},
+		nameOnlyColumn:                &NameOnlyColumn{db: db},
+		commentsAttentionsCountColumn: &CommentsAttentionsCountColumn{db: db},
+		inboxPicturesCountColumn:      &InboxPicturesCountColumn{db: db},
+		mostsActiveColumn: &MostsActiveColumn{
+			db:                db,
+			mostsMinCarsCount: mostsMinCarsCount,
+		},
+		descendantsParentsCountColumn:    &DescendantsParentsCountColumn{},
+		newDescendantsParentsCountColumn: &NewDescendantsParentsCountColumn{},
+		childItemsCountColumn:            &ChildItemsCountColumn{},
+		newChildItemsCountColumn:         &NewChildItemsCountColumn{},
+		idColumn:                         &SimpleColumn{col: schema.ItemTableIDColName},
+		logoColumn:                       &SimpleColumn{col: schema.ItemTableLogoIDColName},
+		fullNameColumn:                   &SimpleColumn{col: schema.ItemTableFullNameColName},
+		catnameColumn:                    &SimpleColumn{col: schema.ItemTableCatnameColName},
+		engineItemIDColumn:               &SimpleColumn{col: schema.ItemTableEngineItemIDColName},
+		itemTypeIDColumn:                 &SimpleColumn{col: schema.ItemTableItemTypeIDColName},
+		isConceptColumn:                  &SimpleColumn{col: schema.ItemTableIsConceptColName},
+		isConceptInheritColumn:           &SimpleColumn{col: schema.ItemTableIsConceptInheritColName},
+		specIDColumn:                     &SimpleColumn{col: schema.ItemTableSpecIDColName},
+		beginYearColumn:                  &SimpleColumn{col: schema.ItemTableBeginYearColName},
+		endYearColumn:                    &SimpleColumn{col: schema.ItemTableEndYearColName},
+		beginMonthColumn:                 &SimpleColumn{col: schema.ItemTableBeginMonthColName},
+		endMonthColumn:                   &SimpleColumn{col: schema.ItemTableEndMonthColName},
+		beginModelYearColumn:             &SimpleColumn{col: schema.ItemTableBeginModelYearColName},
+		endModelYearColumn:               &SimpleColumn{col: schema.ItemTableEndModelYearColName},
+		beginModelYearFractionColumn:     &SimpleColumn{col: schema.ItemTableBeginModelYearFractionColName},
+		endModelYearFractionColumn:       &SimpleColumn{col: schema.ItemTableEndModelYearFractionColName},
+		todayColumn:                      &SimpleColumn{col: schema.ItemTableTodayColName},
+		bodyColumn:                       &SimpleColumn{col: schema.ItemTableBodyColName},
+		addDatetimeColumn:                &SimpleColumn{col: schema.ItemTableAddDatetimeColName},
+		beginOrderCacheColumn:            &SimpleColumn{col: schema.ItemTableBeginOrderCacheColName},
+		endOrderCacheColumn:              &SimpleColumn{col: schema.ItemTableEndOrderCacheColName},
+		nameColumn:                       &SimpleColumn{col: schema.ItemTableNameColName},
+		specNameColumn:                   &SpecNameColumn{},
+		specShortNameColumn:              &SpecShortNameColumn{},
+		starCountColumn:                  &StarCountColumn{},
+		itemParentParentTimestampColumn:  &ItemParentParentTimestampColumn{},
 	}
 }
 
@@ -220,7 +298,7 @@ func yearsPrefix(begin int32, end int32) string {
 	return fmt.Sprintf("%d–xx", begin)
 }
 
-func (s *Repository) langPriorityOrderExpr( //nolint: ireturn
+func langPriorityOrderExpr( //nolint: ireturn
 	col exp.IdentifierExpression, language string,
 ) (exp.OrderedExpression, error) {
 	langPriority, ok := languagePriority[language]
@@ -238,269 +316,104 @@ func (s *Repository) langPriorityOrderExpr( //nolint: ireturn
 	return goqu.Func("FIELD", langs...).Asc(), nil
 }
 
-func (s *Repository) applyItemFields( //nolint:maintidx
-	alias string,
-	sqSelect *goqu.SelectDataset,
-	fields ListFields,
-	language string,
-) (*goqu.SelectDataset, error) {
-	columns := make([]interface{}, 0)
-	aliasTable := goqu.T(alias)
-	aliasIDCol := aliasTable.Col(schema.ItemTableIDColName)
+func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
+	columns := map[string]Column{
+		schema.ItemTableIDColName:               s.idColumn,
+		schema.ItemTableCatnameColName:          s.catnameColumn,
+		schema.ItemTableEngineItemIDColName:     s.engineItemIDColumn,
+		schema.ItemTableItemTypeIDColName:       s.itemTypeIDColumn,
+		schema.ItemTableIsConceptColName:        s.isConceptColumn,
+		schema.ItemTableIsConceptInheritColName: s.isConceptInheritColumn,
+		schema.ItemTableSpecIDColName:           s.specIDColumn,
+	}
 
 	if fields.FullName {
-		columns = append(columns, aliasTable.Col(schema.ItemTableFullNameColName))
+		columns[schema.ItemTableFullNameColName] = s.fullNameColumn
 	}
 
 	if fields.Logo {
-		columns = append(columns, aliasTable.Col(schema.ItemTableLogoIDColName))
+		columns[schema.ItemTableLogoIDColName] = s.logoColumn
 	}
 
 	if fields.NameText || fields.NameHTML {
-		isAlias := alias + "_is"
-
-		columns = append(columns,
-			aliasTable.Col(schema.ItemTableBeginYearColName), aliasTable.Col(schema.ItemTableEndYearColName),
-			aliasTable.Col(schema.ItemTableBeginMonthColName), aliasTable.Col(schema.ItemTableEndMonthColName),
-			aliasTable.Col(schema.ItemTableBeginModelYearColName), aliasTable.Col(schema.ItemTableEndModelYearColName),
-			aliasTable.Col(schema.ItemTableBeginModelYearFractionColName),
-			aliasTable.Col(schema.ItemTableEndModelYearFractionColName),
-			aliasTable.Col(schema.ItemTableTodayColName),
-			aliasTable.Col(schema.ItemTableBodyColName),
-			goqu.T(isAlias).Col(schema.SpecTableShortNameColName).As(colSpecShortName),
-		)
+		columns[schema.ItemTableBeginYearColName] = s.beginYearColumn
+		columns[schema.ItemTableEndYearColName] = s.endYearColumn
+		columns[schema.ItemTableBeginMonthColName] = s.beginMonthColumn
+		columns[schema.ItemTableEndMonthColName] = s.endMonthColumn
+		columns[schema.ItemTableBeginModelYearColName] = s.beginModelYearColumn
+		columns[schema.ItemTableEndModelYearColName] = s.endModelYearColumn
+		columns[schema.ItemTableBeginModelYearFractionColName] = s.beginModelYearFractionColumn
+		columns[schema.ItemTableEndModelYearFractionColName] = s.endModelYearFractionColumn
+		columns[schema.ItemTableTodayColName] = s.todayColumn
+		columns[schema.ItemTableBodyColName] = s.bodyColumn
+		columns[colSpecShortName] = s.specShortNameColumn
 
 		if fields.NameHTML {
-			columns = append(columns, goqu.T(isAlias).Col(schema.SpecTableNameColName).As(colSpecName))
+			columns[colSpecName] = s.specNameColumn
 		}
-
-		sqSelect = sqSelect.
-			LeftJoin(
-				schema.SpecTable.As(isAlias),
-				goqu.On(aliasTable.Col(schema.ItemTableSpecIDColName).Eq(goqu.T(isAlias).Col(schema.SpecTableIDColName))),
-			)
 	}
 
 	if fields.Description {
-		ilAlias := alias + "_ild"
-
-		orderExpr, err := s.langPriorityOrderExpr(goqu.T(ilAlias).Col(schema.ItemLanguageTableLanguageColName), language)
-		if err != nil {
-			return nil, err
-		}
-
-		columns = append(columns,
-			s.db.Select(schema.TextstorageTextTableTextCol).
-				From(schema.ItemLanguageTable.As(ilAlias)).
-				Join(
-					schema.TextstorageTextTable,
-					goqu.On(goqu.T(ilAlias).Col(schema.ItemLanguageTableTextIDColName).Eq(schema.TextstorageTextTableIDCol)),
-				).
-				Where(
-					goqu.T(ilAlias).Col(schema.ItemLanguageTableItemIDColName).Eq(aliasIDCol),
-					goqu.Func("length", schema.TextstorageTextTableTextCol).Gt(0),
-				).
-				Order(orderExpr).
-				Limit(1).
-				As(colDescription),
-		)
+		columns[colDescription] = s.descriptionColumn
 	}
 
 	if fields.FullText {
-		ilAlias := alias + "_ilf"
-
-		orderExpr, err := s.langPriorityOrderExpr(goqu.T(ilAlias).Col(schema.ItemLanguageTableLanguageColName), language)
-		if err != nil {
-			return nil, err
-		}
-
-		columns = append(columns,
-			s.db.Select(schema.TextstorageTextTableTextCol).
-				From(schema.ItemLanguageTable.As(ilAlias)).
-				Join(
-					schema.TextstorageTextTable,
-					goqu.On(goqu.T(ilAlias).Col(schema.ItemLanguageTableFullTextIDColName).Eq(schema.TextstorageTextTableIDCol)),
-				).
-				Where(
-					goqu.T(ilAlias).Col(schema.ItemLanguageTableItemIDColName).Eq(aliasIDCol),
-					goqu.Func("length", schema.TextstorageTextTableTextCol).Gt(0),
-				).
-				Order(orderExpr).
-				Limit(1).
-				As(colFullText),
-		)
+		columns[colFullText] = s.fullTextColumn
 	}
 
 	if fields.NameOnly || fields.NameText || fields.NameHTML {
-		orderExpr, err := s.langPriorityOrderExpr(schema.ItemLanguageTableLanguageCol, language)
-		if err != nil {
-			return nil, err
-		}
-
-		columns = append(columns, goqu.Func(
-			"IFNULL",
-			s.db.Select(schema.ItemLanguageTableNameCol).
-				From(schema.ItemLanguageTable).
-				Where(
-					schema.ItemLanguageTableItemIDCol.Eq(aliasIDCol),
-					goqu.Func("LENGTH", schema.ItemLanguageTableNameCol).Gt(0),
-				).
-				Order(orderExpr).
-				Limit(1),
-			aliasTable.Col(schema.ItemTableNameColName),
-		).As(colNameOnly))
+		columns[colNameOnly] = s.nameOnlyColumn
 	}
 
-	if fields.ChildItemsCount || fields.NewChildItemsCount {
-		ipcAlias := query.AppendItemParentAlias(alias, "c")
-		ipcAliasTable := goqu.T(ipcAlias)
-
-		if fields.ChildItemsCount {
-			columns = append(columns, goqu.COUNT(goqu.DISTINCT(ipcAliasTable.Col(schema.ItemParentTableItemIDColName))).
-				As(colChildItemsCount))
-		}
-
-		if fields.NewChildItemsCount {
-			columns = append(
-				columns,
-				goqu.COUNT(goqu.DISTINCT(
-					goqu.Func("IF",
-						ipcAliasTable.Col(schema.ItemParentTableTimestampColName).Gt(
-							goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL ? DAY", NewDays)),
-						),
-						ipcAliasTable.Col(schema.ItemParentTableItemIDColName),
-						nil,
-					),
-				)).As(colNewChildItemsCount))
-		}
+	if fields.ChildItemsCount {
+		columns[colChildItemsCount] = s.childItemsCountColumn
 	}
 
-	if fields.DescendantsParentsCount || fields.NewDescendantsParentsCount {
-		cAlias := query.AppendItemParentAlias(
-			query.AppendItemParentCacheAlias(alias, "d"), "p",
-		)
-		cAliasTable := goqu.T(cAlias)
+	if fields.NewChildItemsCount {
+		columns[colNewChildItemsCount] = s.newChildItemsCountColumn
+	}
 
-		if fields.DescendantsParentsCount {
-			columns = append(columns, goqu.COUNT(goqu.DISTINCT(cAliasTable.Col(schema.ItemParentTableItemIDColName))).
-				As(ColDescendantsParentsCount))
-		}
+	if fields.DescendantsParentsCount {
+		columns[colDescendantsParentsCount] = s.descendantsParentsCountColumn
+	}
 
-		if fields.NewDescendantsParentsCount {
-			columns = append(columns, goqu.COUNT(goqu.DISTINCT(goqu.Func("IF",
-				aliasTable.Col(schema.ItemTableAddDatetimeColName).Gt(
-					goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL ? DAY", NewDays)),
-				),
-				cAliasTable.Col(schema.ItemParentTableItemIDColName),
-				nil,
-			))).As(colNewDescendantsParentsCount))
-		}
+	if fields.NewDescendantsParentsCount {
+		columns[colNewDescendantsParentsCount] = s.newDescendantsParentsCountColumn
 	}
 
 	if fields.ChildsCount {
-		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy()
-
-		columns = append(
-			columns,
-			subSelect.Select(goqu.COUNT(goqu.Star())).
-				From(schema.ItemParentTable).
-				Where(schema.ItemParentTableParentIDCol.Eq(aliasTable.Col(schema.ItemTableIDColName))).
-				As(colChildsCount),
-		)
+		columns[colChildsCount] = s.childsCountColumn
 	}
 
 	if fields.DescendantsCount {
-		options := query.ItemParentCacheListOptions{
-			ParentIDExpr: aliasIDCol,
-			ExcludeSelf:  true,
-		}
-		columns = append(columns, options.CountSelect(s.db).As(ColDescendantsCount))
+		columns[colDescendantsCount] = s.descendantsCountColumn
 	}
 
 	if fields.NewDescendantsCount {
-		options := query.ItemsListOptions{
-			Alias: alias + "product2",
-			ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
-				ParentIDExpr: aliasIDCol,
-				ExcludeSelf:  true,
-			},
-			CreatedInDays: NewDays,
-		}
-		columns = append(columns, options.CountDistinctSelect(s.db).As(colNewDescendantsCount))
+		columns[colNewDescendantsCount] = s.newDescendantsCountColumn
 	}
 
 	if fields.DescendantTwinsGroupsCount {
-		options := query.ItemsListOptions{
-			Alias:  alias + "dtgc",
-			TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
-			ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
-				ItemParentCacheAncestorByItemID: &query.ItemParentCacheListOptions{
-					ItemsByParentID: &query.ItemsListOptions{
-						ItemIDExpr: aliasTable.Col(schema.ItemTableIDColName),
-					},
-				},
-			},
-		}
-
-		columns = append(
-			columns,
-			options.CountSelect(s.db).As(colDescendantTwinsGroupsCount),
-		)
+		columns[colDescendantTwinsGroupsCount] = s.descendantTwinsGroupsCountColumn
 	}
 
 	if fields.DescendantPicturesCount {
-		piTableAlias := query.AppendPictureItemAlias(
-			query.AppendItemParentCacheAlias(query.ItemAlias, "d"),
-		)
-
-		columns = append(columns,
-			goqu.COUNT(goqu.DISTINCT(goqu.T(piTableAlias).Col(schema.PictureItemTablePictureIDColName))).
-				As(ColDescendantPicturesCount),
-		)
+		columns[colDescendantPicturesCount] = s.descendantPicturesCountColumn
 	}
 
 	if fields.MostsActive {
-		opts := query.ItemParentCacheListOptions{
-			ItemsByParentID: &query.ItemsListOptions{
-				ItemIDExpr: aliasIDCol,
-			},
-		}
-
-		columns = append(columns,
-			goqu.V(s.mostsMinCarsCount).Lt(opts.CountSelect(s.db)).As(colMostsActive),
-		)
+		columns[colMostsActive] = s.mostsActiveColumn
 	}
 
 	if fields.InboxPicturesCount {
-		opts := query.PictureListOptions{
-			Status: schema.PictureStatusInbox,
-			PictureItem: &query.PictureItemListOptions{
-				ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
-					ParentIDExpr: aliasIDCol,
-				},
-			},
-		}
-
-		columns = append(columns, opts.CountSelect(s.db).As(colInboxPicturesCount))
+		columns[colInboxPicturesCount] = s.inboxPicturesCountColumn
 	}
 
 	if fields.CommentsAttentionsCount {
-		opts := query.CommentMessageListOptions{
-			Attention:   schema.CommentMessageModeratorAttentionRequired,
-			CommentType: schema.CommentMessageTypeIDPictures,
-			PictureItems: &query.PictureItemListOptions{
-				ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
-					ParentIDExpr: aliasIDCol,
-				},
-			},
-		}
-
-		columns = append(columns, opts.CountSelect(s.db).As(colCommentsAttentionsCount))
+		columns[colCommentsAttentionsCount] = s.commentsAttentionsCountColumn
 	}
 
-	sqSelect = sqSelect.SelectAppend(columns...)
-
-	return sqSelect, nil
+	return columns
 }
 
 func (s *Repository) IDsSelect(options query.ItemsListOptions) (*goqu.SelectDataset, error) {
@@ -591,10 +504,9 @@ func (s *Repository) isFieldsValid(options query.ItemsListOptions, fields ListFi
 	}
 
 	if (fields.DescendantsParentsCount || fields.NewDescendantsParentsCount) &&
-		(options.ItemParentCacheDescendant == nil || options.ItemParentCacheDescendant.ItemParentByItemID == nil ||
-			options.ItemParentCacheDescendant.ItemParentByItemID.ParentItems == nil) {
+		(options.ItemParentCacheDescendant == nil || options.ItemParentCacheDescendant.ItemParentByItemID == nil) {
 		return fmt.Errorf(
-			"%w: (New)DescendantsParentsCount requires ItemParentCacheDescendant.ItemParentByItemID.ParentItems",
+			"%w: (New)DescendantsParentsCount requires ItemParentCacheDescendant.ItemParentByItemID",
 			errFieldRequires,
 		)
 	}
@@ -602,14 +514,146 @@ func (s *Repository) isFieldsValid(options query.ItemsListOptions, fields ListFi
 	return nil
 }
 
+func (s *Repository) orderBy(alias string, orderBy OrderBy, language string) ([]exp.OrderedExpression, error) {
+	type columnOrder struct {
+		col Column
+		asc bool
+	}
+
+	var columns []columnOrder
+
+	switch orderBy {
+	case OrderByDescendantsCount:
+		columns = []columnOrder{{col: s.descendantsCountColumn, asc: false}}
+	case OrderByDescendantPicturesCount:
+		columns = []columnOrder{{col: s.descendantPicturesCountColumn, asc: false}}
+	case OrderByAddDatetime:
+		columns = []columnOrder{{col: s.addDatetimeColumn, asc: false}}
+	case OrderByName:
+		columns = []columnOrder{
+			{col: s.nameColumn, asc: true},
+			{col: s.bodyColumn, asc: true},
+			{col: s.specIDColumn, asc: true},
+			{col: s.beginOrderCacheColumn, asc: true},
+			{col: s.endOrderCacheColumn, asc: true},
+		}
+	case OrderByDescendantsParentsCount:
+		columns = []columnOrder{{col: s.descendantsParentsCountColumn, asc: false}}
+	case OrderByStarCount:
+		columns = []columnOrder{{col: s.starCountColumn, asc: false}}
+	case OrderByItemParentParentTimestamp:
+		columns = []columnOrder{{col: s.itemParentParentTimestampColumn, asc: false}}
+	case OrderByNone:
+	}
+
+	orderByExp := make([]exp.OrderedExpression, 0, len(columns))
+
+	for _, column := range columns {
+		expr, err := column.col.SelectExpr(alias, language)
+		if err != nil {
+			return nil, err
+		}
+
+		ordExpr := expr.Desc()
+		if column.asc {
+			ordExpr = expr.Asc()
+		}
+
+		orderByExp = append(orderByExp, ordExpr)
+	}
+
+	return orderByExp, nil
+}
+
+func (s *Repository) wrapperOrderBy(wrapperAlias string, wrappedAlias string, orderBy OrderBy) []exp.OrderedExpression {
+	wrapperAliasTable := goqu.T(wrapperAlias)
+	wrappedAliasTable := goqu.T(wrappedAlias)
+
+	switch orderBy {
+	case OrderByDescendantsCount:
+		return []exp.OrderedExpression{wrappedAliasTable.Col(colDescendantsCount).Desc()}
+	case OrderByDescendantPicturesCount:
+		return []exp.OrderedExpression{wrappedAliasTable.Col(colDescendantPicturesCount).Desc()}
+	case OrderByAddDatetime:
+		return []exp.OrderedExpression{wrapperAliasTable.Col(schema.ItemTableAddDatetimeColName).Desc()}
+	case OrderByName:
+		return []exp.OrderedExpression{
+			wrapperAliasTable.Col(schema.ItemTableNameColName).Asc(),
+			wrapperAliasTable.Col(schema.ItemTableBodyColName).Asc(),
+			wrapperAliasTable.Col(schema.ItemTableSpecIDColName).Asc(),
+			wrapperAliasTable.Col(schema.ItemTableBeginOrderCacheColName).Asc(),
+			wrapperAliasTable.Col(schema.ItemTableEndOrderCacheColName).Asc(),
+		}
+	case OrderByDescendantsParentsCount:
+		return []exp.OrderedExpression{wrappedAliasTable.Col(colDescendantsParentsCount).Desc()}
+	case OrderByStarCount:
+		return []exp.OrderedExpression{wrappedAliasTable.Col(colStarCount).Desc()}
+	case OrderByItemParentParentTimestamp:
+		return []exp.OrderedExpression{wrappedAliasTable.Col(colItemParentParentTimestamp).Desc()}
+	case OrderByNone:
+	}
+
+	return nil
+}
+
+func (s *Repository) wrappedOrderBy(alias string, orderBy OrderBy) []exp.OrderedExpression {
+	aliasTable := goqu.T(alias)
+
+	var orderByExp []exp.OrderedExpression
+
+	switch orderBy {
+	case OrderByDescendantsCount:
+		orderByExp = []exp.OrderedExpression{goqu.C(colDescendantsCount).Desc()}
+	case OrderByDescendantPicturesCount:
+		orderByExp = []exp.OrderedExpression{goqu.C(colDescendantPicturesCount).Desc()}
+	case OrderByAddDatetime:
+		orderByExp = []exp.OrderedExpression{aliasTable.Col(schema.ItemTableAddDatetimeColName).Desc()}
+	case OrderByName:
+		orderByExp = []exp.OrderedExpression{
+			aliasTable.Col(schema.ItemTableNameColName).Asc(),
+			aliasTable.Col(schema.ItemTableBodyColName).Asc(),
+			aliasTable.Col(schema.ItemTableSpecIDColName).Asc(),
+			aliasTable.Col(schema.ItemTableBeginOrderCacheColName).Asc(),
+			aliasTable.Col(schema.ItemTableEndOrderCacheColName).Asc(),
+		}
+	case OrderByDescendantsParentsCount:
+		orderByExp = []exp.OrderedExpression{goqu.C(colDescendantsParentsCount).Desc()}
+	case OrderByStarCount:
+		orderByExp = []exp.OrderedExpression{goqu.C(colStarCount).Desc()}
+	case OrderByItemParentParentTimestamp:
+		orderByExp = []exp.OrderedExpression{goqu.C(colItemParentParentTimestamp).Desc()}
+	case OrderByNone:
+	}
+
+	return orderByExp
+}
+
+func (s *Repository) wrappedSelectColumns(orderBy OrderBy) map[string]Column {
+	columns := map[string]Column{
+		schema.ItemTableIDColName: s.idColumn,
+	}
+
+	switch orderBy {
+	case OrderByDescendantsCount:
+		columns[colDescendantsCount] = s.descendantsCountColumn
+	case OrderByDescendantPicturesCount:
+		columns[colDescendantPicturesCount] = s.descendantPicturesCountColumn
+	case OrderByDescendantsParentsCount:
+		columns[colDescendantsParentsCount] = s.descendantsParentsCountColumn
+	case OrderByStarCount:
+		columns[colStarCount] = s.starCountColumn
+	case OrderByItemParentParentTimestamp:
+		columns[colItemParentParentTimestamp] = s.itemParentParentTimestampColumn
+	case OrderByName, OrderByAddDatetime, OrderByNone:
+	}
+
+	return columns
+}
+
 func (s *Repository) List( //nolint:maintidx
 	ctx context.Context, options query.ItemsListOptions, fields ListFields, orderBy OrderBy,
 	pagination bool,
 ) ([]Item, *util.Pages, error) {
-	/*langPriority, ok := languagePriority[options.Language]
-	if !ok {
-		return nil, fmt.Errorf("language `%s` not found", options.Language)
-	}*/
 	var err error
 
 	aliasTable := goqu.T(query.ItemAlias)
@@ -623,56 +667,19 @@ func (s *Repository) List( //nolint:maintidx
 		return nil, nil, fmt.Errorf("%w: NameOnly for SortByName", errFieldsIsRequired)
 	}
 
-	sqSelect := options.Select(s.db).Select(
-		aliasTable.Col(schema.ItemTableIDColName),
-		aliasTable.Col(schema.ItemTableCatnameColName),
-		aliasTable.Col(schema.ItemTableEngineItemIDColName),
-		aliasTable.Col(schema.ItemTableItemTypeIDColName),
-		aliasTable.Col(schema.ItemTableIsConceptColName),
-		aliasTable.Col(schema.ItemTableIsConceptInheritColName),
-		aliasTable.Col(schema.ItemTableSpecIDColName),
-		aliasTable.Col(schema.ItemTableFullNameColName),
-	).GroupBy(aliasTable.Col(schema.ItemTableIDColName))
-
-	sqSelect, err = s.applyItemFields(query.ItemAlias, sqSelect, fields, options.Language)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var orderByExp []exp.OrderedExpression
-
-	switch orderBy {
-	case OrderByDescendantsCount:
-		orderByExp = []exp.OrderedExpression{goqu.C(ColDescendantsCount).Desc()}
-	case OrderByDescendantPicturesCount:
-		orderByExp = []exp.OrderedExpression{goqu.C(ColDescendantPicturesCount).Desc()}
-	case OrderByAddDatetime:
-		orderByExp = []exp.OrderedExpression{aliasTable.Col(schema.ItemTableAddDatetimeColName).Desc()}
-	case OrderByName:
-		orderByExp = []exp.OrderedExpression{
-			aliasTable.Col(schema.ItemTableNameColName).Asc(),
-			aliasTable.Col(schema.ItemTableBodyColName).Asc(),
-			aliasTable.Col(schema.ItemTableSpecIDColName).Asc(),
-			aliasTable.Col(schema.ItemTableBeginOrderCacheColName).Asc(),
-			aliasTable.Col(schema.ItemTableEndOrderCacheColName).Asc(),
-		}
-	case OrderByDescendantsParentsCount:
-		orderByExp = []exp.OrderedExpression{goqu.C(ColDescendantsParentsCount).Desc()}
-	case OrderByStarCount:
-		orderByExp = []exp.OrderedExpression{goqu.COUNT(goqu.Star()).Desc()}
-	case OrderByItemParentParentTimestamp:
-		col := goqu.T(query.AppendItemParentAlias(query.ItemAlias, "p")).Col(schema.ItemParentTableTimestampColName)
-		orderByExp = []exp.OrderedExpression{goqu.MAX(col).Desc()}
-	case OrderByNone:
-	}
-
-	if len(orderByExp) > 0 {
-		sqSelect = sqSelect.Order(orderByExp...)
-	}
+	sqSelect := options.Select(s.db).GroupBy(aliasTable.Col(schema.ItemTableIDColName))
 
 	var pages *util.Pages
 
+	outAlias := query.ItemAlias
+
 	if options.Limit > 0 {
+		wrappedOrderBy := s.wrappedOrderBy(query.ItemAlias, orderBy)
+
+		if len(wrappedOrderBy) > 0 {
+			sqSelect = sqSelect.Order(wrappedOrderBy...)
+		}
+
 		paginator := util.Paginator{
 			SQLSelect:         sqSelect,
 			ItemCountPerPage:  int32(options.Limit), //nolint: gosec
@@ -690,6 +697,90 @@ func (s *Repository) List( //nolint:maintidx
 		if err != nil {
 			return nil, nil, err
 		}
+
+		// implements deferred join pattern
+		wrappedAlias := "wrapped"
+		wrappedIDCol := goqu.T(wrappedAlias).Col(schema.ItemTableIDColName)
+		wrappedColumns := s.wrappedSelectColumns(orderBy)
+		wrappedColumnsExpr := make([]interface{}, 0, len(wrappedColumns))
+
+		for _, mapItem := range toSortedColumns(wrappedColumns) {
+			expr, err := mapItem.col.SelectExpr(query.ItemAlias, options.Language)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			wrappedColumnsExpr = append(wrappedColumnsExpr, expr.As(mapItem.key))
+		}
+
+		wrapperColumns := s.columnsByFields(fields)
+		wrapperColumnsExpr := make([]interface{}, 0, len(wrapperColumns))
+
+		for _, mapItem := range toSortedColumns(wrapperColumns) {
+			var expr AliaseableExpression
+
+			_, isWrapped := wrappedColumns[mapItem.key]
+			if isWrapped && mapItem.key != schema.ItemTableIDColName {
+				expr = goqu.T(wrappedAlias).Col(mapItem.key)
+			} else {
+				expr, err = mapItem.col.SelectExpr(schema.ItemTableName, options.Language)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+
+			wrapperColumnsExpr = append(wrapperColumnsExpr, expr.As(mapItem.key))
+		}
+
+		options.Alias = schema.ItemTableName
+
+		sqSelect = options.Select(s.db).Select(wrapperColumnsExpr...).
+			From(schema.ItemTable).
+			Join(sqSelect.Select(wrappedColumnsExpr...).As(wrappedAlias), goqu.On(
+				schema.ItemTableIDCol.Eq(wrappedIDCol),
+			)).
+			GroupBy(schema.ItemTableIDCol)
+
+		wrapperOrderBy := s.wrapperOrderBy(schema.ItemTableName, wrappedAlias, orderBy)
+
+		if len(wrapperOrderBy) > 0 {
+			sqSelect = sqSelect.Order(wrapperOrderBy...)
+		}
+
+		outAlias = schema.ItemTableName
+	} else {
+		orderByExpr, err := s.orderBy(query.ItemAlias, orderBy, options.Language)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(orderByExpr) > 0 {
+			sqSelect = sqSelect.Order(orderByExpr...)
+		}
+
+		columns := s.columnsByFields(fields)
+
+		res := make([]interface{}, 0, len(columns))
+
+		for _, mapItem := range toSortedColumns(columns) {
+			expr, err := mapItem.col.SelectExpr(query.ItemAlias, options.Language)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			res = append(res, expr.As(mapItem.key))
+		}
+
+		sqSelect = sqSelect.Select(res...)
+	}
+
+	outTable := goqu.T(outAlias)
+
+	if fields.NameText || fields.NameHTML {
+		sqSelect = sqSelect.LeftJoin(
+			schema.SpecTable,
+			goqu.On(outTable.Col(schema.ItemTableSpecIDColName).Eq(schema.SpecTableIDCol)),
+		)
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
@@ -709,24 +800,11 @@ func (s *Repository) List( //nolint:maintidx
 		var row Item
 
 		var (
-			catname                sql.NullString
-			engineItemID           sql.NullInt64
-			beginYear              sql.NullInt32
-			endYear                sql.NullInt32
-			beginMonth             sql.NullInt16
-			endMonth               sql.NullInt16
-			beginModelYear         sql.NullInt32
-			endModelYear           sql.NullInt32
-			beginModelYearFraction sql.NullString
-			endModelYearFraction   sql.NullString
-			today                  sql.NullBool
-			specID                 sql.NullInt64
-			specName               sql.NullString
-			specShortName          sql.NullString
-			description            sql.NullString
-			fullText               sql.NullString
-			fullName               sql.NullString
-			logoID                 sql.NullInt64
+			specName      sql.NullString
+			specShortName sql.NullString
+			description   sql.NullString
+			fullText      sql.NullString
+			fullName      sql.NullString
 		)
 
 		pointers := make([]interface{}, len(columnNames))
@@ -738,11 +816,11 @@ func (s *Repository) List( //nolint:maintidx
 			case colNameOnly:
 				pointers[i] = &row.NameOnly
 			case schema.ItemTableCatnameColName:
-				pointers[i] = &catname
+				pointers[i] = &row.Catname
 			case schema.ItemTableFullNameColName:
 				pointers[i] = &fullName
 			case schema.ItemTableEngineItemIDColName:
-				pointers[i] = &engineItemID
+				pointers[i] = &row.EngineItemID
 			case schema.ItemTableItemTypeIDColName:
 				pointers[i] = &row.ItemTypeID
 			case schema.ItemTableIsConceptColName:
@@ -750,16 +828,16 @@ func (s *Repository) List( //nolint:maintidx
 			case schema.ItemTableIsConceptInheritColName:
 				pointers[i] = &row.IsConceptInherit
 			case schema.ItemTableSpecIDColName:
-				pointers[i] = &specID
+				pointers[i] = &row.SpecID
 			case colDescription:
 				pointers[i] = &description
 			case colFullText:
 				pointers[i] = &fullText
-			case ColDescendantsParentsCount:
-				pointers[i] = &row.ItemsCount
+			case colDescendantsParentsCount:
+				pointers[i] = &row.DescendantsParentsCount
 			case colNewDescendantsParentsCount:
-				pointers[i] = &row.NewItemsCount
-			case ColDescendantsCount:
+				pointers[i] = &row.NewDescendantsParentsCount
+			case colDescendantsCount:
 				pointers[i] = &row.DescendantsCount
 			case colNewDescendantsCount:
 				pointers[i] = &row.NewDescendantsCount
@@ -768,31 +846,31 @@ func (s *Repository) List( //nolint:maintidx
 			case colNewChildItemsCount:
 				pointers[i] = &row.NewChildItemsCount
 			case schema.ItemTableBeginYearColName:
-				pointers[i] = &beginYear
+				pointers[i] = &row.BeginYear
 			case schema.ItemTableEndYearColName:
-				pointers[i] = &endYear
+				pointers[i] = &row.EndYear
 			case schema.ItemTableBeginMonthColName:
-				pointers[i] = &beginMonth
+				pointers[i] = &row.BeginMonth
 			case schema.ItemTableEndMonthColName:
-				pointers[i] = &endMonth
+				pointers[i] = &row.EndMonth
 			case schema.ItemTableBeginModelYearColName:
-				pointers[i] = &beginModelYear
+				pointers[i] = &row.BeginModelYear
 			case schema.ItemTableEndModelYearColName:
-				pointers[i] = &endModelYear
+				pointers[i] = &row.EndModelYear
 			case schema.ItemTableBeginModelYearFractionColName:
-				pointers[i] = &beginModelYearFraction
+				pointers[i] = &row.BeginModelYearFraction
 			case schema.ItemTableEndModelYearFractionColName:
-				pointers[i] = &endModelYearFraction
+				pointers[i] = &row.EndModelYearFraction
 			case schema.ItemTableTodayColName:
-				pointers[i] = &today
+				pointers[i] = &row.Today
 			case schema.ItemTableBodyColName:
 				pointers[i] = &row.Body
 			case colSpecName:
 				pointers[i] = &specName
 			case colSpecShortName:
 				pointers[i] = &specShortName
-			case ColDescendantPicturesCount:
-				pointers[i] = &row.CurrentPicturesCount
+			case colDescendantPicturesCount:
+				pointers[i] = &row.DescendantPicturesCount
 			case colChildsCount:
 				pointers[i] = &row.ChildsCount
 			case colDescendantTwinsGroupsCount:
@@ -800,7 +878,7 @@ func (s *Repository) List( //nolint:maintidx
 			case colInboxPicturesCount:
 				pointers[i] = &row.InboxPicturesCount
 			case schema.ItemTableLogoIDColName:
-				pointers[i] = &logoID
+				pointers[i] = &row.LogoID
 			case colMostsActive:
 				pointers[i] = &row.MostsActive
 			case colCommentsAttentionsCount:
@@ -813,54 +891,6 @@ func (s *Repository) List( //nolint:maintidx
 		err = rows.Scan(pointers...)
 		if err != nil {
 			return nil, nil, err
-		}
-
-		if catname.Valid {
-			row.Catname = catname.String
-		}
-
-		if engineItemID.Valid {
-			row.EngineItemID = engineItemID.Int64
-		}
-
-		if beginYear.Valid {
-			row.BeginYear = beginYear.Int32
-		}
-
-		if endYear.Valid {
-			row.EndYear = endYear.Int32
-		}
-
-		if beginMonth.Valid {
-			row.BeginMonth = beginMonth.Int16
-		}
-
-		if endMonth.Valid {
-			row.EndMonth = endMonth.Int16
-		}
-
-		if beginModelYear.Valid {
-			row.BeginModelYear = beginModelYear.Int32
-		}
-
-		if endModelYear.Valid {
-			row.EndModelYear = endModelYear.Int32
-		}
-
-		if beginModelYearFraction.Valid {
-			row.BeginModelYearFraction = beginModelYearFraction.String
-		}
-
-		if endModelYearFraction.Valid {
-			row.EndModelYearFraction = endModelYearFraction.String
-		}
-
-		if today.Valid {
-			row.Today = util.BoolPtr(today.Bool)
-		}
-
-		if specID.Valid {
-			row.SpecID = specID.Int64
 		}
 
 		if specName.Valid {
@@ -881,10 +911,6 @@ func (s *Repository) List( //nolint:maintidx
 
 		if fullName.Valid {
 			row.FullName = fullName.String
-		}
-
-		if logoID.Valid {
-			row.LogoID = logoID.Int64
 		}
 
 		result = append(result, row)
@@ -1479,11 +1505,9 @@ func (s *Repository) ParentLanguageList(
 func (s *Repository) ItemsWithPicturesCount(
 	ctx context.Context, nPictures int,
 ) (int32, error) {
-	var result int32
-
 	const countAlias = "c"
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(
+	sqSelect := s.db.From(
 		s.db.Select(schema.ItemTableIDCol, goqu.COUNT(schema.PictureTableIDCol).As(countAlias)).
 			From(schema.ItemTable).
 			Join(schema.PictureItemTable, goqu.On(schema.ItemTableIDCol.Eq(schema.PictureItemTable.Col("item_id")))).
@@ -1493,16 +1517,12 @@ func (s *Repository) ItemsWithPicturesCount(
 			As("T1"),
 	)
 
-	success, err := sqSelect.ScanValContext(ctx, &result)
+	result, err := sqSelect.CountContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	if !success {
-		return 0, sql.ErrNoRows
-	}
-
-	return result, nil
+	return int32(result), nil //nolint: gosec
 }
 
 func (s *Repository) SetItemParentLanguage(
@@ -1513,7 +1533,7 @@ func (s *Repository) SetItemParentLanguage(
 		Name   string `db:"name"`
 	}{}
 
-	success, err := s.db.Select().From(schema.ItemParentLanguageTable).Where(
+	success, err := s.db.From(schema.ItemParentLanguageTable).Where(
 		schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
 		schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
 		schema.ItemParentLanguageTableLanguageCol.Eq(language),
@@ -1767,4 +1787,22 @@ func (s *Repository) getNames(ctx context.Context, itemID int64) ([]string, erro
 		).ScanValsContext(ctx, &result)
 
 	return result, err
+}
+
+type sortedColumnMapItem struct {
+	key string
+	col Column
+}
+
+func toSortedColumns(cols map[string]Column) []sortedColumnMapItem {
+	res := make([]sortedColumnMapItem, 0, len(cols))
+	for colName, col := range cols {
+		res = append(res, sortedColumnMapItem{key: colName, col: col})
+	}
+
+	sort.SliceStable(res, func(i, j int) bool {
+		return res[i].key < res[j].key
+	})
+
+	return res
 }

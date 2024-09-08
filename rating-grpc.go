@@ -10,6 +10,7 @@ import (
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9/exp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -102,8 +103,8 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 	for idx, brand := range brands {
 		result[idx] = &APIUsersRatingUserBrand{
 			Name:   brand.NameOnly,
-			Route:  []string{"/", brand.Catname},
-			Volume: int64(brand.CurrentPicturesCount),
+			Route:  []string{"/", util.NullStringToString(brand.Catname)},
+			Volume: int64(brand.DescendantPicturesCount),
 		}
 	}
 

@@ -91,7 +91,7 @@ func TestPictureLikesRating(t *testing.T) {
 
 	res, err := goquDB.Insert(schema.PictureTable).Rows(goqu.Record{
 		schema.PictureTableIdentityColName: identity,
-		schema.PictureTableStatusColName:   "accepted",
+		schema.PictureTableStatusColName:   schema.PictureStatusAccepted,
 		schema.PictureTableIPColName:       "",
 		schema.PictureTableOwnerIDColName:  tester.GetId(),
 	}).Executor().ExecContext(ctx)

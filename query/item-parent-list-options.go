@@ -3,6 +3,7 @@ package query
 import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 )
 
 const (
@@ -14,10 +15,22 @@ func AppendItemParentAlias(alias string, suffix string) string {
 }
 
 type ItemParentListOptions struct {
-	ParentID     int64
-	LinkedInDays int
-	ParentItems  *ItemsListOptions
-	ChildItems   *ItemsListOptions
+	ParentID                          int64
+	ParentIDExpr                      exp.Expression
+	LinkedInDays                      int
+	ParentItems                       *ItemsListOptions
+	ChildItems                        *ItemsListOptions
+	ItemParentCacheAncestorByParentID *ItemParentCacheListOptions
+}
+
+func (s *ItemParentListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
+	sqSelect := db.Select().From(schema.ItemParentTable.As(itemParentAlias))
+
+	return s.Apply(itemParentAlias, sqSelect)
+}
+
+func (s *ItemParentListOptions) CountSelect(db *goqu.Database) *goqu.SelectDataset {
+	return s.Select(db).Select(goqu.COUNT(goqu.Star()))
 }
 
 func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
@@ -25,6 +38,10 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 
 	if s.ParentID != 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableParentIDColName).Eq(s.ParentID))
+	}
+
+	if s.ParentIDExpr != nil {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableParentIDColName).Eq(s.ParentIDExpr))
 	}
 
 	if s.LinkedInDays > 0 {
@@ -59,6 +76,19 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 			)
 
 		sqSelect = s.ChildItems.Apply(iAlias, sqSelect)
+	}
+
+	if s.ItemParentCacheAncestorByParentID != nil {
+		ipcaAlias := AppendItemParentCacheAlias(alias, "a")
+		sqSelect = sqSelect.
+			Join(
+				schema.ItemParentCacheTable.As(ipcaAlias),
+				goqu.On(aliasTable.Col(schema.ItemParentCacheTableParentIDColName).Eq(
+					goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableItemIDColName),
+				)),
+			)
+
+		sqSelect = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
 	}
 
 	return sqSelect

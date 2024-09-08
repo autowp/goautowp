@@ -34,7 +34,7 @@ func getPictureID(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
 
 	res, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
 		schema.PictureTableIdentityColName: identity,
-		schema.PictureTableStatusColName:   "accepted",
+		schema.PictureTableStatusColName:   schema.PictureStatusAccepted,
 		schema.PictureTableIPColName:       "",
 		schema.PictureTableOwnerIDColName:  1,
 	}).Executor().ExecContext(ctx)

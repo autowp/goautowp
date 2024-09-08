@@ -894,7 +894,7 @@ message APIItem {
   bool is_concept_inherit = 11;
   int64 spec_id = 12;
   string full_text = 13;
-  int32 current_pictures_count = 14;
+  int32 descendant_pictures_count = 14;
   int32 childs_count = 15;
   int32 descendant_twins_groups_count = 16;
   int32 inbox_pictures_count = 17;

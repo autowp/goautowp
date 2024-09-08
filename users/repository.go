@@ -326,21 +326,15 @@ func (s *Repository) UpdateUserVoteLimit(ctx context.Context, userID int64) erro
 		return err
 	}
 
-	var picturesExists int
-
-	success, err = s.autowpDB.Select(goqu.COUNT(goqu.Star())).From(schema.PictureTable).Where(
+	picturesExists, err := s.autowpDB.From(schema.PictureTable).Where(
 		schema.PictureTableOwnerIDCol.Eq(userID),
-		schema.PictureTableStatusCol.Eq("accepted"),
-	).ScanValContext(ctx, &picturesExists)
+		schema.PictureTableStatusCol.Eq(schema.PictureStatusAccepted),
+	).CountContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	if !success {
-		picturesExists = 0
-	}
-
-	value := math.Round(avgVote + float64(def+age+picturesExists/100))
+	value := math.Round(avgVote + float64(def+age) + float64(picturesExists)/100)
 	if value < 0 {
 		value = 0
 	}

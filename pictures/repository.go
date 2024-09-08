@@ -18,6 +18,7 @@ import (
 var (
 	errIsAllowedForPictureItemContentOnly = errors.New("is allowed only for picture-item-content")
 	errCombinationNotAllowed              = errors.New("combination not allowed")
+	errImageIDIsNil                       = errors.New("image_id is null")
 )
 
 type VoteSummary struct {
@@ -369,8 +370,8 @@ func (s *Repository) Normalize(ctx context.Context, id int64) error {
 		return err
 	}
 
-	if pic.ImageID != 0 {
-		if err = s.imageStorage.Normalize(ctx, int(pic.ImageID)); err != nil {
+	if pic.ImageID.Valid {
+		if err = s.imageStorage.Normalize(ctx, int(pic.ImageID.Int64)); err != nil {
 			return err
 		}
 	}
@@ -384,8 +385,8 @@ func (s *Repository) Flop(ctx context.Context, id int64) error {
 		return err
 	}
 
-	if pic.ImageID != 0 {
-		if err = s.imageStorage.Flop(ctx, int(pic.ImageID)); err != nil {
+	if pic.ImageID.Valid {
+		if err = s.imageStorage.Flop(ctx, int(pic.ImageID.Int64)); err != nil {
 			return err
 		}
 	}
@@ -679,7 +680,11 @@ func (s *Repository) SetPictureCrop(ctx context.Context, pictureID int64, area s
 		return err
 	}
 
-	return s.imageStorage.SetImageCrop(ctx, int(pic.ImageID), area)
+	if !pic.ImageID.Valid {
+		return errImageIDIsNil
+	}
+
+	return s.imageStorage.SetImageCrop(ctx, int(pic.ImageID.Int64), area)
 }
 
 func (s *Repository) ClearReplacePicture(ctx context.Context, pictureID int64) (bool, error) {
@@ -826,31 +831,21 @@ func (s *Repository) NegativeVotes(ctx context.Context, pictureID int64) ([]sche
 }
 
 func (s *Repository) NegativeVotesCount(ctx context.Context, pictureID int64) (int, error) {
-	var count int
-	success, err := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.PicturesModerVotesTable).Where(
+	count, err := s.db.From(schema.PicturesModerVotesTable).Where(
 		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
 		schema.PicturesModerVotesTableVoteCol.Eq(0),
-	).ScanValContext(ctx, &count)
+	).CountContext(ctx)
 
-	if !success {
-		return 0, sql.ErrNoRows
-	}
-
-	return count, err
+	return int(count), err
 }
 
 func (s *Repository) PositiveVotesCount(ctx context.Context, pictureID int64) (int, error) {
-	var count int
-	success, err := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.PicturesModerVotesTable).Where(
+	count, err := s.db.From(schema.PicturesModerVotesTable).Where(
 		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
 		schema.PicturesModerVotesTableVoteCol.Gt(0),
-	).ScanValContext(ctx, &count)
+	).CountContext(ctx)
 
-	if !success {
-		return 0, sql.ErrNoRows
-	}
-
-	return count, err
+	return int(count), err
 }
 
 func (s *Repository) HasVote(ctx context.Context, pictureID int64, userID int64) (bool, error) {

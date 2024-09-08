@@ -2,7 +2,6 @@ package attrs
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
@@ -128,42 +127,30 @@ func (s *Repository) Zones(ctx context.Context) ([]schema.AttrsZoneRow, error) {
 }
 
 func (s *Repository) TotalValues(ctx context.Context) (int32, error) {
-	var result int32
+	sqSelect := s.db.From(schema.AttrsValuesTable)
 
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.AttrsValuesTable)
-
-	success, err := sqSelect.ScanValContext(ctx, &result)
+	result, err := sqSelect.CountContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	if !success {
-		return 0, sql.ErrNoRows
-	}
-
-	return result, nil
+	return int32(result), nil //nolint: gosec
 }
 
 func (s *Repository) TotalZoneAttrs(ctx context.Context, zoneID int64) (int32, error) {
-	var result int32
-
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.AttrsAttributesTable).
+	sqSelect := s.db.From(schema.AttrsAttributesTable).
 		Join(
 			schema.AttrsZoneAttributesTable,
 			goqu.On(schema.AttrsAttributesTableIDCol.Eq(schema.AttrsZoneAttributesTableAttributeIDCol)),
 		).
 		Where(schema.AttrsZoneAttributesTableZoneIDCol.Eq(zoneID))
 
-	success, err := sqSelect.ScanValContext(ctx, &result)
+	result, err := sqSelect.CountContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	if !success {
-		return 0, sql.ErrNoRows
-	}
-
-	return result, nil
+	return int32(result), nil //nolint: gosec
 }
 
 func (s *Repository) TopUserBrands(

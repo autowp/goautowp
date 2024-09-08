@@ -105,21 +105,14 @@ func (s *StatisticsGRPCServer) randomColor() string {
 }
 
 func (s *StatisticsGRPCServer) totalUsers(ctx context.Context) (int32, error) {
-	var result int32
-
-	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(schema.UserTable).
+	result, err := s.db.From(schema.UserTable).
 		Where(schema.UserTableDeletedCol.IsFalse()).
-		ScanValContext(ctx, &result)
+		CountContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	if !success {
-		return 0, errFailedToFetchRow
-	}
-
-	return roundTo(result, thousands), nil
+	return roundTo(int32(result), thousands), nil //nolint: gosec
 }
 
 func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, error) {
@@ -194,38 +187,23 @@ func (s *StatisticsGRPCServer) picturesStat(ctx context.Context) (int32, int32, 
 }
 
 func (s *StatisticsGRPCServer) totalItems(ctx context.Context) (int32, error) {
-	var result int32
-
-	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(schema.ItemTable).
-		ScanValContext(ctx, &result)
+	result, err := s.db.From(schema.ItemTable).CountContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	if !success {
-		return 0, errFailedToFetchRow
-	}
-
-	return roundTo(result, thousands), nil
+	return roundTo(int32(result), thousands), nil //nolint: gosec
 }
 
 func (s *StatisticsGRPCServer) totalComments(ctx context.Context) (int32, error) {
-	var result int32
-
-	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(schema.CommentMessageTable).
+	result, err := s.db.From(schema.CommentMessageTable).
 		Where(schema.CommentMessageTableDeletedCol.IsFalse()).
-		ScanValContext(ctx, &result)
+		CountContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	if !success {
-		return 0, errFailedToFetchRow
-	}
-
-	return roundTo(result, thousands), nil
+	return roundTo(int32(result), thousands), nil //nolint: gosec
 }
 
 func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empty) (*AboutDataResponse, error) {

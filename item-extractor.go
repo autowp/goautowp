@@ -9,6 +9,7 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
@@ -100,16 +101,16 @@ func (s *ItemExtractor) Extract(
 
 	result := &APIItem{
 		Id:                         row.ID,
-		Catname:                    row.Catname,
-		EngineItemId:               row.EngineItemID,
+		Catname:                    util.NullStringToString(row.Catname),
+		EngineItemId:               util.NullInt64ToScalar(row.EngineItemID),
 		DescendantsCount:           row.DescendantsCount,
 		ItemTypeId:                 convertItemTypeID(row.ItemTypeID),
 		IsConcept:                  row.IsConcept,
 		IsConceptInherit:           row.IsConceptInherit,
-		SpecId:                     row.SpecID,
+		SpecId:                     int64(util.NullInt32ToScalar(row.SpecID)),
 		Description:                row.Description,
 		FullText:                   row.FullText,
-		CurrentPicturesCount:       row.CurrentPicturesCount,
+		DescendantPicturesCount:    row.DescendantPicturesCount,
 		ChildsCount:                row.ChildsCount,
 		DescendantTwinsGroupsCount: row.DescendantTwinsGroupsCount,
 		InboxPicturesCount:         row.InboxPicturesCount,
@@ -118,8 +119,8 @@ func (s *ItemExtractor) Extract(
 		CommentsAttentionsCount:    row.CommentsAttentionsCount,
 	}
 
-	if fields.GetLogo120() && row.LogoID != 0 {
-		logo120, err := s.imageStorage.FormattedImage(ctx, int(row.LogoID), "logo")
+	if fields.GetLogo120() && row.LogoID.Valid {
+		logo120, err := s.imageStorage.FormattedImage(ctx, int(row.LogoID.Int64), "logo")
 		if err != nil {
 			return nil, err
 		}
@@ -127,8 +128,8 @@ func (s *ItemExtractor) Extract(
 		result.Logo120 = APIImageToGRPC(logo120)
 	}
 
-	if fields.GetBrandicon() && row.LogoID != 0 {
-		brandicon2, err := s.imageStorage.FormattedImage(ctx, int(row.LogoID), "brandicon2")
+	if fields.GetBrandicon() && row.LogoID.Valid {
+		brandicon2, err := s.imageStorage.FormattedImage(ctx, int(row.LogoID.Int64), "brandicon2")
 		if err != nil {
 			return nil, err
 		}
@@ -142,19 +143,19 @@ func (s *ItemExtractor) Extract(
 
 	if fields.GetNameText() || fields.GetNameHtml() {
 		formatterOptions := items.ItemNameFormatterOptions{
-			BeginModelYear:         row.BeginModelYear,
-			EndModelYear:           row.EndModelYear,
-			BeginModelYearFraction: row.BeginModelYearFraction,
-			EndModelYearFraction:   row.EndModelYearFraction,
+			BeginModelYear:         util.NullInt32ToScalar(row.BeginModelYear),
+			EndModelYear:           util.NullInt32ToScalar(row.EndModelYear),
+			BeginModelYearFraction: util.NullStringToString(row.BeginModelYearFraction),
+			EndModelYearFraction:   util.NullStringToString(row.EndModelYearFraction),
 			Spec:                   row.SpecShortName,
 			SpecFull:               row.SpecName,
 			Body:                   row.Body,
 			Name:                   row.NameOnly,
-			BeginYear:              row.BeginYear,
-			EndYear:                row.EndYear,
-			Today:                  row.Today,
-			BeginMonth:             row.BeginMonth,
-			EndMonth:               row.EndMonth,
+			BeginYear:              util.NullInt32ToScalar(row.BeginYear),
+			EndYear:                util.NullInt32ToScalar(row.EndYear),
+			Today:                  util.NullBoolToBoolPtr(row.Today),
+			BeginMonth:             util.NullInt16ToScalar(row.BeginMonth),
+			EndMonth:               util.NullInt16ToScalar(row.EndMonth),
 		}
 
 		if fields.GetNameText() {

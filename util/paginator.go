@@ -2,12 +2,15 @@ package util
 
 import (
 	"context"
+	"errors"
 	"math"
 
 	"github.com/doug-martin/goqu/v9"
 )
 
 const DefaultItemCountPerPage = 10
+
+var errMultipleGroupByNotSupported = errors.New("multiple GROUP BY statements not supported by paginator")
 
 type Paginator struct {
 	SQLSelect           *goqu.SelectDataset
@@ -57,15 +60,42 @@ func (s *Paginator) calculatePageCount(ctx context.Context) (int32, error) {
 }
 
 func (s *Paginator) calculateCount(ctx context.Context) (int32, error) {
-	res, err := s.SQLSelect.ClearOrder().
-		ClearOffset().
-		ClearLimit().
-		GroupBy().
-		ClearSelect().
-		Prepared(true).
-		CountContext(ctx)
-	if err != nil {
-		return 0, err
+	clauses := s.SQLSelect.GetClauses()
+	groupBy := clauses.GroupBy()
+
+	var (
+		res int64
+		err error
+	)
+
+	if groupBy == nil || groupBy.IsEmpty() {
+		res, err = s.SQLSelect.ClearOrder().
+			ClearOffset().
+			ClearLimit().
+			GroupBy().
+			ClearSelect().
+			Prepared(true).
+			CountContext(ctx)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		columns := groupBy.Columns()
+		if len(columns) > 1 {
+			return 0, errMultipleGroupByNotSupported
+		}
+
+		_, err = s.SQLSelect.ClearOrder().
+			ClearOffset().
+			ClearLimit().
+			GroupBy().
+			ClearSelect().
+			Select(goqu.COUNT(goqu.DISTINCT(columns[0]))).
+			Prepared(true).
+			ScanValContext(ctx, &res)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	return int32(res), nil //nolint: gosec

@@ -60,7 +60,7 @@ type PictureRow struct {
 	ChangeStatusUserID sql.NullInt64 `db:"change_status_user_id"`
 	Identity           string        `db:"identity"`
 	Status             PictureStatus `db:"status"`
-	ImageID            int64         `db:"image_id"`
+	ImageID            sql.NullInt64 `db:"image_id"`
 	Width              uint16        `db:"width"`
 	Height             uint16        `db:"height"`
 	Point              *NullPoint    `db:"point"`
@@ -70,4 +70,5 @@ type PictureRow struct {
 	CopyrightsTextID   sql.NullInt32 `db:"copyrights_text_id"`
 	AcceptDatetime     sql.NullTime  `db:"accept_datetime"`
 	ReplacePictureID   sql.NullInt64 `db:"replace_picture_id"`
+	IP                 string        `db:"ip"`
 }

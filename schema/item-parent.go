@@ -25,3 +25,9 @@ var (
 	ItemParentTableTypeCol     = ItemParentTable.Col(ItemParentTableTypeColName)
 	ItemParentTableCatnameCol  = ItemParentTable.Col(ItemParentTableCatnameColName)
 )
+
+type ItemParentRow struct {
+	ItemID   int64  `db:"item_id"`
+	ParentID int64  `db:"parent_id"`
+	Catname  string `db:"catname"`
+}

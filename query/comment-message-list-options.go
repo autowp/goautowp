@@ -16,7 +16,7 @@ type CommentMessageListOptions struct {
 }
 
 func (s *CommentMessageListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
-	sqSelect := db.Select().From(schema.CommentMessageTable.As(CommentMessageAlias))
+	sqSelect := db.From(schema.CommentMessageTable.As(CommentMessageAlias))
 
 	return s.Apply(CommentMessageAlias, sqSelect)
 }

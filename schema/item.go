@@ -64,13 +64,24 @@ var (
 )
 
 type ItemRow struct {
-	ID             int64               `db:"id"`
-	Name           string              `db:"name"`
-	ItemType       ItemTableItemTypeID `db:"item_type_id"`
-	Body           string              `db:"body"`
-	BeginYear      sql.NullInt32       `db:"begin_year"`
-	EndYear        sql.NullInt32       `db:"end_year"`
-	BeginModelYear sql.NullInt32       `db:"begin_model_year"`
-	EndModelYear   sql.NullInt32       `db:"end_model_year"`
-	SpecID         sql.NullInt32       `db:"spec_id"`
+	ID                     int64               `db:"id"`
+	Name                   string              `db:"name"`
+	Catname                sql.NullString      `db:"catname"`
+	ItemTypeID             ItemTableItemTypeID `db:"item_type_id"`
+	Body                   string              `db:"body"`
+	BeginYear              sql.NullInt32       `db:"begin_year"`
+	EndYear                sql.NullInt32       `db:"end_year"`
+	BeginModelYear         sql.NullInt32       `db:"begin_model_year"`
+	EndModelYear           sql.NullInt32       `db:"end_model_year"`
+	SpecID                 sql.NullInt32       `db:"spec_id"`
+	LogoID                 sql.NullInt64       `db:"logo_id"`
+	BeginMonth             sql.NullInt16       `db:"begin_month"`
+	EndMonth               sql.NullInt16       `db:"end_month"`
+	EngineItemID           sql.NullInt64       `db:"engine_item_id"`
+	Today                  sql.NullBool        `db:"today"`
+	IsConcept              bool                `db:"is_concept"`
+	IsConceptInherit       bool                `db:"is_concept_inherit"`
+	BeginModelYearFraction sql.NullString      `db:"begin_model_year_fraction"`
+	EndModelYearFraction   sql.NullString      `db:"end_model_year_fraction"`
+	ProducedExactly        bool                `db:"produced_exactly"`
 }

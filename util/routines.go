@@ -166,3 +166,43 @@ func IntersectBounds[T constraints.Integer](rect1 Rect[T], rect2 Rect[T]) Rect[T
 
 	return rect1
 }
+
+func NullInt64ToScalar(value sql.NullInt64) int64 {
+	if value.Valid {
+		return value.Int64
+	}
+
+	return 0
+}
+
+func NullInt32ToScalar(value sql.NullInt32) int32 {
+	if value.Valid {
+		return value.Int32
+	}
+
+	return 0
+}
+
+func NullInt16ToScalar(value sql.NullInt16) int16 {
+	if value.Valid {
+		return value.Int16
+	}
+
+	return 0
+}
+
+func NullStringToString(value sql.NullString) string {
+	if value.Valid {
+		return value.String
+	}
+
+	return ""
+}
+
+func NullBoolToBoolPtr(value sql.NullBool) *bool {
+	if value.Valid {
+		return &value.Bool
+	}
+
+	return nil
+}

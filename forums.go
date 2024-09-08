@@ -64,10 +64,7 @@ func NewForums(db *goqu.Database, commentsRepository *comments.Repository) *Foru
 }
 
 func (s *Forums) GetUserSummary(ctx context.Context, userID int64) (int, error) {
-	result := 0
-
-	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(schema.ForumsTopicsTable).
+	result, err := s.db.From(schema.ForumsTopicsTable).
 		Join(
 			schema.CommentTopicSubscribeTable,
 			goqu.On(schema.ForumsTopicsTableIDCol.Eq(schema.CommentTopicSubscribeTableItemIDCol)),
@@ -80,16 +77,12 @@ func (s *Forums) GetUserSummary(ctx context.Context, userID int64) (int, error) 
 			schema.CommentTopicSubscribeTableUserIDCol.Eq(userID),
 			schema.CommentTopicTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
 			schema.CommentTopicSubscribeTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
-		).ScanValContext(ctx, &result)
+		).CountContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	if !success {
-		return 0, sql.ErrNoRows
-	}
-
-	return result, nil
+	return int(result), nil
 }
 
 func (s *Forums) AddTopic(

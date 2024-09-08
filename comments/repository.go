@@ -606,18 +606,11 @@ func (s *Repository) Add(
 }
 
 func (s *Repository) UpdateMessageRepliesCount(ctx context.Context, messageID int64) error {
-	var count int64
-
-	success, err := s.db.Select(goqu.COUNT(goqu.Star())).
-		From(schema.CommentMessageTable).
+	count, err := s.db.From(schema.CommentMessageTable).
 		Where(schema.CommentMessageTableParentIDCol.Eq(messageID)).
-		ScanValContext(ctx, &count)
+		CountContext(ctx)
 	if err != nil {
 		return err
-	}
-
-	if !success {
-		return sql.ErrNoRows
 	}
 
 	_, err = s.db.Update(schema.CommentMessageTable).
@@ -1402,25 +1395,18 @@ func (s *Repository) TopicStat(ctx context.Context, typeID schema.CommentMessage
 func (s *Repository) MessagesCountFromTimestamp(
 	ctx context.Context, typeID schema.CommentMessageType, itemID int64, timestamp time.Time,
 ) (int32, error) {
-	sqSelect := s.db.Select(goqu.COUNT(goqu.Star())).From(schema.CommentMessageTable).
-		Where(
-			schema.CommentMessageTableItemIDCol.Eq(itemID),
-			schema.CommentMessageTableTypeIDCol.Eq(typeID),
-			schema.CommentMessageTableDatetimeCol.Gt(timestamp),
-		)
+	sqSelect := s.db.From(schema.CommentMessageTable).Where(
+		schema.CommentMessageTableItemIDCol.Eq(itemID),
+		schema.CommentMessageTableTypeIDCol.Eq(typeID),
+		schema.CommentMessageTableDatetimeCol.Gt(timestamp),
+	)
 
-	var cnt int32
-
-	success, err := sqSelect.ScanValContext(ctx, &cnt)
+	cnt, err := sqSelect.CountContext(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	if !success {
-		return 0, nil
-	}
-
-	return cnt, nil
+	return int32(cnt), nil //nolint: gosec
 }
 
 func (s *Repository) TopicStatForUser(
@@ -1530,15 +1516,13 @@ func (s *Repository) MessagePage(
 		}
 	}
 
-	var count int32
-
-	success, err = s.db.Select(goqu.COUNT(goqu.Star())).From(schema.CommentMessageTable).Where(
+	count, err := s.db.From(schema.CommentMessageTable).Where(
 		schema.CommentMessageTableItemIDCol.Eq(row.ItemID),
 		schema.CommentMessageTableTypeIDCol.Eq(row.TypeID),
 		schema.CommentMessageTableDatetimeCol.Lt(parentRow.Datetime),
 		schema.CommentMessageTableParentIDCol.IsNull(),
-	).ScanValContext(ctx, &count)
-	if err != nil || !success {
+	).CountContext(ctx)
+	if err != nil {
 		return 0, 0, 0, err
 	}
 
