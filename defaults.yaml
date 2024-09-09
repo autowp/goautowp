@@ -8,6 +8,8 @@ grpc:
 sentry:
   dsn: ""
   environment: development
+metrics:
+  listen: ":2112"
 autowp-migrations:
   dir: ./migrations
   dsn: mysql://root:password@tcp(127.0.0.1)/autowp?charset=utf8mb4&collation=utf8mb4_0900_ai_ci&parseTime=true&loc=UTC

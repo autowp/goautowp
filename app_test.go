@@ -33,59 +33,6 @@ func TestAutowpMigrations(t *testing.T) {
 	}
 }
 
-func TestListenDuplicateFinderAMQP(t *testing.T) {
-	t.Parallel()
-
-	cfg := config.LoadConfig(".")
-
-	app := NewApplication(cfg)
-
-	ctx := context.Background()
-
-	done := make(chan bool)
-	go func() {
-		time.Sleep(5 * time.Second)
-		done <- false
-	}()
-
-	err := app.ListenDuplicateFinderAMQP(ctx, done)
-	require.NoError(t, err)
-}
-
-func TestListenMonitoringAMQP(t *testing.T) {
-	t.Parallel()
-
-	cfg := config.LoadConfig(".")
-	app := NewApplication(cfg)
-	ctx := context.Background()
-
-	done := make(chan bool)
-	go func() {
-		time.Sleep(5 * time.Second)
-		done <- false
-	}()
-
-	err := app.ListenMonitoringAMQP(ctx, done)
-	require.NoError(t, err)
-}
-
-func TestServeGRPC(t *testing.T) {
-	t.Parallel()
-
-	cfg := config.LoadConfig(".")
-	cfg.GRPC.Listen = ":9093"
-	app := NewApplication(cfg)
-
-	done := make(chan bool)
-	go func() {
-		time.Sleep(5 * time.Second)
-		done <- false
-	}()
-
-	err := app.ServeGRPC(done)
-	require.NoError(t, err)
-}
-
 func TestServe(t *testing.T) {
 	t.Parallel()
 
@@ -97,7 +44,7 @@ func TestServe(t *testing.T) {
 	done := make(chan bool)
 	go func() {
 		time.Sleep(5 * time.Second)
-		done <- false
+		close(done)
 	}()
 
 	err := app.Serve(ctx, ServeOptions{
@@ -108,24 +55,6 @@ func TestServe(t *testing.T) {
 		Private:             true,
 		Autoban:             true,
 	}, done)
-	require.NoError(t, err)
-}
-
-func TestServePrivate(t *testing.T) {
-	t.Parallel()
-
-	cfg := config.LoadConfig(".")
-	cfg.PrivateRest.Listen = ":9091"
-	app := NewApplication(cfg)
-	ctx := context.Background()
-
-	done := make(chan bool)
-	go func() {
-		time.Sleep(5 * time.Second)
-		done <- false
-	}()
-
-	err := app.ServePrivate(ctx, done)
 	require.NoError(t, err)
 }
 

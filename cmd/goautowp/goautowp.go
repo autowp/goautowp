@@ -26,7 +26,6 @@ func captureOsInterrupt() chan bool {
 		for sig := range c {
 			logrus.Infof("captured %v, stopping and exiting.", sig)
 
-			quit <- true
 			close(quit)
 
 			break

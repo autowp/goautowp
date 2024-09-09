@@ -194,8 +194,10 @@ func (s *Application) Serve(ctx context.Context, options ServeOptions, quit chan
 }
 
 func (s *Application) ServeMetrics(ctx context.Context, quit chan bool) error {
+	cfg := s.container.Config()
+
 	httpServer := &http.Server{
-		Addr:              ":2112",
+		Addr:              cfg.Metrics.Listen,
 		Handler:           promhttp.Handler(),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
@@ -213,7 +215,7 @@ func (s *Application) ServeMetrics(ctx context.Context, quit chan bool) error {
 	err := httpServer.ListenAndServe()
 	if err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			logrus.Infof("metrics HTTP listener: ListenAndServe() error: %s\n", err)
+			return err
 		}
 	}
 
@@ -241,7 +243,7 @@ func (s *Application) ServePublic(ctx context.Context, quit chan bool) error {
 	err = httpServer.ListenAndServe()
 	if err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			logrus.Infof("public HTTP listener: ListenAndServe() error: %s\n", err)
+			return err
 		}
 	}
 
@@ -348,7 +350,7 @@ func (s *Application) ServePrivate(ctx context.Context, quit chan bool) error {
 
 	if err = httpServer.ListenAndServe(); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			logrus.Infof("Httpserver: ListenAndServe() error: %s", err)
+			return err
 		}
 	}
 
