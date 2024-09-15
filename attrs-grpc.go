@@ -170,7 +170,7 @@ func (s *AttrsGRPCServer) GetListOptions(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if s.enforcer.Enforce(role, "specifications", "edit") {
+	if !s.enforcer.Enforce(role, "specifications", "edit") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
