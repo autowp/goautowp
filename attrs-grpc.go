@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/autowp/goautowp/attrs"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/casbin/casbin"
 	"google.golang.org/grpc/codes"
@@ -96,7 +97,7 @@ func (s *AttrsGRPCServer) GetAttribute(ctx context.Context, in *AttrAttributeID)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "specifications", "edit"); !res {
+	if !s.enforcer.Enforce(role, "specifications", "edit") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -120,7 +121,7 @@ func (s *AttrsGRPCServer) GetAttributes(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "specifications", "edit"); !res {
+	if !s.enforcer.Enforce(role, "specifications", "edit") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -169,7 +170,7 @@ func (s *AttrsGRPCServer) GetListOptions(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "specifications", "edit"); !res {
+	if s.enforcer.Enforce(role, "specifications", "edit") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -255,6 +256,53 @@ func (s *AttrsGRPCServer) GetZones(ctx context.Context, _ *emptypb.Empty) (*Attr
 	}
 
 	return &AttrZonesResponse{
+		Items: items,
+	}, nil
+}
+
+func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) (*AttrValuesResponse, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "specifications", "edit") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
+	}
+
+	rows, err := s.repository.Values(ctx, query.AttrsValuesListOptions{
+		ZoneID: in.GetZoneId(),
+		ItemID: in.GetItemId(),
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	items := make([]*AttrValue, len(rows))
+
+	for idx, row := range rows {
+		value, valueText, err := s.repository.ActualValueText(ctx, row.AttributeID, row.ItemID, in.GetLanguage())
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		items[idx] = &AttrValue{
+			AttributeId: row.AttributeID,
+			ItemId:      row.ItemID,
+			Value: &AttrValueValue{
+				Valid:       value.Valid,
+				FloatValue:  value.FloatValue,
+				IntValue:    value.IntValue,
+				BoolValue:   value.BoolValue,
+				ListValue:   value.ListValue,
+				StringValue: value.StringValue,
+				IsEmpty:     value.IsEmpty,
+			},
+			ValueText: valueText,
+		}
+	}
+
+	return &AttrValuesResponse{
 		Items: items,
 	}, nil
 }

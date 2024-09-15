@@ -3,12 +3,14 @@ package goautowp
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -103,4 +105,29 @@ func getUserWithCleanHistory(
 	require.NoError(t, err)
 
 	return user.GetId(), token.AccessToken
+}
+
+func createItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
+	t.Helper()
+
+	ctx := context.Background()
+
+	res, err := goquDB.Insert(schema.ItemTable).Rows(row).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
+		ItemID:   itemID,
+		Language: "en",
+		Name:     sql.NullString{Valid: true, String: row.Name},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	repository := items.NewRepository(goquDB, 0)
+	_, err = repository.RebuildCache(ctx, itemID)
+	require.NoError(t, err)
+
+	return itemID
 }

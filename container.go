@@ -306,7 +306,12 @@ func (s *Container) AttrsRepository() (*attrs.Repository, error) {
 			return nil, err
 		}
 
-		s.attrsRepository = attrs.NewRepository(db)
+		i18n, err := s.I18n()
+		if err != nil {
+			return nil, err
+		}
+
+		s.attrsRepository = attrs.NewRepository(db, i18n)
 	}
 
 	return s.attrsRepository, nil

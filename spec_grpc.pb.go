@@ -5687,6 +5687,7 @@ const (
 	Attrs_GetUnits_FullMethodName          = "/goautowp.Attrs/GetUnits"
 	Attrs_GetZoneAttributes_FullMethodName = "/goautowp.Attrs/GetZoneAttributes"
 	Attrs_GetZones_FullMethodName          = "/goautowp.Attrs/GetZones"
+	Attrs_GetValues_FullMethodName         = "/goautowp.Attrs/GetValues"
 )
 
 // AttrsClient is the client API for Attrs service.
@@ -5700,6 +5701,7 @@ type AttrsClient interface {
 	GetUnits(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrUnitsResponse, error)
 	GetZoneAttributes(ctx context.Context, in *AttrZoneAttributesRequest, opts ...grpc.CallOption) (*AttrZoneAttributesResponse, error)
 	GetZones(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrZonesResponse, error)
+	GetValues(ctx context.Context, in *AttrValuesRequest, opts ...grpc.CallOption) (*AttrValuesResponse, error)
 }
 
 type attrsClient struct {
@@ -5780,6 +5782,16 @@ func (c *attrsClient) GetZones(ctx context.Context, in *emptypb.Empty, opts ...g
 	return out, nil
 }
 
+func (c *attrsClient) GetValues(ctx context.Context, in *AttrValuesRequest, opts ...grpc.CallOption) (*AttrValuesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AttrValuesResponse)
+	err := c.cc.Invoke(ctx, Attrs_GetValues_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AttrsServer is the server API for Attrs service.
 // All implementations must embed UnimplementedAttrsServer
 // for forward compatibility.
@@ -5791,6 +5803,7 @@ type AttrsServer interface {
 	GetUnits(context.Context, *emptypb.Empty) (*AttrUnitsResponse, error)
 	GetZoneAttributes(context.Context, *AttrZoneAttributesRequest) (*AttrZoneAttributesResponse, error)
 	GetZones(context.Context, *emptypb.Empty) (*AttrZonesResponse, error)
+	GetValues(context.Context, *AttrValuesRequest) (*AttrValuesResponse, error)
 	mustEmbedUnimplementedAttrsServer()
 }
 
@@ -5821,6 +5834,9 @@ func (UnimplementedAttrsServer) GetZoneAttributes(context.Context, *AttrZoneAttr
 }
 func (UnimplementedAttrsServer) GetZones(context.Context, *emptypb.Empty) (*AttrZonesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetZones not implemented")
+}
+func (UnimplementedAttrsServer) GetValues(context.Context, *AttrValuesRequest) (*AttrValuesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValues not implemented")
 }
 func (UnimplementedAttrsServer) mustEmbedUnimplementedAttrsServer() {}
 func (UnimplementedAttrsServer) testEmbeddedByValue()               {}
@@ -5969,6 +5985,24 @@ func _Attrs_GetZones_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Attrs_GetValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttrValuesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetValues(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Attrs_GetValues_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetValues(ctx, req.(*AttrValuesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Attrs_ServiceDesc is the grpc.ServiceDesc for Attrs service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -6003,6 +6037,10 @@ var Attrs_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetZones",
 			Handler:    _Attrs_GetZones_Handler,
+		},
+		{
+			MethodName: "GetValues",
+			Handler:    _Attrs_GetValues_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

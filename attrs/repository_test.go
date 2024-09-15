@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
 	_ "github.com/go-sql-driver/mysql"               // enable mysql driver
@@ -22,7 +23,10 @@ func createRepository(t *testing.T) *Repository {
 
 	goquDB := goqu.New("mysql", autowpDB)
 
-	repo := NewRepository(goquDB)
+	i18n, err := i18nbundle.New()
+	require.NoError(t, err)
+
+	repo := NewRepository(goquDB, i18n)
 
 	return repo
 }
