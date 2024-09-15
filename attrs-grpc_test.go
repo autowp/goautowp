@@ -220,7 +220,7 @@ func TestGetValues(t *testing.T) {
 	_, err = goquDB.Insert(schema.AttrsValuesFloatTable).Rows(schema.AttrsValuesFloatRow{
 		AttributeID: floatAttributeID,
 		ItemID:      itemID,
-		Value:       sql.NullFloat64{Float64: 7.0, Valid: true},
+		Value:       sql.NullFloat64{Float64: 7.091, Valid: true},
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -351,7 +351,8 @@ func TestGetValues(t *testing.T) {
 		case floatAttributeID:
 			floatFound = true
 
-			require.InDelta(t, 7.0, val.GetValue().GetFloatValue(), 0.01)
+			require.InDelta(t, 7.091, val.GetValue().GetFloatValue(), 0.01)
+			require.Equal(t, "7.1", val.GetValueText())
 		case intAttributeID:
 			intFound = true
 

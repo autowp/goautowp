@@ -389,10 +389,13 @@ func (s *Repository) valueToText(ctx context.Context, attributeID int64, value V
 		opts := make([]number.Option, 0)
 
 		if attribute.Precision.Valid {
-			opts = append(opts, number.Precision(int(attribute.Precision.Int32)))
+			opts = append(opts,
+				number.MinFractionDigits(int(attribute.Precision.Int32)),
+				number.MaxFractionDigits(int(attribute.Precision.Int32)),
+			)
 		}
 
-		dec := number.Decimal(value.IntValue, opts...)
+		dec := number.Decimal(value.FloatValue, opts...)
 
 		return printer.Sprint(dec), nil
 
