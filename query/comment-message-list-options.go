@@ -38,9 +38,11 @@ func (s *CommentMessageListOptions) Apply(alias string, sqSelect *goqu.SelectDat
 
 		sqSelect = sqSelect.Join(
 			schema.PictureItemTable.As(piAlias),
-			goqu.On(aliasTable.Col(schema.CommentMessageTableItemIDColName).Eq(
-				goqu.T(piAlias).Col(schema.PictureItemTableItemIDColName),
-			)),
+			goqu.On(
+				aliasTable.Col(schema.CommentMessageTableItemIDColName).Eq(
+					goqu.T(piAlias).Col(schema.PictureItemTablePictureIDColName),
+				),
+			),
 		)
 
 		sqSelect = s.PictureItems.Apply(piAlias, sqSelect)
