@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type AttrsGRPCServer struct {
@@ -303,6 +304,75 @@ func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) 
 	}
 
 	return &AttrValuesResponse{
+		Items: items,
+	}, nil
+}
+
+func (s *AttrsGRPCServer) GetUserValues(
+	ctx context.Context, in *AttrUserValuesRequest,
+) (*AttrUserValuesResponse, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "specifications", "edit") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
+	}
+
+	if in.GetItemId() == 0 {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: item_id cannot be nil")
+	}
+
+	rows, err := s.repository.UserValues(ctx, query.AttrsUserValuesListOptions{
+		ZoneID:        in.GetZoneId(),
+		ItemID:        in.GetItemId(),
+		UserID:        in.GetUserId(),
+		ExcludeUserID: in.GetExcludeUserId(),
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	items := make([]*AttrUserValue, len(rows))
+
+	for idx, row := range rows {
+		var (
+			value     attrs.Value
+			valueText string
+		)
+
+		if in.GetFields().GetValueText() {
+			value, valueText, err = s.repository.UserValueText(ctx, row.AttributeID, row.ItemID, row.UserID, in.GetLanguage())
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		} else {
+			value, err = s.repository.UserValue(ctx, row.AttributeID, row.ItemID, row.UserID)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
+		items[idx] = &AttrUserValue{
+			AttributeId: row.AttributeID,
+			ItemId:      row.ItemID,
+			UserId:      row.UserID,
+			Value: &AttrValueValue{
+				Valid:       value.Valid,
+				FloatValue:  value.FloatValue,
+				IntValue:    value.IntValue,
+				BoolValue:   value.BoolValue,
+				ListValue:   value.ListValue,
+				StringValue: value.StringValue,
+				IsEmpty:     value.IsEmpty,
+			},
+			ValueText:  valueText,
+			UpdateDate: timestamppb.New(row.UpdateDate),
+		}
+	}
+
+	return &AttrUserValuesResponse{
 		Items: items,
 	}, nil
 }

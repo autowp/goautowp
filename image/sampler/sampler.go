@@ -260,7 +260,7 @@ func (s Sampler) crop(mw *imagick.MagickWand, width int, height int, left int, t
 		return err
 	}
 
-	return mw.CropImage(uint(width), uint(height), left, top)
+	return mw.CropImage(uint(width), uint(height), left, top) //nolint:gosec
 }
 
 func (s Sampler) cropToWidest(mw *imagick.MagickWand, widestRatio float64) error {
@@ -333,7 +333,7 @@ func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 		}
 
 		err := mw.ExtentImage(
-			uint(targetWidth),
+			uint(targetWidth), //nolint:gosec
 			uint(targetHeight),
 			0,
 			-topHeight,
@@ -411,8 +411,8 @@ func (s Sampler) extendHorizontal(mw *imagick.MagickWand, format Format) error {
 		}
 
 		err := mw.ExtentImage(
-			uint(targetWidth),
-			uint(targetHeight),
+			uint(targetWidth),  //nolint:gosec
+			uint(targetHeight), //nolint:gosec
 			-leftWidth,
 			0,
 		)
@@ -667,8 +667,8 @@ func (s Sampler) convertByOuterFit(mw *imagick.MagickWand, format Format) error 
 	borderTop := (formatHeight - int(mw.GetImageHeight())) / 2 //nolint: gosec
 
 	return mw.ExtentImage(
-		uint(formatWidth),
-		uint(formatHeight),
+		uint(formatWidth),  //nolint:gosec
+		uint(formatHeight), //nolint:gosec
 		-borderLeft,
 		-borderTop,
 	)
@@ -759,5 +759,5 @@ func (s Sampler) scaleImage(mw *imagick.MagickWand, width int, height int) error
 			$i->scaleImage($width, $height, false);
 		}
 	} else {*/
-	return mw.ScaleImage(uint(width), uint(height))
+	return mw.ScaleImage(uint(width), uint(height)) //nolint:gosec
 }

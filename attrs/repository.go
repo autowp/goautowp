@@ -223,6 +223,22 @@ func (s *Repository) Values(ctx context.Context, options query.AttrsValuesListOp
 	return res, err
 }
 
+func (s *Repository) UserValues(
+	ctx context.Context, options query.AttrsUserValuesListOptions,
+) ([]schema.AttrsUserValueRow, error) {
+	res := make([]schema.AttrsUserValueRow, 0)
+
+	err := options.Select(s.db).Select(
+		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableAttributeIDColName),
+		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableItemIDColName),
+		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableUserIDColName),
+		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableUpdateDateColName),
+	).
+		ScanStructsContext(ctx, &res)
+
+	return res, err
+}
+
 func (s *Repository) ActualValue(ctx context.Context, attributeID int64, itemID int64) (Value, error) {
 	success, attribute, err := s.Attribute(ctx, attributeID)
 	if err != nil {
@@ -343,6 +359,146 @@ func (s *Repository) ActualValue(ctx context.Context, attributeID int64, itemID 
 	}
 
 	return Value{}, nil
+}
+
+func (s *Repository) UserValue(ctx context.Context, attributeID int64, itemID int64, userID int64) (Value, error) {
+	success, attribute, err := s.Attribute(ctx, attributeID)
+	if err != nil {
+		return Value{}, err
+	}
+
+	if !success {
+		return Value{}, fmt.Errorf("%w: `%d`", errAttributeNotFound, attributeID)
+	}
+
+	if !attribute.TypeID.Valid {
+		return Value{}, nil
+	}
+
+	switch attribute.TypeID.AttributeTypeID {
+	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
+		var value sql.NullString
+
+		success, err = s.db.Select(schema.AttrsUserValuesStringTableValueCol).From(schema.AttrsUserValuesStringTable).Where(
+			schema.AttrsUserValuesStringTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsUserValuesStringTableItemIDCol.Eq(itemID),
+			schema.AttrsUserValuesStringTableUserIDCol.Eq(userID),
+		).ScanValContext(ctx, &value)
+		if err != nil {
+			return Value{}, err
+		}
+
+		return Value{
+			Valid:       success,
+			StringValue: value.String,
+			Type:        attribute.TypeID.AttributeTypeID,
+			IsEmpty:     !value.Valid,
+		}, nil
+
+	case schema.AttrsAttributeTypeIDInteger:
+		var value sql.NullInt32
+
+		success, err = s.db.Select(schema.AttrsUserValuesIntTableValueCol).From(schema.AttrsUserValuesIntTable).Where(
+			schema.AttrsUserValuesIntTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsUserValuesIntTableItemIDCol.Eq(itemID),
+			schema.AttrsUserValuesIntTableUserIDCol.Eq(userID),
+		).ScanValContext(ctx, &value)
+		if err != nil {
+			return Value{}, err
+		}
+
+		return Value{
+			Valid:    success,
+			IntValue: value.Int32,
+			Type:     attribute.TypeID.AttributeTypeID,
+			IsEmpty:  !value.Valid,
+		}, nil
+	case schema.AttrsAttributeTypeIDBoolean:
+		var value sql.NullBool
+
+		success, err = s.db.Select(schema.AttrsUserValuesIntTableValueCol).From(schema.AttrsUserValuesIntTable).Where(
+			schema.AttrsUserValuesIntTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsUserValuesIntTableItemIDCol.Eq(itemID),
+			schema.AttrsUserValuesIntTableUserIDCol.Eq(userID),
+		).ScanValContext(ctx, &value)
+		if err != nil {
+			return Value{}, err
+		}
+
+		return Value{
+			Valid:     success,
+			BoolValue: value.Bool,
+			Type:      attribute.TypeID.AttributeTypeID,
+			IsEmpty:   !value.Valid,
+		}, nil
+
+	case schema.AttrsAttributeTypeIDFloat:
+		var value sql.NullFloat64
+
+		success, err = s.db.Select(schema.AttrsUserValuesFloatTableValueCol).From(schema.AttrsUserValuesFloatTable).Where(
+			schema.AttrsUserValuesFloatTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsUserValuesFloatTableItemIDCol.Eq(itemID),
+			schema.AttrsUserValuesFloatTableUserIDCol.Eq(userID),
+		).ScanValContext(ctx, &value)
+		if err != nil {
+			return Value{}, err
+		}
+
+		return Value{
+			Valid:      success,
+			FloatValue: value.Float64,
+			Type:       attribute.TypeID.AttributeTypeID,
+			IsEmpty:    !value.Valid,
+		}, nil
+	case schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree:
+		var values []sql.NullInt64
+
+		err = s.db.Select(schema.AttrsUserValuesListTableValueCol).From(schema.AttrsUserValuesListTable).Where(
+			schema.AttrsUserValuesListTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsUserValuesListTableItemIDCol.Eq(itemID),
+			schema.AttrsUserValuesListTableUserIDCol.Eq(userID),
+		).Order(schema.AttrsUserValuesListTableOrderingCol.Asc()).ScanValsContext(ctx, &values)
+		if err != nil {
+			return Value{}, err
+		}
+
+		vals := make([]int64, 0, len(values))
+		isEmpty := false
+
+		for _, val := range values {
+			if !val.Valid {
+				isEmpty = true
+
+				break
+			}
+
+			vals = append(vals, val.Int64)
+		}
+
+		return Value{
+			Valid:     len(vals) > 0 || isEmpty,
+			ListValue: vals,
+			Type:      attribute.TypeID.AttributeTypeID,
+			IsEmpty:   isEmpty,
+		}, nil
+
+	case schema.AttrsAttributeTypeIDUnknown:
+	}
+
+	return Value{}, nil
+}
+
+func (s *Repository) UserValueText(
+	ctx context.Context, attributeID int64, itemID int64, userID int64, language string,
+) (Value, string, error) {
+	value, err := s.UserValue(ctx, attributeID, itemID, userID)
+	if err != nil {
+		return Value{}, "", err
+	}
+
+	text, err := s.valueToText(ctx, attributeID, value, language)
+
+	return value, text, err
 }
 
 func (s *Repository) ActualValueText(

@@ -252,7 +252,7 @@ func (s *Paginator) GetItemsByPage(ctx context.Context, pageNumber int32) (*goqu
 	offset := (pageNumber - 1) * s.getItemCountPerPage()
 	ds := *s.SQLSelect
 
-	return ds.Offset(uint(offset)).Limit(uint(s.getItemCountPerPage())), nil
+	return ds.Offset(uint(offset)).Limit(uint(s.getItemCountPerPage())), nil //nolint:gosec
 }
 
 func (s *Paginator) GetCurrentItems(ctx context.Context) (*goqu.SelectDataset, error) {

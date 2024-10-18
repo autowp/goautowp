@@ -188,6 +188,7 @@ service Attrs {
   rpc GetZoneAttributes(AttrZoneAttributesRequest) returns (AttrZoneAttributesResponse) {}
   rpc GetZones(google.protobuf.Empty) returns (AttrZonesResponse) {}
   rpc GetValues(AttrValuesRequest) returns (AttrValuesResponse) {}
+  rpc GetUserValues(AttrUserValuesRequest) returns (AttrUserValuesResponse) {}
 }
 
 message ErrorDetails {
@@ -290,6 +291,32 @@ message AttrZonesResponse {
 message AttrZone {
   int64 id = 1;
   string name = 2;
+}
+
+message AttrUserValuesFields {
+  bool value_text = 1;
+}
+
+message AttrUserValuesRequest {
+  int64 zone_id = 1;
+  int64 user_id = 2;
+  int64 exclude_user_id = 3;
+  int64 item_id = 4;
+  string language = 5;
+  AttrUserValuesFields fields = 6;
+}
+
+message AttrUserValue {
+  int64 attribute_id = 1;
+  int64 item_id = 2;
+  int64 user_id = 3;
+  AttrValueValue value = 4;
+  string value_text = 5;
+  google.protobuf.Timestamp update_date = 6;
+}
+
+message AttrUserValuesResponse {
+  repeated AttrUserValue items = 1;
 }
 
 message AttrValuesRequest {
