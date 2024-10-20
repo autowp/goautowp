@@ -20,7 +20,9 @@ type AttrsGRPCServer struct {
 	auth       *Auth
 }
 
-func NewAttrsGRPCServer(repository *attrs.Repository, enforcer *casbin.Enforcer, auth *Auth) *AttrsGRPCServer {
+func NewAttrsGRPCServer(
+	repository *attrs.Repository, enforcer *casbin.Enforcer, auth *Auth,
+) *AttrsGRPCServer {
 	return &AttrsGRPCServer{
 		repository: repository,
 		enforcer:   enforcer,
@@ -131,14 +133,14 @@ func (s *AttrsGRPCServer) GetAttributes(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	items := make([]*AttrAttribute, len(rows))
+	res := make([]*AttrAttribute, len(rows))
 
 	for idx, row := range rows {
-		items[idx] = convertAttribute(row)
+		res[idx] = convertAttribute(row)
 	}
 
 	return &AttrAttributesResponse{
-		Items: items,
+		Items: res,
 	}, nil
 }
 
@@ -150,16 +152,16 @@ func (s *AttrsGRPCServer) GetAttributeTypes(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	items := make([]*AttrAttributeType, len(rows))
+	res := make([]*AttrAttributeType, len(rows))
 	for idx, row := range rows {
-		items[idx] = &AttrAttributeType{
+		res[idx] = &AttrAttributeType{
 			Id:   convertTypeID(row.ID),
 			Name: row.Name,
 		}
 	}
 
 	return &AttrAttributeTypesResponse{
-		Items: items,
+		Items: res,
 	}, nil
 }
 
@@ -229,16 +231,16 @@ func (s *AttrsGRPCServer) GetZoneAttributes(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	items := make([]*AttrZoneAttribute, len(rows))
+	res := make([]*AttrZoneAttribute, len(rows))
 	for idx, row := range rows {
-		items[idx] = &AttrZoneAttribute{
+		res[idx] = &AttrZoneAttribute{
 			ZoneId:      row.ZoneID,
 			AttributeId: row.AttributeID,
 		}
 	}
 
 	return &AttrZoneAttributesResponse{
-		Items: items,
+		Items: res,
 	}, nil
 }
 
@@ -248,16 +250,16 @@ func (s *AttrsGRPCServer) GetZones(ctx context.Context, _ *emptypb.Empty) (*Attr
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	items := make([]*AttrZone, len(rows))
+	res := make([]*AttrZone, len(rows))
 	for idx, row := range rows {
-		items[idx] = &AttrZone{
+		res[idx] = &AttrZone{
 			Id:   row.ID,
 			Name: row.Name,
 		}
 	}
 
 	return &AttrZonesResponse{
-		Items: items,
+		Items: res,
 	}, nil
 }
 
@@ -274,12 +276,12 @@ func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) 
 	rows, err := s.repository.Values(ctx, query.AttrsValuesListOptions{
 		ZoneID: in.GetZoneId(),
 		ItemID: in.GetItemId(),
-	})
+	}, attrs.ValuesOrderByNone)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	items := make([]*AttrValue, len(rows))
+	res := make([]*AttrValue, len(rows))
 
 	for idx, row := range rows {
 		value, valueText, err := s.repository.ActualValueText(ctx, row.AttributeID, row.ItemID, in.GetLanguage())
@@ -287,7 +289,7 @@ func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) 
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		items[idx] = &AttrValue{
+		res[idx] = &AttrValue{
 			AttributeId: row.AttributeID,
 			ItemId:      row.ItemID,
 			Value: &AttrValueValue{
@@ -304,7 +306,7 @@ func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) 
 	}
 
 	return &AttrValuesResponse{
-		Items: items,
+		Items: res,
 	}, nil
 }
 
@@ -334,7 +336,7 @@ func (s *AttrsGRPCServer) GetUserValues(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	items := make([]*AttrUserValue, len(rows))
+	res := make([]*AttrUserValue, len(rows))
 
 	for idx, row := range rows {
 		var (
@@ -354,7 +356,7 @@ func (s *AttrsGRPCServer) GetUserValues(
 			}
 		}
 
-		items[idx] = &AttrUserValue{
+		res[idx] = &AttrUserValue{
 			AttributeId: row.AttributeID,
 			ItemId:      row.ItemID,
 			UserId:      row.UserID,
@@ -373,6 +375,82 @@ func (s *AttrsGRPCServer) GetUserValues(
 	}
 
 	return &AttrUserValuesResponse{
-		Items: items,
+		Items: res,
+	}, nil
+}
+
+func (s *AttrsGRPCServer) GetConflicts(ctx context.Context, in *AttrConflictsRequest) (*AttrConflictsResponse, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	const conflictsPerPage = 30
+
+	data, pages, err := s.repository.ValuesPaginated(ctx, query.AttrsValuesListOptions{
+		Conflict: in.GetFilter() == AttrConflictsRequest_ALL,
+		UserValues: &query.AttrsUserValuesListOptions{
+			WeightLtZero:   in.GetFilter() == AttrConflictsRequest_MINUS_WEIGHT,
+			ConflictLtZero: in.GetFilter() == AttrConflictsRequest_I_DISAGREE,
+			ConflictGtZero: in.GetFilter() == AttrConflictsRequest_DO_NOT_AGREE_WITH_ME,
+		},
+	}, attrs.ValuesOrderByUpdateDate, in.GetPage(), conflictsPerPage)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	res := make([]*AttrConflict, 0, len(data))
+
+	for _, row := range data {
+		uvRows, err := s.repository.UserValues(ctx, query.AttrsUserValuesListOptions{
+			AttributeID: row.AttributeID,
+			ItemID:      row.ItemID,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		conflictValues := make([]*AttrConflictValue, 0, len(uvRows))
+
+		for _, uvRow := range uvRows {
+			value, uvText, err := s.repository.UserValueText(
+				ctx, uvRow.AttributeID, uvRow.ItemID, uvRow.UserID, in.GetLanguage(),
+			)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			conflictValues = append(conflictValues, &AttrConflictValue{
+				Value:        uvText,
+				ValueIsEmpty: value.IsEmpty,
+				UserId:       uvRow.UserID,
+			})
+		}
+
+		res = append(res, &AttrConflict{
+			ItemId:      row.ItemID,
+			AttributeId: row.AttributeID,
+			Values:      conflictValues,
+		})
+	}
+
+	return &AttrConflictsResponse{
+		Items: res,
+		Paginator: &Pages{
+			PageCount:        pages.PageCount,
+			First:            pages.First,
+			Last:             pages.Last,
+			Previous:         pages.Previous,
+			Next:             pages.Next,
+			Current:          pages.Current,
+			FirstPageInRange: pages.FirstPageInRange,
+			LastPageInRange:  pages.LastPageInRange,
+			PagesInRange:     pages.PagesInRange,
+			TotalItemCount:   pages.TotalItemCount,
+		},
 	}, nil
 }

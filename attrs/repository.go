@@ -10,11 +10,19 @@ import (
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
+)
+
+type ValuesOrderBy int
+
+const (
+	ValuesOrderByNone ValuesOrderBy = iota
+	ValuesOrderByUpdateDate
 )
 
 var errAttributeNotFound = errors.New("attribute not found")
@@ -211,14 +219,49 @@ func (s *Repository) TopUserBrands(
 	return rows, err
 }
 
-func (s *Repository) Values(ctx context.Context, options query.AttrsValuesListOptions) ([]schema.AttrsValueRow, error) {
-	res := make([]schema.AttrsValueRow, 0)
+func (s *Repository) ValuesSelect(options query.AttrsValuesListOptions, orderBy ValuesOrderBy) *goqu.SelectDataset {
+	aliasTable := goqu.T(query.AttrsValuesAlias)
 
-	err := options.Select(s.db).Select(
-		goqu.T(query.AttrsValuesAlias).Col(schema.AttrsValuesTableAttributeIDColName),
-		goqu.T(query.AttrsValuesAlias).Col(schema.AttrsValuesTableItemIDColName),
-	).
-		ScanStructsContext(ctx, &res)
+	sqSelect := options.Select(s.db).Select(
+		aliasTable.Col(schema.AttrsValuesTableAttributeIDColName),
+		aliasTable.Col(schema.AttrsValuesTableItemIDColName),
+	)
+
+	if orderBy == ValuesOrderByUpdateDate {
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.AttrsValuesTableUpdateDateColName).Desc())
+	}
+
+	return sqSelect
+}
+
+func (s *Repository) ValuesPaginated(
+	ctx context.Context, options query.AttrsValuesListOptions, orderBy ValuesOrderBy, page int32, limit int32,
+) ([]schema.AttrsValueRow, *util.Pages, error) {
+	sqSelect := s.ValuesSelect(options, orderBy)
+
+	paginator := util.Paginator{
+		SQLSelect:         sqSelect,
+		CurrentPageNumber: page,
+		ItemCountPerPage:  limit,
+	}
+
+	pages, err := paginator.GetPages(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	res := make([]schema.AttrsValueRow, 0)
+	err = sqSelect.ScanStructsContext(ctx, &res)
+
+	return res, pages, err
+}
+
+func (s *Repository) Values(
+	ctx context.Context, options query.AttrsValuesListOptions, orderBy ValuesOrderBy,
+) ([]schema.AttrsValueRow, error) {
+	sqSelect := s.ValuesSelect(options, orderBy)
+	res := make([]schema.AttrsValueRow, 0)
+	err := sqSelect.ScanStructsContext(ctx, &res)
 
 	return res, err
 }

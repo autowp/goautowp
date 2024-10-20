@@ -8,10 +8,14 @@ import (
 const AttrsUserValuesAlias = "auv"
 
 type AttrsUserValuesListOptions struct {
-	ZoneID        int64
-	ItemID        int64
-	UserID        int64
-	ExcludeUserID int64
+	ZoneID         int64
+	AttributeID    int64
+	ItemID         int64
+	UserID         int64
+	ExcludeUserID  int64
+	WeightLtZero   bool
+	ConflictLtZero bool
+	ConflictGtZero bool
 }
 
 func (s *AttrsUserValuesListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
@@ -39,6 +43,12 @@ func (s *AttrsUserValuesListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 		).Where(goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableZoneIDColName).Eq(s.ZoneID))
 	}
 
+	if s.AttributeID != 0 {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsUserValuesTableAttributeIDColName).Eq(s.AttributeID),
+		)
+	}
+
 	if s.UserID != 0 {
 		sqSelect = sqSelect.Where(
 			aliasTable.Col(schema.AttrsUserValuesTableUserIDColName).Eq(s.UserID),
@@ -48,6 +58,24 @@ func (s *AttrsUserValuesListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 	if s.ExcludeUserID != 0 {
 		sqSelect = sqSelect.Where(
 			aliasTable.Col(schema.AttrsUserValuesTableUserIDColName).Neq(s.ExcludeUserID),
+		)
+	}
+
+	if s.WeightLtZero {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsUserValuesTableWeightColName).Lt(0),
+		)
+	}
+
+	if s.ConflictLtZero {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsUserValuesTableConflictColName).Lt(0),
+		)
+	}
+
+	if s.ConflictGtZero {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsUserValuesTableConflictColName).Gt(0),
 		)
 	}
 

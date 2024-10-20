@@ -13,13 +13,17 @@ const (
 	AttrsUserValuesTableItemIDColName      = "item_id"
 	AttrsUserValuesTableAttributeIDColName = "attribute_id"
 	AttrsUserValuesTableAddDateTimeColName = "add_date"
+	AttrsUserValuesTableConflictColName    = "conflict"
+	AttrsUserValuesTableWeightColName      = "weight"
 )
 
 var (
-	AttrsUserValuesTable          = goqu.T(AttrsUserValuesTableName)
-	AttrsUserValuesTableUserIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
-	AttrsUserValuesTableItemIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableItemIDColName)
-	AttrsUserValuesTableWeightCol = AttrsUserValuesTable.Col("weight")
+	AttrsUserValuesTable               = goqu.T(AttrsUserValuesTableName)
+	AttrsUserValuesTableUserIDCol      = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
+	AttrsUserValuesTableItemIDCol      = AttrsUserValuesTable.Col(AttrsUserValuesTableItemIDColName)
+	AttrsUserValuesTableWeightCol      = AttrsUserValuesTable.Col(AttrsUserValuesTableWeightColName)
+	AttrsUserValuesTableAttributeIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableAttributeIDColName)
+	AttrsUserValuesTableConflictCol    = AttrsUserValuesTable.Col(AttrsUserValuesTableConflictColName)
 )
 
 type AttrsUserValueRow struct {

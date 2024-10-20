@@ -189,6 +189,7 @@ service Attrs {
   rpc GetZones(google.protobuf.Empty) returns (AttrZonesResponse) {}
   rpc GetValues(AttrValuesRequest) returns (AttrValuesResponse) {}
   rpc GetUserValues(AttrUserValuesRequest) returns (AttrUserValuesResponse) {}
+  rpc GetConflicts(AttrConflictsRequest) returns (AttrConflictsResponse) {}
 }
 
 message ErrorDetails {
@@ -304,6 +305,35 @@ message AttrUserValuesRequest {
   int64 item_id = 4;
   string language = 5;
   AttrUserValuesFields fields = 6;
+}
+
+message AttrConflictsRequest {
+  enum Filter {
+    ALL = 0;
+    DO_NOT_AGREE_WITH_ME = 1;
+    I_DISAGREE = 2;
+    MINUS_WEIGHT = 3;
+  }
+  Filter filter = 1;
+  int32 page = 2;
+  string language = 3;
+}
+
+message AttrConflictValue {
+  string value = 1;
+  bool value_is_empty = 2;
+  int64 user_id = 3;
+}
+
+message AttrConflict {
+  int64 item_id = 1;
+  int64 attribute_id = 2;
+  repeated AttrConflictValue values = 5;
+}
+
+message AttrConflictsResponse {
+  repeated AttrConflict items = 1;
+  Pages paginator = 2;
 }
 
 message AttrUserValue {

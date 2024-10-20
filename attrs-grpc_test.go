@@ -690,3 +690,67 @@ func TestGetEmptyValues(t *testing.T) {
 	require.True(t, listEmptyFound)
 	require.True(t, treeEmptyFound)
 }
+
+func TestConflicts(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	client := NewAttrsClient(conn)
+
+	_, err = client.GetConflicts(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&AttrConflictsRequest{
+			Filter:   AttrConflictsRequest_ALL,
+			Page:     0,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.GetConflicts(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&AttrConflictsRequest{
+			Filter:   AttrConflictsRequest_MINUS_WEIGHT,
+			Page:     0,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.GetConflicts(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&AttrConflictsRequest{
+			Filter:   AttrConflictsRequest_I_DISAGREE,
+			Page:     0,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.GetConflicts(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&AttrConflictsRequest{
+			Filter:   AttrConflictsRequest_DO_NOT_AGREE_WITH_ME,
+			Page:     0,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+}

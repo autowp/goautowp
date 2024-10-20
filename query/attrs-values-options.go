@@ -8,8 +8,10 @@ import (
 const AttrsValuesAlias = "av"
 
 type AttrsValuesListOptions struct {
-	ZoneID int64
-	ItemID int64
+	ZoneID     int64
+	ItemID     int64
+	Conflict   bool
+	UserValues *AttrsUserValuesListOptions
 }
 
 func (s *AttrsValuesListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
@@ -35,6 +37,27 @@ func (s *AttrsValuesListOptions) Apply(alias string, sqSelect *goqu.SelectDatase
 				goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableAttributeIDColName),
 			)),
 		).Where(goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableZoneIDColName).Eq(s.ZoneID))
+	}
+
+	if s.Conflict {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsValuesTableConflictColName).IsTrue(),
+		)
+	}
+
+	if s.UserValues != nil {
+		uvAlias := AppendPictureItemAlias(alias)
+
+		sqSelect = sqSelect.Join(schema.AttrsUserValuesTable.As(uvAlias), goqu.On(
+			aliasTable.Col(schema.AttrsValuesTableAttributeIDColName).Eq(
+				goqu.T(uvAlias).Col(schema.AttrsUserValuesTableAttributeIDColName),
+			),
+			aliasTable.Col(schema.AttrsValuesTableItemIDColName).Eq(
+				goqu.T(uvAlias).Col(schema.AttrsUserValuesTableItemIDColName),
+			),
+		))
+
+		sqSelect = s.UserValues.Apply(uvAlias, sqSelect)
 	}
 
 	return sqSelect
