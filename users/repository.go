@@ -594,7 +594,7 @@ func (s *Repository) PasswordMatch(ctx context.Context, userID int64, password s
 	succcess, err := s.autowpDB.Select(goqu.V(1)).
 		From(schema.UserTable).
 		Where(
-			schema.UserTablePasswordCol.Eq(goqu.Func("MD5", goqu.Func("CONTCAT", s.usersSalt, password))),
+			schema.UserTablePasswordCol.Eq(goqu.Func("MD5", goqu.Func("CONCAT", s.usersSalt, password))),
 			schema.UserTableIDCol.Eq(userID),
 			schema.UserTableDeletedCol.IsFalse(),
 		).ScanValContext(ctx, &exists)
