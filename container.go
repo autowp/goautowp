@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"github.com/gin-contrib/cors"
 	"net/http"
 	"time"
 
@@ -534,21 +535,26 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 		return nil, err
 	}
 
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = s.config.PublicRest.Cors.Origin
+	corsConfig.AllowCredentials = true
+
 	ginEngine := gin.New()
-	ginEngine.Use(gin.Recovery())
+	ginEngine.Use(gin.Recovery(), cors.New(corsConfig))
+
 	yoomoney.SetupRouter(ctx, ginEngine)
 
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
-		if wrappedGrpc.IsGrpcWebRequest(req) {
+		if wrappedGrpc.IsAcceptableGrpcCorsRequest(req) || wrappedGrpc.IsGrpcWebRequest(req) {
 			wrappedGrpc.ServeHTTP(resp, req)
-
-			s.grpcServerWithServices = grpcServer
 
 			return
 		}
 		// Fall back to gRPC+h2c server
 		ginEngine.ServeHTTP(resp, req)
 	}
+
+	s.grpcServerWithServices = grpcServer
 
 	return s.publicRouter, nil
 }
