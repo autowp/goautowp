@@ -61,7 +61,7 @@ func (s *UserExtractor) Extract(
 		Route:         frontend.UserRoute(row.ID, row.Identity),
 		Identity:      identity,
 		SpecsWeight:   row.SpecsWeight,
-		PicturesAdded: row.PicturesAdded,
+		PicturesAdded: int32(row.PicturesAdded),
 	}
 
 	if fields.GetRegDate() && row.RegDate != nil {
@@ -142,7 +142,7 @@ func (s *UserExtractor) Extract(
 			return nil, err
 		}
 
-		user.PicturesAcceptedCount = int64(count)
+		user.PicturesAcceptedCount = int32(count)
 	}
 
 	if fields.GetLastIp() && len(currentUserRole) > 0 && s.enforcer.Enforce(currentUserRole, "user", "ip") {

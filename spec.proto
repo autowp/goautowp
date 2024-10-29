@@ -524,8 +524,8 @@ message APIUser {
   APIImage photo = 19;
   bool is_moder = 20;
   google.protobuf.Timestamp reg_date = 21;
-  int64 pictures_added = 23;
-  int64 pictures_accepted_count = 24;
+  int32 pictures_added = 23;
+  int32 pictures_accepted_count = 24;
   string last_ip = 25;
   string login = 26;
 }
