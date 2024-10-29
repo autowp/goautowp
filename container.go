@@ -537,6 +537,7 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 
 	ginEngine := gin.New()
 	ginEngine.Use(gin.Recovery())
+
 	if len(s.config.PublicRest.Cors.Origin) > 0 {
 		corsConfig := cors.DefaultConfig()
 		corsConfig.AllowOrigins = s.config.PublicRest.Cors.Origin
