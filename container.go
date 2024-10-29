@@ -535,12 +535,14 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 		return nil, err
 	}
 
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = s.config.PublicRest.Cors.Origin
-	corsConfig.AllowCredentials = true
-
 	ginEngine := gin.New()
-	ginEngine.Use(gin.Recovery(), cors.New(corsConfig))
+	ginEngine.Use(gin.Recovery())
+	if len(s.config.PublicRest.Cors.Origin) > 0 {
+		corsConfig := cors.DefaultConfig()
+		corsConfig.AllowOrigins = s.config.PublicRest.Cors.Origin
+		corsConfig.AllowCredentials = true
+		ginEngine.Use(cors.New(corsConfig))
+	}
 
 	yoomoney.SetupRouter(ctx, ginEngine)
 
