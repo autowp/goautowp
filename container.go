@@ -3,7 +3,6 @@ package goautowp
 import (
 	"context"
 	"database/sql"
-	"github.com/gin-contrib/cors"
 	"net/http"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
