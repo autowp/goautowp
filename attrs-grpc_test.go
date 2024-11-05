@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"testing"
-	"time"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
@@ -289,183 +288,6 @@ func requireValues(t *testing.T, values *AttrValuesResponse) {
 	require.True(t, treeMultipleFound)
 }
 
-func insertAttrsUserValue(t *testing.T, goquDB *goqu.Database, attributeID int64, itemID int64, userID int64) {
-	t.Helper()
-
-	ctx := context.Background()
-
-	_, err := goquDB.Insert(schema.AttrsUserValuesTable).Rows(schema.AttrsUserValueRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		UserID:      userID,
-		UpdateDate:  time.Now(),
-		AddDate:     time.Now(),
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	_, err = goquDB.Insert(schema.AttrsValuesTable).Rows(schema.AttrsValueRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		UpdateDate:  time.Now(),
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-}
-
-func insertAttrsFloatValue(
-	t *testing.T, goquDB *goqu.Database, attributeID int64, itemID int64, userID int64, value sql.NullFloat64,
-) {
-	t.Helper()
-
-	ctx := context.Background()
-
-	insertAttrsUserValue(t, goquDB, attributeID, itemID, userID)
-
-	_, err := goquDB.Insert(schema.AttrsUserValuesFloatTable).Rows(schema.AttrsUserValuesFloatRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		UserID:      userID,
-		Value:       value,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	_, err = goquDB.Insert(schema.AttrsValuesFloatTable).Rows(schema.AttrsValuesFloatRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		Value:       value,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-}
-
-func insertAttrsIntValue(
-	t *testing.T, goquDB *goqu.Database, attributeID int64, itemID int64, userID int64, value sql.NullInt32,
-) {
-	t.Helper()
-
-	ctx := context.Background()
-
-	insertAttrsUserValue(t, goquDB, attributeID, itemID, userID)
-
-	_, err := goquDB.Insert(schema.AttrsUserValuesIntTable).Rows(schema.AttrsUserValuesIntRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		UserID:      userID,
-		Value:       value,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	_, err = goquDB.Insert(schema.AttrsValuesIntTable).Rows(schema.AttrsValuesIntRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		Value:       value,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-}
-
-func insertAttrsStringValue(
-	t *testing.T, goquDB *goqu.Database, attributeID int64, itemID int64, userID int64, value sql.NullString,
-) {
-	t.Helper()
-
-	ctx := context.Background()
-
-	insertAttrsUserValue(t, goquDB, attributeID, itemID, userID)
-
-	_, err := goquDB.Insert(schema.AttrsUserValuesStringTable).Rows(schema.AttrsUserValuesStringRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		UserID:      userID,
-		Value:       value,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	_, err = goquDB.Insert(schema.AttrsValuesStringTable).Rows(schema.AttrsValuesStringRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		Value:       value,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-}
-
-func insertAttrsBoolValue(
-	t *testing.T, goquDB *goqu.Database, attributeID int64, itemID int64, userID int64, value sql.NullInt32,
-) {
-	t.Helper()
-
-	ctx := context.Background()
-
-	insertAttrsUserValue(t, goquDB, attributeID, itemID, userID)
-
-	_, err := goquDB.Insert(schema.AttrsUserValuesIntTable).Rows(schema.AttrsUserValuesIntRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		UserID:      userID,
-		Value:       value,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	_, err = goquDB.Insert(schema.AttrsValuesIntTable).Rows(schema.AttrsValuesIntRow{
-		AttributeID: attributeID,
-		ItemID:      itemID,
-		Value:       value,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-}
-
-func insertAttrsListValue(
-	t *testing.T, goquDB *goqu.Database, attributeID int64, itemID int64, userID int64, values []sql.NullInt64,
-) {
-	t.Helper()
-
-	ctx := context.Background()
-
-	insertAttrsUserValue(t, goquDB, attributeID, itemID, userID)
-
-	for idx, val := range values {
-		_, err := goquDB.Insert(schema.AttrsUserValuesListTable).Rows(schema.AttrsUserValuesListRow{
-			AttributeID: attributeID,
-			ItemID:      itemID,
-			UserID:      userID,
-			Value:       val,
-			Ordering:    int64(idx + 1),
-		}).Executor().ExecContext(ctx)
-		require.NoError(t, err)
-
-		_, err = goquDB.Insert(schema.AttrsValuesListTable).Rows(schema.AttrsValuesListRow{
-			AttributeID: attributeID,
-			ItemID:      itemID,
-			Value:       val,
-			Ordering:    int64(idx + 1),
-		}).Executor().ExecContext(ctx)
-		require.NoError(t, err)
-	}
-}
-
-func insertAttrsTestData(t *testing.T, goquDB *goqu.Database, itemID int64, userID int64) {
-	t.Helper()
-
-	// insert float value
-	insertAttrsFloatValue(t, goquDB, floatAttributeID, itemID, userID, sql.NullFloat64{Float64: 7.091, Valid: true})
-
-	// insert int value
-	insertAttrsIntValue(t, goquDB, intAttributeID, itemID, userID, sql.NullInt32{Int32: 6, Valid: true})
-
-	// insert string value
-	insertAttrsStringValue(t, goquDB, stringAttributeID, itemID, userID, sql.NullString{String: "test", Valid: true})
-
-	// insert bool value
-	insertAttrsBoolValue(t, goquDB, boolAttributeID, itemID, userID, sql.NullInt32{Int32: 1, Valid: true})
-
-	// insert list value
-	insertAttrsListValue(t, goquDB, listAttributeID, itemID, userID, []sql.NullInt64{{Int64: 1, Valid: true}})
-
-	// insert tree value
-	insertAttrsListValue(t, goquDB, treeAttributeID, itemID, userID, []sql.NullInt64{{Int64: 25, Valid: true}})
-
-	// insert tree multiple value
-	insertAttrsListValue(t, goquDB, treeMultipleAttributeID, itemID, userID,
-		[]sql.NullInt64{{Int64: 28, Valid: true}, {Int64: 29, Valid: true}})
-}
-
 func TestGetValues(t *testing.T) {
 	t.Parallel()
 
@@ -492,14 +314,6 @@ func TestGetValues(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	usersClient := NewUsersClient(conn)
-
-	user, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&APIMeRequest{},
-	)
-	require.NoError(t, err)
-
 	client := NewAttrsClient(conn)
 
 	itemID := createItem(t, goquDB, schema.ItemRow{
@@ -516,7 +330,77 @@ func TestGetValues(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, values.GetItems())
 
-	insertAttrsTestData(t, goquDB, itemID, user.GetId())
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: floatAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:       AttrAttributeType_FLOAT,
+						Valid:      true,
+						FloatValue: 7.091,
+					},
+				},
+				{
+					AttributeId: intAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 6,
+					},
+				},
+				{
+					AttributeId: stringAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:        AttrAttributeType_STRING,
+						Valid:       true,
+						StringValue: "test",
+					},
+				},
+				{
+					AttributeId: boolAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_BOOLEAN,
+						Valid:     true,
+						BoolValue: true,
+					},
+				},
+				{
+					AttributeId: listAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{1},
+					},
+				},
+				{
+					AttributeId: treeAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{25},
+					},
+				},
+				{
+					AttributeId: treeMultipleAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{28, 29},
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
 
 	// check values
 	values, err = client.GetValues(
@@ -570,14 +454,6 @@ func TestGetEmptyValues(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	usersClient := NewUsersClient(conn)
-
-	user, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&APIMeRequest{},
-	)
-	require.NoError(t, err)
-
 	client := NewAttrsClient(conn)
 
 	itemID := createItem(t, goquDB, schema.ItemRow{
@@ -603,29 +479,72 @@ func TestGetEmptyValues(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, values.GetItems())
 
-	userID := user.GetId()
+	t.Helper()
 
-	// insert float empty value
-	insertAttrsFloatValue(t, goquDB, floatEmptyAttributeID, itemID, userID, sql.NullFloat64{Valid: false})
-
-	// insert int empty value
-	insertAttrsIntValue(t, goquDB, intEmptyAttributeID, itemID, userID, sql.NullInt32{Valid: false})
-
-	// insert string empty value
-	insertAttrsStringValue(t, goquDB, stringEmptyAttributeID, itemID, userID, sql.NullString{Valid: false})
-
-	// insert bool empty value
-	insertAttrsBoolValue(t, goquDB, boolEmptyAttributeID, itemID, userID, sql.NullInt32{Valid: false})
-
-	// insert list empty value
-	insertAttrsListValue(t, goquDB, listEmptyAttributeID, itemID, userID, []sql.NullInt64{{Valid: false}})
-
-	// insert tree empty value
-	insertAttrsListValue(t, goquDB, treeEmptyAttributeID, itemID, userID, []sql.NullInt64{{Valid: false}})
-
-	// insert tree multiple value
-	insertAttrsListValue(t, goquDB, treeMultipleAttributeID, itemID, userID,
-		[]sql.NullInt64{{Int64: 28, Valid: true}, {Int64: 29, Valid: true}})
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: floatEmptyAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_FLOAT,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: intEmptyAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_INTEGER,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: stringEmptyAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_STRING,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: boolEmptyAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_BOOLEAN,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: listEmptyAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						IsEmpty:   true,
+						ListValue: []int64{},
+					},
+				},
+				{
+					AttributeId: treeEmptyAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						IsEmpty:   true,
+						ListValue: []int64{},
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
 
 	// check values
 	values, err = client.GetValues(
@@ -753,4 +672,302 @@ func TestConflicts(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+}
+
+func TestValuesInherits(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	childItemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
+		schema.ItemParentTableItemIDColName:   childItemID,
+		schema.ItemParentTableParentIDColName: itemID,
+		schema.ItemParentTableCatnameColName:  "vehicle1",
+		schema.ItemParentTableTypeColName:     0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: intAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 77,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	for _, currentItemID := range []int64{itemID, childItemID} {
+		values, err := client.GetValues(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			&AttrValuesRequest{
+				ItemId:   currentItemID,
+				Language: "en",
+			},
+		)
+		require.NoError(t, err)
+		require.NotEmpty(t, values.GetItems())
+
+		var intFound bool
+
+		for _, val := range values.GetItems() {
+			require.Equal(t, val.GetItemId(), currentItemID)
+
+			if val.GetAttributeId() == intAttributeID {
+				intFound = true
+
+				require.True(t, val.GetValue().GetValid())
+				require.False(t, val.GetValue().GetIsEmpty())
+				require.Equal(t, int32(77), val.GetValue().GetIntValue())
+			}
+		}
+
+		require.True(t, intFound)
+	}
+}
+
+func TestEngineValuesApplied(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	engineItemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDEngine,
+	})
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		EngineItemID: sql.NullInt64{
+			Valid: true,
+			Int64: engineItemID,
+		},
+	})
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: 207,
+					ItemId:      engineItemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_TREE,
+						Valid:     true,
+						ListValue: []int64{104, 105},
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	for _, currentItemID := range []int64{itemID, engineItemID} {
+		values, err := client.GetValues(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			&AttrValuesRequest{
+				ItemId:   currentItemID,
+				Language: "en",
+			},
+		)
+		require.NoError(t, err)
+		require.NotEmpty(t, values.GetItems())
+
+		var attributeFound bool
+
+		for _, val := range values.GetItems() {
+			require.Equal(t, val.GetItemId(), currentItemID)
+
+			if val.GetAttributeId() == 207 {
+				attributeFound = true
+
+				require.True(t, val.GetValue().GetValid())
+				require.False(t, val.GetValue().GetIsEmpty())
+				require.Equal(t, []int64{104, 105}, val.GetValue().GetListValue())
+			}
+		}
+
+		require.True(t, attributeFound)
+	}
+}
+
+func TestSetUserValuesList(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	cases := []struct {
+		Input   []int64
+		IsEmpty bool
+		Output  []int64
+	}{
+		{
+			Input:   []int64{999},
+			IsEmpty: false,
+			Output:  []int64{},
+		},
+		{
+			Input:   []int64{1, 104, 105},
+			IsEmpty: false,
+			Output:  []int64{104, 105},
+		},
+		{
+			Input:   []int64{105, 104},
+			IsEmpty: false,
+			Output:  []int64{104, 105},
+		},
+		{
+			Input:   []int64{},
+			IsEmpty: false,
+			Output:  []int64{},
+		},
+		{
+			Input:   []int64{},
+			IsEmpty: true,
+			Output:  nil,
+		},
+	}
+
+	for _, testCase := range cases {
+		_, err = client.SetUserValues(
+			metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+			&AttrSetUserValuesRequest{
+				Items: []*AttrUserValue{
+					{
+						AttributeId: 207,
+						ItemId:      itemID,
+						Value: &AttrValueValue{
+							Type:      AttrAttributeType_TREE,
+							Valid:     true,
+							IsEmpty:   testCase.IsEmpty,
+							ListValue: testCase.Input,
+						},
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		// check values
+		values, err := client.GetValues(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			&AttrValuesRequest{
+				ItemId:   itemID,
+				Language: "en",
+			},
+		)
+		require.NoError(t, err)
+
+		if len(testCase.Output) == 0 && !testCase.IsEmpty {
+			require.Empty(t, values.GetItems())
+		} else {
+			require.NotEmpty(t, values.GetItems())
+
+			var attributeFound bool
+
+			for _, val := range values.GetItems() {
+				require.Equal(t, val.GetItemId(), itemID)
+
+				if val.GetAttributeId() == 207 {
+					attributeFound = true
+
+					require.True(t, val.GetValue().GetValid())
+					require.Equal(t, testCase.IsEmpty, val.GetValue().GetIsEmpty())
+					require.Equal(t, testCase.Output, val.GetValue().GetListValue())
+				}
+			}
+
+			require.True(t, attributeFound)
+		}
+	}
 }

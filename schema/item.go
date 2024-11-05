@@ -61,6 +61,7 @@ var (
 	ItemTableIsGroupCol        = ItemTable.Col(ItemTableIsGroupColName)
 	ItemTableItemTypeIDCol     = ItemTable.Col(ItemTableItemTypeIDColName)
 	ItemTableTodayCol          = ItemTable.Col(ItemTableTodayColName)
+	ItemTableEngineItemIDCol   = ItemTable.Col(ItemTableEngineItemIDColName)
 )
 
 type ItemRow struct {

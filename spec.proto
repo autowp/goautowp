@@ -189,6 +189,9 @@ service Attrs {
   rpc GetZones(google.protobuf.Empty) returns (AttrZonesResponse) {}
   rpc GetValues(AttrValuesRequest) returns (AttrValuesResponse) {}
   rpc GetUserValues(AttrUserValuesRequest) returns (AttrUserValuesResponse) {}
+  rpc SetUserValues(AttrSetUserValuesRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteUserValues(DeleteAttrUserValuesRequest) returns (google.protobuf.Empty) {}
+  rpc MoveUserValues(MoveAttrUserValuesRequest) returns (google.protobuf.Empty) {}
   rpc GetConflicts(AttrConflictsRequest) returns (AttrConflictsResponse) {}
 }
 
@@ -294,6 +297,17 @@ message AttrZone {
   string name = 2;
 }
 
+message MoveAttrUserValuesRequest {
+  int64 src_item_id = 1;
+  int64 dest_item_id = 2;
+}
+
+message DeleteAttrUserValuesRequest {
+  int64 attribute_id = 1;
+  int64 item_id = 2;
+  int64 user_id = 3;
+}
+
 message AttrUserValuesFields {
   bool value_text = 1;
 }
@@ -305,6 +319,10 @@ message AttrUserValuesRequest {
   int64 item_id = 4;
   string language = 5;
   AttrUserValuesFields fields = 6;
+}
+
+message AttrSetUserValuesRequest {
+  repeated AttrUserValue items = 1;
 }
 
 message AttrConflictsRequest {

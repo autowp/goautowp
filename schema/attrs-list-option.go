@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	AttrsListOptionsTableName = "attrs_list_options"
+	AttrsListOptionsTableName            = "attrs_list_options"
+	AttrsListOptionsTablePositionColName = "position"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 	AttrsListOptionsTableNameCol        = AttrsListOptionsTable.Col("name")
 	AttrsListOptionsTableAttributeIDCol = AttrsListOptionsTable.Col("attribute_id")
 	AttrsListOptionsTableParentIDCol    = AttrsListOptionsTable.Col("parent_id")
-	AttrsListOptionsTablePositionCol    = AttrsListOptionsTable.Col("position")
+	AttrsListOptionsTablePositionCol    = AttrsListOptionsTable.Col(AttrsListOptionsTablePositionColName)
 )
 
 type AttrsListOptionRow struct {

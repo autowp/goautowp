@@ -8,10 +8,12 @@ import (
 const AttrsValuesAlias = "av"
 
 type AttrsValuesListOptions struct {
-	ZoneID     int64
-	ItemID     int64
-	Conflict   bool
-	UserValues *AttrsUserValuesListOptions
+	ZoneID      int64
+	ItemID      int64
+	ChildItemID int64
+	AttributeID int64
+	Conflict    bool
+	UserValues  *AttrsUserValuesListOptions
 }
 
 func (s *AttrsValuesListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
@@ -24,9 +26,26 @@ func (s *AttrsValuesListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
 func (s *AttrsValuesListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
 	aliasTable := goqu.T(alias)
 
-	sqSelect = sqSelect.Where(
-		aliasTable.Col(schema.AttrsValuesTableItemIDColName).Eq(s.ItemID),
-	)
+	if s.ItemID != 0 {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsValuesTableItemIDColName).Eq(s.ItemID),
+		)
+	}
+
+	if s.ChildItemID > 0 {
+		sqSelect = sqSelect.Join(
+			schema.ItemParentTable,
+			goqu.On(aliasTable.Col(schema.AttrsValuesTableItemIDColName).Eq(schema.ItemParentTableParentIDCol)),
+		).Where(
+			schema.ItemParentTableItemIDCol.Eq(s.ChildItemID),
+		)
+	}
+
+	if s.AttributeID != 0 {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsValuesTableAttributeIDColName).Eq(s.AttributeID),
+		)
+	}
 
 	if s.ZoneID != 0 {
 		azaAlias := AppendAttrsZoneAttributesAlias(alias)

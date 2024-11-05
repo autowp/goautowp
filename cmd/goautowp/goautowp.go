@@ -37,7 +37,7 @@ func captureOsInterrupt() chan bool {
 
 func main() { os.Exit(mainReturnWithCode()) }
 
-func mainReturnWithCode() int {
+func mainReturnWithCode() int { //nolint: maintidx
 	logrus.SetLevel(logrus.DebugLevel)
 
 	imagick.Initialize()
@@ -254,6 +254,52 @@ func mainReturnWithCode() int {
 				Name: "scheduler-generate-index-cache",
 				Action: func(ctx context.Context, _ *cli.Command) error {
 					return autowpApp.GenerateIndexCache(ctx)
+				},
+			},
+			{
+				Name: "specs-refresh-conflict-flags",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.SpecsRefreshConflictFlags(ctx)
+				},
+			},
+			{
+				Name: "specs-refresh-item-conflict-flags",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:     "item_id",
+						Value:    0,
+						Usage:    "item_id",
+						Required: true,
+					},
+				},
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.SpecsRefreshItemConflictFlags(ctx, command.Int("item_id"))
+				},
+			},
+			{
+				Name: "specs-refresh-user-stat",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:     "user_id",
+						Value:    0,
+						Usage:    "user_id",
+						Required: true,
+					},
+				},
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.SpecsRefreshUserConflicts(ctx, command.Int("user_id"))
+				},
+			},
+			{
+				Name: "specs-refresh-users-stat",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.SpecsRefreshUsersConflicts(ctx)
+				},
+			},
+			{
+				Name: "specs-refresh-actual-values",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.SpecsRefreshActualValues(ctx)
 				},
 			},
 		},

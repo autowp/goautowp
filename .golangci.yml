@@ -29,7 +29,6 @@ linters:
     - errorlint
     - exhaustive
     #- exhaustruct
-    #- exportloopref
     - fatcontext
     - forbidigo
     - forcetypeassert
@@ -123,3 +122,6 @@ linters-settings:
     min-name-length: 2
     ignore-names:
       - i
+  gomoddirectives:
+    replace-allow-list:
+      - github.com/doug-martin/goqu/v9

@@ -326,7 +326,7 @@ func (s *AttrsGRPCServer) GetUserValues(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: item_id cannot be nil")
 	}
 
-	rows, err := s.repository.UserValues(ctx, query.AttrsUserValuesListOptions{
+	rows, err := s.repository.UserValueRows(ctx, query.AttrsUserValuesListOptions{
 		ZoneID:        in.GetZoneId(),
 		ItemID:        in.GetItemId(),
 		UserID:        in.GetUserId(),
@@ -406,7 +406,7 @@ func (s *AttrsGRPCServer) GetConflicts(ctx context.Context, in *AttrConflictsReq
 	res := make([]*AttrConflict, 0, len(data))
 
 	for _, row := range data {
-		uvRows, err := s.repository.UserValues(ctx, query.AttrsUserValuesListOptions{
+		uvRows, err := s.repository.UserValueRows(ctx, query.AttrsUserValuesListOptions{
 			AttributeID: row.AttributeID,
 			ItemID:      row.ItemID,
 		})
@@ -453,4 +453,83 @@ func (s *AttrsGRPCServer) GetConflicts(ctx context.Context, in *AttrConflictsReq
 			TotalItemCount:   pages.TotalItemCount,
 		},
 	}, nil
+}
+
+func (s *AttrsGRPCServer) DeleteUserValues(
+	ctx context.Context, in *DeleteAttrUserValuesRequest,
+) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "specifications", "admin") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.admin is required")
+	}
+
+	err = s.repository.DeleteUserValue(ctx, in.GetAttributeId(), in.GetItemId(), in.GetUserId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *AttrsGRPCServer) SetUserValues(ctx context.Context, in *AttrSetUserValuesRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "specifications", "edit") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
+	}
+
+	for _, item := range in.GetItems() {
+		protoValue := item.GetValue()
+
+		err := s.repository.SetUserValue(
+			ctx,
+			userID,
+			item.GetAttributeId(),
+			item.GetItemId(),
+			attrs.Value{
+				Valid:       protoValue.GetValid(),
+				FloatValue:  protoValue.GetFloatValue(),
+				IntValue:    protoValue.GetIntValue(),
+				BoolValue:   protoValue.GetBoolValue(),
+				ListValue:   protoValue.GetListValue(),
+				StringValue: protoValue.GetStringValue(),
+				IsEmpty:     protoValue.GetIsEmpty(),
+			},
+		)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *AttrsGRPCServer) MoveUserValues(ctx context.Context, in *MoveAttrUserValuesRequest) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "specifications", "admin") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.admin is required")
+	}
+
+	srcItemID := in.GetSrcItemId()
+	dstItemID := in.GetDestItemId()
+
+	if srcItemID > 0 && dstItemID > 0 {
+		err = s.repository.MoveUserValues(ctx, srcItemID, dstItemID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
 }

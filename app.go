@@ -559,6 +559,51 @@ func (s *Application) GenerateIndexCache(ctx context.Context) error {
 	return nil
 }
 
+func (s *Application) SpecsRefreshConflictFlags(ctx context.Context) error {
+	repository, err := s.container.AttrsRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.RefreshConflictFlags(ctx)
+}
+
+func (s *Application) SpecsRefreshActualValues(ctx context.Context) error {
+	repository, err := s.container.AttrsRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.UpdateAllActualValues(ctx)
+}
+
+func (s *Application) SpecsRefreshUsersConflicts(ctx context.Context) error {
+	repository, err := s.container.AttrsRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.RefreshUserConflictsStat(ctx, nil, true)
+}
+
+func (s *Application) SpecsRefreshUserConflicts(ctx context.Context, userID int64) error {
+	repository, err := s.container.AttrsRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.RefreshUserConflictsStat(ctx, []int64{userID}, false)
+}
+
+func (s *Application) SpecsRefreshItemConflictFlags(ctx context.Context, itemID int64) error {
+	repository, err := s.container.AttrsRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.RefreshItemConflictFlags(ctx, itemID)
+}
+
 func (s *Application) ExportUsersToKeycloak(ctx context.Context) error {
 	ur, err := s.container.UsersRepository()
 	if err != nil {

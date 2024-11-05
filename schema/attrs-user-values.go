@@ -9,6 +9,7 @@ import (
 const (
 	AttrsUserValuesTableName               = "attrs_user_values"
 	AttrsUserValuesTableUserIDColName      = "user_id"
+	AttrsUserValuesTableAddDateColName     = "add_date"
 	AttrsUserValuesTableUpdateDateColName  = "update_date"
 	AttrsUserValuesTableItemIDColName      = "item_id"
 	AttrsUserValuesTableAttributeIDColName = "attribute_id"
@@ -24,6 +25,7 @@ var (
 	AttrsUserValuesTableWeightCol      = AttrsUserValuesTable.Col(AttrsUserValuesTableWeightColName)
 	AttrsUserValuesTableAttributeIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableAttributeIDColName)
 	AttrsUserValuesTableConflictCol    = AttrsUserValuesTable.Col(AttrsUserValuesTableConflictColName)
+	AttrsUserValuesTableUpdateDateCol  = AttrsUserValuesTable.Col(AttrsUserValuesTableUpdateDateColName)
 )
 
 type AttrsUserValueRow struct {

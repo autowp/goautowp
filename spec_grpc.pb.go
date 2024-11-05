@@ -5689,6 +5689,9 @@ const (
 	Attrs_GetZones_FullMethodName          = "/goautowp.Attrs/GetZones"
 	Attrs_GetValues_FullMethodName         = "/goautowp.Attrs/GetValues"
 	Attrs_GetUserValues_FullMethodName     = "/goautowp.Attrs/GetUserValues"
+	Attrs_SetUserValues_FullMethodName     = "/goautowp.Attrs/SetUserValues"
+	Attrs_DeleteUserValues_FullMethodName  = "/goautowp.Attrs/DeleteUserValues"
+	Attrs_MoveUserValues_FullMethodName    = "/goautowp.Attrs/MoveUserValues"
 	Attrs_GetConflicts_FullMethodName      = "/goautowp.Attrs/GetConflicts"
 )
 
@@ -5705,6 +5708,9 @@ type AttrsClient interface {
 	GetZones(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AttrZonesResponse, error)
 	GetValues(ctx context.Context, in *AttrValuesRequest, opts ...grpc.CallOption) (*AttrValuesResponse, error)
 	GetUserValues(ctx context.Context, in *AttrUserValuesRequest, opts ...grpc.CallOption) (*AttrUserValuesResponse, error)
+	SetUserValues(ctx context.Context, in *AttrSetUserValuesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteUserValues(ctx context.Context, in *DeleteAttrUserValuesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	MoveUserValues(ctx context.Context, in *MoveAttrUserValuesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetConflicts(ctx context.Context, in *AttrConflictsRequest, opts ...grpc.CallOption) (*AttrConflictsResponse, error)
 }
 
@@ -5806,6 +5812,36 @@ func (c *attrsClient) GetUserValues(ctx context.Context, in *AttrUserValuesReque
 	return out, nil
 }
 
+func (c *attrsClient) SetUserValues(ctx context.Context, in *AttrSetUserValuesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Attrs_SetUserValues_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) DeleteUserValues(ctx context.Context, in *DeleteAttrUserValuesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Attrs_DeleteUserValues_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) MoveUserValues(ctx context.Context, in *MoveAttrUserValuesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Attrs_MoveUserValues_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *attrsClient) GetConflicts(ctx context.Context, in *AttrConflictsRequest, opts ...grpc.CallOption) (*AttrConflictsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AttrConflictsResponse)
@@ -5829,6 +5865,9 @@ type AttrsServer interface {
 	GetZones(context.Context, *emptypb.Empty) (*AttrZonesResponse, error)
 	GetValues(context.Context, *AttrValuesRequest) (*AttrValuesResponse, error)
 	GetUserValues(context.Context, *AttrUserValuesRequest) (*AttrUserValuesResponse, error)
+	SetUserValues(context.Context, *AttrSetUserValuesRequest) (*emptypb.Empty, error)
+	DeleteUserValues(context.Context, *DeleteAttrUserValuesRequest) (*emptypb.Empty, error)
+	MoveUserValues(context.Context, *MoveAttrUserValuesRequest) (*emptypb.Empty, error)
 	GetConflicts(context.Context, *AttrConflictsRequest) (*AttrConflictsResponse, error)
 	mustEmbedUnimplementedAttrsServer()
 }
@@ -5866,6 +5905,15 @@ func (UnimplementedAttrsServer) GetValues(context.Context, *AttrValuesRequest) (
 }
 func (UnimplementedAttrsServer) GetUserValues(context.Context, *AttrUserValuesRequest) (*AttrUserValuesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserValues not implemented")
+}
+func (UnimplementedAttrsServer) SetUserValues(context.Context, *AttrSetUserValuesRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetUserValues not implemented")
+}
+func (UnimplementedAttrsServer) DeleteUserValues(context.Context, *DeleteAttrUserValuesRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteUserValues not implemented")
+}
+func (UnimplementedAttrsServer) MoveUserValues(context.Context, *MoveAttrUserValuesRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MoveUserValues not implemented")
 }
 func (UnimplementedAttrsServer) GetConflicts(context.Context, *AttrConflictsRequest) (*AttrConflictsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConflicts not implemented")
@@ -6053,6 +6101,60 @@ func _Attrs_GetUserValues_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Attrs_SetUserValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttrSetUserValuesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).SetUserValues(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Attrs_SetUserValues_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).SetUserValues(ctx, req.(*AttrSetUserValuesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_DeleteUserValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAttrUserValuesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).DeleteUserValues(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Attrs_DeleteUserValues_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).DeleteUserValues(ctx, req.(*DeleteAttrUserValuesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_MoveUserValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MoveAttrUserValuesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).MoveUserValues(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Attrs_MoveUserValues_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).MoveUserValues(ctx, req.(*MoveAttrUserValuesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Attrs_GetConflicts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AttrConflictsRequest)
 	if err := dec(in); err != nil {
@@ -6113,6 +6215,18 @@ var Attrs_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserValues",
 			Handler:    _Attrs_GetUserValues_Handler,
+		},
+		{
+			MethodName: "SetUserValues",
+			Handler:    _Attrs_SetUserValues_Handler,
+		},
+		{
+			MethodName: "DeleteUserValues",
+			Handler:    _Attrs_DeleteUserValues_Handler,
+		},
+		{
+			MethodName: "MoveUserValues",
+			Handler:    _Attrs_MoveUserValues_Handler,
 		},
 		{
 			MethodName: "GetConflicts",
