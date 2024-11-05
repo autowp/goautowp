@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/autowp/goautowp/i18nbundle"
@@ -50,6 +51,7 @@ type Repository struct {
 	db                *goqu.Database
 	i18n              *i18nbundle.I18n
 	listOptions       map[int64]map[int64]string
+	listOptionsMutex  sync.RWMutex
 	listOptionsChilds map[int64]map[int64][]int64
 	engineAttributes  []int64
 }
@@ -63,6 +65,7 @@ func NewRepository(
 		db:                db,
 		i18n:              i18n,
 		listOptions:       make(map[int64]map[int64]string),
+		listOptionsMutex:  sync.RWMutex{},
 		listOptionsChilds: make(map[int64]map[int64][]int64),
 		engineAttributes:  make([]int64, 0),
 	}
@@ -665,6 +668,13 @@ func (s *Repository) ListOptionsText(ctx context.Context, attributeID int64, id 
 }
 
 func (s *Repository) loadListOptions(ctx context.Context) error {
+	s.listOptionsMutex.Lock()
+	defer s.listOptionsMutex.Unlock()
+
+	if len(s.listOptions) > 0 {
+		return nil
+	}
+
 	var rows []schema.AttrsListOptionRow
 
 	err := s.db.Select(
