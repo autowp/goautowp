@@ -222,9 +222,10 @@ func ExecAndRetryOnDeadlock(ctx context.Context, executor exec.QueryExecutor) (s
 		res               sql.Result
 		err               error
 		isDeadlockAvoided bool
+		retriesLeft       = 10
 	)
 
-	for !isDeadlockAvoided {
+	for !isDeadlockAvoided && retriesLeft > 0 {
 		res, err = executor.ExecContext(ctx)
 		if err != nil {
 			if !IsMysqlDeadlockError(err) {
@@ -233,6 +234,7 @@ func ExecAndRetryOnDeadlock(ctx context.Context, executor exec.QueryExecutor) (s
 
 			logrus.Warn("Deadlock detected. Retrying")
 			time.Sleep(time.Millisecond)
+			retriesLeft--
 		} else {
 			isDeadlockAvoided = true
 		}
