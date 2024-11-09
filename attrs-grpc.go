@@ -488,7 +488,7 @@ func (s *AttrsGRPCServer) SetUserValues(ctx context.Context, in *AttrSetUserValu
 	for _, item := range in.GetItems() {
 		protoValue := item.GetValue()
 
-		err := s.repository.SetUserValue(
+		_, err = s.repository.SetUserValue(
 			ctx,
 			userID,
 			item.GetAttributeId(),

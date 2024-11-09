@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
@@ -1573,4 +1574,159 @@ func TestMoveValues(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Empty(t, values.GetItems())
+}
+
+func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	// set initial value
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: intAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 77,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	values, err := client.GetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrUserValuesRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, values.GetItems())
+	require.Len(t, values.GetItems(), 1)
+	value := values.GetItems()[0]
+
+	require.Equal(t, itemID, value.GetItemId())
+	require.Equal(t, intAttributeID, value.GetAttributeId())
+	require.True(t, value.GetValue().GetValid())
+	require.False(t, value.GetValue().GetIsEmpty())
+	require.Equal(t, int32(77), value.GetValue().GetIntValue())
+
+	// set secondary value
+	time.Sleep(time.Second)
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: intAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 78,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	values, err = client.GetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrUserValuesRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, values.GetItems())
+	require.Len(t, values.GetItems(), 1)
+	secondaryValue := values.GetItems()[0]
+
+	require.Equal(t, itemID, secondaryValue.GetItemId())
+	require.Equal(t, intAttributeID, secondaryValue.GetAttributeId())
+	require.True(t, secondaryValue.GetValue().GetValid())
+	require.False(t, secondaryValue.GetValue().GetIsEmpty())
+	require.Equal(t, int32(78), secondaryValue.GetValue().GetIntValue())
+
+	require.NotEqual(t, value.GetUpdateDate().AsTime(), secondaryValue.GetUpdateDate().AsTime())
+
+	// set secondary value again
+	time.Sleep(time.Second)
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: intAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 78,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	values, err = client.GetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrUserValuesRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, values.GetItems())
+	require.Len(t, values.GetItems(), 1)
+	thirdValue := values.GetItems()[0]
+
+	require.Equal(t, itemID, thirdValue.GetItemId())
+	require.Equal(t, intAttributeID, thirdValue.GetAttributeId())
+	require.True(t, thirdValue.GetValue().GetValid())
+	require.False(t, thirdValue.GetValue().GetIsEmpty())
+	require.Equal(t, int32(78), thirdValue.GetValue().GetIntValue())
+
+	require.Equal(t, secondaryValue.GetUpdateDate().AsTime(), thirdValue.GetUpdateDate().AsTime())
 }

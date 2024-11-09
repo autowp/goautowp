@@ -8,10 +8,10 @@ import (
 
 const (
 	AttrsUserValuesIntTableName               = "attrs_user_values_int"
-	AttrsUserValuesIntTableUserIDColName      = "user_id"
-	AttrsUserValuesIntTableAttributeIDColName = "attribute_id"
-	AttrsUserValuesIntTableItemIDColName      = "item_id"
-	AttrsUserValuesIntTableValueColName       = "value"
+	AttrsUserValuesIntTableUserIDColName      = AttrsUserValuesTypeTableUserIDColName
+	AttrsUserValuesIntTableAttributeIDColName = AttrsUserValuesTypeTableAttributeIDColName
+	AttrsUserValuesIntTableItemIDColName      = AttrsUserValuesTypeTableItemIDColName
+	AttrsUserValuesIntTableValueColName       = AttrsUserValuesTypeTableValueColName
 )
 
 var (

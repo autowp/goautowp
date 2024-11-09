@@ -15,6 +15,11 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+const (
+	mysqlDuplicateKeyErrorCode = 1062
+	mysqlDeadlockErrorCode     = 1213
+)
+
 // Close resource and prints error.
 func Close(c io.Closer) {
 	if err := c.Close(); err != nil {
@@ -211,10 +216,18 @@ func NullBoolToBoolPtr(value sql.NullBool) *bool {
 	return nil
 }
 
-func IsMysqlDeadlockError(err error) bool {
+func isMysqlErrorCode(err error, code uint16) bool {
 	var me *mysql.MySQLError
 
-	return errors.As(err, &me) && me.Number == 1213
+	return errors.As(err, &me) && me.Number == code
+}
+
+func IsMysqlDuplicateKeyError(err error) bool {
+	return isMysqlErrorCode(err, mysqlDuplicateKeyErrorCode)
+}
+
+func IsMysqlDeadlockError(err error) bool {
+	return isMysqlErrorCode(err, mysqlDeadlockErrorCode)
 }
 
 func ExecAndRetryOnDeadlock(ctx context.Context, executor exec.QueryExecutor) (sql.Result, error) {

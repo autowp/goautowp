@@ -16,6 +16,11 @@ const (
 	AttrsUserValuesTableAddDateTimeColName = "add_date"
 	AttrsUserValuesTableConflictColName    = "conflict"
 	AttrsUserValuesTableWeightColName      = "weight"
+
+	AttrsUserValuesTypeTableUserIDColName      = "user_id"
+	AttrsUserValuesTypeTableAttributeIDColName = "attribute_id"
+	AttrsUserValuesTypeTableItemIDColName      = "item_id"
+	AttrsUserValuesTypeTableValueColName       = "value"
 )
 
 var (

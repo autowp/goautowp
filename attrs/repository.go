@@ -14,6 +14,7 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -849,12 +850,29 @@ func (s *Repository) updateAttributeActualValue(
 		}
 	}
 
-	res, err := s.setActualValue(ctx, attribute, itemID, actualValue)
+	somethingChanged, err := s.setActualValue(ctx, attribute, itemID, actualValue)
 	if err != nil {
 		return false, fmt.Errorf("setActualValue(%d, %d): %w", attribute.ID, itemID, err)
 	}
 
-	return res, nil
+	if somethingChanged {
+		err = s.propagateInheritance(ctx, attribute, itemID)
+		if err != nil {
+			return false, fmt.Errorf("propagateInheritance(%d, %d): %w", attribute.ID, itemID, err)
+		}
+
+		err = s.propagateEngine(ctx, attribute, itemID)
+		if err != nil {
+			return false, fmt.Errorf("propagateEngine(%d, %d): %w", attribute.ID, itemID, err)
+		}
+
+		err = s.refreshConflictFlag(ctx, attribute.ID, itemID)
+		if err != nil {
+			return false, fmt.Errorf("refreshConflictFlag(%d, %d): %w", attribute.ID, itemID, err)
+		}
+	}
+
+	return somethingChanged, nil
 }
 
 type valueItem struct {
@@ -1467,100 +1485,62 @@ func (s *Repository) setActualValue(
 	return valueChanged, nil
 }
 
-func (s *Repository) setStringUserValue(
-	ctx context.Context, attributeID, itemID, userID int64, value string, isEmpty bool,
+func (s *Repository) setScalarUserValue(
+	ctx context.Context, attributeID, itemID, userID int64, table exp.IdentifierExpression, sqlValue interface{},
 ) (bool, error) {
-	res, err := s.db.Insert(schema.AttrsUserValuesStringTable).Rows(goqu.Record{
-		schema.AttrsUserValuesStringTableAttributeIDColName: attributeID,
-		schema.AttrsUserValuesStringTableItemIDColName:      itemID,
-		schema.AttrsUserValuesStringTableUserIDColName:      userID,
-		schema.AttrsUserValuesStringTableValueColName: sql.NullString{
-			String: value,
-			Valid:  !isEmpty,
-		},
-	}).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsUserValuesStringTableAttributeIDColName+
-				","+schema.AttrsUserValuesStringTableItemIDColName+
-				","+schema.AttrsUserValuesStringTableUserIDColName,
-			goqu.Record{
-				schema.AttrsUserValuesStringTableValueColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsUserValuesStringTableValueColName),
-				),
-			},
-		)).Executor().ExecContext(ctx)
+	res, err := s.db.Insert(table).Rows(goqu.Record{
+		schema.AttrsUserValuesTypeTableAttributeIDColName: attributeID,
+		schema.AttrsUserValuesTypeTableItemIDColName:      itemID,
+		schema.AttrsUserValuesTypeTableUserIDColName:      userID,
+		schema.AttrsUserValuesTypeTableValueColName:       sqlValue,
+	}).Executor().ExecContext(ctx)
 	if err != nil {
-		return false, err
+		if !util.IsMysqlDuplicateKeyError(err) {
+			return false, err
+		}
+
+		res, err = s.db.Update(table).Set(goqu.Record{
+			schema.AttrsUserValuesTypeTableValueColName: sqlValue,
+		}).Where(
+			table.Col(schema.AttrsUserValuesTypeTableAttributeIDColName).Eq(attributeID),
+			table.Col(schema.AttrsUserValuesStringTableItemIDColName).Eq(itemID),
+			table.Col(schema.AttrsUserValuesStringTableUserIDColName).Eq(userID),
+		).Executor().ExecContext(ctx)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	affected, err := res.RowsAffected()
 
 	return affected > 0, err
+}
+
+func (s *Repository) setStringUserValue(
+	ctx context.Context, attributeID, itemID, userID int64, value string, isEmpty bool,
+) (bool, error) {
+	return s.setScalarUserValue(ctx, attributeID, itemID, userID, schema.AttrsUserValuesStringTable, sql.NullString{
+		String: value,
+		Valid:  !isEmpty,
+	})
 }
 
 func (s *Repository) setIntUserValue(
 	ctx context.Context, attributeID, itemID, userID int64, value int32, isEmpty bool,
 ) (bool, error) {
-	res, err := s.db.Insert(schema.AttrsUserValuesIntTable).Rows(goqu.Record{
-		schema.AttrsUserValuesIntTableAttributeIDColName: attributeID,
-		schema.AttrsUserValuesIntTableItemIDColName:      itemID,
-		schema.AttrsUserValuesIntTableUserIDColName:      userID,
-		schema.AttrsUserValuesIntTableValueColName: sql.NullInt32{
-			Int32: value,
-			Valid: !isEmpty,
-		},
-	}).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsUserValuesIntTableAttributeIDColName+
-				","+schema.AttrsUserValuesIntTableItemIDColName+
-				","+schema.AttrsUserValuesIntTableUserIDColName,
-			goqu.Record{
-				schema.AttrsUserValuesIntTableValueColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsUserValuesIntTableValueColName),
-				),
-			},
-		)).Executor().ExecContext(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	affected, err := res.RowsAffected()
-
-	return affected > 0, err
+	return s.setScalarUserValue(ctx, attributeID, itemID, userID, schema.AttrsUserValuesIntTable, sql.NullInt32{
+		Int32: value,
+		Valid: !isEmpty,
+	})
 }
 
 func (s *Repository) setFloatUserValue(
 	ctx context.Context, attributeID, itemID, userID int64, value float64, isEmpty bool,
 ) (bool, error) {
-	res, err := s.db.Insert(schema.AttrsUserValuesFloatTable).Rows(goqu.Record{
-		schema.AttrsUserValuesFloatTableAttributeIDColName: attributeID,
-		schema.AttrsUserValuesFloatTableItemIDColName:      itemID,
-		schema.AttrsUserValuesFloatTableUserIDColName:      userID,
-		schema.AttrsUserValuesFloatTableValueColName: sql.NullFloat64{
-			Float64: value,
-			Valid:   !isEmpty,
-		},
-	}).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsUserValuesFloatTableAttributeIDColName+
-				","+schema.AttrsUserValuesFloatTableItemIDColName+
-				","+schema.AttrsUserValuesFloatTableUserIDColName,
-			goqu.Record{
-				schema.AttrsUserValuesFloatTableValueColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsUserValuesFloatTableValueColName),
-				),
-			},
-		)).Executor().ExecContext(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	affected, err := res.RowsAffected()
-
-	return affected > 0, err
+	return s.setScalarUserValue(ctx, attributeID, itemID, userID, schema.AttrsUserValuesFloatTable, sql.NullFloat64{
+		Float64: value,
+		Valid:   !isEmpty,
+	})
 }
 
 func (s *Repository) setListUserValue(
@@ -1659,31 +1639,31 @@ func (s *Repository) setListUserValue(
 	return deleted > 0 || affected > 0, err
 }
 
-func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, itemID int64, value Value) error {
+func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, itemID int64, value Value) (bool, error) {
 	success, attribute, err := s.Attribute(ctx, attributeID)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if !success {
-		return fmt.Errorf("%w: `%d`", errAttributeNotFound, attributeID)
+		return false, fmt.Errorf("%w: `%d`", errAttributeNotFound, attributeID)
 	}
 
 	if !attribute.TypeID.Valid {
-		return nil
+		return false, nil
 	}
 
 	if !value.Valid {
-		return s.DeleteUserValue(ctx, attributeID, itemID, userID)
+		return false, s.DeleteUserValue(ctx, attributeID, itemID, userID)
 	}
 
 	oldValue, err := s.UserValue(ctx, attributeID, itemID, userID)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if oldValue.Equals(value) {
-		return nil
+		return false, nil
 	}
 
 	_, err = s.db.Insert(schema.AttrsUserValuesTable).Rows(goqu.Record{
@@ -1692,20 +1672,9 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 		schema.AttrsUserValuesTableUserIDColName:      userID,
 		schema.AttrsUserValuesTableAddDateColName:     goqu.Func("NOW"),
 		schema.AttrsUserValuesTableUpdateDateColName:  goqu.Func("NOW"),
-	}).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsUserValuesTableAttributeIDColName+
-				","+schema.AttrsUserValuesTableItemIDColName+
-				","+schema.AttrsUserValuesTableUserIDColName,
-			goqu.Record{
-				schema.AttrsUserValuesTableUpdateDateColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsUserValuesTableUpdateDateColName),
-				),
-			},
-		)).Executor().ExecContext(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to insert attribute user value descriptor: %w", err)
+	}).Executor().ExecContext(ctx)
+	if err != nil && !util.IsMysqlDuplicateKeyError(err) {
+		return false, fmt.Errorf("failed to insert attribute user value descriptor: %w", err)
 	}
 
 	valueChanged := false
@@ -1714,7 +1683,7 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
 		valueChanged, err = s.setStringUserValue(ctx, attribute.ID, itemID, userID, value.StringValue, value.IsEmpty)
 		if err != nil {
-			return fmt.Errorf(
+			return false, fmt.Errorf(
 				"setStringUserValue(%d, %d, %d, %s, %t): %w",
 				attribute.ID, itemID, userID, value.StringValue, value.IsEmpty, err,
 			)
@@ -1723,7 +1692,7 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	case schema.AttrsAttributeTypeIDInteger:
 		valueChanged, err = s.setIntUserValue(ctx, attribute.ID, itemID, userID, value.IntValue, value.IsEmpty)
 		if err != nil {
-			return fmt.Errorf(
+			return false, fmt.Errorf(
 				"setIntUserValue(%d, %d, %d, %d, %t): %w",
 				attribute.ID, itemID, userID, value.IntValue, value.IsEmpty, err,
 			)
@@ -1737,7 +1706,7 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 
 		valueChanged, err = s.setIntUserValue(ctx, attribute.ID, itemID, userID, intValue, value.IsEmpty)
 		if err != nil {
-			return fmt.Errorf(
+			return false, fmt.Errorf(
 				"setIntUserValue(%d, %d, %d, %d, %t): %w",
 				attribute.ID, itemID, userID, value.IntValue, value.IsEmpty, err,
 			)
@@ -1746,7 +1715,7 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	case schema.AttrsAttributeTypeIDFloat:
 		valueChanged, err = s.setFloatUserValue(ctx, attribute.ID, itemID, userID, value.FloatValue, value.IsEmpty)
 		if err != nil {
-			return fmt.Errorf(
+			return false, fmt.Errorf(
 				"setFloatUserValue(%d, %d, %d, %x, %t): %w",
 				attribute.ID, itemID, userID, value.IntValue, value.IsEmpty, err,
 			)
@@ -1755,7 +1724,7 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	case schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree:
 		valueChanged, err = s.setListUserValue(ctx, attribute.ID, itemID, userID, value.ListValue, value.IsEmpty)
 		if err != nil {
-			return fmt.Errorf(
+			return false, fmt.Errorf(
 				"setListUserValue(%d, %d, %d, %v, %t): %w",
 				attribute.ID, itemID, userID, value.ListValue, value.IsEmpty, err,
 			)
@@ -1764,29 +1733,25 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	case schema.AttrsAttributeTypeIDUnknown:
 	}
 
+	if valueChanged {
+		_, err = s.db.Update(schema.AttrsUserValuesTable).Set(goqu.Record{
+			schema.AttrsUserValuesTableUpdateDateColName: goqu.Func("NOW"),
+		}).Where(
+			schema.AttrsUserValuesTableAttributeIDCol.Eq(attribute.ID),
+			schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
+			schema.AttrsUserValuesTableUserIDCol.Eq(userID),
+		).Executor().ExecContext(ctx)
+		if err != nil {
+			return false, fmt.Errorf("failed to update attribute user value descriptor: %w", err)
+		}
+	}
+
 	somethingChanged, err := s.updateAttributeActualValue(ctx, attribute, itemID)
 	if err != nil {
-		return fmt.Errorf("updateAttributeActualValue(%d, %d): %w", attribute.ID, itemID, err)
+		return false, fmt.Errorf("updateAttributeActualValue(%d, %d): %w", attribute.ID, itemID, err)
 	}
 
-	if somethingChanged || valueChanged {
-		err = s.propagateInheritance(ctx, attribute, itemID)
-		if err != nil {
-			return fmt.Errorf("propagateInheritance(%d, %d): %w", attribute.ID, itemID, err)
-		}
-
-		err = s.propagateEngine(ctx, attribute, itemID)
-		if err != nil {
-			return fmt.Errorf("propagateEngine(%d, %d): %w", attribute.ID, itemID, err)
-		}
-
-		err = s.refreshConflictFlag(ctx, attribute.ID, itemID)
-		if err != nil {
-			return fmt.Errorf("refreshConflictFlag(%d, %d): %w", attribute.ID, itemID, err)
-		}
-	}
-
-	return nil
+	return somethingChanged || valueChanged, nil
 }
 
 func (s *Repository) propagateInheritance(ctx context.Context, attribute schema.AttrsAttributeRow, itemID int64) error {
