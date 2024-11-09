@@ -234,6 +234,7 @@ func ExecAndRetryOnDeadlock(ctx context.Context, executor exec.QueryExecutor) (s
 
 			logrus.Warn("Deadlock detected. Retrying")
 			time.Sleep(time.Millisecond)
+
 			retriesLeft--
 		} else {
 			isDeadlockAvoided = true
