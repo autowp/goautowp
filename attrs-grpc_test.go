@@ -1201,3 +1201,242 @@ func TestSetValuesRaceConditions(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestValuesInheritsThroughItem(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	childItemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	inheritorItemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	_, err = goquDB.Insert(schema.ItemParentTable).Rows(
+		goqu.Record{
+			schema.ItemParentTableItemIDColName:   childItemID,
+			schema.ItemParentTableParentIDColName: itemID,
+			schema.ItemParentTableCatnameColName:  "vehicle1",
+			schema.ItemParentTableTypeColName:     0,
+		},
+		goqu.Record{
+			schema.ItemParentTableItemIDColName:   inheritorItemID,
+			schema.ItemParentTableParentIDColName: childItemID,
+			schema.ItemParentTableCatnameColName:  "vehicle1",
+			schema.ItemParentTableTypeColName:     0,
+		},
+	).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: intAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 77,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	for _, currentItemID := range []int64{itemID, childItemID, inheritorItemID} {
+		values, err := client.GetValues(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			&AttrValuesRequest{
+				ItemId:   currentItemID,
+				Language: "en",
+			},
+		)
+		require.NoError(t, err)
+		require.NotEmpty(t, values.GetItems())
+
+		var intFound bool
+
+		for _, val := range values.GetItems() {
+			require.Equal(t, val.GetItemId(), currentItemID)
+
+			if val.GetAttributeId() == intAttributeID {
+				intFound = true
+
+				require.True(t, val.GetValue().GetValid())
+				require.False(t, val.GetValue().GetIsEmpty())
+				require.Equal(t, int32(77), val.GetValue().GetIntValue())
+			}
+		}
+
+		require.True(t, intFound)
+	}
+}
+
+func TestInheritedValueOverrided(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	childItemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
+		schema.ItemParentTableItemIDColName:   childItemID,
+		schema.ItemParentTableParentIDColName: itemID,
+		schema.ItemParentTableCatnameColName:  "vehicle1",
+		schema.ItemParentTableTypeColName:     0,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: intAttributeID,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 77,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: intAttributeID,
+					ItemId:      childItemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 219,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	values, err := client.GetValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrValuesRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, values.GetItems())
+
+	intFound := false
+
+	for _, val := range values.GetItems() {
+		require.Equal(t, val.GetItemId(), itemID)
+
+		if val.GetAttributeId() == intAttributeID {
+			intFound = true
+
+			require.True(t, val.GetValue().GetValid())
+			require.False(t, val.GetValue().GetIsEmpty())
+			require.Equal(t, int32(77), val.GetValue().GetIntValue())
+		}
+	}
+
+	require.True(t, intFound)
+
+	// check values
+	values, err = client.GetValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrValuesRequest{
+			ItemId:   childItemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, values.GetItems())
+
+	intFound = false
+
+	for _, val := range values.GetItems() {
+		require.Equal(t, val.GetItemId(), childItemID)
+
+		if val.GetAttributeId() == intAttributeID {
+			intFound = true
+
+			require.True(t, val.GetValue().GetValid())
+			require.False(t, val.GetValue().GetIsEmpty())
+			require.Equal(t, int32(219), val.GetValue().GetIntValue())
+		}
+	}
+
+	require.True(t, intFound)
+}

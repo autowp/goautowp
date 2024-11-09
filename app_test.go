@@ -53,12 +53,13 @@ func TestServe(t *testing.T) {
 	}()
 
 	err := app.Serve(ctx, ServeOptions{
-		DuplicateFinderAMQP: true,
-		MonitoringAMQP:      true,
-		GRPC:                true,
-		Public:              true,
-		Private:             true,
-		Autoban:             true,
+		DuplicateFinderAMQP:   true,
+		MonitoringAMQP:        true,
+		GRPC:                  true,
+		Public:                true,
+		Private:               true,
+		Autoban:               true,
+		AttrsUpdateValuesAMQP: true,
 	}, done)
 	require.NoError(t, err)
 }
