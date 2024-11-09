@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/autowp/goautowp/attrsamqp"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
@@ -26,12 +27,13 @@ import (
 )
 
 type ServeOptions struct {
-	DuplicateFinderAMQP bool
-	MonitoringAMQP      bool
-	GRPC                bool
-	Public              bool
-	Private             bool
-	Autoban             bool
+	DuplicateFinderAMQP   bool
+	MonitoringAMQP        bool
+	GRPC                  bool
+	Public                bool
+	Private               bool
+	Autoban               bool
+	AttrsUpdateValuesAMQP bool
 }
 
 // Application is Service Main Object.
@@ -169,6 +171,19 @@ func (s *Application) Serve(ctx context.Context, options ServeOptions, quit chan
 
 		go func() {
 			err := s.Autoban(ctx, quit)
+			if err != nil {
+				logrus.Errorln(err.Error())
+			}
+
+			wg.Done()
+		}()
+	}
+
+	if options.AttrsUpdateValuesAMQP {
+		wg.Add(1)
+
+		go func() {
+			err := s.AttrsUpdateValuesAMQP(ctx, quit)
 			if err != nil {
 				logrus.Errorln(err.Error())
 			}
@@ -631,6 +646,30 @@ func (s *Application) ListenMonitoringAMQP(ctx context.Context, quit chan bool) 
 	}
 
 	logrus.Info("Monitoring listener stopped")
+
+	return nil
+}
+
+func (s *Application) AttrsUpdateValuesAMQP(ctx context.Context, quit chan bool) error {
+	repository, err := s.container.AttrsRepository()
+	if err != nil {
+		return err
+	}
+
+	listener := attrsamqp.NewAttrsAMQP(repository)
+
+	cfg := s.container.Config()
+
+	logrus.Info("AttrsUpdateValuesAMQP listener started")
+
+	err = listener.ListenUpdateValues(ctx, cfg.RabbitMQ, cfg.Attrs.AttrsUpdateValuesQueue, quit)
+	if err != nil {
+		logrus.Error(err.Error())
+
+		return err
+	}
+
+	logrus.Info("AttrsUpdateValuesAMQP listener stopped")
 
 	return nil
 }

@@ -809,6 +809,24 @@ func (s *Repository) updateActualValue(ctx context.Context, attributeID, itemID 
 	return nil
 }
 
+func (s *Repository) UpdateActualValues(ctx context.Context, itemID int64) error {
+	attributes, err := s.Attributes(ctx, 0, 0)
+	if err != nil {
+		return err
+	}
+
+	for _, attribute := range attributes {
+		if attribute.TypeID.Valid {
+			_, err = s.updateAttributeActualValue(ctx, attribute, itemID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (s *Repository) updateAttributeActualValue(
 	ctx context.Context, attribute schema.AttrsAttributeRow, itemID int64,
 ) (bool, error) {
@@ -2188,6 +2206,31 @@ func (s *Repository) UpdateAllActualValues(ctx context.Context) error {
 	for _, itemID := range itemIDs {
 		for _, attribute := range attributes {
 			if attribute.TypeID.Valid {
+				_, err = s.updateAttributeActualValue(ctx, attribute, itemID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) UpdateInheritedValues(ctx context.Context, itemID int64) error {
+	attributes, err := s.Attributes(ctx, 0, 0)
+	if err != nil {
+		return err
+	}
+
+	for _, attribute := range attributes {
+		if attribute.TypeID.Valid {
+			haveValue, err := s.haveOwnAttributeValue(ctx, attribute.ID, itemID)
+			if err != nil {
+				return err
+			}
+
+			if !haveValue {
 				_, err = s.updateAttributeActualValue(ctx, attribute, itemID)
 				if err != nil {
 					return err

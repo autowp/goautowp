@@ -14,6 +14,8 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
+const attrsUpdateValuesAMQPFlag = "attrs-update-values-amqp"
+
 var autowpApp *goautowp.Application
 
 func captureOsInterrupt() chan bool {
@@ -190,6 +192,10 @@ func mainReturnWithCode() int { //nolint: maintidx
 						Name:     "autoban",
 						Required: false,
 					},
+					&cli.BoolFlag{
+						Name:     attrsUpdateValuesAMQPFlag,
+						Required: false,
+					},
 				},
 				Action: func(ctx context.Context, cli *cli.Command) error {
 					err := autowpApp.MigrateAutowp(ctx)
@@ -205,12 +211,13 @@ func mainReturnWithCode() int { //nolint: maintidx
 					quit := captureOsInterrupt()
 
 					return autowpApp.Serve(ctx, goautowp.ServeOptions{
-						DuplicateFinderAMQP: cli.Bool("df-amqp"),
-						MonitoringAMQP:      cli.Bool("monitoring-amqp"),
-						GRPC:                cli.Bool("grpc"),
-						Public:              cli.Bool("public"),
-						Private:             cli.Bool("private"),
-						Autoban:             cli.Bool("autoban"),
+						DuplicateFinderAMQP:   cli.Bool("df-amqp"),
+						MonitoringAMQP:        cli.Bool("monitoring-amqp"),
+						GRPC:                  cli.Bool("grpc"),
+						Public:                cli.Bool("public"),
+						Private:               cli.Bool("private"),
+						Autoban:               cli.Bool("autoban"),
+						AttrsUpdateValuesAMQP: cli.Bool(attrsUpdateValuesAMQPFlag),
 					}, quit)
 				},
 			},
