@@ -1,12 +1,14 @@
 package util
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"io"
 	"strings"
 	"time"
 
+	"github.com/doug-martin/goqu/v9/exec"
 	"github.com/go-sql-driver/mysql"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
@@ -213,4 +215,28 @@ func IsMysqlDeadlockError(err error) bool {
 	var me *mysql.MySQLError
 
 	return errors.As(err, &me) && me.Number == 1213
+}
+
+func ExecAndRetryOnDeadlock(ctx context.Context, executor exec.QueryExecutor) (sql.Result, error) {
+	var (
+		res               sql.Result
+		err               error
+		isDeadlockAvoided bool
+	)
+
+	for !isDeadlockAvoided {
+		res, err = executor.ExecContext(ctx)
+		if err != nil {
+			if !IsMysqlDeadlockError(err) {
+				return res, err
+			}
+
+			logrus.Warn("Deadlock detected. Retrying")
+			time.Sleep(time.Millisecond)
+		} else {
+			isDeadlockAvoided = true
+		}
+	}
+
+	return res, err
 }

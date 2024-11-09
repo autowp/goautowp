@@ -15,7 +15,6 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -1067,10 +1066,12 @@ func (s *Repository) calcInheritedValue(ctx context.Context, attributeID int64, 
 }
 
 func (s *Repository) clearStringValue(ctx context.Context, attributeID, itemID int64) (bool, error) {
-	res, err := s.db.Delete(schema.AttrsValuesStringTable).Where(
-		schema.AttrsValuesStringTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsValuesStringTableItemIDCol.Eq(itemID),
-	).Executor().ExecContext(ctx)
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Delete(schema.AttrsValuesStringTable).Where(
+			schema.AttrsValuesStringTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsValuesStringTableItemIDCol.Eq(itemID),
+		).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -1084,10 +1085,12 @@ func (s *Repository) clearStringValue(ctx context.Context, attributeID, itemID i
 }
 
 func (s *Repository) clearIntValue(ctx context.Context, attributeID, itemID int64) (bool, error) {
-	res, err := s.db.Delete(schema.AttrsValuesIntTable).Where(
-		schema.AttrsValuesIntTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsValuesIntTableItemIDCol.Eq(itemID),
-	).Executor().ExecContext(ctx)
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Delete(schema.AttrsValuesIntTable).Where(
+			schema.AttrsValuesIntTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsValuesIntTableItemIDCol.Eq(itemID),
+		).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -1101,10 +1104,12 @@ func (s *Repository) clearIntValue(ctx context.Context, attributeID, itemID int6
 }
 
 func (s *Repository) clearFloatValue(ctx context.Context, attributeID, itemID int64) (bool, error) {
-	res, err := s.db.Delete(schema.AttrsValuesFloatTable).Where(
-		schema.AttrsValuesFloatTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsValuesFloatTableItemIDCol.Eq(itemID),
-	).Executor().ExecContext(ctx)
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Delete(schema.AttrsValuesFloatTable).Where(
+			schema.AttrsValuesFloatTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsValuesFloatTableItemIDCol.Eq(itemID),
+		).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -1118,10 +1123,12 @@ func (s *Repository) clearFloatValue(ctx context.Context, attributeID, itemID in
 }
 
 func (s *Repository) clearListValue(ctx context.Context, attributeID, itemID int64) (bool, error) {
-	res, err := s.db.Delete(schema.AttrsValuesListTable).Where(
-		schema.AttrsValuesListTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsValuesListTableItemIDCol.Eq(itemID),
-	).Executor().ExecContext(ctx)
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Delete(schema.AttrsValuesListTable).Where(
+			schema.AttrsValuesListTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsValuesListTableItemIDCol.Eq(itemID),
+		).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -1163,10 +1170,12 @@ func (s *Repository) clearValue(ctx context.Context, attribute schema.AttrsAttri
 	}
 
 	// descriptor
-	res, err = s.db.Delete(schema.AttrsValuesTable).Where(
-		schema.AttrsValuesTableAttributeIDCol.Eq(attribute.ID),
-		schema.AttrsValuesTableItemIDCol.Eq(itemID),
-	).Executor().ExecContext(ctx)
+	res, err = util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Delete(schema.AttrsValuesTable).Where(
+			schema.AttrsValuesTableAttributeIDCol.Eq(attribute.ID),
+			schema.AttrsValuesTableItemIDCol.Eq(itemID),
+		).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -1182,23 +1191,25 @@ func (s *Repository) clearValue(ctx context.Context, attribute schema.AttrsAttri
 func (s *Repository) setStringValue(
 	ctx context.Context, attributeID, itemID int64, value string, isEmpty bool,
 ) (bool, error) {
-	res, err := s.db.Insert(schema.AttrsValuesStringTable).Rows(goqu.Record{
-		schema.AttrsValuesStringTableAttributeIDColName: attributeID,
-		schema.AttrsValuesStringTableItemIDColName:      itemID,
-		schema.AttrsValuesStringTableValueColName: sql.NullString{
-			String: value,
-			Valid:  !isEmpty,
-		},
-	}).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsValuesStringTableAttributeIDColName+","+schema.AttrsValuesStringTableItemIDColName,
-			goqu.Record{
-				schema.AttrsValuesStringTableValueColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsValuesStringTableValueColName),
-				),
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Insert(schema.AttrsValuesStringTable).Rows(goqu.Record{
+			schema.AttrsValuesStringTableAttributeIDColName: attributeID,
+			schema.AttrsValuesStringTableItemIDColName:      itemID,
+			schema.AttrsValuesStringTableValueColName: sql.NullString{
+				String: value,
+				Valid:  !isEmpty,
 			},
-		)).Executor().ExecContext(ctx)
+		}).OnConflict(
+			goqu.DoUpdate(
+				schema.AttrsValuesStringTableAttributeIDColName+","+schema.AttrsValuesStringTableItemIDColName,
+				goqu.Record{
+					schema.AttrsValuesStringTableValueColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.AttrsValuesStringTableValueColName),
+					),
+				},
+			)).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -1211,23 +1222,25 @@ func (s *Repository) setStringValue(
 func (s *Repository) setIntValue(
 	ctx context.Context, attributeID, itemID int64, value int32, isEmpty bool,
 ) (bool, error) {
-	res, err := s.db.Insert(schema.AttrsValuesIntTable).Rows(goqu.Record{
-		schema.AttrsValuesIntTableAttributeIDColName: attributeID,
-		schema.AttrsValuesIntTableItemIDColName:      itemID,
-		schema.AttrsValuesIntTableValueColName: sql.NullInt32{
-			Int32: value,
-			Valid: !isEmpty,
-		},
-	}).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsValuesIntTableAttributeIDColName+","+schema.AttrsValuesIntTableItemIDColName,
-			goqu.Record{
-				schema.AttrsValuesIntTableValueColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsValuesIntTableValueColName),
-				),
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Insert(schema.AttrsValuesIntTable).Rows(goqu.Record{
+			schema.AttrsValuesIntTableAttributeIDColName: attributeID,
+			schema.AttrsValuesIntTableItemIDColName:      itemID,
+			schema.AttrsValuesIntTableValueColName: sql.NullInt32{
+				Int32: value,
+				Valid: !isEmpty,
 			},
-		)).Executor().ExecContext(ctx)
+		}).OnConflict(
+			goqu.DoUpdate(
+				schema.AttrsValuesIntTableAttributeIDColName+","+schema.AttrsValuesIntTableItemIDColName,
+				goqu.Record{
+					schema.AttrsValuesIntTableValueColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.AttrsValuesIntTableValueColName),
+					),
+				},
+			)).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -1240,23 +1253,25 @@ func (s *Repository) setIntValue(
 func (s *Repository) setFloatValue(
 	ctx context.Context, attributeID, itemID int64, value float64, isEmpty bool,
 ) (bool, error) {
-	res, err := s.db.Insert(schema.AttrsValuesFloatTable).Rows(goqu.Record{
-		schema.AttrsValuesFloatTableAttributeIDColName: attributeID,
-		schema.AttrsValuesFloatTableItemIDColName:      itemID,
-		schema.AttrsValuesFloatTableValueColName: sql.NullFloat64{
-			Float64: value,
-			Valid:   !isEmpty,
-		},
-	}).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsValuesFloatTableAttributeIDColName+","+schema.AttrsValuesFloatTableItemIDColName,
-			goqu.Record{
-				schema.AttrsValuesFloatTableValueColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsValuesFloatTableValueColName),
-				),
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Insert(schema.AttrsValuesFloatTable).Rows(goqu.Record{
+			schema.AttrsValuesFloatTableAttributeIDColName: attributeID,
+			schema.AttrsValuesFloatTableItemIDColName:      itemID,
+			schema.AttrsValuesFloatTableValueColName: sql.NullFloat64{
+				Float64: value,
+				Valid:   !isEmpty,
 			},
-		)).Executor().ExecContext(ctx)
+		}).OnConflict(
+			goqu.DoUpdate(
+				schema.AttrsValuesFloatTableAttributeIDColName+","+schema.AttrsValuesFloatTableItemIDColName,
+				goqu.Record{
+					schema.AttrsValuesFloatTableValueColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.AttrsValuesFloatTableValueColName),
+					),
+				},
+			)).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -1298,41 +1313,43 @@ func (s *Repository) setListValue(
 		orderings = append(orderings, index)
 	}
 
-	res, err := s.db.Insert(schema.AttrsValuesListTable).Rows(records).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsValuesListTableAttributeIDColName+","+
-				schema.AttrsValuesListTableItemIDColName+","+
-				schema.AttrsValuesListTableOrderingColName,
-			goqu.Record{
-				schema.AttrsValuesListTableValueColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsValuesListTableValueColName),
-				),
-			},
-		)).Executor().ExecContext(ctx)
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Insert(schema.AttrsValuesListTable).Rows(records).OnConflict(
+			goqu.DoUpdate(
+				schema.AttrsValuesListTableAttributeIDColName+","+
+					schema.AttrsValuesListTableItemIDColName+","+
+					schema.AttrsValuesListTableOrderingColName,
+				goqu.Record{
+					schema.AttrsValuesListTableValueColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.AttrsValuesListTableValueColName),
+					),
+				},
+			)).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
 
-	affected, err := res.RowsAffected()
+	inserted, err := res.RowsAffected()
 	if err != nil {
 		return false, err
 	}
 
-	somethingChanges := affected > 0
-
-	_, err = s.db.Delete(schema.AttrsValuesListTable).Where(
-		schema.AttrsValuesListTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsValuesListTableItemIDCol.Eq(itemID),
-		schema.AttrsValuesListTableOrderingCol.NotIn(orderings),
-	).Executor().ExecContext(ctx)
+	res, err = util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Delete(schema.AttrsValuesListTable).Where(
+			schema.AttrsValuesListTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsValuesListTableItemIDCol.Eq(itemID),
+			schema.AttrsValuesListTableOrderingCol.NotIn(orderings),
+		).Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
 
-	affected, err = res.RowsAffected()
+	deleted, err := res.RowsAffected()
 
-	return somethingChanges || affected > 0, err
+	return inserted > 0 || deleted > 0, err
 }
 
 func (s *Repository) setActualValue(
@@ -1354,9 +1371,8 @@ func (s *Repository) setActualValue(
 	var err error
 
 	// descriptor
-	isDeadlockAvoided := false
-	for !isDeadlockAvoided {
-		_, err = s.db.Insert(schema.AttrsValuesTable).Rows(goqu.Record{
+	_, err = util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Insert(schema.AttrsValuesTable).Rows(goqu.Record{
 			schema.AttrsValuesTableAttributeIDColName: attribute.ID,
 			schema.AttrsValuesTableItemIDColName:      itemID,
 			schema.AttrsValuesTableUpdateDateColName:  goqu.Func("NOW"),
@@ -1369,16 +1385,11 @@ func (s *Repository) setActualValue(
 						goqu.C(schema.AttrsValuesTableUpdateDateColName),
 					),
 				},
-			)).Executor().ExecContext(ctx)
-		if err != nil {
-			if !util.IsMysqlDeadlockError(err) {
-				return false, err
-			}
-
-			logrus.Warn("setActualValue(): Deadlock detected. Retrying")
-		} else {
-			isDeadlockAvoided = true
-		}
+			),
+		).Executor(),
+	)
+	if err != nil {
+		return false, err
 	}
 
 	// value
@@ -1538,11 +1549,10 @@ func (s *Repository) setListUserValue(
 	ctx context.Context, attributeID, itemID, userID int64, value []int64, isEmpty bool,
 ) (bool, error) {
 	var (
-		err               error
-		affected          int64
-		res               sql.Result
-		isDeadlockAvoided = false
-		deleted           int64
+		err      error
+		affected int64
+		res      sql.Result
+		deleted  int64
 	)
 
 	insertExpr := s.db.Insert(schema.AttrsUserValuesListTable).Cols(
@@ -1567,28 +1577,20 @@ func (s *Repository) setListUserValue(
 			))
 
 	if isEmpty {
-		isDeadlockAvoided = false
-		for !isDeadlockAvoided {
-			res, err = insertExpr.Vals([]interface{}{attributeID, itemID, userID, 0, nil}).Executor().ExecContext(ctx)
-			if err != nil {
-				if !util.IsMysqlDeadlockError(err) {
-					return false, fmt.Errorf("error inserting attrs user list value: %w", err)
-				}
+		res, err = util.ExecAndRetryOnDeadlock(ctx,
+			insertExpr.Vals([]interface{}{attributeID, itemID, userID, 0, nil}).Executor(),
+		)
+		if err != nil {
+			return false, fmt.Errorf("error inserting attrs user list value: %w", err)
+		}
 
-				logrus.Warn("setListUserValue(): Deadlock detected. Retrying")
-			} else {
-				isDeadlockAvoided = true
-
-				affected, err = res.RowsAffected()
-				if err != nil {
-					return false, err
-				}
-			}
+		affected, err = res.RowsAffected()
+		if err != nil {
+			return false, err
 		}
 	} else if len(value) > 0 {
-		isDeadlockAvoided = false
-		for !isDeadlockAvoided {
-			res, err = insertExpr.
+		res, err = util.ExecAndRetryOnDeadlock(ctx,
+			insertExpr.
 				FromQuery(
 					s.db.Select(
 						schema.AttrsListOptionsTableAttributeIDCol,
@@ -1602,52 +1604,38 @@ func (s *Repository) setListUserValue(
 							schema.AttrsListOptionsTableAttributeIDCol.Eq(attributeID),
 							schema.AttrsListOptionsTableIDCol.In(value),
 						),
-				).Executor().ExecContext(ctx)
-			if err != nil {
-				if !util.IsMysqlDeadlockError(err) {
-					return false, fmt.Errorf("error inserting attrs user list value: %w", err)
-				}
+				).Executor(),
+		)
+		if err != nil {
+			return false, fmt.Errorf("error inserting attrs user list value: %w", err)
+		}
 
-				logrus.Warn("setListUserValue(): Deadlock detected. Retrying")
-			} else {
-				isDeadlockAvoided = true
-
-				affected, err = res.RowsAffected()
-				if err != nil {
-					return false, err
-				}
-			}
+		affected, err = res.RowsAffected()
+		if err != nil {
+			return false, err
 		}
 	}
 
-	for !isDeadlockAvoided {
-		deleteExpr := s.db.Delete(schema.AttrsUserValuesListTable).Where(
-			schema.AttrsUserValuesListTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesListTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesListTableUserIDCol.Eq(userID),
-		)
+	deleteExpr := s.db.Delete(schema.AttrsUserValuesListTable).Where(
+		schema.AttrsUserValuesListTableAttributeIDCol.Eq(attributeID),
+		schema.AttrsUserValuesListTableItemIDCol.Eq(itemID),
+		schema.AttrsUserValuesListTableUserIDCol.Eq(userID),
+	)
 
-		if isEmpty {
-			deleteExpr = deleteExpr.Where(schema.AttrsUserValuesListTableValueCol.IsNotNull())
-		} else if len(value) > 0 {
-			deleteExpr = deleteExpr.Where(schema.AttrsUserValuesListTableValueCol.NotIn(value))
-		}
+	if isEmpty {
+		deleteExpr = deleteExpr.Where(schema.AttrsUserValuesListTableValueCol.IsNotNull())
+	} else if len(value) > 0 {
+		deleteExpr = deleteExpr.Where(schema.AttrsUserValuesListTableValueCol.NotIn(value))
+	}
 
-		res, err = deleteExpr.Executor().ExecContext(ctx)
-		if err != nil {
-			if !util.IsMysqlDeadlockError(err) {
-				return false, fmt.Errorf("error deleting attrs user list value: %w", err)
-			}
+	res, err = util.ExecAndRetryOnDeadlock(ctx, deleteExpr.Executor())
+	if err != nil {
+		return false, fmt.Errorf("error deleting attrs user list value: %w", err)
+	}
 
-			logrus.Warn("setListUserValue(): Deadlock detected. Retrying")
-		} else {
-			isDeadlockAvoided = true
-
-			deleted, err = res.RowsAffected()
-			if err != nil {
-				return false, err
-			}
-		}
+	deleted, err = res.RowsAffected()
+	if err != nil {
+		return false, err
 	}
 
 	return deleted > 0 || affected > 0, err
