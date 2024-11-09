@@ -1228,6 +1228,14 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
+	usersClient := NewUsersClient(conn)
+	me, err := usersClient.Me(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&APIMeRequest{},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, me)
+
 	client := NewAttrsClient(conn)
 
 	itemID := createItem(t, goquDB, schema.ItemRow{
@@ -1304,9 +1312,33 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 
 		require.True(t, intFound)
 	}
+
+	// delete user value
+	_, err = client.DeleteUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&DeleteAttrUserValuesRequest{
+			AttributeId: intAttributeID,
+			ItemId:      itemID,
+			UserId:      me.GetId(),
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	for _, currentItemID := range []int64{itemID, childItemID, inheritorItemID} {
+		values, err := client.GetValues(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			&AttrValuesRequest{
+				ItemId:   currentItemID,
+				Language: "en",
+			},
+		)
+		require.NoError(t, err)
+		require.Empty(t, values.GetItems())
+	}
 }
 
-func TestInheritedValueOverrided(t *testing.T) {
+func TestInheritedValueOverridden(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -1439,4 +1471,106 @@ func TestInheritedValueOverrided(t *testing.T) {
 	}
 
 	require.True(t, intFound)
+}
+
+func TestMoveValues(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	srcItemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	destItemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: intAttributeID,
+					ItemId:      srcItemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 77,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.MoveUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&MoveAttrUserValuesRequest{
+			SrcItemId:  srcItemID,
+			DestItemId: destItemID,
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	values, err := client.GetValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrValuesRequest{
+			ItemId:   destItemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, values.GetItems())
+
+	intFound := false
+
+	for _, val := range values.GetItems() {
+		require.Equal(t, val.GetItemId(), destItemID)
+
+		if val.GetAttributeId() == intAttributeID {
+			intFound = true
+
+			require.True(t, val.GetValue().GetValid())
+			require.False(t, val.GetValue().GetIsEmpty())
+			require.Equal(t, int32(77), val.GetValue().GetIntValue())
+		}
+	}
+
+	require.True(t, intFound)
+
+	// check values
+	values, err = client.GetValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrValuesRequest{
+			ItemId:   srcItemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Empty(t, values.GetItems())
 }
