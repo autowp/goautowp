@@ -2,10 +2,12 @@ package util
 
 import (
 	"database/sql"
+	"errors"
 	"io"
 	"strings"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/constraints"
@@ -205,4 +207,10 @@ func NullBoolToBoolPtr(value sql.NullBool) *bool {
 	}
 
 	return nil
+}
+
+func IsMysqlDeadlockError(err error) bool {
+	var me *mysql.MySQLError
+
+	return errors.As(err, &me) && me.Number == 1213
 }

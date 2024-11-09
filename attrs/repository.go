@@ -15,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -803,7 +804,7 @@ func (s *Repository) updateActualValue(ctx context.Context, attributeID, itemID 
 
 	_, err = s.updateAttributeActualValue(ctx, attribute, itemID)
 	if err != nil {
-		return fmt.Errorf("%w: updateAttributeActualValue(%d, %d)", errAttributeNotFound, attribute.ID, itemID)
+		return fmt.Errorf("%w: updateAttributeActualValue(%d, %d)", err, attribute.ID, itemID)
 	}
 
 	return nil
@@ -814,24 +815,29 @@ func (s *Repository) updateAttributeActualValue(
 ) (bool, error) {
 	actualValue, err := s.calcAvgUserValue(ctx, attribute, itemID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("calcAvgUserValue(%d, %d): %w", attribute.ID, itemID, err)
 	}
 
 	if !actualValue.Valid {
 		actualValue, err = s.calcEngineValue(ctx, attribute.ID, itemID)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("calcEngineValue(%d, %d): %w", attribute.ID, itemID, err)
 		}
 	}
 
 	if !actualValue.Valid {
 		actualValue, err = s.calcInheritedValue(ctx, attribute.ID, itemID)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("calcInheritedValue(%d, %d): %w", attribute.ID, itemID, err)
 		}
 	}
 
-	return s.setActualValue(ctx, attribute, itemID, actualValue)
+	res, err := s.setActualValue(ctx, attribute, itemID, actualValue)
+	if err != nil {
+		return false, fmt.Errorf("setActualValue(%d, %d): %w", attribute.ID, itemID, err)
+	}
+
+	return res, nil
 }
 
 type valueItem struct {
@@ -1337,28 +1343,42 @@ func (s *Repository) setActualValue(
 	}
 
 	if !actualValue.Valid {
-		return s.clearValue(ctx, attribute, itemID)
+		res, err := s.clearValue(ctx, attribute, itemID)
+		if err != nil {
+			return false, fmt.Errorf("clearValue(%d, %d): %w", attribute.ID, itemID, err)
+		}
+
+		return res, nil
 	}
 
 	var err error
 
 	// descriptor
-	_, err = s.db.Insert(schema.AttrsValuesTable).Rows(goqu.Record{
-		schema.AttrsValuesTableAttributeIDColName: attribute.ID,
-		schema.AttrsValuesTableItemIDColName:      itemID,
-		schema.AttrsValuesTableUpdateDateColName:  goqu.Func("NOW"),
-	}).OnConflict(
-		goqu.DoUpdate(
-			schema.AttrsValuesTableAttributeIDColName+","+schema.AttrsValuesTableItemIDColName,
-			goqu.Record{
-				schema.AttrsValuesTableUpdateDateColName: goqu.Func(
-					"VALUES",
-					goqu.C(schema.AttrsValuesTableUpdateDateColName),
-				),
-			},
-		)).Executor().ExecContext(ctx)
-	if err != nil {
-		return false, err
+	isDeadlockAvoided := false
+	for !isDeadlockAvoided {
+		_, err = s.db.Insert(schema.AttrsValuesTable).Rows(goqu.Record{
+			schema.AttrsValuesTableAttributeIDColName: attribute.ID,
+			schema.AttrsValuesTableItemIDColName:      itemID,
+			schema.AttrsValuesTableUpdateDateColName:  goqu.Func("NOW"),
+		}).OnConflict(
+			goqu.DoUpdate(
+				schema.AttrsValuesTableAttributeIDColName+","+schema.AttrsValuesTableItemIDColName,
+				goqu.Record{
+					schema.AttrsValuesTableUpdateDateColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.AttrsValuesTableUpdateDateColName),
+					),
+				},
+			)).Executor().ExecContext(ctx)
+		if err != nil {
+			if !util.IsMysqlDeadlockError(err) {
+				return false, err
+			}
+
+			logrus.Warn("setActualValue(): Deadlock detected. Retrying")
+		} else {
+			isDeadlockAvoided = true
+		}
 	}
 
 	// value
@@ -1367,9 +1387,21 @@ func (s *Repository) setActualValue(
 	switch attribute.TypeID.AttributeTypeID {
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
 		valueChanged, err = s.setStringValue(ctx, attribute.ID, itemID, actualValue.StringValue, actualValue.IsEmpty)
+		if err != nil {
+			return false, fmt.Errorf(
+				"setStringValue(%d, %d, %s, %t): %w",
+				attribute.ID, itemID, actualValue.StringValue, actualValue.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDInteger:
 		valueChanged, err = s.setIntValue(ctx, attribute.ID, itemID, actualValue.IntValue, actualValue.IsEmpty)
+		if err != nil {
+			return false, fmt.Errorf(
+				"setIntValue(%d, %d, %d, %t): %w",
+				attribute.ID, itemID, actualValue.IntValue, actualValue.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDBoolean:
 		var value int32
@@ -1378,17 +1410,32 @@ func (s *Repository) setActualValue(
 		}
 
 		valueChanged, err = s.setIntValue(ctx, attribute.ID, itemID, value, actualValue.IsEmpty)
+		if err != nil {
+			return false, fmt.Errorf(
+				"setIntValue(%d, %d, %d, %t): %w", attribute.ID, itemID, value, actualValue.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDFloat:
 		valueChanged, err = s.setFloatValue(ctx, attribute.ID, itemID, actualValue.FloatValue, actualValue.IsEmpty)
+		if err != nil {
+			return false, fmt.Errorf(
+				"setFloatValue(%d, %d, %f, %t): %w", attribute.ID, itemID, actualValue.FloatValue, actualValue.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree:
 		valueChanged, err = s.setListValue(ctx, attribute.ID, itemID, actualValue.ListValue, actualValue.IsEmpty)
+		if err != nil {
+			return false, fmt.Errorf(
+				"setFloatValue(%d, %d, %v, %t): %w", attribute.ID, itemID, actualValue.ListValue, actualValue.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDUnknown:
 	}
 
-	return valueChanged, err
+	return valueChanged, nil
 }
 
 func (s *Repository) setStringUserValue(
@@ -1491,9 +1538,11 @@ func (s *Repository) setListUserValue(
 	ctx context.Context, attributeID, itemID, userID int64, value []int64, isEmpty bool,
 ) (bool, error) {
 	var (
-		err      error
-		affected int64
-		res      sql.Result
+		err               error
+		affected          int64
+		res               sql.Result
+		isDeadlockAvoided = false
+		deleted           int64
 	)
 
 	insertExpr := s.db.Insert(schema.AttrsUserValuesListTable).Cols(
@@ -1516,60 +1565,90 @@ func (s *Repository) setListUserValue(
 					),
 				},
 			))
-	if isEmpty {
-		res, err = insertExpr.Vals([]interface{}{attributeID, itemID, userID, 0, nil}).Executor().ExecContext(ctx)
-		if err != nil {
-			return false, err
-		}
-
-		affected, err = res.RowsAffected()
-		if err != nil {
-			return false, err
-		}
-	} else if len(value) > 0 {
-		res, err = insertExpr.
-			FromQuery(
-				s.db.Select(
-					schema.AttrsListOptionsTableAttributeIDCol,
-					goqu.V(itemID),
-					goqu.V(userID),
-					goqu.L("ROW_NUMBER() OVER(ORDER BY ?)", schema.AttrsListOptionsTablePositionCol),
-					schema.AttrsListOptionsTableIDCol,
-				).
-					From(schema.AttrsListOptionsTable).
-					Where(
-						schema.AttrsListOptionsTableAttributeIDCol.Eq(attributeID),
-						schema.AttrsListOptionsTableIDCol.In(value),
-					),
-			).Executor().ExecContext(ctx)
-		if err != nil {
-			return false, err
-		}
-
-		affected, err = res.RowsAffected()
-		if err != nil {
-			return false, err
-		}
-	}
-
-	deleteExpr := s.db.Delete(schema.AttrsUserValuesListTable).Where(
-		schema.AttrsUserValuesListTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsUserValuesListTableItemIDCol.Eq(itemID),
-		schema.AttrsUserValuesListTableUserIDCol.Eq(userID),
-	)
 
 	if isEmpty {
-		deleteExpr = deleteExpr.Where(schema.AttrsUserValuesListTableValueCol.IsNotNull())
+		isDeadlockAvoided = false
+		for !isDeadlockAvoided {
+			res, err = insertExpr.Vals([]interface{}{attributeID, itemID, userID, 0, nil}).Executor().ExecContext(ctx)
+			if err != nil {
+				if !util.IsMysqlDeadlockError(err) {
+					return false, fmt.Errorf("error inserting attrs user list value: %w", err)
+				}
+
+				logrus.Warn("setListUserValue(): Deadlock detected. Retrying")
+			} else {
+				isDeadlockAvoided = true
+
+				affected, err = res.RowsAffected()
+				if err != nil {
+					return false, err
+				}
+			}
+		}
 	} else if len(value) > 0 {
-		deleteExpr = deleteExpr.Where(schema.AttrsUserValuesListTableValueCol.NotIn(value))
+		isDeadlockAvoided = false
+		for !isDeadlockAvoided {
+			res, err = insertExpr.
+				FromQuery(
+					s.db.Select(
+						schema.AttrsListOptionsTableAttributeIDCol,
+						goqu.V(itemID),
+						goqu.V(userID),
+						goqu.L("ROW_NUMBER() OVER(ORDER BY ?)", schema.AttrsListOptionsTablePositionCol),
+						schema.AttrsListOptionsTableIDCol,
+					).
+						From(schema.AttrsListOptionsTable).
+						Where(
+							schema.AttrsListOptionsTableAttributeIDCol.Eq(attributeID),
+							schema.AttrsListOptionsTableIDCol.In(value),
+						),
+				).Executor().ExecContext(ctx)
+			if err != nil {
+				if !util.IsMysqlDeadlockError(err) {
+					return false, fmt.Errorf("error inserting attrs user list value: %w", err)
+				}
+
+				logrus.Warn("setListUserValue(): Deadlock detected. Retrying")
+			} else {
+				isDeadlockAvoided = true
+
+				affected, err = res.RowsAffected()
+				if err != nil {
+					return false, err
+				}
+			}
+		}
 	}
 
-	res, err = deleteExpr.Executor().ExecContext(ctx)
-	if err != nil {
-		return false, err
-	}
+	for !isDeadlockAvoided {
+		deleteExpr := s.db.Delete(schema.AttrsUserValuesListTable).Where(
+			schema.AttrsUserValuesListTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsUserValuesListTableItemIDCol.Eq(itemID),
+			schema.AttrsUserValuesListTableUserIDCol.Eq(userID),
+		)
 
-	deleted, err := res.RowsAffected()
+		if isEmpty {
+			deleteExpr = deleteExpr.Where(schema.AttrsUserValuesListTableValueCol.IsNotNull())
+		} else if len(value) > 0 {
+			deleteExpr = deleteExpr.Where(schema.AttrsUserValuesListTableValueCol.NotIn(value))
+		}
+
+		res, err = deleteExpr.Executor().ExecContext(ctx)
+		if err != nil {
+			if !util.IsMysqlDeadlockError(err) {
+				return false, fmt.Errorf("error deleting attrs user list value: %w", err)
+			}
+
+			logrus.Warn("setListUserValue(): Deadlock detected. Retrying")
+		} else {
+			isDeadlockAvoided = true
+
+			deleted, err = res.RowsAffected()
+			if err != nil {
+				return false, err
+			}
+		}
+	}
 
 	return deleted > 0 || affected > 0, err
 }
@@ -1620,7 +1699,7 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 			},
 		)).Executor().ExecContext(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert attribute user value descriptor: %w", err)
 	}
 
 	valueChanged := false
@@ -1628,9 +1707,21 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	switch attribute.TypeID.AttributeTypeID {
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
 		valueChanged, err = s.setStringUserValue(ctx, attribute.ID, itemID, userID, value.StringValue, value.IsEmpty)
+		if err != nil {
+			return fmt.Errorf(
+				"setStringUserValue(%d, %d, %d, %s, %t): %w",
+				attribute.ID, itemID, userID, value.StringValue, value.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDInteger:
 		valueChanged, err = s.setIntUserValue(ctx, attribute.ID, itemID, userID, value.IntValue, value.IsEmpty)
+		if err != nil {
+			return fmt.Errorf(
+				"setIntUserValue(%d, %d, %d, %d, %t): %w",
+				attribute.ID, itemID, userID, value.IntValue, value.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDBoolean:
 		var intValue int32
@@ -1639,39 +1730,53 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 		}
 
 		valueChanged, err = s.setIntUserValue(ctx, attribute.ID, itemID, userID, intValue, value.IsEmpty)
+		if err != nil {
+			return fmt.Errorf(
+				"setIntUserValue(%d, %d, %d, %d, %t): %w",
+				attribute.ID, itemID, userID, value.IntValue, value.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDFloat:
 		valueChanged, err = s.setFloatUserValue(ctx, attribute.ID, itemID, userID, value.FloatValue, value.IsEmpty)
+		if err != nil {
+			return fmt.Errorf(
+				"setFloatUserValue(%d, %d, %d, %x, %t): %w",
+				attribute.ID, itemID, userID, value.IntValue, value.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree:
 		valueChanged, err = s.setListUserValue(ctx, attribute.ID, itemID, userID, value.ListValue, value.IsEmpty)
+		if err != nil {
+			return fmt.Errorf(
+				"setListUserValue(%d, %d, %d, %v, %t): %w",
+				attribute.ID, itemID, userID, value.ListValue, value.IsEmpty, err,
+			)
+		}
 
 	case schema.AttrsAttributeTypeIDUnknown:
 	}
 
-	if err != nil {
-		return err
-	}
-
 	somethingChanged, err := s.updateAttributeActualValue(ctx, attribute, itemID)
 	if err != nil {
-		return fmt.Errorf("%w: updateAttributeActualValue(%d, %d)", errAttributeNotFound, attribute.ID, itemID)
+		return fmt.Errorf("updateAttributeActualValue(%d, %d): %w", attribute.ID, itemID, err)
 	}
 
 	if somethingChanged || valueChanged {
 		err = s.propagateInheritance(ctx, attribute, itemID)
 		if err != nil {
-			return err
+			return fmt.Errorf("propagateInheritance(%d, %d): %w", attribute.ID, itemID, err)
 		}
 
 		err = s.propagateEngine(ctx, attribute, itemID)
 		if err != nil {
-			return err
+			return fmt.Errorf("propagateEngine(%d, %d): %w", attribute.ID, itemID, err)
 		}
 
 		err = s.refreshConflictFlag(ctx, attribute.ID, itemID)
 		if err != nil {
-			return err
+			return fmt.Errorf("refreshConflictFlag(%d, %d): %w", attribute.ID, itemID, err)
 		}
 	}
 

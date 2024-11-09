@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"sync"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -10,6 +11,7 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -25,6 +27,15 @@ const (
 	listAttributeID         int64 = 20
 	treeAttributeID         int64 = 23
 	treeMultipleAttributeID int64 = 98
+)
+
+const (
+	floatEmptyAttributeID  int64 = 28
+	intEmptyAttributeID    int64 = 2
+	stringEmptyAttributeID int64 = 9
+	boolEmptyAttributeID   int64 = 77
+	listEmptyAttributeID   int64 = 21
+	treeEmptyAttributeID   int64 = 41
 )
 
 func TestGetUnits(t *testing.T) {
@@ -459,15 +470,6 @@ func TestGetEmptyValues(t *testing.T) {
 	itemID := createItem(t, goquDB, schema.ItemRow{
 		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
 	})
-
-	const (
-		floatEmptyAttributeID  int64 = 28
-		intEmptyAttributeID    int64 = 2
-		stringEmptyAttributeID int64 = 9
-		boolEmptyAttributeID   int64 = 77
-		listEmptyAttributeID   int64 = 21
-		treeEmptyAttributeID   int64 = 41
-	)
 
 	values, err := client.GetValues(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -970,4 +972,232 @@ func TestSetUserValuesList(t *testing.T) {
 			require.True(t, attributeFound)
 		}
 	}
+}
+
+func TestSetValuesRaceConditions(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	cases := []struct {
+		AttributeID int64
+		Value       *AttrValueValue
+	}{
+		{
+			AttributeID: 207,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_TREE,
+				Valid:     true,
+				IsEmpty:   false,
+				ListValue: []int64{999},
+			},
+		},
+		{
+			AttributeID: 207,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_TREE,
+				Valid:     true,
+				IsEmpty:   false,
+				ListValue: []int64{1, 104, 105},
+			},
+		},
+		{
+			AttributeID: 207,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_TREE,
+				Valid:     true,
+				IsEmpty:   false,
+				ListValue: []int64{105, 104},
+			},
+		},
+		{
+			AttributeID: 207,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_TREE,
+				Valid:     true,
+				IsEmpty:   false,
+				ListValue: []int64{},
+			},
+		},
+		{
+			AttributeID: 207,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_TREE,
+				Valid:     true,
+				IsEmpty:   true,
+				ListValue: []int64{},
+			},
+		},
+		{
+			AttributeID: floatEmptyAttributeID,
+			Value: &AttrValueValue{
+				Type:    AttrAttributeType_FLOAT,
+				Valid:   true,
+				IsEmpty: true,
+			},
+		},
+		{
+			AttributeID: intEmptyAttributeID,
+			Value: &AttrValueValue{
+				Type:    AttrAttributeType_INTEGER,
+				Valid:   true,
+				IsEmpty: true,
+			},
+		},
+		{
+			AttributeID: stringEmptyAttributeID,
+			Value: &AttrValueValue{
+				Type:    AttrAttributeType_STRING,
+				Valid:   true,
+				IsEmpty: true,
+			},
+		},
+		{
+			AttributeID: boolEmptyAttributeID,
+			Value: &AttrValueValue{
+				Type:    AttrAttributeType_BOOLEAN,
+				Valid:   true,
+				IsEmpty: true,
+			},
+		},
+		{
+			AttributeID: listEmptyAttributeID,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_LIST,
+				Valid:     true,
+				IsEmpty:   true,
+				ListValue: []int64{},
+			},
+		},
+		{
+			AttributeID: treeEmptyAttributeID,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_LIST,
+				Valid:     true,
+				IsEmpty:   true,
+				ListValue: []int64{},
+			},
+		},
+		{
+			AttributeID: floatAttributeID,
+			Value: &AttrValueValue{
+				Type:       AttrAttributeType_FLOAT,
+				Valid:      true,
+				FloatValue: 7.091,
+			},
+		},
+		{
+			AttributeID: intAttributeID,
+			Value: &AttrValueValue{
+				Type:     AttrAttributeType_INTEGER,
+				Valid:    true,
+				IntValue: 6,
+			},
+		},
+		{
+			AttributeID: stringAttributeID,
+			Value: &AttrValueValue{
+				Type:        AttrAttributeType_STRING,
+				Valid:       true,
+				StringValue: "test",
+			},
+		},
+		{
+			AttributeID: boolAttributeID,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_BOOLEAN,
+				Valid:     true,
+				BoolValue: true,
+			},
+		},
+		{
+			AttributeID: listAttributeID,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_LIST,
+				Valid:     true,
+				ListValue: []int64{1},
+			},
+		},
+		{
+			AttributeID: treeAttributeID,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_LIST,
+				Valid:     true,
+				ListValue: []int64{25},
+			},
+		},
+		{
+			AttributeID: treeMultipleAttributeID,
+			Value: &AttrValueValue{
+				Type:      AttrAttributeType_LIST,
+				Valid:     true,
+				ListValue: []int64{28, 29},
+			},
+		},
+	}
+
+	wg := sync.WaitGroup{}
+
+	for range 5 {
+		for _, testCase := range cases {
+			wg.Add(1)
+
+			go func(ctx context.Context) {
+				defer wg.Done()
+
+				_, err = client.SetUserValues(
+					metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+					&AttrSetUserValuesRequest{
+						Items: []*AttrUserValue{
+							{
+								AttributeId: 207,
+								ItemId:      itemID,
+								Value:       testCase.Value,
+							},
+						},
+					},
+				)
+				assert.NoError(t, err)
+
+				// check values
+				_, err := client.GetValues(
+					metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+					&AttrValuesRequest{
+						ItemId:   itemID,
+						Language: "en",
+					},
+				)
+				assert.NoError(t, err)
+			}(ctx)
+		}
+	}
+
+	wg.Wait()
 }
