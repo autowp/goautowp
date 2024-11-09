@@ -710,10 +710,12 @@ func (s *Repository) SetPicturePoint(ctx context.Context, pictureID int64, point
 		pointExpr = goqu.Func("Point", point.Lon(), point.Lat())
 	}
 
-	res, err := s.db.Update(schema.PictureTable).
-		Set(goqu.Record{schema.PictureTablePointColName: pointExpr}).
-		Where(schema.PictureTableIDCol.Eq(pictureID)).
-		Executor().ExecContext(ctx)
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Update(schema.PictureTable).
+			Set(goqu.Record{schema.PictureTablePointColName: pointExpr}).
+			Where(schema.PictureTableIDCol.Eq(pictureID)).
+			Executor(),
+	)
 	if err != nil {
 		return false, err
 	}
