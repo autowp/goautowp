@@ -1488,24 +1488,28 @@ func (s *Repository) setActualValue(
 func (s *Repository) setScalarUserValue(
 	ctx context.Context, attributeID, itemID, userID int64, table exp.IdentifierExpression, sqlValue interface{},
 ) (bool, error) {
-	res, err := s.db.Insert(table).Rows(goqu.Record{
-		schema.AttrsUserValuesTypeTableAttributeIDColName: attributeID,
-		schema.AttrsUserValuesTypeTableItemIDColName:      itemID,
-		schema.AttrsUserValuesTypeTableUserIDColName:      userID,
-		schema.AttrsUserValuesTypeTableValueColName:       sqlValue,
-	}).Executor().ExecContext(ctx)
+	res, err := util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Insert(table).Rows(goqu.Record{
+			schema.AttrsUserValuesTypeTableAttributeIDColName: attributeID,
+			schema.AttrsUserValuesTypeTableItemIDColName:      itemID,
+			schema.AttrsUserValuesTypeTableUserIDColName:      userID,
+			schema.AttrsUserValuesTypeTableValueColName:       sqlValue,
+		}).Executor(),
+	)
 	if err != nil {
 		if !util.IsMysqlDuplicateKeyError(err) {
 			return false, err
 		}
 
-		res, err = s.db.Update(table).Set(goqu.Record{
-			schema.AttrsUserValuesTypeTableValueColName: sqlValue,
-		}).Where(
-			table.Col(schema.AttrsUserValuesTypeTableAttributeIDColName).Eq(attributeID),
-			table.Col(schema.AttrsUserValuesStringTableItemIDColName).Eq(itemID),
-			table.Col(schema.AttrsUserValuesStringTableUserIDColName).Eq(userID),
-		).Executor().ExecContext(ctx)
+		res, err = util.ExecAndRetryOnDeadlock(ctx,
+			s.db.Update(table).Set(goqu.Record{
+				schema.AttrsUserValuesTypeTableValueColName: sqlValue,
+			}).Where(
+				table.Col(schema.AttrsUserValuesTypeTableAttributeIDColName).Eq(attributeID),
+				table.Col(schema.AttrsUserValuesStringTableItemIDColName).Eq(itemID),
+				table.Col(schema.AttrsUserValuesStringTableUserIDColName).Eq(userID),
+			).Executor(),
+		)
 		if err != nil {
 			return false, err
 		}
