@@ -1544,7 +1544,7 @@ func (s *Repository) setFloatUserValue(
 }
 
 func (s *Repository) setListUserValue(
-	ctx context.Context, attributeID, itemID, userID int64, value []int64, isEmpty bool,
+	ctx context.Context, attribute schema.AttrsAttributeRow, itemID, userID int64, value []int64, isEmpty bool,
 ) (bool, error) {
 	var (
 		err      error
@@ -1576,7 +1576,7 @@ func (s *Repository) setListUserValue(
 
 	if isEmpty {
 		res, err = util.ExecAndRetryOnDeadlock(ctx,
-			insertExpr.Vals([]interface{}{attributeID, itemID, userID, 0, nil}).Executor(),
+			insertExpr.Vals([]interface{}{attribute.ID, itemID, userID, 0, nil}).Executor(),
 		)
 		if err != nil {
 			return false, fmt.Errorf("error inserting attrs user list value: %w", err)
@@ -1587,22 +1587,25 @@ func (s *Repository) setListUserValue(
 			return false, err
 		}
 	} else if len(value) > 0 {
+		sqSelect := s.db.Select(
+			schema.AttrsListOptionsTableAttributeIDCol,
+			goqu.V(itemID),
+			goqu.V(userID),
+			goqu.L("ROW_NUMBER() OVER(ORDER BY ?)", schema.AttrsListOptionsTablePositionCol),
+			schema.AttrsListOptionsTableIDCol,
+		).
+			From(schema.AttrsListOptionsTable).
+			Where(
+				schema.AttrsListOptionsTableAttributeIDCol.Eq(attribute.ID),
+				schema.AttrsListOptionsTableIDCol.In(value),
+			)
+
+		if !attribute.Multiple {
+			sqSelect = sqSelect.Limit(1)
+		}
+
 		res, err = util.ExecAndRetryOnDeadlock(ctx,
-			insertExpr.
-				FromQuery(
-					s.db.Select(
-						schema.AttrsListOptionsTableAttributeIDCol,
-						goqu.V(itemID),
-						goqu.V(userID),
-						goqu.L("ROW_NUMBER() OVER(ORDER BY ?)", schema.AttrsListOptionsTablePositionCol),
-						schema.AttrsListOptionsTableIDCol,
-					).
-						From(schema.AttrsListOptionsTable).
-						Where(
-							schema.AttrsListOptionsTableAttributeIDCol.Eq(attributeID),
-							schema.AttrsListOptionsTableIDCol.In(value),
-						),
-				).Executor(),
+			insertExpr.FromQuery(sqSelect).Executor(),
 		)
 		if err != nil {
 			return false, fmt.Errorf("error inserting attrs user list value: %w", err)
@@ -1615,7 +1618,7 @@ func (s *Repository) setListUserValue(
 	}
 
 	deleteExpr := s.db.Delete(schema.AttrsUserValuesListTable).Where(
-		schema.AttrsUserValuesListTableAttributeIDCol.Eq(attributeID),
+		schema.AttrsUserValuesListTableAttributeIDCol.Eq(attribute.ID),
 		schema.AttrsUserValuesListTableItemIDCol.Eq(itemID),
 		schema.AttrsUserValuesListTableUserIDCol.Eq(userID),
 	)
@@ -1653,6 +1656,40 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 		return false, nil
 	}
 
+	// convert empty values to valid = false
+	if value.Valid && !value.IsEmpty {
+		switch attribute.TypeID.AttributeTypeID {
+		case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
+			value.Valid = len(value.StringValue) > 0
+
+		case schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree:
+			if len(value.ListValue) > 0 {
+				sqSelect := s.db.Select(schema.AttrsListOptionsTableIDCol).
+					From(schema.AttrsListOptionsTable).
+					Where(
+						schema.AttrsListOptionsTableAttributeIDCol.Eq(attribute.ID),
+						schema.AttrsListOptionsTableIDCol.In(value.ListValue),
+					)
+
+				if !attribute.Multiple {
+					sqSelect = sqSelect.Limit(1)
+				}
+
+				err = sqSelect.ScanValsContext(ctx, &value.ListValue)
+				if err != nil {
+					return false, err
+				}
+			}
+
+			value.Valid = len(value.ListValue) > 0
+
+		case schema.AttrsAttributeTypeIDInteger,
+			schema.AttrsAttributeTypeIDBoolean,
+			schema.AttrsAttributeTypeIDFloat,
+			schema.AttrsAttributeTypeIDUnknown:
+		}
+	}
+
 	if !value.Valid {
 		return false, s.DeleteUserValue(ctx, attributeID, itemID, userID)
 	}
@@ -1666,13 +1703,15 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 		return false, nil
 	}
 
-	_, err = s.db.Insert(schema.AttrsUserValuesTable).Rows(goqu.Record{
-		schema.AttrsUserValuesTableAttributeIDColName: attribute.ID,
-		schema.AttrsUserValuesTableItemIDColName:      itemID,
-		schema.AttrsUserValuesTableUserIDColName:      userID,
-		schema.AttrsUserValuesTableAddDateColName:     goqu.Func("NOW"),
-		schema.AttrsUserValuesTableUpdateDateColName:  goqu.Func("NOW"),
-	}).Executor().ExecContext(ctx)
+	_, err = util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Insert(schema.AttrsUserValuesTable).Rows(goqu.Record{
+			schema.AttrsUserValuesTableAttributeIDColName: attribute.ID,
+			schema.AttrsUserValuesTableItemIDColName:      itemID,
+			schema.AttrsUserValuesTableUserIDColName:      userID,
+			schema.AttrsUserValuesTableAddDateColName:     goqu.Func("NOW"),
+			schema.AttrsUserValuesTableUpdateDateColName:  goqu.Func("NOW"),
+		}).Executor(),
+	)
 	if err != nil && !util.IsMysqlDuplicateKeyError(err) {
 		return false, fmt.Errorf("failed to insert attribute user value descriptor: %w", err)
 	}
@@ -1722,7 +1761,7 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 		}
 
 	case schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree:
-		valueChanged, err = s.setListUserValue(ctx, attribute.ID, itemID, userID, value.ListValue, value.IsEmpty)
+		valueChanged, err = s.setListUserValue(ctx, attribute, itemID, userID, value.ListValue, value.IsEmpty)
 		if err != nil {
 			return false, fmt.Errorf(
 				"setListUserValue(%d, %d, %d, %v, %t): %w",

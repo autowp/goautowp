@@ -849,7 +849,7 @@ func TestEngineValuesApplied(t *testing.T) {
 
 				require.True(t, val.GetValue().GetValid())
 				require.False(t, val.GetValue().GetIsEmpty())
-				require.Equal(t, []int64{104, 105}, val.GetValue().GetListValue())
+				require.Equal(t, []int64{104}, val.GetValue().GetListValue())
 			}
 		}
 
@@ -902,12 +902,12 @@ func TestSetUserValuesList(t *testing.T) {
 		{
 			Input:   []int64{1, 104, 105},
 			IsEmpty: false,
-			Output:  []int64{104, 105},
+			Output:  []int64{104},
 		},
 		{
 			Input:   []int64{105, 104},
 			IsEmpty: false,
-			Output:  []int64{104, 105},
+			Output:  []int64{104},
 		},
 		{
 			Input:   []int64{},
@@ -1729,4 +1729,201 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	require.Equal(t, int32(78), thirdValue.GetValue().GetIntValue())
 
 	require.Equal(t, secondaryValue.GetUpdateDate().AsTime(), thirdValue.GetUpdateDate().AsTime())
+}
+
+func TestNonMultipleValuesFiltered(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	// set value
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: 20,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{1, 2},
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	values, err := client.GetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrUserValuesRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, values.GetItems())
+	require.Len(t, values.GetItems(), 1)
+	value := values.GetItems()[0]
+
+	require.Equal(t, itemID, value.GetItemId())
+	require.Equal(t, int64(20), value.GetAttributeId())
+	require.True(t, value.GetValue().GetValid())
+	require.False(t, value.GetValue().GetIsEmpty())
+	require.Len(t, value.GetValue().GetListValue(), 1)
+}
+
+func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	// set value
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: 20,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{},
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	userValues, err := client.GetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrUserValuesRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Empty(t, userValues.GetItems())
+}
+
+func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	})
+
+	// set value
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: 8,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:        AttrAttributeType_STRING,
+						Valid:       true,
+						StringValue: "",
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	userValues, err := client.GetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrUserValuesRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Empty(t, userValues.GetItems())
 }
