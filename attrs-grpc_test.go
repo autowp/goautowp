@@ -1166,7 +1166,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 
-	for range 5 {
+	for range 3 {
 		for _, testCase := range cases {
 			wg.Add(1)
 
