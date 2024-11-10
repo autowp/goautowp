@@ -1777,13 +1777,15 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	}
 
 	if valueChanged {
-		_, err = s.db.Update(schema.AttrsUserValuesTable).Set(goqu.Record{
-			schema.AttrsUserValuesTableUpdateDateColName: goqu.Func("NOW"),
-		}).Where(
-			schema.AttrsUserValuesTableAttributeIDCol.Eq(attribute.ID),
-			schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesTableUserIDCol.Eq(userID),
-		).Executor().ExecContext(ctx)
+		_, err = util.ExecAndRetryOnDeadlock(ctx,
+			s.db.Update(schema.AttrsUserValuesTable).Set(goqu.Record{
+				schema.AttrsUserValuesTableUpdateDateColName: goqu.Func("NOW"),
+			}).Where(
+				schema.AttrsUserValuesTableAttributeIDCol.Eq(attribute.ID),
+				schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesTableUserIDCol.Eq(userID),
+			).Executor(),
+		)
 		if err != nil {
 			return false, fmt.Errorf("failed to update attribute user value descriptor: %w", err)
 		}
@@ -1943,12 +1945,17 @@ func (s *Repository) refreshConflictFlag(ctx context.Context, attributeID, itemI
 		}
 	}
 
-	s.db.Update(schema.AttrsValuesTable).Set(goqu.Record{
-		schema.AttrsValuesTableConflictColName: hasConflict,
-	}).Where(
-		schema.AttrsValuesTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsValuesTableItemIDCol.Eq(itemID),
+	_, err = util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Update(schema.AttrsValuesTable).Set(goqu.Record{
+			schema.AttrsValuesTableConflictColName: hasConflict,
+		}).Where(
+			schema.AttrsValuesTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsValuesTableItemIDCol.Eq(itemID),
+		).Executor(),
 	)
+	if err != nil {
+		return err
+	}
 
 	affectedUserIDs := make([]int64, 0)
 
@@ -1992,14 +1999,16 @@ func (s *Repository) refreshConflictFlag(ctx context.Context, attributeID, itemI
 				}
 			}
 
-			res, err := s.db.Update(schema.AttrsUserValuesTable).Set(goqu.Record{
-				schema.AttrsUserValuesTableConflictColName: conflict,
-				schema.AttrsUserValuesTableWeightColName:   weight,
-			}).Where(
-				schema.AttrsUserValuesTableUserIDCol.Eq(userID),
-				schema.AttrsUserValuesTableAttributeIDCol.Eq(attributeID),
-				schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
-			).Executor().ExecContext(ctx)
+			res, err := util.ExecAndRetryOnDeadlock(ctx,
+				s.db.Update(schema.AttrsUserValuesTable).Set(goqu.Record{
+					schema.AttrsUserValuesTableConflictColName: conflict,
+					schema.AttrsUserValuesTableWeightColName:   weight,
+				}).Where(
+					schema.AttrsUserValuesTableUserIDCol.Eq(userID),
+					schema.AttrsUserValuesTableAttributeIDCol.Eq(attributeID),
+					schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
+				).Executor(),
+			)
 			if err != nil {
 				return err
 			}
@@ -2014,13 +2023,15 @@ func (s *Repository) refreshConflictFlag(ctx context.Context, attributeID, itemI
 			}
 		}
 	} else {
-		res, err := s.db.Update(schema.AttrsUserValuesTable).Set(goqu.Record{
-			schema.AttrsUserValuesTableConflictColName: 0,
-			schema.AttrsUserValuesTableWeightColName:   weightNone,
-		}).Where(
-			schema.AttrsUserValuesTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
-		).Executor().ExecContext(ctx)
+		res, err := util.ExecAndRetryOnDeadlock(ctx,
+			s.db.Update(schema.AttrsUserValuesTable).Set(goqu.Record{
+				schema.AttrsUserValuesTableConflictColName: 0,
+				schema.AttrsUserValuesTableWeightColName:   weightNone,
+			}).Where(
+				schema.AttrsUserValuesTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
+			).Executor(),
+		)
 		if err != nil {
 			return err
 		}
@@ -2092,7 +2103,7 @@ func (s *Repository) RefreshUserConflictsStat(ctx context.Context, userIDs []int
 		expr = expr.Where(schema.UserTableIDCol.In(userIDs))
 	}
 
-	_, err := expr.Executor().ExecContext(ctx)
+	_, err := util.ExecAndRetryOnDeadlock(ctx, expr.Executor())
 
 	return err
 }
