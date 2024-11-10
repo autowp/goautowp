@@ -85,11 +85,15 @@ func (s *AttrsAMQP) ListenUpdateValues(ctx context.Context, url string, queue st
 
 			switch message.Type {
 			case "actual":
+				logrus.Infof("UpdateActualValues(%d)", message.ItemID)
+
 				err = s.repository.UpdateActualValues(ctx, message.ItemID)
 				if err != nil {
 					logrus.Error(err.Error())
 				}
 			case "inherited":
+				logrus.Infof("UpdateInheritedValues(%d)", message.ItemID)
+
 				err = s.repository.UpdateInheritedValues(ctx, message.ItemID)
 				if err != nil {
 					logrus.Error(err.Error())
