@@ -1681,7 +1681,7 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 
 				err = sqSelect.ScanValsContext(ctx, &value.ListValue)
 				if err != nil {
-					return false, err
+					return false, fmt.Errorf("ScanValsContext(): %w", err)
 				}
 			}
 
@@ -1695,12 +1695,17 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	}
 
 	if !value.Valid {
-		return false, s.DeleteUserValue(ctx, attributeID, itemID, userID)
+		err = s.DeleteUserValue(ctx, attributeID, itemID, userID)
+		if err != nil {
+			return false, fmt.Errorf("DeleteUserValue(%d, %d, %d): %w", attributeID, itemID, userID, err)
+		}
+
+		return false, nil
 	}
 
 	oldValue, err := s.UserValue(ctx, attributeID, itemID, userID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("UserValue(%d, %d, %d): %w", attributeID, itemID, userID, err)
 	}
 
 	if oldValue.Equals(value) {
