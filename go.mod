@@ -35,12 +35,12 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v3 v3.0.0-alpha10
-	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
-	golang.org/x/text v0.19.0
-	google.golang.org/genproto v0.0.0-20241104194629-dd2ea8efbc28
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28
-	google.golang.org/grpc v1.67.1
-	google.golang.org/protobuf v1.35.1
+	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
+	golang.org/x/text v0.20.0
+	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241118233622-e639e219e697
+	google.golang.org/grpc v1.68.0
+	google.golang.org/protobuf v1.35.2
 	gopkg.in/gographics/imagick.v2 v2.7.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 
@@ -60,12 +60,12 @@ require (
 	github.com/desertbit/timer v1.0.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.6 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.22.1 // indirect
-	github.com/go-resty/resty/v2 v2.15.3 // indirect
+	github.com/go-playground/validator/v10 v10.23.0 // indirect
+	github.com/go-resty/resty/v2 v2.16.1 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
@@ -76,7 +76,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.9 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -106,10 +106,10 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/arch v0.11.0 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/arch v0.12.0 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/net v0.31.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
