@@ -1617,6 +1617,11 @@ func (s *ItemsGRPCServer) notifyItemParentSubscribers(
 		return err
 	}
 
+	author, err := s.usersRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{})
+	if err != nil {
+		return err
+	}
+
 	for _, subscriber := range subscribers {
 		uri, err := s.hostManager.URIByLanguage(subscriber.Language)
 		if err != nil {
@@ -1640,7 +1645,7 @@ func (s *ItemsGRPCServer) notifyItemParentSubscribers(
 				ID: messageID,
 			},
 			TemplateData: map[string]interface{}{
-				"UserURL":            frontend.UserURL(uri, subscriber.ID, subscriber.Identity),
+				"UserURL":            frontend.UserURL(uri, author.ID, author.Identity),
 				"ItemName":           itemNameText,
 				"ItemModerURL":       frontend.ItemModerURL(uri, item.ID),
 				"ParentItemName":     parentNameText,
