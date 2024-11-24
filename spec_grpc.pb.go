@@ -2355,6 +2355,10 @@ const (
 	Items_GetStats_FullMethodName               = "/goautowp.Items/GetStats"
 	Items_GetBrandNewItems_FullMethodName       = "/goautowp.Items/GetBrandNewItems"
 	Items_GetNewItems_FullMethodName            = "/goautowp.Items/GetNewItems"
+	Items_CreateItemParent_FullMethodName       = "/goautowp.Items/CreateItemParent"
+	Items_UpdateItemParent_FullMethodName       = "/goautowp.Items/UpdateItemParent"
+	Items_DeleteItemParent_FullMethodName       = "/goautowp.Items/DeleteItemParent"
+	Items_MoveItemParent_FullMethodName         = "/goautowp.Items/MoveItemParent"
 )
 
 // ItemsClient is the client API for Items service.
@@ -2386,6 +2390,10 @@ type ItemsClient interface {
 	GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error)
 	GetBrandNewItems(ctx context.Context, in *NewItemsRequest, opts ...grpc.CallOption) (*NewItemsResponse, error)
 	GetNewItems(ctx context.Context, in *NewItemsRequest, opts ...grpc.CallOption) (*NewItemsResponse, error)
+	CreateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpdateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	MoveItemParent(ctx context.Context, in *MoveItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type itemsClient struct {
@@ -2646,6 +2654,46 @@ func (c *itemsClient) GetNewItems(ctx context.Context, in *NewItemsRequest, opts
 	return out, nil
 }
 
+func (c *itemsClient) CreateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_CreateItemParent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) UpdateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_UpdateItemParent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_DeleteItemParent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) MoveItemParent(ctx context.Context, in *MoveItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_MoveItemParent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility.
@@ -2675,6 +2723,10 @@ type ItemsServer interface {
 	GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error)
 	GetBrandNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error)
 	GetNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error)
+	CreateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error)
+	UpdateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error)
+	DeleteItemParent(context.Context, *DeleteItemParentRequest) (*emptypb.Empty, error)
+	MoveItemParent(context.Context, *MoveItemParentRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -2759,6 +2811,18 @@ func (UnimplementedItemsServer) GetBrandNewItems(context.Context, *NewItemsReque
 }
 func (UnimplementedItemsServer) GetNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNewItems not implemented")
+}
+func (UnimplementedItemsServer) CreateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateItemParent not implemented")
+}
+func (UnimplementedItemsServer) UpdateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateItemParent not implemented")
+}
+func (UnimplementedItemsServer) DeleteItemParent(context.Context, *DeleteItemParentRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteItemParent not implemented")
+}
+func (UnimplementedItemsServer) MoveItemParent(context.Context, *MoveItemParentRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MoveItemParent not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 func (UnimplementedItemsServer) testEmbeddedByValue()               {}
@@ -3231,6 +3295,78 @@ func _Items_GetNewItems_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_CreateItemParent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ItemParent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).CreateItemParent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_CreateItemParent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).CreateItemParent(ctx, req.(*ItemParent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_UpdateItemParent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ItemParent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).UpdateItemParent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_UpdateItemParent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).UpdateItemParent(ctx, req.(*ItemParent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_DeleteItemParent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteItemParentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).DeleteItemParent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_DeleteItemParent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).DeleteItemParent(ctx, req.(*DeleteItemParentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_MoveItemParent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MoveItemParentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).MoveItemParent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_MoveItemParent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).MoveItemParent(ctx, req.(*MoveItemParentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3337,6 +3473,22 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNewItems",
 			Handler:    _Items_GetNewItems_Handler,
+		},
+		{
+			MethodName: "CreateItemParent",
+			Handler:    _Items_CreateItemParent_Handler,
+		},
+		{
+			MethodName: "UpdateItemParent",
+			Handler:    _Items_UpdateItemParent_Handler,
+		},
+		{
+			MethodName: "DeleteItemParent",
+			Handler:    _Items_DeleteItemParent_Handler,
+		},
+		{
+			MethodName: "MoveItemParent",
+			Handler:    _Items_MoveItemParent_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

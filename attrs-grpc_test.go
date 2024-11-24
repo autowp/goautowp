@@ -707,18 +707,26 @@ func TestValuesInherits(t *testing.T) {
 
 	itemID := createItem(t, goquDB, schema.ItemRow{
 		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		IsGroup:    true,
 	})
 
 	childItemID := createItem(t, goquDB, schema.ItemRow{
 		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
 	})
 
-	_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
-		schema.ItemParentTableItemIDColName:   childItemID,
-		schema.ItemParentTableParentIDColName: itemID,
-		schema.ItemParentTableCatnameColName:  "vehicle1",
-		schema.ItemParentTableTypeColName:     0,
-	}).Executor().ExecContext(ctx)
+	itemsClient := NewItemsClient(conn)
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: childItemID, ParentId: itemID, Catname: "vehicle1",
+		},
+	)
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
@@ -1241,30 +1249,39 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 
 	itemID := createItem(t, goquDB, schema.ItemRow{
 		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		IsGroup:    true,
 	})
 
 	childItemID := createItem(t, goquDB, schema.ItemRow{
 		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		IsGroup:    true,
 	})
 
 	inheritorItemID := createItem(t, goquDB, schema.ItemRow{
 		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
 	})
 
-	_, err = goquDB.Insert(schema.ItemParentTable).Rows(
-		goqu.Record{
-			schema.ItemParentTableItemIDColName:   childItemID,
-			schema.ItemParentTableParentIDColName: itemID,
-			schema.ItemParentTableCatnameColName:  "vehicle1",
-			schema.ItemParentTableTypeColName:     0,
+	itemsClient := NewItemsClient(conn)
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: childItemID, ParentId: itemID, Catname: "vehicle1",
 		},
-		goqu.Record{
-			schema.ItemParentTableItemIDColName:   inheritorItemID,
-			schema.ItemParentTableParentIDColName: childItemID,
-			schema.ItemParentTableCatnameColName:  "vehicle1",
-			schema.ItemParentTableTypeColName:     0,
+	)
+	require.NoError(t, err)
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: inheritorItemID, ParentId: childItemID, Catname: "vehicle1",
 		},
-	).Executor().ExecContext(ctx)
+	)
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
@@ -1369,18 +1386,26 @@ func TestInheritedValueOverridden(t *testing.T) {
 
 	itemID := createItem(t, goquDB, schema.ItemRow{
 		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		IsGroup:    true,
 	})
 
 	childItemID := createItem(t, goquDB, schema.ItemRow{
 		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
 	})
 
-	_, err = goquDB.Insert(schema.ItemParentTable).Rows(goqu.Record{
-		schema.ItemParentTableItemIDColName:   childItemID,
-		schema.ItemParentTableParentIDColName: itemID,
-		schema.ItemParentTableCatnameColName:  "vehicle1",
-		schema.ItemParentTableTypeColName:     0,
-	}).Executor().ExecContext(ctx)
+	itemsClient := NewItemsClient(conn)
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: childItemID, ParentId: itemID, Catname: "vehicle1",
+		},
+	)
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(

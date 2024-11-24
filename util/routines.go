@@ -256,3 +256,36 @@ func ExecAndRetryOnDeadlock(ctx context.Context, executor exec.QueryExecutor) (s
 
 	return res, err
 }
+
+func KeyOfMapMaxValue[T constraints.Integer](values map[T]int) T {
+	var (
+		maxCount   = 0
+		selectedID T
+	)
+
+	for id, count := range values {
+		if maxCount == 0 || (count > maxCount) {
+			maxCount = count
+			selectedID = id
+		}
+	}
+
+	return selectedID
+}
+
+func RemoveDuplicate[T comparable](sliceList []T) []T {
+	var (
+		allKeys = make(map[T]bool)
+		list    []T
+	)
+
+	for _, item := range sliceList {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+
+			list = append(list, item)
+		}
+	}
+
+	return list
+}

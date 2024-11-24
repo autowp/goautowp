@@ -7,27 +7,36 @@ import (
 )
 
 type UserListOptions struct {
-	ID          int64
-	IDs         []int64
-	Identity    string
-	InContacts  int64
-	Order       []exp.OrderedExpression
-	Deleted     *bool
-	HasSpecs    *bool
-	IsOnline    bool
-	HasPictures *bool
-	Limit       uint64
-	Page        uint64
-	Search      string
+	ID            int64
+	IDs           []int64
+	ExcludeIDs    []int64
+	Identity      string
+	InContacts    int64
+	Order         []exp.OrderedExpression
+	Deleted       *bool
+	HasSpecs      *bool
+	IsOnline      bool
+	HasPictures   *bool
+	Limit         uint64
+	Page          uint64
+	Search        string
+	ItemSubscribe *UserItemSubscribeListOptions
 }
 
 func (s *UserListOptions) Apply(sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+	alias := schema.UserTableName
+	aliasTable := goqu.T(alias)
+
 	if s.ID != 0 {
 		sqSelect = sqSelect.Where(schema.UserTableIDCol.Eq(s.ID))
 	}
 
 	if len(s.IDs) != 0 {
 		sqSelect = sqSelect.Where(schema.UserTableIDCol.In(s.IDs))
+	}
+
+	if len(s.ExcludeIDs) != 0 {
+		sqSelect = sqSelect.Where(schema.UserTableIDCol.NotIn(s.ExcludeIDs))
 	}
 
 	if len(s.Identity) > 0 {
@@ -77,6 +86,18 @@ func (s *UserListOptions) Apply(sqSelect *goqu.SelectDataset) *goqu.SelectDatase
 
 	if len(s.Order) > 0 {
 		sqSelect = sqSelect.Order(s.Order...)
+	}
+
+	if s.ItemSubscribe != nil {
+		isAlias := alias + "_" + userItemSubscribeAlias
+		sqSelect = sqSelect.Join(
+			schema.UserItemSubscribeTable.As(isAlias),
+			goqu.On(aliasTable.Col(schema.UserTableIDColName).Eq(
+				goqu.T(isAlias).Col(schema.UserItemSubscribeTableUserIDColName),
+			)),
+		)
+
+		sqSelect = s.ItemSubscribe.Apply(isAlias, sqSelect)
 	}
 
 	return sqSelect

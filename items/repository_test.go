@@ -28,7 +28,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	langs := []string{"ru", "zh"}
 
@@ -69,7 +69,7 @@ func TestListFilters(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	options := query.ItemsListOptions{
 		Language: "en",
@@ -114,7 +114,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 	options := query.ItemsListOptions{
 		Language: "en",
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
@@ -178,6 +178,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 		schema.ItemTableNameColName:            "",
 		schema.ItemTableBodyColName:            "",
 		schema.ItemTableProducedExactlyColName: 0,
+		schema.ItemTableIsGroupColName:         true,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
@@ -195,26 +196,11 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	vehicleID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemParentTable).Rows(schema.ItemParentRow{
-		ItemID:   vehicleID,
-		ParentID: brandID,
-		Catname:  "",
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
-	_, err = goquDB.Insert(schema.ItemParentCacheTable).
-		Cols(
-			schema.ItemParentCacheTableItemIDColName,
-			schema.ItemParentCacheTableParentIDColName,
-			schema.ItemParentCacheTableDiffColName,
-		).
-		Vals(
-			goqu.Vals{brandID, brandID, 0},
-			goqu.Vals{vehicleID, vehicleID, 0},
-			goqu.Vals{vehicleID, brandID, 1},
-		).
-		Executor().ExecContext(ctx)
+	success, err := repository.CreateItemParent(ctx, vehicleID, brandID, schema.ItemParentTypeDefault, "")
 	require.NoError(t, err)
+	require.True(t, success)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
@@ -237,7 +223,6 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	repository := NewRepository(goquDB, 200)
 	options := query.ItemsListOptions{
 		Language: "en",
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
@@ -287,7 +272,7 @@ func TestPaginator(t *testing.T) {
 		})
 	}
 
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 	options := query.ItemsListOptions{
 		Language: "en",
 		Limit:    2,
@@ -312,7 +297,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByDescendantsCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -321,6 +306,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 		Name:            name,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
 	subName := name + "sub"
@@ -329,13 +315,12 @@ func TestOrderByDescendantsCount(t *testing.T) {
 		Name:            subName,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
-	CreateItemParent(t, goquDB, schema.ItemParentRow{
-		ItemID:   subItemID,
-		ParentID: itemID,
-		Catname:  "",
-	})
+	success, err := repository.CreateItemParent(ctx, subItemID, itemID, schema.ItemParentTypeDefault, "")
+	require.NoError(t, err)
+	require.True(t, success)
 
 	for i := range 10 {
 		subSubName := name + "_" + strconv.Itoa(i)
@@ -346,11 +331,11 @@ func TestOrderByDescendantsCount(t *testing.T) {
 			ProducedExactly: false,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 	}
 
 	// with field DescendantsCount, with pagination
@@ -419,7 +404,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByOrderByDescendantPicturesCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -429,6 +414,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 		Name:            name,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
 	subName := name + "sub"
@@ -437,13 +423,12 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 		Name:            subName,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
-	CreateItemParent(t, goquDB, schema.ItemParentRow{
-		ItemID:   subItemID,
-		ParentID: itemID,
-		Catname:  "",
-	})
+	success, err := repository.CreateItemParent(ctx, subItemID, itemID, schema.ItemParentTypeDefault, "")
+	require.NoError(t, err)
+	require.True(t, success)
 
 	for i := range 10 {
 		subSubName := name + "_" + strconv.Itoa(i)
@@ -454,11 +439,11 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 			ProducedExactly: false,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 
 		// add picture
 		identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
@@ -559,7 +544,7 @@ func TestOrderByAddDatetime(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByAddDatetime" + strconv.Itoa(int(random.Uint32()%100000))
@@ -568,6 +553,7 @@ func TestOrderByAddDatetime(t *testing.T) {
 		Name:            name,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
 	subName := name + "sub"
@@ -576,13 +562,12 @@ func TestOrderByAddDatetime(t *testing.T) {
 		Name:            subName,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
-	CreateItemParent(t, goquDB, schema.ItemParentRow{
-		ItemID:   subItemID,
-		ParentID: itemID,
-		Catname:  "",
-	})
+	success, err := repository.CreateItemParent(ctx, subItemID, itemID, schema.ItemParentTypeDefault, "")
+	require.NoError(t, err)
+	require.True(t, success)
 
 	for i := range 10 {
 		subSubName := name + "_" + strconv.Itoa(i)
@@ -593,11 +578,11 @@ func TestOrderByAddDatetime(t *testing.T) {
 			ProducedExactly: false,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 	}
 
 	// with pagination
@@ -638,7 +623,7 @@ func TestOrderByName(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByName" + strconv.Itoa(int(random.Uint32()%100000))
@@ -647,6 +632,7 @@ func TestOrderByName(t *testing.T) {
 		Name:            "a" + name,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
 	subName := "b" + name + "sub"
@@ -655,13 +641,12 @@ func TestOrderByName(t *testing.T) {
 		Name:            subName,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
-	CreateItemParent(t, goquDB, schema.ItemParentRow{
-		ItemID:   subItemID,
-		ParentID: itemID,
-		Catname:  "",
-	})
+	success, err := repository.CreateItemParent(ctx, subItemID, itemID, schema.ItemParentTypeDefault, "")
+	require.NoError(t, err)
+	require.True(t, success)
 
 	for i := range 10 {
 		subSubName := "c" + name + "_" + strconv.Itoa(i)
@@ -672,11 +657,11 @@ func TestOrderByName(t *testing.T) {
 			ProducedExactly: false,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 	}
 
 	// with pagination
@@ -745,7 +730,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByDescendantsParentsCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -755,6 +740,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 		Name:            name,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
 	subName := name + "sub"
@@ -763,13 +749,12 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 		Name:            subName,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
-	CreateItemParent(t, goquDB, schema.ItemParentRow{
-		ItemID:   subItemID,
-		ParentID: itemID,
-		Catname:  "",
-	})
+	success, err := repository.CreateItemParent(ctx, subItemID, itemID, schema.ItemParentTypeDefault, "")
+	require.NoError(t, err)
+	require.True(t, success)
 
 	for i := range 10 {
 		subSubName := name + "_" + strconv.Itoa(i)
@@ -780,11 +765,11 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 			ProducedExactly: false,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 
 		// add parent
 		subSubParentName := name + "_" + strconv.Itoa(i) + "_parent"
@@ -793,13 +778,14 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 			Name:            subSubParentName,
 			Body:            "",
 			ProducedExactly: false,
+			IsGroup:         true,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subSubParentItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subSubParentItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 	}
 
 	// with field DescendantsParentsCount, with pagination
@@ -886,7 +872,7 @@ func TestOrderByStarCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByStarCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -896,6 +882,7 @@ func TestOrderByStarCount(t *testing.T) {
 		Name:            name,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
 	subName := name + "sub"
@@ -904,13 +891,12 @@ func TestOrderByStarCount(t *testing.T) {
 		Name:            subName,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
-	CreateItemParent(t, goquDB, schema.ItemParentRow{
-		ItemID:   subItemID,
-		ParentID: itemID,
-		Catname:  "",
-	})
+	success, err := repository.CreateItemParent(ctx, subItemID, itemID, schema.ItemParentTypeDefault, "")
+	require.NoError(t, err)
+	require.True(t, success)
 
 	for i := range 10 {
 		subSubName := name + "_" + strconv.Itoa(i)
@@ -921,11 +907,11 @@ func TestOrderByStarCount(t *testing.T) {
 			ProducedExactly: false,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 	}
 
 	// with pagination
@@ -966,7 +952,7 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByItemParentParentTimestamp" + strconv.Itoa(int(random.Uint32()%100000))
@@ -975,6 +961,7 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 		Name:            name,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
 	subName := name + "sub"
@@ -983,13 +970,12 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 		Name:            subName,
 		Body:            "",
 		ProducedExactly: false,
+		IsGroup:         true,
 	})
 
-	CreateItemParent(t, goquDB, schema.ItemParentRow{
-		ItemID:   subItemID,
-		ParentID: itemID,
-		Catname:  "",
-	})
+	success, err := repository.CreateItemParent(ctx, subItemID, itemID, schema.ItemParentTypeDefault, "")
+	require.NoError(t, err)
+	require.True(t, success)
 
 	for i := range 10 {
 		subSubName := name + "_" + strconv.Itoa(i)
@@ -1000,11 +986,11 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 			ProducedExactly: false,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 
 		// add parent
 		subSubParentName := name + "_" + strconv.Itoa(i) + "_parent"
@@ -1013,13 +999,14 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 			Name:            subSubParentName,
 			Body:            "",
 			ProducedExactly: false,
+			IsGroup:         true,
 		})
 
-		CreateItemParent(t, goquDB, schema.ItemParentRow{
-			ItemID:   subSubItemID,
-			ParentID: subSubParentItemID,
-			Catname:  strconv.Itoa(i),
-		})
+		success, err = repository.CreateItemParent(
+			ctx, subSubItemID, subSubParentItemID, schema.ItemParentTypeDefault, strconv.Itoa(i),
+		)
+		require.NoError(t, err)
+		require.True(t, success)
 	}
 
 	// with pagination
@@ -1049,22 +1036,6 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 	require.Nil(t, pages)
 }
 
-func CreateItemParent(t *testing.T, goquDB *goqu.Database, row schema.ItemParentRow) {
-	t.Helper()
-
-	ctx := context.Background()
-
-	_, err := goquDB.Insert(schema.ItemParentTable).Rows(row).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	repository := NewRepository(goquDB, 200)
-	_, err = repository.RebuildCache(ctx, row.ParentID)
-	require.NoError(t, err)
-
-	_, err = repository.RebuildCache(ctx, row.ItemID)
-	require.NoError(t, err)
-}
-
 func CreateItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	t.Helper()
 
@@ -1083,7 +1054,9 @@ func CreateItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	repository := NewRepository(goquDB, 200)
+	cfg := config.LoadConfig("../")
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 	_, err = repository.RebuildCache(ctx, itemID)
 	require.NoError(t, err)
 

@@ -10,6 +10,8 @@
   "pm/your-picture-accepted-%s": "La tua foto è stata accettata\n{{.PictureURL}}",
   "pm/your-picture-%s-enqueued-to-remove-%s": "La tua immagine {{.PictureURL}} è in coda di rimozione\n{{.Reasons}}",
   "pm/user-%s-accept-replace-%s-%s": "{{.ModeratorURL}} accetta la sostituzione da {{.PictureURL}} a {{.ReplacementPictureURL}}",
+  "pm/user-%s-removed-item-%s-%s-from-item-%s-%s": "L'utente {{ .UserURL }} ha rimosso {{ .ItemName }} ( {{ .ItemModerURL }} ) da {{ .ParentItemName }} ( {{ .ParentItemModerURL }} )",
+  "pm/user-%s-adds-item-%s-%s-to-item-%s-%s": "L'utente {{ .UserURL }} ha aggiunto {{ .ItemName }} ( {{ .ItemModerURL }} ) a {{ .ParentItemName }} ( {{ .ParentItemModerURL }} )",
   "specs/attrs/22/24/26/options/x": "X",
   "specs/attrs/157/options/euro-6d": "Euro 6d",
   "specs/attrs/157/options/euro-5a": "Euro 5a",

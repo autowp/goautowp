@@ -10,6 +10,8 @@
   "pm/your-picture-accepted-%s": "您的图片已通过\n{{.PictureURL}}",
   "pm/your-picture-%s-enqueued-to-remove-%s": "您的图片{{.PictureURL}}已被删除\n{{.Reasons}}",
   "pm/user-%s-accept-replace-%s-%s": "{{.ModeratorURL}}接受了替换申请{{.PictureURL}} to {{.ReplacementPictureURL}}",
+  "pm/user-%s-removed-item-%s-%s-from-item-%s-%s": "User {{ .UserURL }} removed {{ .ItemName }} ( {{ .ItemModerURL }} ) from {{ .ParentItemName }} ( {{ .ParentItemModerURL }} )",
+  "pm/user-%s-adds-item-%s-%s-to-item-%s-%s": "User {{ .UserURL }} added {{ .ItemName }} ( {{ .ItemModerURL }} ) to {{ .ParentItemName }} ( {{ .ParentItemModerURL }} )",
   "specs/attrs/22/24/26/options/x": "X",
   "specs/attrs/157/options/euro-6d": "Euro 6d",
   "specs/attrs/157/options/euro-5a": "Euro 5a",

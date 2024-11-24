@@ -17,4 +17,11 @@ var (
 	ItemParentLanguageTableParentIDCol = ItemParentLanguageTable.Col(ItemParentLanguageTableParentIDColName)
 	ItemParentLanguageTableLanguageCol = ItemParentLanguageTable.Col(ItemParentLanguageTableLanguageColName)
 	ItemParentLanguageTableNameCol     = ItemParentLanguageTable.Col(ItemParentLanguageTableNameColName)
+	ItemParentLanguageTableIsAutoCol   = ItemParentLanguageTable.Col(ItemParentLanguageTableIsAutoColName)
 )
+
+type ItemParentLanguageRow struct {
+	Name     string `db:"name"`
+	IsAuto   bool   `db:"is_auto"`
+	Language string `db:"language"`
+}

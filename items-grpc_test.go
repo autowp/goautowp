@@ -61,7 +61,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 
 	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
 		Name:            fmt.Sprintf("brand1-%d", random.Int()),
-		IsGroup:         false,
+		IsGroup:         true,
 		ItemTypeID:      5,
 		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("brand1-%d", random.Int())},
 		Body:            "",
@@ -74,7 +74,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 
 	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
 		Name:            fmt.Sprintf("brand2-%d", random.Int()),
-		IsGroup:         false,
+		IsGroup:         true,
 		ItemTypeID:      5,
 		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("brand2-%d", random.Int())},
 		Body:            "",
@@ -113,7 +113,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 
 	r5, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
 		Name:            fmt.Sprintf("twins-%d", random.Int()),
-		IsGroup:         false,
+		IsGroup:         true,
 		ItemTypeID:      4,
 		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("twins-%d", random.Int())},
 		Body:            "",
@@ -124,27 +124,6 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	twins, err := r5.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemParentTable).
-		Cols(schema.ItemParentTableItemIDColName, schema.ItemParentTableParentIDColName,
-			schema.ItemParentTableCatnameColName, schema.ItemParentTableTypeColName).
-		Vals(
-			goqu.Vals{vehicle1, brand1, "vehicle1", 0},
-			goqu.Vals{vehicle2, brand2, "vehicle2", 0},
-			goqu.Vals{vehicle1, twins, "vehicle1", 0},
-			goqu.Vals{vehicle2, twins, "vehicle2", 0},
-		).
-		Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	rep, err := cnt.ItemsRepository()
-	require.NoError(t, err)
-
-	toRebuild := []int64{brand1, brand2, vehicle1, vehicle2, twins}
-	for _, id := range toRebuild {
-		_, err := rep.RebuildCache(ctx, id)
-		require.NoError(t, err)
-	}
-
 	conn, err := grpc.NewClient(
 		"localhost",
 		grpc.WithContextDialer(bufDialer),
@@ -154,6 +133,45 @@ func TestGetTwinsBrandsList(t *testing.T) {
 
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
+
+	kc := gocloak.NewClient(cfg.Keycloak.URL)
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: vehicle1, ParentId: brand1, Catname: "vehicle1",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: vehicle2, ParentId: brand2, Catname: "vehicle2",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: vehicle1, ParentId: twins, Catname: "vehicle1",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: vehicle2, ParentId: twins, Catname: "vehicle2",
+		},
+	)
+	require.NoError(t, err)
 
 	res, err := client.GetTopTwinsBrandsList(ctx, &GetTopTwinsBrandsListRequest{
 		Language: "ru",
@@ -766,15 +784,16 @@ func TestSetItemParentLanguage(t *testing.T) {
 		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 
-		_, err = goquDB.Insert(schema.ItemParentTable).Rows(schema.ItemParentRow{
-			ItemID:   itemID,
-			ParentID: parentID,
-			Catname:  "child-item",
-			Type:     schema.ItemParentTypeDefault,
-		}).Executor().ExecContext(ctx)
-		require.NoError(t, err)
-
+		// admin
 		_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+		_, err = client.CreateItemParent(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+			&ItemParent{
+				ItemId: itemID, ParentId: parentID, Catname: "child-item", Type: ItemParentType_ITEM_TYPE_DEFAULT,
+			},
+		)
+		require.NoError(t, err)
 
 		_, err = client.SetItemParentLanguage(
 			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
@@ -871,7 +890,7 @@ func TestNewItems(t *testing.T) {
 
 	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
 		Name:            fmt.Sprintf("category-%d", random.Int()),
-		IsGroup:         false,
+		IsGroup:         true,
 		ItemTypeID:      schema.ItemTableItemTypeIDCategory,
 		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("category-%d", random.Int())},
 		Body:            "",
@@ -895,14 +914,6 @@ func TestNewItems(t *testing.T) {
 	childID, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemParentTable).Rows(schema.ItemParentRow{
-		ItemID:   childID,
-		ParentID: itemID,
-		Catname:  "child-item",
-		Type:     schema.ItemParentTypeDefault,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
 	conn, err := grpc.NewClient(
 		"localhost",
 		grpc.WithContextDialer(bufDialer),
@@ -912,6 +923,17 @@ func TestNewItems(t *testing.T) {
 
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: childID, ParentId: itemID, Catname: "child-item", Type: ItemParentType_ITEM_TYPE_DEFAULT,
+		},
+	)
+	require.NoError(t, err)
 
 	_, err = client.GetNewItems(ctx, &NewItemsRequest{
 		ItemId:   itemID,
@@ -931,7 +953,7 @@ func TestInboxPicturesCount(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
-	repository := items.NewRepository(goquDB, 200)
+	repository := items.NewRepository(goquDB, 200, cfg.ContentLanguages)
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -967,15 +989,27 @@ func TestInboxPicturesCount(t *testing.T) {
 	childID, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemParentTable).Rows(schema.ItemParentRow{
-		ItemID:   childID,
-		ParentID: brandID,
-		Catname:  "child-item",
-		Type:     schema.ItemParentTypeDefault,
-	}).Executor().ExecContext(ctx)
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
 
-	_, err = repository.RebuildCache(ctx, childID)
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// login with admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: childID, ParentId: brandID, Catname: "child-item", Type: ItemParentType_ITEM_TYPE_DEFAULT,
+		},
+	)
 	require.NoError(t, err)
 
 	// create inbox pictures
@@ -1003,16 +1037,6 @@ func TestInboxPicturesCount(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-	client := NewItemsClient(conn)
-
 	_, err = client.List(ctx, &ListItemsRequest{
 		Fields: &ItemFields{
 			InboxPicturesCount: true,
@@ -1032,11 +1056,6 @@ func TestInboxPicturesCount(t *testing.T) {
 		Language: "en",
 	})
 	require.ErrorContains(t, err, "PermissionDenied")
-
-	// login with admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, adminToken)
 
 	list, err := client.List(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
@@ -1066,4 +1085,411 @@ func TestInboxPicturesCount(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, int32(5), item.GetInboxPicturesCount())
+}
+
+func TestCreateMoveDeleteItemParent(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("category-%d", random.Int()),
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDCategory,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("category-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	parentID1, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("category-%d", random.Int()),
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDCategory,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("category-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	parentID2, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	r3, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("vehicle-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	childID, err := r3.LastInsertId()
+	require.NoError(t, err)
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	// attach to first parent
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: childID, ParentId: parentID1, Catname: "child-item", Type: ItemParentType_ITEM_TYPE_DEFAULT,
+		},
+	)
+	require.NoError(t, err)
+
+	// check child in parent 1
+	res, err := client.List(ctx, &ListItemsRequest{
+		Options: &ItemListOptions{
+			Parent: &ItemParentListOptions{
+				ParentId: parentID1,
+			},
+		},
+		Language: "en",
+	})
+	require.NoError(t, err)
+	require.Len(t, res.GetItems(), 1)
+
+	resItem := res.GetItems()[0]
+	require.Equal(t, childID, resItem.GetId())
+
+	// move to second parent
+	_, err = client.MoveItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&MoveItemParentRequest{
+			ItemId: childID, ParentId: parentID1, DestParentId: parentID2,
+		},
+	)
+	require.NoError(t, err)
+
+	// check no childs in parent 1
+	res, err = client.List(ctx, &ListItemsRequest{
+		Options: &ItemListOptions{
+			Parent: &ItemParentListOptions{
+				ParentId: parentID1,
+			},
+		},
+		Language: "en",
+	})
+	require.NoError(t, err)
+	require.Empty(t, res.GetItems())
+
+	// check child in parent 2
+	res, err = client.List(ctx, &ListItemsRequest{
+		Options: &ItemListOptions{
+			Parent: &ItemParentListOptions{
+				ParentId: parentID2,
+			},
+		},
+		Language: "en",
+	})
+	require.NoError(t, err)
+	require.Len(t, res.GetItems(), 1)
+
+	resItem = res.GetItems()[0]
+	require.Equal(t, childID, resItem.GetId())
+
+	// delete
+	_, err = client.DeleteItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&DeleteItemParentRequest{
+			ItemId:   childID,
+			ParentId: parentID2,
+		},
+	)
+	require.NoError(t, err)
+
+	// check no childs in parent 2
+	res, err = client.List(ctx, &ListItemsRequest{
+		Options: &ItemListOptions{
+			Parent: &ItemParentListOptions{
+				ParentId: parentID2,
+			},
+		},
+		Language: "en",
+	})
+	require.NoError(t, err)
+	require.Empty(t, res.GetItems())
+}
+
+func TestDeleteItemParentNotDeletesSecondChild(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("category-%d", random.Int()),
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDCategory,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("category-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	parentID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("vehicle-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	childID1, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	r3, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("vehicle-%d", random.Int()),
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", random.Int())},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	childID2, err := r3.LastInsertId()
+	require.NoError(t, err)
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	// attach first to parent
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: childID1, ParentId: parentID, Catname: "child-item-1", Type: ItemParentType_ITEM_TYPE_DEFAULT,
+		},
+	)
+	require.NoError(t, err)
+
+	// attach second to parent
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: childID2, ParentId: parentID, Catname: "child-item-2", Type: ItemParentType_ITEM_TYPE_DEFAULT,
+		},
+	)
+	require.NoError(t, err)
+
+	// check childs in parent
+	res, err := client.List(ctx, &ListItemsRequest{
+		Options: &ItemListOptions{
+			Parent: &ItemParentListOptions{
+				ParentId: parentID,
+			},
+		},
+		Language: "en",
+	})
+	require.NoError(t, err)
+	require.Len(t, res.GetItems(), 2)
+
+	// delete
+	_, err = client.DeleteItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&DeleteItemParentRequest{
+			ItemId:   childID1,
+			ParentId: parentID,
+		},
+	)
+	require.NoError(t, err)
+
+	// check child 2 in parent
+	res, err = client.List(ctx, &ListItemsRequest{
+		Options: &ItemListOptions{
+			Parent: &ItemParentListOptions{
+				ParentId: parentID,
+			},
+		},
+		Language: "en",
+	})
+	require.NoError(t, err)
+	require.Len(t, res.GetItems(), 1)
+
+	resItem := res.GetItems()[0]
+	require.Equal(t, childID2, resItem.GetId())
+}
+
+func TestUpdateItemParent(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	parentName := fmt.Sprintf("Peugeot-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            parentName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDCategory,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	parentID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
+		ItemID:   parentID,
+		Language: "xx",
+		Name:     sql.NullString{Valid: true, String: parentName},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	childName := fmt.Sprintf("Peugeot-%d 407", randomInt)
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            childName,
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d 407", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	childID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
+		ItemID:   childID,
+		Language: "xx",
+		Name:     sql.NullString{Valid: true, String: childName},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	// attach first to parent
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: childID, ParentId: parentID,
+		},
+	)
+	require.NoError(t, err)
+
+	rep, err := cnt.ItemsRepository()
+	require.NoError(t, err)
+
+	row, err := rep.ItemParent(ctx, childID, parentID)
+	require.NoError(t, err)
+	require.Equal(t, "407", row.Catname)
+	require.Equal(t, schema.ItemParentTypeDefault, row.Type)
+	require.False(t, row.ManualCatname)
+
+	// update
+	_, err = client.UpdateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: childID, ParentId: parentID, Type: ItemParentType_ITEM_TYPE_DESIGN, Catname: "custom",
+		},
+	)
+	require.NoError(t, err)
+
+	// check child in parent
+	res, err := client.List(ctx, &ListItemsRequest{
+		Options: &ItemListOptions{
+			Parent: &ItemParentListOptions{
+				ParentId: parentID,
+			},
+		},
+		Language: "en",
+	})
+	require.NoError(t, err)
+	require.Len(t, res.GetItems(), 1)
+
+	resItem := res.GetItems()[0]
+	require.Equal(t, childID, resItem.GetId())
+
+	// check row
+	row, err = rep.ItemParent(ctx, childID, parentID)
+	require.NoError(t, err)
+	require.Equal(t, "custom", row.Catname)
+	require.Equal(t, schema.ItemParentTypeDesign, row.Type)
+	require.True(t, row.ManualCatname)
+
+	// update
+	_, err = client.UpdateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: childID, ParentId: parentID, Type: ItemParentType_ITEM_TYPE_TUNING, Catname: "",
+		},
+	)
+	require.NoError(t, err)
+
+	// check row
+	row, err = rep.ItemParent(ctx, childID, parentID)
+	require.NoError(t, err)
+	require.Equal(t, "407", row.Catname)
+	require.Equal(t, schema.ItemParentTypeTuning, row.Type)
+	require.False(t, row.ManualCatname)
 }

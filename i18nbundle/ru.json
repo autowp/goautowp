@@ -10,6 +10,8 @@
   "pm/your-picture-accepted-%s": "Добавленная вами картинка принята на сайт\n{{.PictureURL}}",
   "pm/your-picture-%s-enqueued-to-remove-%s": "Добавленная вами картинка {{.PictureURL}} поставлена в очередь на удаление\n{{.Reasons}}",
   "pm/user-%s-accept-replace-%s-%s": "{{.ModeratorURL}} принял замену {{.PictureURL}} на {{.ReplacementPictureURL}}",
+  "pm/user-%s-removed-item-%s-%s-from-item-%s-%s": "Пользователь {{ .UserURL }} удалил {{ .ItemName }} ( {{ .ItemModerURL }} ) из {{ .ParentItemName }} ( {{ .ParentItemModerURL }} )",
+  "pm/user-%s-adds-item-%s-%s-to-item-%s-%s": "Пользователь {{ .UserURL }} добавил {{ .ItemName }} ( {{ .ItemModerURL }} ) в {{ .ParentItemName }} ( {{ .ParentItemModerURL }} )",
   "specs/attrs/22/24/26/options/x": "X",
   "specs/attrs/157/options/euro-6d": "Euro 6d",
   "specs/attrs/157/options/euro-5a": "Euro 5a",

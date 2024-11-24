@@ -23,6 +23,7 @@ const (
 	ItemTableNameColName                   = "name"
 	ItemTableCatnameColName                = "catname"
 	ItemTableEngineItemIDColName           = "engine_item_id"
+	ItemTableEngineInheritColName          = "engine_inherit"
 	ItemTableItemTypeIDColName             = "item_type_id"
 	ItemTableIsConceptColName              = "is_concept"
 	ItemTableIsConceptInheritColName       = "is_concept_inherit"
@@ -45,23 +46,32 @@ const (
 	ItemTableAddDatetimeColName            = "add_datetime"
 	ItemTableBeginOrderCacheColName        = "begin_order_cache"
 	ItemTableEndOrderCacheColName          = "end_order_cache"
+	ItemTableCarTypeInheritColName         = "car_type_inherit"
+	ItemTableCarTypeIDColName              = "car_type_id"
+	ItemTableSpecInheritColName            = "spec_inherit"
 )
 
 var (
-	ItemTable                  = goqu.T(ItemTableName)
-	ItemTableIDCol             = ItemTable.Col(ItemTableIDColName)
-	ItemTableBodyCol           = ItemTable.Col(ItemTableBodyColName)
-	ItemTableSpecIDCol         = ItemTable.Col(ItemTableSpecIDColName)
-	ItemTableCatnameCol        = ItemTable.Col(ItemTableCatnameColName)
-	ItemTableNameCol           = ItemTable.Col(ItemTableNameColName)
-	ItemTableBeginYearCol      = ItemTable.Col(ItemTableBeginYearColName)
-	ItemTableEndYearCol        = ItemTable.Col(ItemTableEndYearColName)
-	ItemTableBeginModelYearCol = ItemTable.Col(ItemTableBeginModelYearColName)
-	ItemTableEndModelYearCol   = ItemTable.Col(ItemTableEndModelYearColName)
-	ItemTableIsGroupCol        = ItemTable.Col(ItemTableIsGroupColName)
-	ItemTableItemTypeIDCol     = ItemTable.Col(ItemTableItemTypeIDColName)
-	ItemTableTodayCol          = ItemTable.Col(ItemTableTodayColName)
-	ItemTableEngineItemIDCol   = ItemTable.Col(ItemTableEngineItemIDColName)
+	ItemTable                    = goqu.T(ItemTableName)
+	ItemTableIDCol               = ItemTable.Col(ItemTableIDColName)
+	ItemTableBodyCol             = ItemTable.Col(ItemTableBodyColName)
+	ItemTableSpecIDCol           = ItemTable.Col(ItemTableSpecIDColName)
+	ItemTableCatnameCol          = ItemTable.Col(ItemTableCatnameColName)
+	ItemTableNameCol             = ItemTable.Col(ItemTableNameColName)
+	ItemTableBeginYearCol        = ItemTable.Col(ItemTableBeginYearColName)
+	ItemTableEndYearCol          = ItemTable.Col(ItemTableEndYearColName)
+	ItemTableBeginModelYearCol   = ItemTable.Col(ItemTableBeginModelYearColName)
+	ItemTableEndModelYearCol     = ItemTable.Col(ItemTableEndModelYearColName)
+	ItemTableIsGroupCol          = ItemTable.Col(ItemTableIsGroupColName)
+	ItemTableItemTypeIDCol       = ItemTable.Col(ItemTableItemTypeIDColName)
+	ItemTableTodayCol            = ItemTable.Col(ItemTableTodayColName)
+	ItemTableEngineItemIDCol     = ItemTable.Col(ItemTableEngineItemIDColName)
+	ItemTableEngineInheritCol    = ItemTable.Col(ItemTableEngineInheritColName)
+	ItemTableIsConceptInheritCol = ItemTable.Col(ItemTableIsConceptInheritColName)
+	ItemTableIsConceptCol        = ItemTable.Col(ItemTableIsConceptColName)
+	ItemTableCarTypeInheritCol   = ItemTable.Col(ItemTableCarTypeInheritColName)
+	ItemTableCarTypeIDCol        = ItemTable.Col(ItemTableCarTypeIDColName)
+	ItemTableSpecInheritCol      = ItemTable.Col(ItemTableSpecInheritColName)
 )
 
 type ItemRow struct {
@@ -79,6 +89,7 @@ type ItemRow struct {
 	BeginMonth             sql.NullInt16       `db:"begin_month"`
 	EndMonth               sql.NullInt16       `db:"end_month"`
 	EngineItemID           sql.NullInt64       `db:"engine_item_id"`
+	EngineInherit          bool                `db:"engine_inherit"`
 	Today                  sql.NullBool        `db:"today"`
 	IsConcept              bool                `db:"is_concept"`
 	IsConceptInherit       bool                `db:"is_concept_inherit"`
@@ -86,4 +97,7 @@ type ItemRow struct {
 	EndModelYearFraction   sql.NullString      `db:"end_model_year_fraction"`
 	ProducedExactly        bool                `db:"produced_exactly"`
 	IsGroup                bool                `db:"is_group"`
+	CarTypeInherit         bool                `db:"car_type_inherit"`
+	CarTypeID              sql.NullInt64       `db:"car_type_id"`
+	SpecInherit            bool                `db:"spec_inherit"`
 }

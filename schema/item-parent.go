@@ -10,25 +10,30 @@ const (
 	ItemParentTypeSport   ItemParentType = 2
 	ItemParentTypeDesign  ItemParentType = 3
 
-	ItemParentTableName             = "item_parent"
-	ItemParentTableParentIDColName  = "parent_id"
-	ItemParentTableItemIDColName    = "item_id"
-	ItemParentTableTypeColName      = "type"
-	ItemParentTableCatnameColName   = "catname"
-	ItemParentTableTimestampColName = "timestamp"
+	ItemParentTableName                 = "item_parent"
+	ItemParentTableParentIDColName      = "parent_id"
+	ItemParentTableItemIDColName        = "item_id"
+	ItemParentTableTypeColName          = "type"
+	ItemParentTableCatnameColName       = "catname"
+	ItemParentTableManualCatnameColName = "manual_catname"
+	ItemParentTableTimestampColName     = "timestamp"
+
+	ItemParentMaxCatname = 150
 )
 
 var (
-	ItemParentTable            = goqu.T(ItemParentTableName)
-	ItemParentTableParentIDCol = ItemParentTable.Col(ItemParentTableParentIDColName)
-	ItemParentTableItemIDCol   = ItemParentTable.Col(ItemParentTableItemIDColName)
-	ItemParentTableTypeCol     = ItemParentTable.Col(ItemParentTableTypeColName)
-	ItemParentTableCatnameCol  = ItemParentTable.Col(ItemParentTableCatnameColName)
+	ItemParentTable                 = goqu.T(ItemParentTableName)
+	ItemParentTableParentIDCol      = ItemParentTable.Col(ItemParentTableParentIDColName)
+	ItemParentTableItemIDCol        = ItemParentTable.Col(ItemParentTableItemIDColName)
+	ItemParentTableTypeCol          = ItemParentTable.Col(ItemParentTableTypeColName)
+	ItemParentTableCatnameCol       = ItemParentTable.Col(ItemParentTableCatnameColName)
+	ItemParentTableManualCatnameCol = ItemParentTable.Col(ItemParentTableManualCatnameColName)
 )
 
 type ItemParentRow struct {
-	ItemID   int64          `db:"item_id"`
-	ParentID int64          `db:"parent_id"`
-	Catname  string         `db:"catname"`
-	Type     ItemParentType `db:"type"`
+	ItemID        int64          `db:"item_id"`
+	ParentID      int64          `db:"parent_id"`
+	Catname       string         `db:"catname"`
+	Type          ItemParentType `db:"type"`
+	ManualCatname bool           `db:"manual_catname"`
 }

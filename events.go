@@ -7,6 +7,8 @@ import (
 	"github.com/doug-martin/goqu/v9"
 )
 
+const EventsDefaultLanguage = "en"
+
 type Event struct {
 	UserID   int64
 	Message  string

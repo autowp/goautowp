@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/autowp/goautowp/filter"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -20,10 +21,15 @@ import (
 )
 
 var (
-	ErrItemNotFound     = errors.New("item not found")
-	errLangNotFound     = errors.New("language not found")
-	errFieldsIsRequired = errors.New("fields is required")
-	errFieldRequires    = errors.New("fields requires")
+	ErrItemNotFound                    = errors.New("item not found")
+	errLangNotFound                    = errors.New("language not found")
+	errFieldsIsRequired                = errors.New("fields is required")
+	errFieldRequires                   = errors.New("fields requires")
+	errItemParentCycle                 = errors.New("cycle detected")
+	errFailedToCreateItemParentCatname = errors.New("failed to create catname")
+	errInvalidItemParentCombination    = errors.New("that type of parent is not allowed for this type")
+	errGroupRequired                   = errors.New("only groups can have childs")
+	errSelfParent                      = errors.New("self parent forbidden")
 )
 
 const (
@@ -63,6 +69,8 @@ const (
 	OrderByStarCount
 	OrderByItemParentParentTimestamp
 )
+
+var catnameBlacklist = []string{"sport", "tuning", "related", "pictures", "specifications"}
 
 type TreeItem struct {
 	ID       int64
@@ -110,6 +118,7 @@ type Repository struct {
 	catnameColumn                    *SimpleColumn
 	engineItemIDColumn               *SimpleColumn
 	itemTypeIDColumn                 *SimpleColumn
+	isGroupColumn                    *SimpleColumn
 	isConceptColumn                  *SimpleColumn
 	isConceptInheritColumn           *SimpleColumn
 	specIDColumn                     *SimpleColumn
@@ -131,6 +140,7 @@ type Repository struct {
 	specShortNameColumn              *SpecShortNameColumn
 	starCountColumn                  *StarCountColumn
 	itemParentParentTimestampColumn  *ItemParentParentTimestampColumn
+	contentLanguages                 []string
 }
 
 type Item struct {
@@ -174,6 +184,7 @@ type ItemParentLanguage struct {
 func NewRepository(
 	db *goqu.Database,
 	mostsMinCarsCount int,
+	contentLanguages []string,
 ) *Repository {
 	return &Repository{
 		db:                               db,
@@ -208,6 +219,7 @@ func NewRepository(
 		catnameColumn:                    &SimpleColumn{col: schema.ItemTableCatnameColName},
 		engineItemIDColumn:               &SimpleColumn{col: schema.ItemTableEngineItemIDColName},
 		itemTypeIDColumn:                 &SimpleColumn{col: schema.ItemTableItemTypeIDColName},
+		isGroupColumn:                    &SimpleColumn{col: schema.ItemTableIsGroupColName},
 		isConceptColumn:                  &SimpleColumn{col: schema.ItemTableIsConceptColName},
 		isConceptInheritColumn:           &SimpleColumn{col: schema.ItemTableIsConceptInheritColName},
 		specIDColumn:                     &SimpleColumn{col: schema.ItemTableSpecIDColName},
@@ -229,6 +241,7 @@ func NewRepository(
 		specShortNameColumn:              &SpecShortNameColumn{},
 		starCountColumn:                  &StarCountColumn{},
 		itemParentParentTimestampColumn:  &ItemParentParentTimestampColumn{},
+		contentLanguages:                 contentLanguages,
 	}
 }
 
@@ -303,6 +316,10 @@ func langPriorityOrderExpr( //nolint: ireturn
 ) (exp.OrderedExpression, error) {
 	langPriority, ok := languagePriority[language]
 	if !ok {
+		langPriority, ok = languagePriority["xx"]
+	}
+
+	if !ok {
 		return nil, fmt.Errorf("%w: `%s`", errLangNotFound, language)
 	}
 
@@ -325,6 +342,7 @@ func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 		schema.ItemTableIsConceptColName:        s.isConceptColumn,
 		schema.ItemTableIsConceptInheritColName: s.isConceptInheritColumn,
 		schema.ItemTableSpecIDColName:           s.specIDColumn,
+		schema.ItemTableIsGroupColName:          s.isGroupColumn,
 	}
 
 	if fields.FullName {
@@ -823,6 +841,8 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &row.EngineItemID
 			case schema.ItemTableItemTypeIDColName:
 				pointers[i] = &row.ItemTypeID
+			case schema.ItemTableIsGroupColName:
+				pointers[i] = &row.IsGroup
 			case schema.ItemTableIsConceptColName:
 				pointers[i] = &row.IsConcept
 			case schema.ItemTableIsConceptInheritColName:
@@ -1018,7 +1038,7 @@ func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehic
 	}
 
 	if changed {
-		err = s.refreshItemVehicleTypeInheritanceFromParents(ctx, itemID)
+		err = s.RefreshItemVehicleTypeInheritanceFromParents(ctx, itemID)
 		if err != nil {
 			return err
 		}
@@ -1049,7 +1069,7 @@ func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, ve
 	}
 
 	if deleted > 0 {
-		err = s.refreshItemVehicleTypeInheritanceFromParents(ctx, itemID)
+		err = s.RefreshItemVehicleTypeInheritanceFromParents(ctx, itemID)
 		if err != nil {
 			return err
 		}
@@ -1094,7 +1114,7 @@ func (s *Repository) setItemVehicleTypeRow(
 	return affected > 0, nil
 }
 
-func (s *Repository) refreshItemVehicleTypeInheritanceFromParents(ctx context.Context, itemID int64) error {
+func (s *Repository) RefreshItemVehicleTypeInheritanceFromParents(ctx context.Context, itemID int64) error {
 	typeIDs, err := s.getItemVehicleTypeIDs(ctx, itemID, false)
 	if err != nil {
 		return err
@@ -1157,7 +1177,7 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 	}
 
 	for _, childID := range ids {
-		err = s.refreshItemVehicleTypeInheritanceFromParents(ctx, childID)
+		err = s.RefreshItemVehicleTypeInheritanceFromParents(ctx, childID)
 		if err != nil {
 			return err
 		}
@@ -1628,6 +1648,67 @@ func (s *Repository) SetItemParentLanguage(
 	return err
 }
 
+func (s *Repository) namePreferLanguage(ctx context.Context, parentID, itemID int64, language string) (string, error) {
+	res := ""
+
+	success, err := s.db.Select(schema.ItemParentLanguageTableNameCol).
+		From(schema.ItemParentLanguageTable).
+		Where(
+			schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
+			schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
+			goqu.Func("LENGTH", schema.ItemParentLanguageTableNameCol).Gt(0),
+		).
+		Order(goqu.L("? > 0", schema.ItemParentLanguageTableLanguageCol.Eq(language)).Desc()).
+		ScanValContext(ctx, &res)
+	if err != nil {
+		return "", err
+	}
+
+	if !success {
+		return "", nil
+	}
+
+	return res, nil
+}
+
+func (s *Repository) extractCatname(ctx context.Context, brandRow, vehicleRow schema.ItemRow) (string, error) {
+	var err error
+
+	diffName, err := s.namePreferLanguage(ctx, brandRow.ID, vehicleRow.ID, "en")
+	if err != nil {
+		return "", err
+	}
+
+	if len(diffName) == 0 {
+		diffName, err = s.extractName(ctx, brandRow, vehicleRow, "en")
+		if err != nil {
+			return "", err
+		}
+	}
+
+	catnameTemplate := filter.SanitizeFilename(diffName)
+
+	i := 0
+	allowed := false
+	catname := ""
+
+	for !allowed {
+		catname = catnameTemplate
+		if i > 0 {
+			catname = catname + "_" + strconv.Itoa(i)
+		}
+
+		allowed, err = s.isAllowedCatname(ctx, vehicleRow.ID, brandRow.ID, catname)
+		if err != nil {
+			return "", err
+		}
+
+		i++
+	}
+
+	return catname, nil
+}
+
 func (s *Repository) extractName(
 	ctx context.Context, parentRow schema.ItemRow, vehicleRow schema.ItemRow, language string,
 ) (string, error) {
@@ -1745,6 +1826,10 @@ func (s *Repository) getAliases(ctx context.Context, itemID int64) ([]string, er
 func (s *Repository) getName(ctx context.Context, itemID int64, language string) (string, error) {
 	langPriority, ok := languagePriority[language]
 	if !ok {
+		langPriority, ok = languagePriority["xx"]
+	}
+
+	if !ok {
 		return "", fmt.Errorf("%w: `%s`", errLangNotFound, language)
 	}
 
@@ -1805,4 +1890,732 @@ func toSortedColumns(cols map[string]Column) []sortedColumnMapItem {
 	})
 
 	return res
+}
+
+func (s *Repository) isAllowedCombination(itemTypeID, parentItemTypeID schema.ItemTableItemTypeID) bool {
+	allowed := map[schema.ItemTableItemTypeID][]schema.ItemTableItemTypeID{
+		schema.ItemTableItemTypeIDVehicle: {schema.ItemTableItemTypeIDVehicle},
+		schema.ItemTableItemTypeIDEngine:  {schema.ItemTableItemTypeIDEngine},
+		schema.ItemTableItemTypeIDCategory: {
+			schema.ItemTableItemTypeIDVehicle,
+			schema.ItemTableItemTypeIDCategory,
+			schema.ItemTableItemTypeIDBrand,
+		},
+		schema.ItemTableItemTypeIDTwins: {schema.ItemTableItemTypeIDVehicle},
+		schema.ItemTableItemTypeIDBrand: {
+			schema.ItemTableItemTypeIDBrand,
+			schema.ItemTableItemTypeIDVehicle,
+			schema.ItemTableItemTypeIDEngine,
+		},
+		schema.ItemTableItemTypeIDFactory: {
+			schema.ItemTableItemTypeIDVehicle,
+			schema.ItemTableItemTypeIDEngine,
+		},
+		schema.ItemTableItemTypeIDPerson:    {},
+		schema.ItemTableItemTypeIDCopyright: {},
+		schema.ItemTableItemTypeIDMuseum:    {},
+	}
+
+	itemTypes, ok := allowed[parentItemTypeID]
+	if !ok {
+		return false
+	}
+
+	return util.Contains(itemTypes, itemTypeID)
+}
+
+func (s *Repository) isAllowedCatname(ctx context.Context, itemID, parentID int64, catname string) (bool, error) {
+	if len(catname) == 0 {
+		return false, nil
+	}
+
+	if util.Contains(catnameBlacklist, catname) {
+		return false, nil
+	}
+
+	var exists bool
+
+	success, err := s.db.Select(goqu.V(true)).From(schema.ItemParentTable).Where(
+		schema.ItemParentTableParentIDCol.Eq(parentID),
+		schema.ItemParentTableCatnameCol.Eq(catname),
+		schema.ItemParentTableItemIDCol.Neq(itemID),
+	).ScanValContext(ctx, &exists)
+	if err != nil {
+		return false, err
+	}
+
+	return !(success && exists), nil
+}
+
+func (s *Repository) collectAncestorsIDs(ctx context.Context, id int64) ([]int64, error) {
+	var (
+		toCheck = []int64{id}
+		ids     []int64
+	)
+
+	for len(toCheck) > 0 {
+		ids = append(ids, toCheck...)
+
+		var res []int64
+
+		err := s.db.Select(schema.ItemParentTableParentIDCol).
+			From(schema.ItemParentTable).
+			Where(schema.ItemParentTableItemIDCol.In(toCheck)).
+			ScanValsContext(ctx, &res)
+		if err != nil {
+			return nil, err
+		}
+
+		toCheck = res
+	}
+
+	return util.RemoveDuplicate(ids), nil
+}
+
+func (s *Repository) setItemParentLanguages(
+	ctx context.Context, parentID, itemID int64, values map[string]schema.ItemParentLanguageRow, forceIsAuto bool,
+) error {
+	for _, lang := range s.contentLanguages {
+		name := ""
+		if _, ok := values[lang]; ok {
+			name = values[lang].Name
+		}
+
+		err := s.SetItemParentLanguage(ctx, parentID, itemID, lang, name, forceIsAuto)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) CreateItemParent(
+	ctx context.Context, itemID, parentID int64, typeID schema.ItemParentType, catname string,
+) (bool, error) {
+	if itemID == parentID {
+		return false, errSelfParent
+	}
+
+	parentRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: parentID}, ListFields{})
+	if err != nil {
+		return false, err
+	}
+
+	itemRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: itemID}, ListFields{})
+	if err != nil {
+		return false, err
+	}
+
+	if !parentRow.IsGroup {
+		return false, errGroupRequired
+	}
+
+	if !s.isAllowedCombination(itemRow.ItemTypeID, parentRow.ItemTypeID) {
+		return false, fmt.Errorf("%w: %d/%d", errInvalidItemParentCombination, itemRow.ItemTypeID, parentRow.ItemTypeID)
+	}
+
+	if len(catname) > 0 {
+		allowed, err := s.isAllowedCatname(ctx, itemID, parentID, catname)
+		if err != nil {
+			return false, err
+		}
+
+		if !allowed {
+			catname = ""
+		}
+	}
+
+	manualCatname := len(catname) > 0 && catname != "_"
+
+	if !manualCatname {
+		catname, err = s.extractCatname(ctx, parentRow.ItemRow, itemRow.ItemRow)
+		if err != nil {
+			return false, err
+		}
+
+		if len(catname) == 0 {
+			return false, errFailedToCreateItemParentCatname
+		}
+	}
+
+	parentIDs, err := s.collectAncestorsIDs(ctx, parentID)
+	if err != nil {
+		return false, err
+	}
+
+	if util.Contains(parentIDs, itemID) {
+		return false, errItemParentCycle
+	}
+
+	exists := false
+
+	success, err := s.db.Select(goqu.V(true)).From(schema.ItemParentTable).Where(
+		schema.ItemParentTableItemIDCol.Eq(itemID),
+		schema.ItemParentTableParentIDCol.Eq(parentID),
+	).ScanValContext(ctx, &exists)
+	if err != nil {
+		return false, err
+	}
+
+	if success && exists {
+		return false, nil
+	}
+
+	_, err = s.db.Insert(schema.ItemParentTable).Rows(goqu.Record{
+		schema.ItemParentTableParentIDColName:      parentID,
+		schema.ItemParentTableItemIDColName:        itemID,
+		schema.ItemParentTableTypeColName:          typeID,
+		schema.ItemParentTableCatnameColName:       catname,
+		schema.ItemParentTableManualCatnameColName: manualCatname,
+		schema.ItemParentTableTimestampColName:     goqu.Func("NOW"),
+	}).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	values := make(map[string]schema.ItemParentLanguageRow)
+
+	for _, lang := range s.contentLanguages {
+		name, err := s.extractName(ctx, parentRow.ItemRow, itemRow.ItemRow, lang)
+		if err != nil {
+			return false, err
+		}
+
+		values[lang] = schema.ItemParentLanguageRow{
+			Name: name,
+		}
+	}
+
+	err = s.setItemParentLanguages(ctx, parentID, itemID, values, true)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = s.RebuildCache(ctx, itemID)
+
+	return err == nil, err
+}
+
+func (s *Repository) UpdateItemParent(
+	ctx context.Context, itemID, parentID int64, typeID schema.ItemParentType, catname string, forceIsAuto bool,
+) (bool, error) {
+	var itemParentRow schema.ItemParentRow
+
+	success, err := s.db.Select(
+		schema.ItemParentTableCatnameCol,
+		schema.ItemParentTableManualCatnameCol,
+	).
+		From(schema.ItemParentTable).Where(
+		schema.ItemParentTableParentIDCol.Eq(parentID),
+		schema.ItemParentTableItemIDCol.Eq(itemID),
+	).ScanStructContext(ctx, &itemParentRow)
+	if err != nil {
+		return false, err
+	}
+
+	if !success {
+		return false, nil
+	}
+
+	var isAuto bool
+
+	if forceIsAuto {
+		isAuto = true
+	} else {
+		isAuto = !itemParentRow.ManualCatname
+		if itemParentRow.Catname != catname {
+			isAuto = false
+		}
+	}
+
+	if len(catname) == 0 || catname == "_" || util.Contains(catnameBlacklist, catname) {
+		parentRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: parentID}, ListFields{NameText: true})
+		if err != nil {
+			return false, err
+		}
+
+		itemRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: itemID}, ListFields{NameText: true})
+		if err != nil {
+			return false, err
+		}
+
+		catname, err = s.extractCatname(ctx, parentRow.ItemRow, itemRow.ItemRow)
+		if err != nil {
+			return false, err
+		}
+
+		isAuto = true
+	}
+
+	res, err := s.db.Update(schema.ItemParentTable).Set(goqu.Record{
+		schema.ItemParentTableTypeColName:          typeID,
+		schema.ItemParentTableCatnameColName:       catname,
+		schema.ItemParentTableManualCatnameColName: !isAuto,
+	}).Where(
+		schema.ItemParentTableParentIDCol.Eq(parentID),
+		schema.ItemParentTableItemIDCol.Eq(itemID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	if affected > 0 {
+		_, err = s.RebuildCache(ctx, itemID)
+
+		return true, err
+	}
+
+	return false, nil
+}
+
+func (s *Repository) RemoveItemParent(ctx context.Context, itemID, parentID int64) error {
+	res, err := s.db.Delete(schema.ItemParentTable).Where(
+		schema.ItemParentTableItemIDCol.Eq(itemID),
+		schema.ItemParentTableParentIDCol.Eq(parentID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	affectedItemParentRows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	res, err = s.db.Delete(schema.ItemParentLanguageTable).Where(
+		schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
+		schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	affectedItemParentLanguageRows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affectedItemParentRows > 0 || affectedItemParentLanguageRows > 0 {
+		_, err = s.RebuildCache(ctx, itemID)
+	}
+
+	return err
+}
+
+func (s *Repository) UpdateInheritance(ctx context.Context, itemID int64) error {
+	var item schema.ItemRow
+
+	success, err := s.db.Select(
+		schema.ItemTableIDCol, schema.ItemTableIsConceptCol, schema.ItemTableIsConceptInheritCol,
+		schema.ItemTableEngineInheritCol, schema.ItemTableCarTypeInheritCol, schema.ItemTableCarTypeIDCol,
+		schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol,
+	).
+		From(schema.ItemTable).
+		Where(schema.ItemTableIDCol.Eq(itemID)).
+		ScanStructContext(ctx, &item)
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return ErrItemNotFound
+	}
+
+	return s.updateItemInheritance(ctx, item)
+}
+
+func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemRow) error {
+	var parents []schema.ItemRow
+
+	err := s.db.Select(
+		schema.ItemTableIsConceptCol, schema.ItemTableEngineItemIDCol, schema.ItemTableCarTypeIDCol,
+		schema.ItemTableSpecIDCol,
+	).
+		From(schema.ItemTable).
+		Join(schema.ItemParentTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentTableParentIDCol))).
+		Where(schema.ItemParentTableItemIDCol.Eq(car.ID)).
+		ScanStructsContext(ctx, &parents)
+	if err != nil {
+		return err
+	}
+
+	somethingChanged := false
+
+	set := goqu.Record{}
+
+	if car.IsConceptInherit {
+		isConcept := false
+
+		for _, parent := range parents {
+			if parent.IsConcept {
+				isConcept = true
+
+				break
+			}
+		}
+
+		if car.IsConcept != isConcept {
+			set[schema.ItemTableIsConceptColName] = isConcept
+			somethingChanged = true
+		}
+	}
+
+	if car.EngineInherit {
+		enginesMap := make(map[int64]int)
+
+		for _, parent := range parents {
+			engineID := parent.EngineItemID
+			if engineID.Valid {
+				enginesMap[engineID.Int64]++
+			}
+		}
+
+		// select top
+		selectedID := util.KeyOfMapMaxValue(enginesMap)
+
+		var oldEngineID int64
+		if !car.EngineItemID.Valid {
+			oldEngineID = car.EngineItemID.Int64
+		}
+
+		if oldEngineID != selectedID {
+			set[schema.ItemTableEngineItemIDColName] = sql.NullInt64{
+				Int64: selectedID,
+				Valid: selectedID > 0,
+			}
+			somethingChanged = true
+		}
+	}
+
+	if car.CarTypeInherit {
+		carTypesMap := make(map[int64]int)
+
+		for _, parent := range parents {
+			typeID := parent.CarTypeID
+			if typeID.Valid {
+				carTypesMap[typeID.Int64]++
+			}
+		}
+
+		for id, count := range carTypesMap {
+			otherIDs := make([]int64, 0, len(carTypesMap))
+
+			for i := range carTypesMap {
+				if id != i {
+					otherIDs = append(otherIDs, i)
+				}
+			}
+
+			isParentOf, err := s.getChildVehicleTypesByWhitelist(ctx, id, otherIDs)
+			if err != nil {
+				return err
+			}
+
+			if len(isParentOf) > 0 {
+				for _, childID := range isParentOf {
+					carTypesMap[childID] += count
+				}
+
+				delete(carTypesMap, id)
+			}
+		}
+
+		// select top
+		selectedID := util.KeyOfMapMaxValue(carTypesMap)
+
+		var oldCarTypeID int64
+		if car.CarTypeID.Valid {
+			oldCarTypeID = car.CarTypeID.Int64
+		}
+
+		if oldCarTypeID != selectedID {
+			set[schema.ItemTableCarTypeIDColName] = sql.NullInt64{
+				Int64: selectedID,
+				Valid: selectedID > 0,
+			}
+			somethingChanged = true
+		}
+	}
+
+	if car.SpecInherit {
+		specsMap := make(map[int32]int)
+
+		for _, parent := range parents {
+			specID := parent.SpecID
+			if specID.Valid {
+				specsMap[specID.Int32]++
+			}
+		}
+
+		// select top
+		selectedID := util.KeyOfMapMaxValue(specsMap)
+
+		var oldSpecID int32
+		if car.SpecID.Valid {
+			oldSpecID = car.SpecID.Int32
+		}
+
+		if oldSpecID != selectedID {
+			set[schema.ItemTableSpecIDColName] = sql.NullInt32{
+				Int32: selectedID,
+				Valid: selectedID > 0,
+			}
+			somethingChanged = true
+		}
+	}
+
+	if somethingChanged || !car.CarTypeInherit {
+		if len(set) > 0 {
+			_, err = s.db.Update(schema.ItemTable).Set(set).
+				Where(schema.ItemTableIDCol.Eq(car.ID)).
+				Executor().ExecContext(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
+		var childItems []schema.ItemRow
+
+		err = s.db.Select(
+			schema.ItemTableIDCol, schema.ItemTableIsConceptCol, schema.ItemTableIsConceptInheritCol,
+			schema.ItemTableEngineInheritCol, schema.ItemTableCarTypeInheritCol, schema.ItemTableCarTypeIDCol,
+			schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol,
+		).
+			From(schema.ItemTable).
+			Join(schema.ItemParentTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentTableItemIDCol))).
+			Where(schema.ItemParentTableParentIDCol.Eq(car.ID)).
+			ScanStructsContext(ctx, &childItems)
+		if err != nil {
+			return err
+		}
+
+		for _, child := range childItems {
+			err = s.updateItemInheritance(ctx, child)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) getChildVehicleTypesByWhitelist(
+	ctx context.Context, parentID int64, whitelist []int64,
+) ([]int64, error) {
+	res := make([]int64, 0)
+
+	if len(whitelist) == 0 {
+		return res, nil
+	}
+
+	var ids []int64
+
+	err := s.db.Select(schema.CarTypesParentsTableIDCol).
+		From(schema.CarTypesParentsTable).
+		Where(
+			schema.CarTypesParentsTableIDCol.In(whitelist),
+			schema.CarTypesParentsTableParentIDCol.Eq(parentID),
+			schema.CarTypesParentsTableIDCol.Neq(schema.CarTypesParentsTableParentIDCol),
+		).ScanValsContext(ctx, &ids)
+	if err != nil {
+		return res, err
+	}
+
+	return ids, nil
+}
+
+func (s *Repository) MoveItemParent(ctx context.Context, itemID, parentID, newParentID int64) (bool, error) {
+	oldParentRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: parentID}, ListFields{})
+	if err != nil {
+		return false, err
+	}
+
+	itemRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: itemID}, ListFields{})
+	if err != nil {
+		return false, err
+	}
+
+	newParentRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: newParentID}, ListFields{})
+	if err != nil {
+		return false, err
+	}
+
+	if oldParentRow.ID == newParentRow.ID {
+		return false, nil
+	}
+
+	if !oldParentRow.IsGroup {
+		return false, errGroupRequired
+	}
+
+	if !newParentRow.IsGroup {
+		return false, errGroupRequired
+	}
+
+	if !s.isAllowedCombination(itemRow.ItemTypeID, newParentRow.ItemTypeID) {
+		return false, fmt.Errorf("%w: %d/%d", errInvalidItemParentCombination, itemRow.ItemTypeID, newParentRow.ItemTypeID)
+	}
+
+	parentIDs, err := s.collectAncestorsIDs(ctx, newParentRow.ID)
+	if err != nil {
+		return false, err
+	}
+
+	if util.Contains(parentIDs, itemID) {
+		return false, errItemParentCycle
+	}
+
+	res, err := s.db.Update(schema.ItemParentTable).Set(goqu.Record{
+		schema.ItemParentTableParentIDColName: newParentID,
+	}).Where(
+		schema.ItemParentTableItemIDCol.Eq(itemID),
+		schema.ItemParentTableParentIDCol.Eq(parentID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	if affected <= 0 {
+		return false, nil
+	}
+
+	_, err = s.db.Update(schema.ItemParentLanguageTable).Set(goqu.Record{
+		schema.ItemParentLanguageTableParentIDColName: newParentID,
+	}).Where(
+		schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
+		schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = s.RebuildCache(ctx, itemRow.ID)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = s.refreshAuto(ctx, newParentID, itemID)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (bool, error) {
+	var bvlRows []schema.ItemParentLanguageRow
+
+	err := s.db.Select(
+		schema.ItemParentLanguageTableIsAutoColName,
+		schema.ItemParentLanguageTableNameCol,
+		schema.ItemParentLanguageTableLanguageCol,
+	).
+		From(schema.ItemParentLanguageTable).Where(
+		schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
+		schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
+	).ScanStructsContext(ctx, &bvlRows)
+	if err != nil {
+		return false, err
+	}
+
+	values := make(map[string]schema.ItemParentLanguageRow)
+
+	for _, bvlRow := range bvlRows {
+		row := schema.ItemParentLanguageRow{}
+		if !bvlRow.IsAuto {
+			row.Name = bvlRow.Name
+		}
+
+		values[bvlRow.Language] = row
+	}
+
+	err = s.setItemParentLanguages(ctx, parentID, itemID, values, false)
+	if err != nil {
+		return false, err
+	}
+
+	var bvRow schema.ItemParentRow
+
+	success, err := s.db.Select(schema.ItemParentTableManualCatnameCol).
+		From(schema.ItemParentTable).
+		Where(
+			schema.ItemParentTableItemIDCol.Eq(itemID),
+			schema.ItemParentTableParentIDCol.Eq(parentID),
+		).
+		ScanStructContext(ctx, &bvRow)
+	if err != nil {
+		return false, err
+	}
+
+	if !success {
+		return false, nil
+	}
+
+	if bvRow.ManualCatname {
+		return true, nil
+	}
+
+	brandRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: parentID}, ListFields{NameText: true})
+	if err != nil {
+		return false, err
+	}
+
+	vehicleRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: itemID}, ListFields{NameText: true})
+	if err != nil {
+		return false, err
+	}
+
+	catname, err := s.extractCatname(ctx, brandRow.ItemRow, vehicleRow.ItemRow)
+	if err != nil {
+		return false, err
+	}
+
+	if len(catname) == 0 {
+		return false, nil
+	}
+
+	_, err = s.db.Update(schema.ItemParentTable).Set(goqu.Record{
+		schema.ItemParentTableCatnameColName: catname,
+	}).Where(
+		schema.ItemParentTableItemIDCol.Eq(itemID),
+		schema.ItemParentTableParentIDCol.Eq(parentID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (s *Repository) ItemParent(ctx context.Context, itemID, parentID int64) (*schema.ItemParentRow, error) {
+	listOptions := query.ItemParentListOptions{
+		ItemID:   itemID,
+		ParentID: parentID,
+	}
+
+	var res schema.ItemParentRow
+
+	success, err := listOptions.Apply(schema.ItemParentTableName, s.db.Select().From(schema.ItemParentTable)).
+		ScanStructContext(ctx, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, ErrItemNotFound
+	}
+
+	return &res, nil
 }

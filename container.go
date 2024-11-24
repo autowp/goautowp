@@ -799,7 +799,7 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 
 		cfg := s.Config()
 
-		s.itemsRepository = items.NewRepository(db, cfg.MostsMinCarsCount)
+		s.itemsRepository = items.NewRepository(db, cfg.MostsMinCarsCount, s.Config().ContentLanguages)
 	}
 
 	return s.itemsRepository, nil
@@ -1087,9 +1087,24 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
+		events, err := s.Events()
+		if err != nil {
+			return nil, err
+		}
+
+		usersRepository, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		messagingRepository, err := s.MessagingRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		s.itemsGrpcServer = NewItemsGRPCServer(
 			repo, db, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
-			attrsRepository, picturesRepository, idx,
+			attrsRepository, picturesRepository, idx, events, usersRepository, messagingRepository, s.HostsManager(),
 		)
 	}
 

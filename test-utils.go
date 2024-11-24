@@ -125,7 +125,9 @@ func createItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	repository := items.NewRepository(goquDB, 0)
+	cfg := config.LoadConfig(".")
+
+	repository := items.NewRepository(goquDB, 0, cfg.ContentLanguages)
 	_, err = repository.RebuildCache(ctx, itemID)
 	require.NoError(t, err)
 

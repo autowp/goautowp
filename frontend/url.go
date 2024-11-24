@@ -51,3 +51,9 @@ func UserURL(url *url.URL, userID int64, identity *string) string {
 func UserRoute(userID int64, identity *string) []string {
 	return []string{"/" + usersPrefix, userIdentity(userID, identity)}
 }
+
+func ItemModerURL(url *url.URL, itemID int64) string {
+	url.Path = "/moder/items/item/" + strconv.FormatInt(itemID, 10)
+
+	return url.String()
+}

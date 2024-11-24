@@ -4,19 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/autowp/goautowp/attrs"
+	"github.com/autowp/goautowp/frontend"
+	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/index"
 	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
+	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,6 +32,55 @@ import (
 const itemLinkNameMaxLength = 255
 
 const typicalPicturesInList = 4
+
+func reverseConvertItemParentType(itemParentType ItemParentType) schema.ItemParentType {
+	switch itemParentType {
+	case ItemParentType_ITEM_TYPE_DEFAULT:
+		return schema.ItemParentTypeDefault
+	case ItemParentType_ITEM_TYPE_TUNING:
+		return schema.ItemParentTypeTuning
+	case ItemParentType_ITEM_TYPE_SPORT:
+		return schema.ItemParentTypeSport
+	case ItemParentType_ITEM_TYPE_DESIGN:
+		return schema.ItemParentTypeDesign
+	}
+
+	return schema.ItemParentTypeDefault
+}
+
+func (s *ItemParent) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
+	var (
+		result   = make([]*errdetails.BadRequest_FieldViolation, 0)
+		problems []string
+		err      error
+	)
+
+	catnameInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{
+			&validation.StringTrimFilter{},
+			&validation.StringSingleSpaces{},
+			&validation.StringToLower{},
+			&validation.StringSanitizeFilename{},
+		},
+		Validators: []validation.ValidatorInterface{
+			&validation.StringLength{Max: schema.ItemParentMaxCatname},
+		},
+	}
+
+	s.Catname, problems, err = catnameInputFilter.IsValidString(s.GetCatname())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "name",
+			Description: fv,
+		})
+	}
+
+	return result, nil
+}
 
 type ItemsGRPCServer struct {
 	UnimplementedItemsServer
@@ -40,6 +95,10 @@ type ItemsGRPCServer struct {
 	attrsRepository       *attrs.Repository
 	picturesRepository    *pictures.Repository
 	index                 *index.Index
+	events                *Events
+	usersRepository       *users.Repository
+	messagingRepository   *messaging.Repository
+	hostManager           *hosts.Manager
 }
 
 func NewItemsGRPCServer(
@@ -54,6 +113,10 @@ func NewItemsGRPCServer(
 	attrsRepository *attrs.Repository,
 	picturesRepository *pictures.Repository,
 	index *index.Index,
+	events *Events,
+	usersRepository *users.Repository,
+	messagingRepository *messaging.Repository,
+	hostManager *hosts.Manager,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository:            repository,
@@ -67,6 +130,10 @@ func NewItemsGRPCServer(
 		attrsRepository:       attrsRepository,
 		picturesRepository:    picturesRepository,
 		index:                 index,
+		events:                events,
+		usersRepository:       usersRepository,
+		messagingRepository:   messagingRepository,
+		hostManager:           hostManager,
 	}
 }
 
@@ -1301,4 +1368,377 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		Brand: extractedBrand,
 		Items: extractedItems,
 	}, nil
+}
+
+func (s *ItemsGRPCServer) formatItemNameText(row items.Item, language string) (string, error) {
+	nameFormatter := items.ItemNameFormatter{}
+	localizer := s.i18n.Localizer(language)
+
+	return nameFormatter.FormatText(items.ItemNameFormatterOptions{
+		BeginModelYear:         util.NullInt32ToScalar(row.BeginModelYear),
+		EndModelYear:           util.NullInt32ToScalar(row.EndModelYear),
+		BeginModelYearFraction: util.NullStringToString(row.BeginModelYearFraction),
+		EndModelYearFraction:   util.NullStringToString(row.EndModelYearFraction),
+		Spec:                   row.SpecShortName,
+		SpecFull:               row.SpecName,
+		Body:                   row.Body,
+		Name:                   row.NameOnly,
+		BeginYear:              util.NullInt32ToScalar(row.BeginYear),
+		EndYear:                util.NullInt32ToScalar(row.EndYear),
+		Today:                  util.NullBoolToBoolPtr(row.Today),
+		BeginMonth:             util.NullInt16ToScalar(row.BeginMonth),
+		EndMonth:               util.NullInt16ToScalar(row.EndMonth),
+	}, localizer)
+}
+
+func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "move") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	InvalidParams, err := in.Validate()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	item, err := s.repository.Item(
+		ctx, query.ItemsListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
+		items.ListFields{NameText: true},
+	)
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	parentItem, err := s.repository.Item(
+		ctx, query.ItemsListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
+		items.ListFields{NameText: true},
+	)
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	_, err = s.repository.CreateItemParent(
+		ctx, item.ID, parentItem.ID, reverseConvertItemParentType(in.GetType()), in.GetCatname(),
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.repository.UpdateInheritance(ctx, item.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.repository.RefreshItemVehicleTypeInheritanceFromParents(ctx, item.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.attrsRepository.UpdateActualValues(ctx, item.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	itemNameText, err := s.formatItemNameText(item, "en")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	parentNameText, err := s.formatItemNameText(parentItem, "en")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID: userID,
+		Message: fmt.Sprintf(
+			"%s выбран как родительский для %s",
+			parentNameText,
+			itemNameText,
+		),
+		Items: []int64{item.ID, parentItem.ID},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.notifyItemParentSubscribers(ctx, item, parentItem, userID, "pm/user-%s-adds-item-%s-%s-to-item-%s-%s")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) UpdateItemParent(ctx context.Context, in *ItemParent) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "move") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	InvalidParams, err := in.Validate()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	_, err = s.repository.UpdateItemParent(
+		ctx, in.GetItemId(), in.GetParentId(), reverseConvertItemParentType(in.GetType()), in.GetCatname(), false,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "move") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	item, err := s.repository.Item(
+		ctx, query.ItemsListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
+		items.ListFields{NameText: true},
+	)
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	parent, err := s.repository.Item(
+		ctx, query.ItemsListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
+		items.ListFields{NameText: true},
+	)
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.repository.RemoveItemParent(ctx, item.ID, parent.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.repository.UpdateInheritance(ctx, item.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.repository.RefreshItemVehicleTypeInheritanceFromParents(ctx, item.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.attrsRepository.UpdateActualValues(ctx, item.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	itemNameText, err := s.formatItemNameText(item, "en")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	parentNameText, err := s.formatItemNameText(parent, "en")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID: userID,
+		Message: fmt.Sprintf(
+			"%s перестал быть родительским автомобилем для %s",
+			parentNameText,
+			itemNameText,
+		),
+		Items: []int64{item.ID, parent.ID},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.notifyItemParentSubscribers(ctx, item, parent, userID, "pm/user-%s-removed-item-%s-%s-from-item-%s-%s")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) notifyItemParentSubscribers(
+	ctx context.Context, item, parent items.Item, userID int64, messageID string,
+) error {
+	falseRef := false
+
+	subscribers, _, err := s.usersRepository.Users(ctx, query.UserListOptions{
+		Deleted: &falseRef,
+		ItemSubscribe: &query.UserItemSubscribeListOptions{
+			ItemIDs: []int64{item.ID, parent.ID},
+		},
+		ExcludeIDs: []int64{userID},
+	}, users.UserFields{})
+	if err != nil {
+		return err
+	}
+
+	for _, subscriber := range subscribers {
+		uri, err := s.hostManager.URIByLanguage(subscriber.Language)
+		if err != nil {
+			return err
+		}
+
+		itemNameText, err := s.formatItemNameText(item, subscriber.Language)
+		if err != nil {
+			return err
+		}
+
+		parentNameText, err := s.formatItemNameText(parent, subscriber.Language)
+		if err != nil {
+			return err
+		}
+
+		localizer := s.i18n.Localizer(subscriber.Language)
+
+		message, err := localizer.Localize(&i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{
+				ID: messageID,
+			},
+			TemplateData: map[string]interface{}{
+				"UserURL":            frontend.UserURL(uri, subscriber.ID, subscriber.Identity),
+				"ItemName":           itemNameText,
+				"ItemModerURL":       frontend.ItemModerURL(uri, item.ID),
+				"ParentItemName":     parentNameText,
+				"ParentItemModerURL": frontend.ItemModerURL(uri, parent.ID),
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		err = s.messagingRepository.CreateMessage(ctx, 0, subscriber.ID, message)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParentRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "move") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	success, err := s.repository.MoveItemParent(ctx, in.GetItemId(), in.GetParentId(), in.GetDestParentId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if success {
+		item, err := s.repository.Item(
+			ctx, query.ItemsListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
+			items.ListFields{NameText: true},
+		)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		itemNameText, err := s.formatItemNameText(item, "en")
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		oldParent, err := s.repository.Item(
+			ctx, query.ItemsListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
+			items.ListFields{NameText: true},
+		)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		oldParentNameText, err := s.formatItemNameText(oldParent, "en")
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		newParent, err := s.repository.Item(
+			ctx, query.ItemsListOptions{ItemID: in.GetDestParentId(), Language: EventsDefaultLanguage},
+			items.ListFields{NameText: true},
+		)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		newParentNameText, err := s.formatItemNameText(newParent, "en")
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.events.Add(ctx, Event{
+			UserID: userID,
+			Message: fmt.Sprintf(
+				"%s перемещен из %s в %s",
+				oldParentNameText,
+				itemNameText,
+				newParentNameText,
+			),
+			Items: []int64{item.ID, oldParent.ID, newParent.ID},
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.repository.UpdateInheritance(ctx, item.ID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.attrsRepository.UpdateActualValues(ctx, item.ID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
 }

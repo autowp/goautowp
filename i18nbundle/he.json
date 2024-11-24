@@ -1,6 +1,7 @@
 {
   "pm/user-%s-post-new-message-%s": "{{.Name}} posted new message\n{{.Message}}",
   "pm/user-%s-replies-to-you-%s": "{{.Name}} replies to you\n{{.Message}}",
+  "pm/user-%s-removed-item-%s-%s-from-item-%s-%s": "User {{ .UserURL }} removed {{ .ItemName }} ( {{ .ItemModerURL }} ) from {{ .ParentItemName }} ( {{ .ParentItemModerURL }} )",
   "carlist/model-years": "model years",
   "carlist/years": "years of production",
   "present-time-abbr": "pr.",
@@ -10,6 +11,7 @@
   "pm/your-picture-accepted-%s": "Your picture was accepted\n{{.PictureURL}}",
   "pm/your-picture-%s-enqueued-to-remove-%s": "Your picture {{.PictureURL}} enqueued to remove\n{{.Reasons}}",
   "pm/user-%s-accept-replace-%s-%s": "{{.ModeratorURL}} accept replacement {{.PictureURL}} to {{.ReplacementPictureURL}}",
+  "pm/user-%s-adds-item-%s-%s-to-item-%s-%s": "User {{ .UserURL }} added {{ .ItemName }} ( {{ .ItemModerURL }} ) to {{ .ParentItemName }} ( {{ .ParentItemModerURL }} )",
   "specs/attrs/22/24/26/options/x": "X",
   "specs/attrs/157/options/euro-6d": "Euro 6d",
   "specs/attrs/157/options/euro-5a": "Euro 5a",
