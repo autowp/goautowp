@@ -1747,3 +1747,28 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *ItemsGRPCServer) RefreshInheritance(
+	ctx context.Context, in *RefreshInheritanceRequest,
+) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "specifications", "admin") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	err = s.repository.UpdateInheritance(ctx, in.GetItemId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.attrsRepository.UpdateActualValues(ctx, in.GetItemId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}

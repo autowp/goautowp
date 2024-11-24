@@ -2359,6 +2359,7 @@ const (
 	Items_UpdateItemParent_FullMethodName       = "/goautowp.Items/UpdateItemParent"
 	Items_DeleteItemParent_FullMethodName       = "/goautowp.Items/DeleteItemParent"
 	Items_MoveItemParent_FullMethodName         = "/goautowp.Items/MoveItemParent"
+	Items_RefreshInheritance_FullMethodName     = "/goautowp.Items/RefreshInheritance"
 )
 
 // ItemsClient is the client API for Items service.
@@ -2394,6 +2395,7 @@ type ItemsClient interface {
 	UpdateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	MoveItemParent(ctx context.Context, in *MoveItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	RefreshInheritance(ctx context.Context, in *RefreshInheritanceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type itemsClient struct {
@@ -2694,6 +2696,16 @@ func (c *itemsClient) MoveItemParent(ctx context.Context, in *MoveItemParentRequ
 	return out, nil
 }
 
+func (c *itemsClient) RefreshInheritance(ctx context.Context, in *RefreshInheritanceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_RefreshInheritance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility.
@@ -2727,6 +2739,7 @@ type ItemsServer interface {
 	UpdateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error)
 	DeleteItemParent(context.Context, *DeleteItemParentRequest) (*emptypb.Empty, error)
 	MoveItemParent(context.Context, *MoveItemParentRequest) (*emptypb.Empty, error)
+	RefreshInheritance(context.Context, *RefreshInheritanceRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -2823,6 +2836,9 @@ func (UnimplementedItemsServer) DeleteItemParent(context.Context, *DeleteItemPar
 }
 func (UnimplementedItemsServer) MoveItemParent(context.Context, *MoveItemParentRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MoveItemParent not implemented")
+}
+func (UnimplementedItemsServer) RefreshInheritance(context.Context, *RefreshInheritanceRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RefreshInheritance not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 func (UnimplementedItemsServer) testEmbeddedByValue()               {}
@@ -3367,6 +3383,24 @@ func _Items_MoveItemParent_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_RefreshInheritance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefreshInheritanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).RefreshInheritance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_RefreshInheritance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).RefreshInheritance(ctx, req.(*RefreshInheritanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3489,6 +3523,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MoveItemParent",
 			Handler:    _Items_MoveItemParent_Handler,
+		},
+		{
+			MethodName: "RefreshInheritance",
+			Handler:    _Items_RefreshInheritance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
