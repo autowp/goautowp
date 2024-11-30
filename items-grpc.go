@@ -1973,3 +1973,28 @@ func (s *ItemsGRPCServer) RefreshInheritance(
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *ItemsGRPCServer) SetUserItemSubscription(
+	ctx context.Context, in *SetUserItemSubscriptionRequest,
+) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "edit_meta") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	if in.GetSubscribed() {
+		err = s.repository.UserItemSubscribe(ctx, in.GetItemId(), userID)
+	} else {
+		err = s.repository.UserItemUnsubscribe(ctx, in.GetItemId(), userID)
+	}
+
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}

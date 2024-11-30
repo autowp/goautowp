@@ -2330,37 +2330,38 @@ var Rating_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	Items_GetTopBrandsList_FullMethodName       = "/goautowp.Items/GetTopBrandsList"
-	Items_GetTopPersonsList_FullMethodName      = "/goautowp.Items/GetTopPersonsList"
-	Items_GetTopFactoriesList_FullMethodName    = "/goautowp.Items/GetTopFactoriesList"
-	Items_GetTopCategoriesList_FullMethodName   = "/goautowp.Items/GetTopCategoriesList"
-	Items_GetTwinsBrandsList_FullMethodName     = "/goautowp.Items/GetTwinsBrandsList"
-	Items_GetTopTwinsBrandsList_FullMethodName  = "/goautowp.Items/GetTopTwinsBrandsList"
-	Items_Item_FullMethodName                   = "/goautowp.Items/Item"
-	Items_List_FullMethodName                   = "/goautowp.Items/List"
-	Items_GetTree_FullMethodName                = "/goautowp.Items/GetTree"
-	Items_GetContentLanguages_FullMethodName    = "/goautowp.Items/GetContentLanguages"
-	Items_GetItemLink_FullMethodName            = "/goautowp.Items/GetItemLink"
-	Items_GetItemLinks_FullMethodName           = "/goautowp.Items/GetItemLinks"
-	Items_DeleteItemLink_FullMethodName         = "/goautowp.Items/DeleteItemLink"
-	Items_CreateItemLink_FullMethodName         = "/goautowp.Items/CreateItemLink"
-	Items_UpdateItemLink_FullMethodName         = "/goautowp.Items/UpdateItemLink"
-	Items_GetItemVehicleTypes_FullMethodName    = "/goautowp.Items/GetItemVehicleTypes"
-	Items_GetItemVehicleType_FullMethodName     = "/goautowp.Items/GetItemVehicleType"
-	Items_CreateItemVehicleType_FullMethodName  = "/goautowp.Items/CreateItemVehicleType"
-	Items_DeleteItemVehicleType_FullMethodName  = "/goautowp.Items/DeleteItemVehicleType"
-	Items_GetItemLanguages_FullMethodName       = "/goautowp.Items/GetItemLanguages"
-	Items_UpdateItemLanguage_FullMethodName     = "/goautowp.Items/UpdateItemLanguage"
-	Items_GetItemParentLanguages_FullMethodName = "/goautowp.Items/GetItemParentLanguages"
-	Items_SetItemParentLanguage_FullMethodName  = "/goautowp.Items/SetItemParentLanguage"
-	Items_GetStats_FullMethodName               = "/goautowp.Items/GetStats"
-	Items_GetBrandNewItems_FullMethodName       = "/goautowp.Items/GetBrandNewItems"
-	Items_GetNewItems_FullMethodName            = "/goautowp.Items/GetNewItems"
-	Items_CreateItemParent_FullMethodName       = "/goautowp.Items/CreateItemParent"
-	Items_UpdateItemParent_FullMethodName       = "/goautowp.Items/UpdateItemParent"
-	Items_DeleteItemParent_FullMethodName       = "/goautowp.Items/DeleteItemParent"
-	Items_MoveItemParent_FullMethodName         = "/goautowp.Items/MoveItemParent"
-	Items_RefreshInheritance_FullMethodName     = "/goautowp.Items/RefreshInheritance"
+	Items_GetTopBrandsList_FullMethodName        = "/goautowp.Items/GetTopBrandsList"
+	Items_GetTopPersonsList_FullMethodName       = "/goautowp.Items/GetTopPersonsList"
+	Items_GetTopFactoriesList_FullMethodName     = "/goautowp.Items/GetTopFactoriesList"
+	Items_GetTopCategoriesList_FullMethodName    = "/goautowp.Items/GetTopCategoriesList"
+	Items_GetTwinsBrandsList_FullMethodName      = "/goautowp.Items/GetTwinsBrandsList"
+	Items_GetTopTwinsBrandsList_FullMethodName   = "/goautowp.Items/GetTopTwinsBrandsList"
+	Items_Item_FullMethodName                    = "/goautowp.Items/Item"
+	Items_List_FullMethodName                    = "/goautowp.Items/List"
+	Items_GetTree_FullMethodName                 = "/goautowp.Items/GetTree"
+	Items_GetContentLanguages_FullMethodName     = "/goautowp.Items/GetContentLanguages"
+	Items_GetItemLink_FullMethodName             = "/goautowp.Items/GetItemLink"
+	Items_GetItemLinks_FullMethodName            = "/goautowp.Items/GetItemLinks"
+	Items_DeleteItemLink_FullMethodName          = "/goautowp.Items/DeleteItemLink"
+	Items_CreateItemLink_FullMethodName          = "/goautowp.Items/CreateItemLink"
+	Items_UpdateItemLink_FullMethodName          = "/goautowp.Items/UpdateItemLink"
+	Items_GetItemVehicleTypes_FullMethodName     = "/goautowp.Items/GetItemVehicleTypes"
+	Items_GetItemVehicleType_FullMethodName      = "/goautowp.Items/GetItemVehicleType"
+	Items_CreateItemVehicleType_FullMethodName   = "/goautowp.Items/CreateItemVehicleType"
+	Items_DeleteItemVehicleType_FullMethodName   = "/goautowp.Items/DeleteItemVehicleType"
+	Items_GetItemLanguages_FullMethodName        = "/goautowp.Items/GetItemLanguages"
+	Items_UpdateItemLanguage_FullMethodName      = "/goautowp.Items/UpdateItemLanguage"
+	Items_GetItemParentLanguages_FullMethodName  = "/goautowp.Items/GetItemParentLanguages"
+	Items_SetItemParentLanguage_FullMethodName   = "/goautowp.Items/SetItemParentLanguage"
+	Items_GetStats_FullMethodName                = "/goautowp.Items/GetStats"
+	Items_GetBrandNewItems_FullMethodName        = "/goautowp.Items/GetBrandNewItems"
+	Items_GetNewItems_FullMethodName             = "/goautowp.Items/GetNewItems"
+	Items_CreateItemParent_FullMethodName        = "/goautowp.Items/CreateItemParent"
+	Items_UpdateItemParent_FullMethodName        = "/goautowp.Items/UpdateItemParent"
+	Items_DeleteItemParent_FullMethodName        = "/goautowp.Items/DeleteItemParent"
+	Items_MoveItemParent_FullMethodName          = "/goautowp.Items/MoveItemParent"
+	Items_RefreshInheritance_FullMethodName      = "/goautowp.Items/RefreshInheritance"
+	Items_SetUserItemSubscription_FullMethodName = "/goautowp.Items/SetUserItemSubscription"
 )
 
 // ItemsClient is the client API for Items service.
@@ -2398,6 +2399,7 @@ type ItemsClient interface {
 	DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	MoveItemParent(ctx context.Context, in *MoveItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	RefreshInheritance(ctx context.Context, in *RefreshInheritanceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SetUserItemSubscription(ctx context.Context, in *SetUserItemSubscriptionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type itemsClient struct {
@@ -2718,6 +2720,16 @@ func (c *itemsClient) RefreshInheritance(ctx context.Context, in *RefreshInherit
 	return out, nil
 }
 
+func (c *itemsClient) SetUserItemSubscription(ctx context.Context, in *SetUserItemSubscriptionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_SetUserItemSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility.
@@ -2753,6 +2765,7 @@ type ItemsServer interface {
 	DeleteItemParent(context.Context, *DeleteItemParentRequest) (*emptypb.Empty, error)
 	MoveItemParent(context.Context, *MoveItemParentRequest) (*emptypb.Empty, error)
 	RefreshInheritance(context.Context, *RefreshInheritanceRequest) (*emptypb.Empty, error)
+	SetUserItemSubscription(context.Context, *SetUserItemSubscriptionRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -2855,6 +2868,9 @@ func (UnimplementedItemsServer) MoveItemParent(context.Context, *MoveItemParentR
 }
 func (UnimplementedItemsServer) RefreshInheritance(context.Context, *RefreshInheritanceRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefreshInheritance not implemented")
+}
+func (UnimplementedItemsServer) SetUserItemSubscription(context.Context, *SetUserItemSubscriptionRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetUserItemSubscription not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 func (UnimplementedItemsServer) testEmbeddedByValue()               {}
@@ -3435,6 +3451,24 @@ func _Items_RefreshInheritance_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_SetUserItemSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUserItemSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).SetUserItemSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_SetUserItemSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).SetUserItemSubscription(ctx, req.(*SetUserItemSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3565,6 +3599,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RefreshInheritance",
 			Handler:    _Items_RefreshInheritance_Handler,
+		},
+		{
+			MethodName: "SetUserItemSubscription",
+			Handler:    _Items_SetUserItemSubscription_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

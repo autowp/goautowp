@@ -1705,3 +1705,72 @@ func TestUpdateItemLanguage(t *testing.T) {
 	require.Equal(t, "", row.GetFullText())
 	require.Equal(t, lastFullTextID, row.GetFullTextId())
 }
+
+func TestSetUserItemSubscription(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	itemName := fmt.Sprintf("Peugeot-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            itemName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDCategory,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = client.SetUserItemSubscription(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetUserItemSubscriptionRequest{
+			ItemId:     itemID,
+			Subscribed: true,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetUserItemSubscription(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetUserItemSubscriptionRequest{
+			ItemId:     itemID,
+			Subscribed: true,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetUserItemSubscription(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetUserItemSubscriptionRequest{
+			ItemId:     itemID,
+			Subscribed: false,
+		},
+	)
+	require.NoError(t, err)
+}

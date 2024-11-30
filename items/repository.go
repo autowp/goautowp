@@ -2797,3 +2797,12 @@ func (s *Repository) UserItemSubscribe(ctx context.Context, itemID, userID int64
 
 	return err
 }
+
+func (s *Repository) UserItemUnsubscribe(ctx context.Context, itemID, userID int64) error {
+	_, err := s.db.Delete(schema.UserItemSubscribeTable).Where(
+		schema.UserItemSubscribeTableUserIDCol.Eq(userID),
+		schema.UserItemSubscribeTableItemIDCol.Eq(itemID),
+	).Executor().ExecContext(ctx)
+
+	return err
+}

@@ -111,6 +111,7 @@ service Items {
   rpc DeleteItemParent(DeleteItemParentRequest) returns (google.protobuf.Empty) {}
   rpc MoveItemParent(MoveItemParentRequest) returns (google.protobuf.Empty) {}
   rpc RefreshInheritance(RefreshInheritanceRequest) returns (google.protobuf.Empty) {}
+  rpc SetUserItemSubscription(SetUserItemSubscriptionRequest) returns (google.protobuf.Empty) {}
 }
 
 service Comments {
@@ -1526,6 +1527,11 @@ message MoveItemParentRequest {
 
 message RefreshInheritanceRequest {
   int64 item_id = 1;
+}
+
+message SetUserItemSubscriptionRequest {
+  int64 item_id = 1;
+  bool subscribed = 2;
 }
 
 message AddCommentRequest {
