@@ -1433,7 +1433,7 @@ func TestUpdateItemParent(t *testing.T) {
 	_, err = client.UpdateItemLanguage(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
 		&ItemLanguage{
-			ItemId:   parentID,
+			ItemId:   childID,
 			Language: items.DefaultLanguageCode,
 			Name:     childName,
 		},
