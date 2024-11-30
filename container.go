@@ -799,7 +799,14 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 
 		cfg := s.Config()
 
-		s.itemsRepository = items.NewRepository(db, cfg.MostsMinCarsCount, s.Config().ContentLanguages)
+		textStorageRepository, err := s.TextStorageRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.itemsRepository = items.NewRepository(
+			db, cfg.MostsMinCarsCount, s.Config().ContentLanguages, textStorageRepository,
+		)
 	}
 
 	return s.itemsRepository, nil

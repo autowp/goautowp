@@ -2350,6 +2350,7 @@ const (
 	Items_CreateItemVehicleType_FullMethodName  = "/goautowp.Items/CreateItemVehicleType"
 	Items_DeleteItemVehicleType_FullMethodName  = "/goautowp.Items/DeleteItemVehicleType"
 	Items_GetItemLanguages_FullMethodName       = "/goautowp.Items/GetItemLanguages"
+	Items_UpdateItemLanguage_FullMethodName     = "/goautowp.Items/UpdateItemLanguage"
 	Items_GetItemParentLanguages_FullMethodName = "/goautowp.Items/GetItemParentLanguages"
 	Items_SetItemParentLanguage_FullMethodName  = "/goautowp.Items/SetItemParentLanguage"
 	Items_GetStats_FullMethodName               = "/goautowp.Items/GetStats"
@@ -2386,6 +2387,7 @@ type ItemsClient interface {
 	CreateItemVehicleType(ctx context.Context, in *APIItemVehicleType, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteItemVehicleType(ctx context.Context, in *APIItemVehicleTypeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetItemLanguages(ctx context.Context, in *APIGetItemLanguagesRequest, opts ...grpc.CallOption) (*ItemLanguages, error)
+	UpdateItemLanguage(ctx context.Context, in *ItemLanguage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetItemParentLanguages(ctx context.Context, in *APIGetItemParentLanguagesRequest, opts ...grpc.CallOption) (*ItemParentLanguages, error)
 	SetItemParentLanguage(ctx context.Context, in *ItemParentLanguage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error)
@@ -2606,6 +2608,16 @@ func (c *itemsClient) GetItemLanguages(ctx context.Context, in *APIGetItemLangua
 	return out, nil
 }
 
+func (c *itemsClient) UpdateItemLanguage(ctx context.Context, in *ItemLanguage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_UpdateItemLanguage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *itemsClient) GetItemParentLanguages(ctx context.Context, in *APIGetItemParentLanguagesRequest, opts ...grpc.CallOption) (*ItemParentLanguages, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ItemParentLanguages)
@@ -2730,6 +2742,7 @@ type ItemsServer interface {
 	CreateItemVehicleType(context.Context, *APIItemVehicleType) (*emptypb.Empty, error)
 	DeleteItemVehicleType(context.Context, *APIItemVehicleTypeRequest) (*emptypb.Empty, error)
 	GetItemLanguages(context.Context, *APIGetItemLanguagesRequest) (*ItemLanguages, error)
+	UpdateItemLanguage(context.Context, *ItemLanguage) (*emptypb.Empty, error)
 	GetItemParentLanguages(context.Context, *APIGetItemParentLanguagesRequest) (*ItemParentLanguages, error)
 	SetItemParentLanguage(context.Context, *ItemParentLanguage) (*emptypb.Empty, error)
 	GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error)
@@ -2809,6 +2822,9 @@ func (UnimplementedItemsServer) DeleteItemVehicleType(context.Context, *APIItemV
 }
 func (UnimplementedItemsServer) GetItemLanguages(context.Context, *APIGetItemLanguagesRequest) (*ItemLanguages, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItemLanguages not implemented")
+}
+func (UnimplementedItemsServer) UpdateItemLanguage(context.Context, *ItemLanguage) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateItemLanguage not implemented")
 }
 func (UnimplementedItemsServer) GetItemParentLanguages(context.Context, *APIGetItemParentLanguagesRequest) (*ItemParentLanguages, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItemParentLanguages not implemented")
@@ -3221,6 +3237,24 @@ func _Items_GetItemLanguages_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_UpdateItemLanguage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ItemLanguage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).UpdateItemLanguage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_UpdateItemLanguage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).UpdateItemLanguage(ctx, req.(*ItemLanguage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Items_GetItemParentLanguages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(APIGetItemParentLanguagesRequest)
 	if err := dec(in); err != nil {
@@ -3487,6 +3521,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetItemLanguages",
 			Handler:    _Items_GetItemLanguages_Handler,
+		},
+		{
+			MethodName: "UpdateItemLanguage",
+			Handler:    _Items_UpdateItemLanguage_Handler,
 		},
 		{
 			MethodName: "GetItemParentLanguages",

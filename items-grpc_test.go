@@ -13,6 +13,7 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
@@ -729,6 +730,9 @@ func TestSetItemParentLanguage(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
 	for _, testCase := range cases {
 		randomInt := random.Int()
 		childName := fmt.Sprintf(testCase.ChildName, randomInt)
@@ -752,11 +756,14 @@ func TestSetItemParentLanguage(t *testing.T) {
 		itemID, err := r1.LastInsertId()
 		require.NoError(t, err)
 
-		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
-			ItemID:   itemID,
-			Language: "xx",
-			Name:     sql.NullString{Valid: true, String: childName},
-		}).Executor().ExecContext(ctx)
+		_, err = client.UpdateItemLanguage(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+			&ItemLanguage{
+				ItemId:   itemID,
+				Language: items.DefaultLanguageCode,
+				Name:     childName,
+			},
+		)
 		require.NoError(t, err)
 
 		r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
@@ -777,15 +784,15 @@ func TestSetItemParentLanguage(t *testing.T) {
 		parentID, err := r2.LastInsertId()
 		require.NoError(t, err)
 
-		_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
-			ItemID:   parentID,
-			Language: "xx",
-			Name:     sql.NullString{Valid: true, String: parentName},
-		}).Executor().ExecContext(ctx)
+		_, err = client.UpdateItemLanguage(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+			&ItemLanguage{
+				ItemId:   parentID,
+				Language: items.DefaultLanguageCode,
+				Name:     parentName,
+			},
+		)
 		require.NoError(t, err)
-
-		// admin
-		_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
 		_, err = client.CreateItemParent(
 			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
@@ -953,7 +960,7 @@ func TestInboxPicturesCount(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
-	repository := items.NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := items.NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -1369,6 +1376,18 @@ func TestUpdateItemParent(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	randomInt := random.Int()
@@ -1387,11 +1406,14 @@ func TestUpdateItemParent(t *testing.T) {
 	parentID, err := r1.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
-		ItemID:   parentID,
-		Language: "xx",
-		Name:     sql.NullString{Valid: true, String: parentName},
-	}).Executor().ExecContext(ctx)
+	_, err = client.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemLanguage{
+			ItemId:   parentID,
+			Language: items.DefaultLanguageCode,
+			Name:     parentName,
+		},
+	)
 	require.NoError(t, err)
 
 	childName := fmt.Sprintf("Peugeot-%d 407", randomInt)
@@ -1408,25 +1430,15 @@ func TestUpdateItemParent(t *testing.T) {
 	childID, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
-		ItemID:   childID,
-		Language: "xx",
-		Name:     sql.NullString{Valid: true, String: childName},
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	_, err = client.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemLanguage{
+			ItemId:   parentID,
+			Language: items.DefaultLanguageCode,
+			Name:     childName,
+		},
 	)
 	require.NoError(t, err)
-
-	defer util.Close(conn)
-	client := NewItemsClient(conn)
-
-	// admin
-	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
 	// attach first to parent
 	_, err = client.CreateItemParent(
@@ -1492,4 +1504,204 @@ func TestUpdateItemParent(t *testing.T) {
 	require.Equal(t, "407", row.Catname)
 	require.Equal(t, schema.ItemParentTypeTuning, row.Type)
 	require.False(t, row.ManualCatname)
+}
+
+func TestUpdateItemLanguage(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	itemName := fmt.Sprintf("Peugeot-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            itemName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDCategory,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = client.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemLanguage{
+			ItemId:   itemID,
+			Language: "fr",
+			Name:     itemName,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetItemLanguages(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&APIGetItemLanguagesRequest{
+			ItemId: itemID,
+		},
+	)
+	require.NoError(t, err)
+
+	rows := res.GetItems()
+	require.Len(t, rows, 1)
+
+	row := rows[0]
+	require.Equal(t, itemID, row.GetItemId())
+	require.Equal(t, "fr", row.GetLanguage())
+	require.Equal(t, itemName, row.GetName())
+	require.Zero(t, row.GetTextId())
+	require.Zero(t, row.GetFullTextId())
+
+	// setup text
+	_, err = client.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemLanguage{
+			ItemId:   itemID,
+			Language: "fr",
+			Name:     itemName,
+			Text:     "a text",
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.GetItemLanguages(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&APIGetItemLanguagesRequest{
+			ItemId: itemID,
+		},
+	)
+	require.NoError(t, err)
+
+	rows = res.GetItems()
+	require.Len(t, rows, 1)
+
+	row = rows[0]
+	require.Equal(t, itemID, row.GetItemId())
+	require.Equal(t, "fr", row.GetLanguage())
+	require.Equal(t, itemName, row.GetName())
+	require.NotZero(t, row.GetTextId())
+	require.Equal(t, "a text", row.GetText())
+	require.Zero(t, row.GetFullTextId())
+
+	lastTextID := row.GetTextId()
+
+	// update text
+	_, err = client.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemLanguage{
+			ItemId:   itemID,
+			Language: "fr",
+			Name:     itemName,
+			Text:     "a second text",
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.GetItemLanguages(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&APIGetItemLanguagesRequest{
+			ItemId: itemID,
+		},
+	)
+	require.NoError(t, err)
+
+	rows = res.GetItems()
+	require.Len(t, rows, 1)
+
+	row = rows[0]
+	require.Equal(t, itemID, row.GetItemId())
+	require.Equal(t, "fr", row.GetLanguage())
+	require.Equal(t, itemName, row.GetName())
+	require.Equal(t, lastTextID, row.GetTextId())
+	require.Equal(t, "a second text", row.GetText())
+	require.Zero(t, row.GetFullTextId())
+
+	// setup full text
+	_, err = client.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemLanguage{
+			ItemId:   itemID,
+			Language: "fr",
+			Name:     itemName,
+			Text:     "a second text",
+			FullText: "a full text",
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.GetItemLanguages(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&APIGetItemLanguagesRequest{
+			ItemId: itemID,
+		},
+	)
+	require.NoError(t, err)
+
+	rows = res.GetItems()
+	require.Len(t, rows, 1)
+
+	row = rows[0]
+	require.Equal(t, itemID, row.GetItemId())
+	require.Equal(t, "fr", row.GetLanguage())
+	require.Equal(t, itemName, row.GetName())
+	require.Equal(t, lastTextID, row.GetTextId())
+	require.Equal(t, "a second text", row.GetText())
+	require.Equal(t, "a full text", row.GetFullText())
+	require.NotZero(t, row.GetFullTextId())
+
+	lastFullTextID := row.GetFullTextId()
+
+	// clear texts
+	_, err = client.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemLanguage{
+			ItemId:   itemID,
+			Language: "fr",
+			Name:     itemName,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.GetItemLanguages(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&APIGetItemLanguagesRequest{
+			ItemId: itemID,
+		},
+	)
+	require.NoError(t, err)
+
+	rows = res.GetItems()
+	require.Len(t, rows, 1)
+
+	row = rows[0]
+	require.Equal(t, itemID, row.GetItemId())
+	require.Equal(t, "fr", row.GetLanguage())
+	require.Equal(t, itemName, row.GetName())
+	require.Equal(t, lastTextID, row.GetTextId())
+	require.Equal(t, "", row.GetText())
+	require.Equal(t, "", row.GetFullText())
+	require.Equal(t, lastFullTextID, row.GetFullTextId())
 }

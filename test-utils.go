@@ -3,7 +3,6 @@ package goautowp
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"encoding/hex"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -111,6 +111,8 @@ func createItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	t.Helper()
 
 	ctx := context.Background()
+	cfg := config.LoadConfig(".")
+	repository := items.NewRepository(goquDB, 0, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(row).Executor().ExecContext(ctx)
 	require.NoError(t, err)
@@ -118,16 +120,9 @@ func createItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	itemID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
-		ItemID:   itemID,
-		Language: "en",
-		Name:     sql.NullString{Valid: true, String: row.Name},
-	}).Executor().ExecContext(ctx)
+	_, err = repository.UpdateItemLanguage(ctx, itemID, "en", row.Name, "", "", 0)
 	require.NoError(t, err)
 
-	cfg := config.LoadConfig(".")
-
-	repository := items.NewRepository(goquDB, 0, cfg.ContentLanguages)
 	_, err = repository.RebuildCache(ctx, itemID)
 	require.NoError(t, err)
 

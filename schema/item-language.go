@@ -13,6 +13,8 @@ const (
 	ItemLanguageTableNameColName       = "name"
 	ItemLanguageTableTextIDColName     = "text_id"
 	ItemLanguageTableFullTextIDColName = "full_text_id"
+
+	ItemLanguageNameMaxLength = 255
 )
 
 var (
@@ -25,7 +27,9 @@ var (
 )
 
 type ItemLanguageRow struct {
-	ItemID   int64          `db:"item_id"`
-	Language string         `db:"language"`
-	Name     sql.NullString `db:"name"`
+	ItemID     int64          `db:"item_id"`
+	Language   string         `db:"language"`
+	Name       sql.NullString `db:"name"`
+	TextID     sql.NullInt32  `db:"text_id"`
+	FullTextID sql.NullInt32  `db:"full_text_id"`
 }

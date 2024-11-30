@@ -11,6 +11,7 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
 	_ "github.com/go-sql-driver/mysql"
@@ -28,7 +29,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	langs := []string{"ru", "zh"}
 
@@ -69,7 +70,7 @@ func TestListFilters(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	options := query.ItemsListOptions{
 		Language: "en",
@@ -114,7 +115,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 	options := query.ItemsListOptions{
 		Language: "en",
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
@@ -196,7 +197,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	vehicleID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	success, err := repository.CreateItemParent(ctx, vehicleID, brandID, schema.ItemParentTypeDefault, "")
 	require.NoError(t, err)
@@ -272,7 +273,7 @@ func TestPaginator(t *testing.T) {
 		})
 	}
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 	options := query.ItemsListOptions{
 		Language: "en",
 		Limit:    2,
@@ -297,7 +298,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByDescendantsCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -404,7 +405,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByOrderByDescendantPicturesCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -544,7 +545,7 @@ func TestOrderByAddDatetime(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByAddDatetime" + strconv.Itoa(int(random.Uint32()%100000))
@@ -623,7 +624,7 @@ func TestOrderByName(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByName" + strconv.Itoa(int(random.Uint32()%100000))
@@ -730,7 +731,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByDescendantsParentsCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -872,7 +873,7 @@ func TestOrderByStarCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByStarCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -952,7 +953,7 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := context.Background()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByItemParentParentTimestamp" + strconv.Itoa(int(random.Uint32()%100000))
@@ -1040,6 +1041,8 @@ func CreateItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	t.Helper()
 
 	ctx := context.Background()
+	cfg := config.LoadConfig("../")
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(row).Executor().ExecContext(ctx)
 	require.NoError(t, err)
@@ -1047,16 +1050,9 @@ func CreateItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	itemID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.ItemLanguageTable).Rows(schema.ItemLanguageRow{
-		ItemID:   itemID,
-		Language: "en",
-		Name:     sql.NullString{Valid: true, String: row.Name},
-	}).Executor().ExecContext(ctx)
+	_, err = repository.UpdateItemLanguage(ctx, itemID, "en", row.Name, "", "", 0)
 	require.NoError(t, err)
 
-	cfg := config.LoadConfig("../")
-
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages)
 	_, err = repository.RebuildCache(ctx, itemID)
 	require.NoError(t, err)
 

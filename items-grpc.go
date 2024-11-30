@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/frontend"
@@ -1030,6 +1031,139 @@ func (s *ItemsGRPCServer) GetItemLanguages(
 	}, nil
 }
 
+func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLanguage) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	InvalidParams, err := in.Validate()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	itemID := in.GetItemId()
+
+	item, err := s.repository.Item(
+		ctx, query.ItemsListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
+		items.ListFields{NameText: true},
+	)
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	changes, err := s.repository.UpdateItemLanguage(
+		ctx, itemID, in.GetLanguage(), in.GetName(), in.GetText(), in.GetFullText(), userID,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(changes) > 0 {
+		err := s.repository.UserItemSubscribe(ctx, userID, in.GetItemId())
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		author, err := s.usersRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		language := in.GetLanguage()
+
+		falseRef := false
+
+		subscribers, _, err := s.usersRepository.Users(ctx, query.UserListOptions{
+			Deleted: &falseRef,
+			ItemSubscribe: &query.UserItemSubscribeListOptions{
+				ItemIDs: []int64{itemID},
+			},
+			ExcludeIDs: []int64{userID},
+		}, users.UserFields{})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		for _, subscriber := range subscribers {
+			uri, err := s.hostManager.URIByLanguage(subscriber.Language)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			itemNameText, err := s.formatItemNameText(item, subscriber.Language)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			localizer := s.i18n.Localizer(subscriber.Language)
+
+			changesStrs := make([]string, 0, len(changes))
+
+			for _, field := range changes {
+				changesStr, err := localizer.Localize(&i18n.LocalizeConfig{
+					DefaultMessage: &i18n.Message{
+						ID: field,
+					},
+				})
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+
+				changesStrs = append(changesStrs, changesStr+" ("+language+")")
+			}
+
+			message, err := localizer.Localize(&i18n.LocalizeConfig{
+				DefaultMessage: &i18n.Message{
+					ID: "pm/user-%s-edited-item-language-%s-%s",
+				},
+				TemplateData: map[string]interface{}{
+					"UserURL":      frontend.UserURL(uri, author.ID, author.Identity),
+					"ItemName":     itemNameText,
+					"ItemModerURL": frontend.ItemModerURL(uri, itemID),
+					"Changes":      strings.Join(changesStrs, "\n"),
+				},
+			})
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			err = s.messagingRepository.CreateMessage(ctx, 0, subscriber.ID, message)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
+		itemNameText, err := s.formatItemNameText(item, EventsDefaultLanguage)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.events.Add(ctx, Event{
+			UserID:  userID,
+			Message: "Редактирование языковых названия, описания и полного описания автомобиля " + itemNameText,
+			Items:   []int64{itemID},
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
 func (s *ItemsGRPCServer) GetItemParentLanguages(
 	ctx context.Context, in *APIGetItemParentLanguagesRequest,
 ) (*ItemParentLanguages, error) {
@@ -1187,6 +1321,73 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 	}, nil
 }
 
+func (s *ItemLanguage) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
+	var (
+		result   = make([]*errdetails.BadRequest_FieldViolation, 0)
+		problems []string
+		err      error
+	)
+
+	nameInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.StringLength{Min: 0, Max: schema.ItemLanguageNameMaxLength},
+		},
+	}
+
+	s.Name, problems, err = nameInputFilter.IsValidString(s.GetName())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "name",
+			Description: fv,
+		})
+	}
+
+	textInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.StringLength{Min: 0, Max: items.ItemLanguageTextMaxLength},
+		},
+	}
+
+	s.Text, problems, err = textInputFilter.IsValidString(s.GetText())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "text",
+			Description: fv,
+		})
+	}
+
+	fullTextInputFilter := validation.InputFilter{
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.StringLength{Min: 0, Max: items.ItemLanguageFullTextMaxLength},
+		},
+	}
+
+	s.FullText, problems, err = fullTextInputFilter.IsValidString(s.GetFullText())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fv := range problems {
+		result = append(result, &errdetails.BadRequest_FieldViolation{
+			Field:       "full_text",
+			Description: fv,
+		})
+	}
+
+	return result, nil
+}
+
 func (s *ItemParentLanguage) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
 	var (
 		result   = make([]*errdetails.BadRequest_FieldViolation, 0)
@@ -1197,7 +1398,7 @@ func (s *ItemParentLanguage) Validate() ([]*errdetails.BadRequest_FieldViolation
 	nameInputFilter := validation.InputFilter{
 		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
 		Validators: []validation.ValidatorInterface{
-			&validation.StringLength{Min: 0, Max: items.ItemLanguageNameMaxLength},
+			&validation.StringLength{Min: 0, Max: schema.ItemLanguageNameMaxLength},
 		},
 	}
 

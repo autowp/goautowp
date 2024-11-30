@@ -100,6 +100,7 @@ service Items {
   rpc CreateItemVehicleType(APIItemVehicleType) returns (google.protobuf.Empty) {}
   rpc DeleteItemVehicleType(APIItemVehicleTypeRequest) returns (google.protobuf.Empty) {}
   rpc GetItemLanguages(APIGetItemLanguagesRequest) returns (ItemLanguages) {}
+  rpc UpdateItemLanguage(ItemLanguage) returns (google.protobuf.Empty) {}
   rpc GetItemParentLanguages(APIGetItemParentLanguagesRequest) returns (ItemParentLanguages) {}
   rpc SetItemParentLanguage(ItemParentLanguage) returns (google.protobuf.Empty) {}
   rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}

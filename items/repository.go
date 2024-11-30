@@ -13,6 +13,7 @@ import (
 	"github.com/autowp/goautowp/filter"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
@@ -33,8 +34,11 @@ var (
 )
 
 const (
-	NewDays                   = 7
-	ItemLanguageNameMaxLength = 255
+	DefaultLanguageCode = "xx"
+
+	NewDays                       = 7
+	ItemLanguageTextMaxLength     = 4096
+	ItemLanguageFullTextMaxLength = 65536
 
 	colNameOnly                   = "name_only"
 	colSpecName                   = "spec_name"
@@ -80,17 +84,17 @@ type TreeItem struct {
 }
 
 var languagePriority = map[string][]string{
-	"xx":    {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", "xx"},
-	"en":    {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", "xx"},
-	"fr":    {"fr", "en", "it", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", "xx"},
-	"pt-br": {"pt", "en", "it", "fr", "de", "es", "ru", "be", "uk", "zh", "jp", "he", "xx"},
-	"ru":    {"ru", "en", "it", "fr", "de", "es", "pt", "be", "uk", "zh", "jp", "he", "xx"},
-	"be":    {"be", "ru", "uk", "en", "it", "fr", "de", "es", "pt", "zh", "jp", "he", "xx"},
-	"uk":    {"uk", "ru", "en", "it", "fr", "de", "es", "pt", "be", "zh", "jp", "he", "xx"},
-	"zh":    {"zh", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "jp", "he", "xx"},
-	"es":    {"es", "en", "it", "fr", "de", "pt", "ru", "be", "uk", "zh", "jp", "he", "xx"},
-	"it":    {"it", "en", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", "xx"},
-	"he":    {"he", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "xx"},
+	DefaultLanguageCode: {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
+	"en":                {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
+	"fr":                {"fr", "en", "it", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
+	"pt-br":             {"pt", "en", "it", "fr", "de", "es", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
+	"ru":                {"ru", "en", "it", "fr", "de", "es", "pt", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
+	"be":                {"be", "ru", "uk", "en", "it", "fr", "de", "es", "pt", "zh", "jp", "he", DefaultLanguageCode},
+	"uk":                {"uk", "ru", "en", "it", "fr", "de", "es", "pt", "be", "zh", "jp", "he", DefaultLanguageCode},
+	"zh":                {"zh", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "jp", "he", DefaultLanguageCode},
+	"es":                {"es", "en", "it", "fr", "de", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
+	"it":                {"it", "en", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
+	"he":                {"he", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", DefaultLanguageCode},
 }
 
 // Repository Main Object.
@@ -141,6 +145,7 @@ type Repository struct {
 	starCountColumn                  *StarCountColumn
 	itemParentParentTimestampColumn  *ItemParentParentTimestampColumn
 	contentLanguages                 []string
+	textStorageRepository            *textstorage.Repository
 }
 
 type Item struct {
@@ -185,6 +190,7 @@ func NewRepository(
 	db *goqu.Database,
 	mostsMinCarsCount int,
 	contentLanguages []string,
+	textStorageRepository *textstorage.Repository,
 ) *Repository {
 	return &Repository{
 		db:                               db,
@@ -242,6 +248,7 @@ func NewRepository(
 		starCountColumn:                  &StarCountColumn{},
 		itemParentParentTimestampColumn:  &ItemParentParentTimestampColumn{},
 		contentLanguages:                 contentLanguages,
+		textStorageRepository:            textStorageRepository,
 	}
 }
 
@@ -316,7 +323,7 @@ func langPriorityOrderExpr( //nolint: ireturn
 ) (exp.OrderedExpression, error) {
 	langPriority, ok := languagePriority[language]
 	if !ok {
-		langPriority, ok = languagePriority["xx"]
+		langPriority, ok = languagePriority[DefaultLanguageCode]
 	}
 
 	if !ok {
@@ -1436,7 +1443,7 @@ func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLang
 		schema.ItemLanguageTableNameCol, schema.ItemLanguageTableTextIDCol, schema.ItemLanguageTableFullTextIDCol).
 		From(schema.ItemLanguageTable).Where(
 		schema.ItemLanguageTableItemIDCol.Eq(itemID),
-		schema.ItemLanguageTableLanguageCol.Neq("xx"),
+		schema.ItemLanguageTableLanguageCol.Neq(DefaultLanguageCode),
 	)
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
@@ -1483,6 +1490,126 @@ func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLang
 	}
 
 	return result, nil
+}
+
+func (s *Repository) UpdateItemLanguage(
+	ctx context.Context, itemID int64, lang, name, text, fullText string, userID int64,
+) ([]string, error) {
+	var row schema.ItemLanguageRow
+
+	success, err := s.db.Select(
+		schema.ItemLanguageTableNameCol, schema.ItemLanguageTableTextIDCol, schema.ItemLanguageTableFullTextIDCol,
+	).
+		From(schema.ItemLanguageTable).
+		Where(
+			schema.ItemLanguageTableItemIDCol.Eq(itemID),
+			schema.ItemLanguageTableLanguageCol.Eq(lang),
+		).ScanStructContext(ctx, &row)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		row = schema.ItemLanguageRow{}
+	}
+
+	set := goqu.Record{}
+
+	changes := make([]string, 0)
+
+	oldName := ""
+	if row.Name.Valid {
+		oldName = row.Name.String
+	}
+
+	if oldName != name {
+		set[schema.ItemLanguageTableNameColName] = name
+
+		changes = append(changes, "moder/vehicle/name")
+	}
+
+	textChanged := false
+
+	if row.TextID.Valid {
+		oldText, err := s.textStorageRepository.Text(ctx, row.TextID.Int32)
+		if err != nil {
+			return nil, err
+		}
+
+		textChanged = text != oldText
+
+		err = s.textStorageRepository.SetText(ctx, row.TextID.Int32, text, userID)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(text) > 0 {
+		textChanged = true
+
+		textID, err := s.textStorageRepository.CreateText(ctx, text, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		set[schema.ItemLanguageTableTextIDColName] = textID
+	}
+
+	if textChanged {
+		changes = append(changes, "moder/item/short-description")
+	}
+
+	fullTextChanged := false
+
+	if row.FullTextID.Valid {
+		oldFullText, err := s.textStorageRepository.Text(ctx, row.FullTextID.Int32)
+		if err != nil {
+			return nil, err
+		}
+
+		fullTextChanged = fullText != oldFullText
+
+		err = s.textStorageRepository.SetText(ctx, row.FullTextID.Int32, fullText, userID)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(fullText) > 0 {
+		fullTextChanged = true
+
+		fullTextID, err := s.textStorageRepository.CreateText(ctx, fullText, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		set[schema.ItemLanguageTableFullTextIDColName] = fullTextID
+	}
+
+	if fullTextChanged {
+		changes = append(changes, "moder/item/full-description")
+	}
+
+	if len(set) > 0 {
+		onConflict := goqu.Record{}
+		for col := range set {
+			onConflict[col] = goqu.Func("VALUES", goqu.C(col))
+		}
+
+		set[schema.ItemLanguageTableItemIDColName] = itemID
+		set[schema.ItemLanguageTableLanguageColName] = lang
+
+		_, err = s.db.Insert(schema.ItemLanguageTable).Rows(set).OnConflict(goqu.DoUpdate(
+			schema.ItemLanguageTableItemIDColName+","+schema.ItemLanguageTableLanguageColName,
+			onConflict,
+		)).Executor().ExecContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = s.refreshAutoByVehicle(ctx, itemID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return changes, nil
 }
 
 func (s *Repository) ParentLanguageList(
@@ -1621,8 +1748,8 @@ func (s *Repository) SetItemParentLanguage(
 		isAuto = true
 	}
 
-	if len(newName) > ItemLanguageNameMaxLength {
-		newName = newName[:ItemLanguageNameMaxLength]
+	if len(newName) > schema.ItemLanguageNameMaxLength {
+		newName = newName[:schema.ItemLanguageNameMaxLength]
 	}
 
 	_, err = s.db.Insert(schema.ItemParentLanguageTable).Rows(goqu.Record{
@@ -1826,7 +1953,7 @@ func (s *Repository) getAliases(ctx context.Context, itemID int64) ([]string, er
 func (s *Repository) getName(ctx context.Context, itemID int64, language string) (string, error) {
 	langPriority, ok := languagePriority[language]
 	if !ok {
-		langPriority, ok = languagePriority["xx"]
+		langPriority, ok = languagePriority[DefaultLanguageCode]
 	}
 
 	if !ok {
@@ -2514,6 +2641,48 @@ func (s *Repository) MoveItemParent(ctx context.Context, itemID, parentID, newPa
 	return true, nil
 }
 
+func (s *Repository) getParentRows(ctx context.Context, itemID int64, stockFirst bool) ([]schema.ItemParentRow, error) {
+	sqSelect := s.db.Select(schema.ItemParentTableParentIDCol).
+		From(schema.ItemParentTable).
+		Where(
+			schema.ItemParentTableItemIDCol.Eq(itemID),
+		)
+
+	if stockFirst {
+		sqSelect = sqSelect.Order(
+			goqu.L("?", schema.ItemParentTableTypeCol.Eq(schema.ItemParentTypeDefault)).Desc(),
+		)
+	}
+
+	var rows []schema.ItemParentRow
+
+	err := sqSelect.ScanStructsContext(ctx, &rows)
+
+	return rows, err
+}
+
+func (s *Repository) refreshAutoByVehicle(ctx context.Context, itemID int64) (bool, error) {
+	rows, err := s.getParentRows(ctx, itemID, false)
+	if err != nil {
+		return false, err
+	}
+
+	somethingChanged := false
+
+	for _, itemParentRow := range rows {
+		changed, err := s.refreshAuto(ctx, itemParentRow.ParentID, itemID)
+		if err != nil {
+			return false, err
+		}
+
+		if changed {
+			somethingChanged = true
+		}
+	}
+
+	return somethingChanged, nil
+}
+
 func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (bool, error) {
 	var bvlRows []schema.ItemParentLanguageRow
 
@@ -2618,4 +2787,13 @@ func (s *Repository) ItemParent(ctx context.Context, itemID, parentID int64) (*s
 	}
 
 	return &res, nil
+}
+
+func (s *Repository) UserItemSubscribe(ctx context.Context, itemID, userID int64) error {
+	_, err := s.db.Insert(schema.UserItemSubscribeTable).Rows(goqu.Record{
+		schema.UserItemSubscribeTableUserIDColName: userID,
+		schema.UserItemSubscribeTableItemIDColName: itemID,
+	}).OnConflict(goqu.DoNothing()).Executor().ExecContext(ctx)
+
+	return err
 }
