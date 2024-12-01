@@ -933,6 +933,8 @@ message ItemFields {
   bool comments_attentions_count = 17;
   bool is_compiles_item_of_day = 18;
   bool brandicon = 19;
+  bool attr_zone_id = 20;
+  bool location = 21;
 }
 
 message ItemRequest {
@@ -1023,6 +1025,9 @@ message APIItem {
   int32 comments_attentions_count = 21;
   bool is_compiles_item_of_day = 22;
   APIImage brandicon = 23;
+  int64 attr_zone_id = 24;
+  bool engine_inherit = 25;
+  google.type.LatLng location = 26;
 }
 
 message APIItemList {

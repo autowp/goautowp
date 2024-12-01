@@ -2,7 +2,9 @@ package goautowp
 
 import (
 	"context"
+	"errors"
 
+	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/itemofday"
@@ -12,6 +14,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
 func convertItemTypeID(itemTypeID schema.ItemTableItemTypeID) ItemType {
@@ -72,7 +75,9 @@ type ItemExtractor struct {
 	imageStorage        *storage.Storage
 	commentsRepository  *comments.Repository
 	picturesRepository  *pictures.Repository
+	itemRepository      *items.Repository
 	itemOfDayRepository *itemofday.Repository
+	attrs               *attrs.Repository
 }
 
 func NewItemExtractor(
@@ -80,7 +85,9 @@ func NewItemExtractor(
 	imageStorage *storage.Storage,
 	commentsRepository *comments.Repository,
 	picturesRepository *pictures.Repository,
+	itemRepository *items.Repository,
 	itemOfDayRepository *itemofday.Repository,
+	attrs *attrs.Repository,
 ) *ItemExtractor {
 	return &ItemExtractor{
 		enforcer:            enforcer,
@@ -89,6 +96,8 @@ func NewItemExtractor(
 		commentsRepository:  commentsRepository,
 		picturesRepository:  picturesRepository,
 		itemOfDayRepository: itemOfDayRepository,
+		itemRepository:      itemRepository,
+		attrs:               attrs,
 	}
 }
 
@@ -103,6 +112,7 @@ func (s *ItemExtractor) Extract(
 		Id:                         row.ID,
 		Catname:                    util.NullStringToString(row.Catname),
 		EngineItemId:               util.NullInt64ToScalar(row.EngineItemID),
+		EngineInherit:              row.EngineInherit,
 		DescendantsCount:           row.DescendantsCount,
 		ItemTypeId:                 convertItemTypeID(row.ItemTypeID),
 		IsConcept:                  row.IsConcept,
@@ -183,6 +193,29 @@ func (s *ItemExtractor) Extract(
 			}
 
 			result.IsCompilesItemOfDay = IsCompiles
+		}
+
+		if fields.GetAttrZoneId() {
+			vehicleTypes, err := s.itemRepository.VehicleTypes(ctx, row.ID, false)
+			if err != nil {
+				return nil, err
+			}
+
+			result.AttrZoneId = s.attrs.ZoneIDByVehicleTypeIDs(row.ItemTypeID, vehicleTypes)
+		}
+
+		if fields.GetLocation() {
+			location, err := s.itemRepository.ItemLocation(ctx, row.ID)
+			if err != nil {
+				if !errors.Is(err, items.ErrItemNotFound) {
+					return nil, err
+				}
+			} else {
+				result.Location = &latlng.LatLng{
+					Latitude:  location.Lat(),
+					Longitude: location.Lng(),
+				}
+			}
 		}
 	}
 

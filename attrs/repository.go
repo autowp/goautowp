@@ -30,10 +30,12 @@ var (
 )
 
 const (
-	defaultZoneID = 1
-	engineZoneID  = 5
-	busZoneID     = 3
+	defaultZoneID int64 = 1
+	engineZoneID  int64 = 5
+	busZoneID     int64 = 3
 )
+
+var busVehicleTypes = []int64{19, 39, 28, 32}
 
 const (
 	ValuesOrderByNone ValuesOrderBy = iota
@@ -2264,4 +2266,22 @@ func (s *Repository) UpdateInheritedValues(ctx context.Context, itemID int64) er
 	}
 
 	return nil
+}
+
+func (s *Repository) ZoneIDByVehicleTypeIDs(itemTypeID schema.ItemTableItemTypeID, vehicleTypeIDs []int64) int64 {
+	if itemTypeID == schema.ItemTableItemTypeIDEngine {
+		return engineZoneID
+	}
+
+	zoneID := defaultZoneID
+
+	for _, vehicleTypeID := range vehicleTypeIDs {
+		if util.Contains(busVehicleTypes, vehicleTypeID) {
+			zoneID = busZoneID
+
+			break
+		}
+	}
+
+	return zoneID
 }

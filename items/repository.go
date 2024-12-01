@@ -17,6 +17,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
+	geo "github.com/paulmach/go.geo"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
@@ -121,6 +122,7 @@ type Repository struct {
 	idColumn                         *SimpleColumn
 	catnameColumn                    *SimpleColumn
 	engineItemIDColumn               *SimpleColumn
+	engineInheritColumn              *SimpleColumn
 	itemTypeIDColumn                 *SimpleColumn
 	isGroupColumn                    *SimpleColumn
 	isConceptColumn                  *SimpleColumn
@@ -224,6 +226,7 @@ func NewRepository(
 		fullNameColumn:                   &SimpleColumn{col: schema.ItemTableFullNameColName},
 		catnameColumn:                    &SimpleColumn{col: schema.ItemTableCatnameColName},
 		engineItemIDColumn:               &SimpleColumn{col: schema.ItemTableEngineItemIDColName},
+		engineInheritColumn:              &SimpleColumn{col: schema.ItemTableEngineInheritColName},
 		itemTypeIDColumn:                 &SimpleColumn{col: schema.ItemTableItemTypeIDColName},
 		isGroupColumn:                    &SimpleColumn{col: schema.ItemTableIsGroupColName},
 		isConceptColumn:                  &SimpleColumn{col: schema.ItemTableIsConceptColName},
@@ -345,6 +348,7 @@ func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 		schema.ItemTableIDColName:               s.idColumn,
 		schema.ItemTableCatnameColName:          s.catnameColumn,
 		schema.ItemTableEngineItemIDColName:     s.engineItemIDColumn,
+		schema.ItemTableEngineInheritColName:    s.engineInheritColumn,
 		schema.ItemTableItemTypeIDColName:       s.itemTypeIDColumn,
 		schema.ItemTableIsConceptColName:        s.isConceptColumn,
 		schema.ItemTableIsConceptInheritColName: s.isConceptInheritColumn,
@@ -2855,4 +2859,39 @@ func (s *Repository) SetItemEngine(
 	}
 
 	return affected > 0, nil
+}
+
+func (s *Repository) VehicleTypes(ctx context.Context, vehicleID int64, inherited bool) ([]int64, error) {
+	sqSelect := s.db.Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).
+		From(schema.VehicleVehicleTypeTable).
+		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(vehicleID))
+
+	if inherited {
+		sqSelect = sqSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsTrue())
+	} else {
+		sqSelect = sqSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsFalse())
+	}
+
+	var res []int64
+	err := sqSelect.ScanValsContext(ctx, &res)
+
+	return res, err
+}
+
+func (s *Repository) ItemLocation(ctx context.Context, itemID int64) (geo.Point, error) {
+	var res geo.Point
+
+	success, err := s.db.Select(schema.ItemPointTablePointCol).
+		From(schema.ItemPointTable).
+		Where(schema.ItemPointTableItemIDCol.Eq(itemID)).
+		ScanValContext(ctx, &res)
+	if err != nil {
+		return res, err
+	}
+
+	if !success {
+		return res, ErrItemNotFound
+	}
+
+	return res, nil
 }
