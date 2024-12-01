@@ -1126,22 +1126,16 @@ func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLangua
 				changesStrs = append(changesStrs, changesStr+" ("+language+")")
 			}
 
-			message, err := localizer.Localize(&i18n.LocalizeConfig{
-				DefaultMessage: &i18n.Message{
-					ID: "pm/user-%s-edited-item-language-%s-%s",
-				},
-				TemplateData: map[string]interface{}{
+			err = s.messagingRepository.CreateMessageFromTemplate(
+				ctx, 0, subscriber.ID, "pm/user-%s-edited-item-language-%s-%s",
+				map[string]interface{}{
 					"UserURL":      frontend.UserURL(uri, author.ID, author.Identity),
 					"ItemName":     itemNameText,
 					"ItemModerURL": frontend.ItemModerURL(uri, itemID),
 					"Changes":      strings.Join(changesStrs, "\n"),
 				},
-			})
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
-			err = s.messagingRepository.CreateMessage(ctx, 0, subscriber.ID, message)
+				subscriber.Language,
+			)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -1840,25 +1834,13 @@ func (s *ItemsGRPCServer) notifyItemParentSubscribers(
 			return err
 		}
 
-		localizer := s.i18n.Localizer(subscriber.Language)
-
-		message, err := localizer.Localize(&i18n.LocalizeConfig{
-			DefaultMessage: &i18n.Message{
-				ID: messageID,
-			},
-			TemplateData: map[string]interface{}{
-				"UserURL":            frontend.UserURL(uri, author.ID, author.Identity),
-				"ItemName":           itemNameText,
-				"ItemModerURL":       frontend.ItemModerURL(uri, item.ID),
-				"ParentItemName":     parentNameText,
-				"ParentItemModerURL": frontend.ItemModerURL(uri, parent.ID),
-			},
-		})
-		if err != nil {
-			return err
-		}
-
-		err = s.messagingRepository.CreateMessage(ctx, 0, subscriber.ID, message)
+		err = s.messagingRepository.CreateMessageFromTemplate(ctx, 0, subscriber.ID, messageID, map[string]interface{}{
+			"UserURL":            frontend.UserURL(uri, author.ID, author.Identity),
+			"ItemName":           itemNameText,
+			"ItemModerURL":       frontend.ItemModerURL(uri, item.ID),
+			"ParentItemName":     parentNameText,
+			"ParentItemModerURL": frontend.ItemModerURL(uri, parent.ID),
+		}, subscriber.Language)
 		if err != nil {
 			return err
 		}
@@ -2258,8 +2240,6 @@ func (s *ItemsGRPCServer) notifyItemSubscribers(
 	}
 
 	for _, subscriber := range subscribers {
-		localizer := s.i18n.Localizer(subscriber.Language)
-
 		uri, err := s.hostManager.URIByLanguage(subscriber.Language)
 		if err != nil {
 			return err
@@ -2270,15 +2250,7 @@ func (s *ItemsGRPCServer) notifyItemSubscribers(
 			return err
 		}
 
-		message, err := localizer.Localize(&i18n.LocalizeConfig{
-			DefaultMessage: &i18n.Message{ID: messageID},
-			TemplateData:   data,
-		})
-		if err != nil {
-			return err
-		}
-
-		err = s.messagingRepository.CreateMessage(ctx, 0, subscriber.ID, message)
+		err = s.messagingRepository.CreateMessageFromTemplate(ctx, 0, subscriber.ID, messageID, data, subscriber.Language)
 		if err != nil {
 			return err
 		}

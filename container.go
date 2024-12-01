@@ -285,12 +285,7 @@ func (s *Container) CommentsRepository() (*comments.Repository, error) {
 			return nil, err
 		}
 
-		i18n, err := s.I18n()
-		if err != nil {
-			return nil, err
-		}
-
-		s.commentsRepository = comments.NewRepository(db, usersRepository, messagingRepository, s.HostsManager(), i18n)
+		s.commentsRepository = comments.NewRepository(db, usersRepository, messagingRepository, s.HostsManager())
 	}
 
 	return s.commentsRepository, nil
@@ -1436,7 +1431,12 @@ func (s *Container) MessagingRepository() (*messaging.Repository, error) {
 			return nil, err
 		}
 
-		s.messagingRepository = messaging.NewRepository(db, tg)
+		i18n, err := s.I18n()
+		if err != nil {
+			return nil, err
+		}
+
+		s.messagingRepository = messaging.NewRepository(db, tg, i18n)
 	}
 
 	return s.messagingRepository, nil

@@ -7,10 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 var (
@@ -30,6 +32,7 @@ const (
 type Repository struct {
 	db              *goqu.Database
 	telegramService *telegram.Service
+	i18n            *i18nbundle.I18n
 }
 
 type Message struct {
@@ -46,10 +49,11 @@ type Message struct {
 	DialogWithUserID int64
 }
 
-func NewRepository(db *goqu.Database, telegramService *telegram.Service) *Repository {
+func NewRepository(db *goqu.Database, telegramService *telegram.Service, i18n *i18nbundle.I18n) *Repository {
 	return &Repository{
 		db:              db,
 		telegramService: telegramService,
+		i18n:            i18n,
 	}
 }
 
@@ -150,6 +154,23 @@ func (s *Repository) ClearSystem(ctx context.Context, userID int64) error {
 		Executor().ExecContext(ctx)
 
 	return err
+}
+
+func (s *Repository) CreateMessageFromTemplate(
+	ctx context.Context, fromUserID int64, toUserID int64, messageID string, templateData map[string]interface{},
+	lang string,
+) error {
+	localizer := s.i18n.Localizer(lang)
+
+	text, err := localizer.Localize(&i18n.LocalizeConfig{
+		DefaultMessage: &i18n.Message{ID: messageID},
+		TemplateData:   templateData,
+	})
+	if err != nil {
+		return err
+	}
+
+	return s.CreateMessage(ctx, fromUserID, toUserID, text)
 }
 
 func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUserID int64, text string) error {

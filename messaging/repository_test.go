@@ -9,6 +9,7 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/telegram"
 	"github.com/doug-martin/goqu/v9"
@@ -30,7 +31,10 @@ func createRepository(t *testing.T) *Repository {
 	hostsManager := hosts.NewManager(cfg.Languages)
 	tg := telegram.NewService(cfg.Telegram, goquDB, hostsManager)
 
-	s := NewRepository(goquDB, tg)
+	i18n, err := i18nbundle.New()
+	require.NoError(t, err)
+
+	s := NewRepository(goquDB, tg, i18n)
 
 	return s
 }

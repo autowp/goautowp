@@ -23,7 +23,6 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/casbin/casbin"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/paulmach/orb"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -1280,22 +1279,14 @@ func (s *PicturesGRPCServer) notifyCopyrightsEdited(
 			return err
 		}
 
-		localizer := s.i18n.Localizer(userRow.Language)
-
-		message, err := localizer.Localize(&i18n.LocalizeConfig{
-			DefaultMessage: &i18n.Message{
-				ID: "pm/user-%s-edited-picture-copyrights-%s-%s",
-			},
-			TemplateData: map[string]interface{}{
+		err = s.messagingRepository.CreateMessageFromTemplate(
+			ctx, 0, userRow.ID, "pm/user-%s-edited-picture-copyrights-%s-%s",
+			map[string]interface{}{
 				"User":       userURL,
 				"PictureURL": pictureURL,
 			},
-		})
-		if err != nil {
-			return err
-		}
-
-		err = s.messagingRepository.CreateMessage(ctx, 0, userRow.ID, message)
+			userRow.Language,
+		)
 		if err != nil {
 			return err
 		}
@@ -1493,24 +1484,12 @@ func (s *PicturesGRPCServer) sendLocalizedMessage(
 		return nil
 	}
 
-	localizer := s.i18n.Localizer(receiver.Language)
-
 	templateData, err := templateDataFunc(receiver.Language)
 	if err != nil {
 		return err
 	}
 
-	message, err := localizer.Localize(&i18n.LocalizeConfig{
-		DefaultMessage: &i18n.Message{
-			ID: messageID,
-		},
-		TemplateData: templateData,
-	})
-	if err != nil {
-		return err
-	}
-
-	return s.messagingRepository.CreateMessage(ctx, 0, receiver.ID, message)
+	return s.messagingRepository.CreateMessageFromTemplate(ctx, 0, receiver.ID, messageID, templateData, receiver.Language)
 }
 
 func (s *PicturesGRPCServer) NotifyAccepted(

@@ -13,7 +13,6 @@ import (
 
 	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
-	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
@@ -21,7 +20,6 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 var (
@@ -83,7 +81,6 @@ type Repository struct {
 	userRepository    *users.Repository
 	messageRepository *messaging.Repository
 	hostManager       *hosts.Manager
-	i18n              *i18nbundle.I18n
 }
 
 // NewRepository constructor.
@@ -92,14 +89,12 @@ func NewRepository(
 	userRepository *users.Repository,
 	messageRepository *messaging.Repository,
 	hostManager *hosts.Manager,
-	i18n *i18nbundle.I18n,
 ) *Repository {
 	return &Repository{
 		db:                db,
 		userRepository:    userRepository,
 		messageRepository: messageRepository,
 		hostManager:       hostManager,
-		i18n:              i18n,
 	}
 }
 
@@ -748,22 +743,13 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 		return err
 	}
 
-	localizer := s.i18n.Localizer(st.ParentLanguage)
-
-	message, err := localizer.Localize(&i18n.LocalizeConfig{
-		DefaultMessage: &i18n.Message{
-			ID: "pm/user-%s-replies-to-you-%s",
-		},
-		TemplateData: map[string]interface{}{
+	return s.messageRepository.CreateMessageFromTemplate(
+		ctx, 0, st.ParentAuthorID, "pm/user-%s-replies-to-you-%s", map[string]interface{}{
 			"Name":    userURL,
 			"Message": messageURL,
 		},
-	})
-	if err != nil {
-		return err
-	}
-
-	return s.messageRepository.CreateMessage(ctx, 0, st.ParentAuthorID, message)
+		st.ParentLanguage,
+	)
 }
 
 func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) error {
@@ -869,22 +855,13 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 			return err
 		}
 
-		localizer := s.i18n.Localizer(subscriberLanguage)
-
-		message, err := localizer.Localize(&i18n.LocalizeConfig{
-			DefaultMessage: &i18n.Message{
-				ID: "pm/user-%s-post-new-message-%s",
-			},
-			TemplateData: map[string]interface{}{
+		err = s.messageRepository.CreateMessageFromTemplate(
+			ctx, 0, subscriberID, "pm/user-%s-post-new-message-%s", map[string]interface{}{
 				"Name":    userURL,
 				"Message": messageURL,
 			},
-		})
-		if err != nil {
-			return err
-		}
-
-		err = s.messageRepository.CreateMessage(ctx, 0, subscriberID, message)
+			subscriberLanguage,
+		)
 		if err != nil {
 			return err
 		}

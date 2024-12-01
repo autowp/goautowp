@@ -89,12 +89,12 @@ func createRepository(t *testing.T) (*Repository, *goqu.Database) {
 
 	telegramService := telegram.NewService(cfg.Telegram, goquDB, hostsManager)
 
-	messagingRepository := messaging.NewRepository(goquDB, telegramService)
-
 	i, err := i18nbundle.New()
 	require.NoError(t, err)
 
-	repo := NewRepository(goquDB, usersRepository, messagingRepository, hostsManager, i)
+	messagingRepository := messaging.NewRepository(goquDB, telegramService, i)
+
+	repo := NewRepository(goquDB, usersRepository, messagingRepository, hostsManager)
 
 	return repo, goquDB
 }
