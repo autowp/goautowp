@@ -1603,7 +1603,7 @@ func (s *Repository) UpdateItemLanguage(
 			return nil, err
 		}
 
-		_, err = s.refreshAutoByVehicle(ctx, itemID)
+		_, err = s.RefreshAutoByVehicle(ctx, itemID)
 		if err != nil {
 			return nil, err
 		}
@@ -2407,7 +2407,7 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 		selectedID := util.KeyOfMapMaxValue(enginesMap)
 
 		var oldEngineID int64
-		if !car.EngineItemID.Valid {
+		if car.EngineItemID.Valid {
 			oldEngineID = car.EngineItemID.Int64
 		}
 
@@ -2511,8 +2511,8 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 
 		err = s.db.Select(
 			schema.ItemTableIDCol, schema.ItemTableIsConceptCol, schema.ItemTableIsConceptInheritCol,
-			schema.ItemTableEngineInheritCol, schema.ItemTableCarTypeInheritCol, schema.ItemTableCarTypeIDCol,
-			schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol,
+			schema.ItemTableEngineInheritCol, schema.ItemTableEngineItemIDCol, schema.ItemTableCarTypeInheritCol,
+			schema.ItemTableCarTypeIDCol, schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol,
 		).
 			From(schema.ItemTable).
 			Join(schema.ItemParentTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentTableItemIDCol))).
@@ -2661,7 +2661,7 @@ func (s *Repository) getParentRows(ctx context.Context, itemID int64, stockFirst
 	return rows, err
 }
 
-func (s *Repository) refreshAutoByVehicle(ctx context.Context, itemID int64) (bool, error) {
+func (s *Repository) RefreshAutoByVehicle(ctx context.Context, itemID int64) (bool, error) {
 	rows, err := s.getParentRows(ctx, itemID, false)
 	if err != nil {
 		return false, err
@@ -2687,7 +2687,7 @@ func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (b
 	var bvlRows []schema.ItemParentLanguageRow
 
 	err := s.db.Select(
-		schema.ItemParentLanguageTableIsAutoColName,
+		schema.ItemParentLanguageTableIsAutoCol,
 		schema.ItemParentLanguageTableNameCol,
 		schema.ItemParentLanguageTableLanguageCol,
 	).
@@ -2805,4 +2805,54 @@ func (s *Repository) UserItemUnsubscribe(ctx context.Context, itemID, userID int
 	).Executor().ExecContext(ctx)
 
 	return err
+}
+
+func (s *Repository) SetItemEngine(
+	ctx context.Context, itemID int64, engineID int64, engineInherited bool,
+) (bool, error) {
+	set := goqu.Record{
+		schema.ItemTableEngineInheritColName: engineInherited,
+	}
+
+	if engineInherited || engineID == 0 {
+		set[schema.ItemTableEngineItemIDColName] = nil
+	} else {
+		set[schema.ItemTableEngineItemIDColName] = engineID
+	}
+
+	var found int64
+
+	success, err := s.db.Select(schema.ItemTableIDCol).From(schema.ItemTable).Where(
+		schema.ItemTableIDCol.Eq(itemID),
+		schema.ItemTableItemTypeIDCol.Eq(schema.ItemTableItemTypeIDVehicle),
+	).ScanValContext(ctx, &found)
+	if err != nil {
+		return false, err
+	}
+
+	if !success {
+		return false, ErrItemNotFound
+	}
+
+	res, err := s.db.Update(schema.ItemTable).
+		Set(set).
+		Where(schema.ItemTableIDCol.Eq(itemID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	if affected > 0 {
+		err = s.UpdateInheritance(ctx, itemID)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return affected > 0, nil
 }

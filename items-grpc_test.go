@@ -1774,3 +1774,250 @@ func TestSetUserItemSubscription(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestSetItemEngine(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	itemName := fmt.Sprintf("Peugeot-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            itemName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	engineName := fmt.Sprintf("Peugeot-%d-Engine", randomInt)
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            engineName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDEngine,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d-engine", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	engineID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetItemEngineRequest{
+			ItemId:          itemID,
+			EngineItemId:    engineID,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.Item(ctx, &ItemRequest{
+		Id: itemID,
+	})
+	require.NoError(t, err)
+	require.Equal(t, engineID, res.GetEngineItemId())
+
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetItemEngineRequest{
+			ItemId:          itemID,
+			EngineItemId:    engineID,
+			EngineInherited: true,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.Item(ctx, &ItemRequest{
+		Id: itemID,
+	})
+	require.NoError(t, err)
+	require.Zero(t, res.GetEngineItemId())
+
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetItemEngineRequest{
+			ItemId:          itemID,
+			EngineItemId:    engineID,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.Item(ctx, &ItemRequest{
+		Id: itemID,
+	})
+	require.NoError(t, err)
+	require.Equal(t, engineID, res.GetEngineItemId())
+
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetItemEngineRequest{
+			ItemId:          itemID,
+			EngineItemId:    0,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.Item(ctx, &ItemRequest{
+		Id: itemID,
+	})
+	require.NoError(t, err)
+	require.Zero(t, res.GetEngineItemId())
+}
+
+func TestSetItemEngineInheritance(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	itemName := fmt.Sprintf("Peugeot-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            itemName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	engineName := fmt.Sprintf("Peugeot-%d-Engine", randomInt)
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            engineName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDEngine,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d-engine", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	engineID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	// test inheritance
+	r3, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            fmt.Sprintf("Peugeot-%d-Parent", randomInt),
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d-parent", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	parentItemID, err := r3.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: itemID, ParentId: parentItemID, Catname: "vehicle1",
+		},
+	)
+	require.NoError(t, err)
+
+	// set parent engine
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetItemEngineRequest{
+			ItemId:          parentItemID,
+			EngineItemId:    engineID,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.Item(ctx, &ItemRequest{
+		Id: itemID,
+	})
+	require.NoError(t, err)
+	require.Zero(t, res.GetEngineItemId())
+
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetItemEngineRequest{
+			ItemId:          itemID,
+			EngineInherited: true,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.Item(ctx, &ItemRequest{
+		Id: itemID,
+	})
+	require.NoError(t, err)
+	require.Equal(t, engineID, res.GetEngineItemId())
+
+	// reset parent engine
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&SetItemEngineRequest{
+			ItemId:          parentItemID,
+			EngineItemId:    0,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err = client.Item(ctx, &ItemRequest{
+		Id: itemID,
+	})
+	require.NoError(t, err)
+	require.Zero(t, res.GetEngineItemId())
+}

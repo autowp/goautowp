@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/autowp/goautowp/attrs"
@@ -1997,4 +1998,291 @@ func (s *ItemsGRPCServer) SetUserItemSubscription(
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "edit_meta") ||
+		!s.enforcer.Enforce(role, "specifications", "edit-engine") ||
+		!s.enforcer.Enforce(role, "specifications", "edit") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	itemID := in.GetItemId()
+
+	item, err := s.repository.Item(
+		ctx, query.ItemsListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
+		items.ListFields{NameText: true},
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	changed, err := s.repository.SetItemEngine(ctx, itemID, in.GetEngineItemId(), in.GetEngineInherited())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if changed {
+		user, err := s.usersRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		eventItemIDs := []int64{itemID}
+		if item.EngineItemID.Valid {
+			eventItemIDs = append(eventItemIDs, item.EngineItemID.Int64)
+		}
+
+		itemNameText, err := s.formatItemNameText(item, EventsDefaultLanguage)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		switch {
+		case in.GetEngineInherited():
+			err = s.events.Add(ctx, Event{
+				UserID: userID,
+				Message: fmt.Sprintf(
+					"У автомобиля %s установлено наследование двигателя",
+					itemNameText,
+				),
+				Items: eventItemIDs,
+			})
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			err = s.notifyItemEngineInherited(ctx, user, item)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		case in.GetEngineItemId() == 0:
+			if item.EngineItemID.Valid {
+				oldEngine, err := s.repository.Item(
+					ctx, query.ItemsListOptions{ItemID: item.EngineItemID.Int64, Language: EventsDefaultLanguage},
+					items.ListFields{NameText: true},
+				)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+
+				oldEngineNameText, err := s.formatItemNameText(oldEngine, EventsDefaultLanguage)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+
+				err = s.events.Add(ctx, Event{
+					UserID: userID,
+					Message: fmt.Sprintf(
+						"У автомобиля %s убран двигатель (был %s)",
+						itemNameText,
+						oldEngineNameText,
+					),
+					Items: append(eventItemIDs, item.EngineItemID.Int64),
+				})
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+
+				err = s.notifyItemEngineCleared(ctx, user, item)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+			}
+		default:
+			newEngine, err := s.repository.Item(ctx, query.ItemsListOptions{
+				ItemID: in.GetEngineItemId(),
+				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDEngine},
+			}, items.ListFields{NameText: true})
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			newEngineNameText, err := s.formatItemNameText(newEngine, EventsDefaultLanguage)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			err = s.events.Add(ctx, Event{
+				UserID: userID,
+				Message: fmt.Sprintf(
+					"Автомобилю %s назначен двигатель %s",
+					itemNameText,
+					newEngineNameText,
+				),
+				Items: []int64{itemID, newEngine.ID},
+			})
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			err = s.notifyItemEngineUpdated(ctx, user, item, in.GetEngineItemId())
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
+		err = s.attrsRepository.UpdateActualValues(ctx, item.ID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	err = s.repository.UserItemSubscribe(ctx, itemID, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) notifyItemEngineInherited(ctx context.Context, user *schema.UsersRow, item items.Item) error {
+	var oldEngineID int64
+	if item.EngineItemID.Valid {
+		oldEngineID = item.EngineItemID.Int64
+	}
+
+	return s.notifyItemSubscribers(
+		ctx, []int64{item.ID, oldEngineID}, user.ID, "pm/user-%s-set-inherited-vehicle-engine-%s-%s",
+		func(uri *url.URL, language string) (map[string]interface{}, error) {
+			itemNameText, err := s.formatItemNameText(item, language)
+			if err != nil {
+				return nil, err
+			}
+
+			return map[string]interface{}{
+				"UserURL":      frontend.UserURL(uri, user.ID, user.Identity),
+				"ItemName":     itemNameText,
+				"ItemModerURL": frontend.ItemModerURL(uri, item.ID),
+			}, nil
+		},
+	)
+}
+
+func (s *ItemsGRPCServer) notifyItemEngineCleared(ctx context.Context, user *schema.UsersRow, item items.Item) error {
+	var oldEngineID int64
+	if item.EngineItemID.Valid {
+		oldEngineID = item.EngineItemID.Int64
+	}
+
+	return s.notifyItemSubscribers(
+		ctx, []int64{item.ID, oldEngineID}, user.ID, "pm/user-%s-canceled-vehicle-engine-%s-%s-%s",
+		func(uri *url.URL, language string) (map[string]interface{}, error) {
+			itemNameText, err := s.formatItemNameText(item, language)
+			if err != nil {
+				return nil, err
+			}
+
+			oldEngine, err := s.repository.Item(
+				ctx, query.ItemsListOptions{ItemID: oldEngineID, Language: language},
+				items.ListFields{NameText: true},
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			oldEngineNameText, err := s.formatItemNameText(oldEngine, language)
+			if err != nil {
+				return nil, err
+			}
+
+			return map[string]interface{}{
+				"UserURL":      frontend.UserURL(uri, user.ID, user.Identity),
+				"EngineName":   oldEngineNameText,
+				"ItemName":     itemNameText,
+				"ItemModerURL": frontend.ItemModerURL(uri, item.ID),
+			}, nil
+		},
+	)
+}
+
+func (s *ItemsGRPCServer) notifyItemEngineUpdated(
+	ctx context.Context, user *schema.UsersRow, item items.Item, newEngineID int64,
+) error {
+	var oldEngineID int64
+	if item.EngineItemID.Valid {
+		oldEngineID = item.EngineItemID.Int64
+	}
+
+	return s.notifyItemSubscribers(
+		ctx, []int64{item.ID, oldEngineID, newEngineID}, user.ID, "pm/user-%s-set-vehicle-engine-%s-%s-%s",
+		func(uri *url.URL, language string) (map[string]interface{}, error) {
+			itemNameText, err := s.formatItemNameText(item, language)
+			if err != nil {
+				return nil, err
+			}
+
+			newEngine, err := s.repository.Item(
+				ctx, query.ItemsListOptions{ItemID: newEngineID, Language: language},
+				items.ListFields{NameText: true},
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			newEngineNameText, err := s.formatItemNameText(newEngine, language)
+			if err != nil {
+				return nil, err
+			}
+
+			return map[string]interface{}{
+				"UserURL":      frontend.UserURL(uri, user.ID, user.Identity),
+				"EngineName":   newEngineNameText,
+				"ItemName":     itemNameText,
+				"ItemModerURL": frontend.ItemModerURL(uri, item.ID),
+			}, nil
+		},
+	)
+}
+
+func (s *ItemsGRPCServer) notifyItemSubscribers(
+	ctx context.Context, itemIDs []int64, excludeUserID int64, messageID string,
+	templateData func(*url.URL, string) (map[string]interface{}, error),
+) error {
+	falseRef := false
+
+	subscribers, _, err := s.usersRepository.Users(ctx, query.UserListOptions{
+		Deleted: &falseRef,
+		ItemSubscribe: &query.UserItemSubscribeListOptions{
+			ItemIDs: itemIDs,
+		},
+		ExcludeIDs: []int64{excludeUserID},
+	}, users.UserFields{})
+	if err != nil {
+		return err
+	}
+
+	for _, subscriber := range subscribers {
+		localizer := s.i18n.Localizer(subscriber.Language)
+
+		uri, err := s.hostManager.URIByLanguage(subscriber.Language)
+		if err != nil {
+			return err
+		}
+
+		data, err := templateData(uri, subscriber.Language)
+		if err != nil {
+			return err
+		}
+
+		message, err := localizer.Localize(&i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{ID: messageID},
+			TemplateData:   data,
+		})
+		if err != nil {
+			return err
+		}
+
+		err = s.messagingRepository.CreateMessage(ctx, 0, subscriber.ID, message)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

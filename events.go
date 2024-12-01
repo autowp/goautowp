@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 )
 
@@ -45,6 +46,8 @@ func (s *Events) Add(ctx context.Context, event Event) error {
 	}
 
 	if len(event.Users) > 0 {
+		event.Users = util.RemoveDuplicate(event.Users)
+
 		rows := make([]interface{}, len(event.Users))
 		for idx, id := range event.Users {
 			rows[idx] = goqu.Record{
@@ -60,6 +63,8 @@ func (s *Events) Add(ctx context.Context, event Event) error {
 	}
 
 	if len(event.Pictures) > 0 {
+		event.Pictures = util.RemoveDuplicate(event.Pictures)
+
 		rows := make([]interface{}, len(event.Pictures))
 		for idx, id := range event.Pictures {
 			rows[idx] = goqu.Record{
@@ -75,6 +80,8 @@ func (s *Events) Add(ctx context.Context, event Event) error {
 	}
 
 	if len(event.Items) > 0 {
+		event.Items = util.RemoveDuplicate(event.Items)
+
 		rows := make([]interface{}, len(event.Items))
 		for idx, id := range event.Items {
 			rows[idx] = goqu.Record{
