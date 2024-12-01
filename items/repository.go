@@ -850,6 +850,8 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &fullName
 			case schema.ItemTableEngineItemIDColName:
 				pointers[i] = &row.EngineItemID
+			case schema.ItemTableEngineInheritColName:
+				pointers[i] = &row.EngineInherit
 			case schema.ItemTableItemTypeIDColName:
 				pointers[i] = &row.ItemTypeID
 			case schema.ItemTableIsGroupColName:
