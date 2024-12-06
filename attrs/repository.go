@@ -735,41 +735,49 @@ func (s *Repository) DeleteUserValue(ctx context.Context, attributeID, itemID, u
 
 	switch attribute.TypeID.AttributeTypeID {
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
-		_, err = s.db.Delete(schema.AttrsUserValuesStringTable).Where(
-			schema.AttrsUserValuesStringTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesStringTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesStringTableUserIDCol.Eq(userID),
-		).Executor().ExecContext(ctx)
+		_, err = util.ExecAndRetryOnDeadlock(ctx,
+			s.db.Delete(schema.AttrsUserValuesStringTable).Where(
+				schema.AttrsUserValuesStringTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesStringTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesStringTableUserIDCol.Eq(userID),
+			).Executor(),
+		)
 		if err != nil {
 			return err
 		}
 
 	case schema.AttrsAttributeTypeIDInteger, schema.AttrsAttributeTypeIDBoolean:
-		_, err = s.db.Delete(schema.AttrsUserValuesIntTable).Where(
-			schema.AttrsUserValuesIntTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesIntTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesIntTableUserIDCol.Eq(userID),
-		).Executor().ExecContext(ctx)
+		_, err = util.ExecAndRetryOnDeadlock(ctx,
+			s.db.Delete(schema.AttrsUserValuesIntTable).Where(
+				schema.AttrsUserValuesIntTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesIntTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesIntTableUserIDCol.Eq(userID),
+			).Executor(),
+		)
 		if err != nil {
 			return err
 		}
 
 	case schema.AttrsAttributeTypeIDFloat:
-		_, err = s.db.Delete(schema.AttrsUserValuesFloatTable).Where(
-			schema.AttrsUserValuesFloatTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesFloatTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesFloatTableUserIDCol.Eq(userID),
-		).Executor().ExecContext(ctx)
+		_, err = util.ExecAndRetryOnDeadlock(ctx,
+			s.db.Delete(schema.AttrsUserValuesFloatTable).Where(
+				schema.AttrsUserValuesFloatTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesFloatTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesFloatTableUserIDCol.Eq(userID),
+			).Executor(),
+		)
 		if err != nil {
 			return err
 		}
 
 	case schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree:
-		_, err = s.db.Delete(schema.AttrsUserValuesListTable).Where(
-			schema.AttrsUserValuesListTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesListTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesListTableUserIDCol.Eq(userID),
-		).Executor().ExecContext(ctx)
+		_, err = util.ExecAndRetryOnDeadlock(ctx,
+			s.db.Delete(schema.AttrsUserValuesListTable).Where(
+				schema.AttrsUserValuesListTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesListTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesListTableUserIDCol.Eq(userID),
+			).Executor(),
+		)
 		if err != nil {
 			return err
 		}
@@ -777,11 +785,13 @@ func (s *Repository) DeleteUserValue(ctx context.Context, attributeID, itemID, u
 	case schema.AttrsAttributeTypeIDUnknown:
 	}
 
-	_, err = s.db.Delete(schema.AttrsUserValuesTable).Where(
-		schema.AttrsUserValuesTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
-		schema.AttrsUserValuesTableUserIDCol.Eq(userID),
-	).Executor().ExecContext(ctx)
+	_, err = util.ExecAndRetryOnDeadlock(ctx,
+		s.db.Delete(schema.AttrsUserValuesTable).Where(
+			schema.AttrsUserValuesTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
+			schema.AttrsUserValuesTableUserIDCol.Eq(userID),
+		).Executor(),
+	)
 	if err != nil {
 		return err
 	}
