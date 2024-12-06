@@ -19,7 +19,8 @@ const (
 	topFactoriesCount   = 8
 	topCategoriesCount  = 15
 	topTwinsBrandsCount = 20
-	brandsCacheKey      = "GO_TOPBRANDSLIST_3_%s"
+	brandsCacheKey      = "GO_BRANDSLIST_3_%s"
+	topBrandsCacheKey   = "GO_TOPBRANDSLIST_3_%s"
 	twinsCacheKey       = "GO_TWINS_5_%s"
 	categoriesCacheKey  = "GO_CATEGORIES_6_%s"
 	personsCacheKey     = "GO_PERSONS_3_%d_%s"
@@ -31,7 +32,7 @@ type Index struct {
 	repository *items.Repository
 }
 
-type BrandsCache struct {
+type TopBrandsCache struct {
 	Items []items.Item
 	Total int
 }
@@ -49,9 +50,38 @@ func NewIndex(redis *redis.Client, repository *items.Repository) *Index {
 }
 
 func (s *Index) GenerateBrandsCache(ctx context.Context, lang string) error {
+	logrus.Infof("generate brands cache for `%s`", lang)
+
+	resultArray, err := s.repository.Brands(ctx, lang)
+	if err != nil {
+		return err
+	}
+
+	cacheBytes, err := json.Marshal(resultArray) //nolint: musttag
+	if err != nil {
+		return err
+	}
+
+	return s.redis.Set(ctx, fmt.Sprintf(brandsCacheKey, lang), string(cacheBytes), 0).Err()
+}
+
+func (s *Index) BrandsCache(ctx context.Context, lang string) ([]*items.BrandsListLine, error) {
+	var cache []*items.BrandsListLine
+
+	item, err := s.redis.Get(ctx, fmt.Sprintf(brandsCacheKey, lang)).Result()
+	if err == nil {
+		err = json.Unmarshal([]byte(item), &cache) //nolint: musttag
+	} else if errors.Is(err, redis.Nil) {
+		err = nil
+	}
+
+	return cache, err
+}
+
+func (s *Index) GenerateTopBrandsCache(ctx context.Context, lang string) error {
 	logrus.Infof("generate index brands cache for `%s`", lang)
 
-	var cache BrandsCache
+	var cache TopBrandsCache
 
 	options := query.ItemsListOptions{
 		Language:   lang,
@@ -82,13 +112,13 @@ func (s *Index) GenerateBrandsCache(ctx context.Context, lang string) error {
 		return err
 	}
 
-	return s.redis.Set(ctx, fmt.Sprintf(brandsCacheKey, lang), string(cacheBytes), 0).Err()
+	return s.redis.Set(ctx, fmt.Sprintf(topBrandsCacheKey, lang), string(cacheBytes), 0).Err()
 }
 
-func (s *Index) BrandsCache(ctx context.Context, lang string) (BrandsCache, error) {
-	var cache BrandsCache
+func (s *Index) TopBrandsCache(ctx context.Context, lang string) (TopBrandsCache, error) {
+	var cache TopBrandsCache
 
-	item, err := s.redis.Get(ctx, fmt.Sprintf(brandsCacheKey, lang)).Result()
+	item, err := s.redis.Get(ctx, fmt.Sprintf(topBrandsCacheKey, lang)).Result()
 	if err == nil {
 		err = json.Unmarshal([]byte(item), &cache) //nolint: musttag
 	} else if errors.Is(err, redis.Nil) {

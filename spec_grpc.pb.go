@@ -2330,6 +2330,7 @@ var Rating_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
+	Items_GetBrands_FullMethodName               = "/goautowp.Items/GetBrands"
 	Items_GetTopBrandsList_FullMethodName        = "/goautowp.Items/GetTopBrandsList"
 	Items_GetTopPersonsList_FullMethodName       = "/goautowp.Items/GetTopPersonsList"
 	Items_GetTopFactoriesList_FullMethodName     = "/goautowp.Items/GetTopFactoriesList"
@@ -2369,6 +2370,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ItemsClient interface {
+	GetBrands(ctx context.Context, in *GetBrandsRequest, opts ...grpc.CallOption) (*APIBrandsList, error)
 	GetTopBrandsList(ctx context.Context, in *GetTopBrandsListRequest, opts ...grpc.CallOption) (*APITopBrandsList, error)
 	GetTopPersonsList(ctx context.Context, in *GetTopPersonsListRequest, opts ...grpc.CallOption) (*APITopPersonsList, error)
 	GetTopFactoriesList(ctx context.Context, in *GetTopFactoriesListRequest, opts ...grpc.CallOption) (*APITopFactoriesList, error)
@@ -2410,6 +2412,16 @@ type itemsClient struct {
 
 func NewItemsClient(cc grpc.ClientConnInterface) ItemsClient {
 	return &itemsClient{cc}
+}
+
+func (c *itemsClient) GetBrands(ctx context.Context, in *GetBrandsRequest, opts ...grpc.CallOption) (*APIBrandsList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(APIBrandsList)
+	err := c.cc.Invoke(ctx, Items_GetBrands_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *itemsClient) GetTopBrandsList(ctx context.Context, in *GetTopBrandsListRequest, opts ...grpc.CallOption) (*APITopBrandsList, error) {
@@ -2746,6 +2758,7 @@ func (c *itemsClient) SetItemEngine(ctx context.Context, in *SetItemEngineReques
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility.
 type ItemsServer interface {
+	GetBrands(context.Context, *GetBrandsRequest) (*APIBrandsList, error)
 	GetTopBrandsList(context.Context, *GetTopBrandsListRequest) (*APITopBrandsList, error)
 	GetTopPersonsList(context.Context, *GetTopPersonsListRequest) (*APITopPersonsList, error)
 	GetTopFactoriesList(context.Context, *GetTopFactoriesListRequest) (*APITopFactoriesList, error)
@@ -2789,6 +2802,9 @@ type ItemsServer interface {
 // pointer dereference when methods are called.
 type UnimplementedItemsServer struct{}
 
+func (UnimplementedItemsServer) GetBrands(context.Context, *GetBrandsRequest) (*APIBrandsList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBrands not implemented")
+}
 func (UnimplementedItemsServer) GetTopBrandsList(context.Context, *GetTopBrandsListRequest) (*APITopBrandsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopBrandsList not implemented")
 }
@@ -2907,6 +2923,24 @@ func RegisterItemsServer(s grpc.ServiceRegistrar, srv ItemsServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Items_ServiceDesc, srv)
+}
+
+func _Items_GetBrands_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBrandsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetBrands(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_GetBrands_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetBrands(ctx, req.(*GetBrandsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Items_GetTopBrandsList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -3510,6 +3544,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "goautowp.Items",
 	HandlerType: (*ItemsServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetBrands",
+			Handler:    _Items_GetBrands_Handler,
+		},
 		{
 			MethodName: "GetTopBrandsList",
 			Handler:    _Items_GetTopBrandsList_Handler,

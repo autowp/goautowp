@@ -139,6 +139,65 @@ func NewItemsGRPCServer(
 	}
 }
 
+func (s *ItemsGRPCServer) GetBrands(ctx context.Context, in *GetBrandsRequest) (*APIBrandsList, error) {
+	if s == nil {
+		return nil, status.Error(codes.Internal, "self not initialized")
+	}
+
+	lang := in.GetLanguage()
+
+	resultArray, err := s.index.BrandsCache(ctx, lang)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result := make([]*APIBrandsListLine, 0, len(resultArray))
+
+	for _, line := range resultArray {
+		characters := make([]*APIBrandsListCharacter, 0, len(line.Characters))
+
+		for _, character := range line.Characters {
+			rows := make([]*APIBrandsListItem, 0, len(character.Items))
+			for _, item := range character.Items {
+				rows = append(rows, &APIBrandsListItem{
+					Id:                    item.ID,
+					Catname:               item.Catname,
+					Name:                  item.Name,
+					ItemsCount:            item.ItemsCount,
+					NewItemsCount:         item.NewItemsCount,
+					AcceptedPicturesCount: item.AcceptedPicturesCount,
+				})
+			}
+
+			characters = append(characters, &APIBrandsListCharacter{
+				Id:        character.ID,
+				Character: character.Character,
+				Items:     rows,
+			})
+		}
+
+		var category APIBrandsListLine_Category
+
+		switch line.Category {
+		case items.BrandsListCategoryDefault:
+			category = APIBrandsListLine_DEFAULT
+		case items.BrandsListCategoryNumber:
+			category = APIBrandsListLine_NUMBER
+		case items.BrandsListCategoryCyrillic:
+			category = APIBrandsListLine_CYRILLIC
+		case items.BrandsListCategoryLatin:
+			category = APIBrandsListLine_LATIN
+		}
+
+		result = append(result, &APIBrandsListLine{
+			Category:   category,
+			Characters: characters,
+		})
+	}
+
+	return &APIBrandsList{Lines: result}, nil
+}
+
 func (s *ItemsGRPCServer) GetTopBrandsList(
 	ctx context.Context,
 	in *GetTopBrandsListRequest,
@@ -147,7 +206,7 @@ func (s *ItemsGRPCServer) GetTopBrandsList(
 		return nil, status.Error(codes.Internal, "self not initialized")
 	}
 
-	cache, err := s.index.BrandsCache(ctx, in.GetLanguage())
+	cache, err := s.index.TopBrandsCache(ctx, in.GetLanguage())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -465,14 +524,14 @@ func convertFields(fields *ItemFields) items.ListFields {
 	}
 
 	result := items.ListFields{
-		NameOnly:                   fields.GetNameOnly(),
-		NameHTML:                   fields.GetNameHtml(),
-		NameText:                   fields.GetNameText(),
-		NameDefault:                fields.GetNameDefault(),
-		Description:                fields.GetDescription(),
-		HasText:                    fields.GetHasText(),
-		PreviewPictures:            previewPictures,
-		TotalPictures:              fields.GetTotalPictures(),
+		NameOnly:        fields.GetNameOnly(),
+		NameHTML:        fields.GetNameHtml(),
+		NameText:        fields.GetNameText(),
+		NameDefault:     fields.GetNameDefault(),
+		Description:     fields.GetDescription(),
+		HasText:         fields.GetHasText(),
+		PreviewPictures: previewPictures,
+		// TotalPictures:              fields.GetTotalPictures(),
 		DescendantsCount:           fields.GetDescendantsCount(),
 		DescendantPicturesCount:    fields.GetDescendantPicturesCount(),
 		ChildsCount:                fields.GetChildsCount(),

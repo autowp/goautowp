@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -2020,4 +2021,124 @@ func TestSetItemEngineInheritance(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Zero(t, res.GetEngineItemId())
+}
+
+func TestGetBrands(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		util.Close(conn)
+	})
+
+	client := NewItemsClient(conn)
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	testCases := []struct {
+		Name      string
+		Catname   string
+		Language  string
+		Category  APIBrandsListLine_Category
+		Character string
+	}{
+		{
+			Name:      "123",
+			Catname:   "numeric",
+			Language:  "en",
+			Category:  APIBrandsListLine_NUMBER,
+			Character: "1",
+		},
+		{
+			Name:      "Бренд",
+			Catname:   "cyrillic",
+			Language:  "en",
+			Category:  APIBrandsListLine_CYRILLIC,
+			Character: "Б",
+		},
+		{
+			Name:      "Latin Brand",
+			Catname:   "latin",
+			Language:  "en",
+			Category:  APIBrandsListLine_LATIN,
+			Character: "L",
+		},
+		{
+			Name:      "所有",
+			Catname:   "han",
+			Language:  "en",
+			Category:  APIBrandsListLine_LATIN,
+			Character: "S",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.Character, func(t *testing.T) {
+			t.Parallel()
+
+			brandName := fmt.Sprintf("%s-%d", testCase.Name, randomInt)
+			r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+				Name:       brandName,
+				IsGroup:    true,
+				ItemTypeID: schema.ItemTableItemTypeIDBrand,
+				Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("%s-%d", testCase.Catname, randomInt)},
+				Body:       "",
+			}).Executor().ExecContext(ctx)
+			require.NoError(t, err)
+
+			brandID, err := r1.LastInsertId()
+			require.NoError(t, err)
+
+			// setup text
+			_, err = client.UpdateItemLanguage(
+				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+				&ItemLanguage{
+					ItemId:   brandID,
+					Language: testCase.Language,
+					Name:     brandName,
+				},
+			)
+			require.NoError(t, err)
+
+			res, err := client.GetBrands(ctx, &GetBrandsRequest{Language: testCase.Language})
+			require.NoError(t, err)
+
+			lineIndex := slices.IndexFunc(res.GetLines(), func(line *APIBrandsListLine) bool {
+				return testCase.Category == line.GetCategory()
+			})
+			require.GreaterOrEqual(t, lineIndex, 0)
+
+			line := res.GetLines()[lineIndex]
+
+			characterIndex := slices.IndexFunc(line.GetCharacters(), func(character *APIBrandsListCharacter) bool {
+				return testCase.Character == character.GetCharacter()
+			})
+			require.GreaterOrEqual(t, characterIndex, 0)
+
+			character := line.GetCharacters()[characterIndex]
+
+			require.True(t,
+				slices.ContainsFunc(character.GetItems(), func(item *APIBrandsListItem) bool {
+					return item.GetId() == brandID
+				}),
+			)
+		})
+	}
 }

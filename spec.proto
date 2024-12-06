@@ -80,6 +80,7 @@ service Rating {
 }
 
 service Items {
+  rpc GetBrands(GetBrandsRequest) returns (APIBrandsList) {}
   rpc GetTopBrandsList(GetTopBrandsListRequest) returns (APITopBrandsList) {}
   rpc GetTopPersonsList(GetTopPersonsListRequest) returns (APITopPersonsList) {}
   rpc GetTopFactoriesList(GetTopFactoriesListRequest) returns (APITopFactoriesList) {}
@@ -778,6 +779,40 @@ message UserFields {
 
 message GetTopBrandsListRequest {
   string language = 1;
+}
+
+message GetBrandsRequest {
+  string language = 1;
+}
+
+message APIBrandsListItem {
+  int64 id = 1;
+  string catname = 2;
+  string name = 3;
+  int32 items_count = 4;
+  int32 new_items_count = 5;
+  int32 accepted_pictures_count = 6;
+}
+
+message APIBrandsListCharacter {
+  string character = 1;
+  string id = 2;
+  repeated APIBrandsListItem items = 3;
+}
+
+message APIBrandsListLine {
+  enum Category {
+    DEFAULT = 0;
+    NUMBER = 1;
+    CYRILLIC = 2;
+    LATIN = 3;
+  }
+  Category category = 1;
+  repeated APIBrandsListCharacter characters = 2;
+}
+
+message APIBrandsList {
+  repeated APIBrandsListLine lines = 1;
 }
 
 message APITopBrandsList {

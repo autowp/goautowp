@@ -1,11 +1,13 @@
 package items
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,6 +19,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
+	"github.com/mozillazg/go-unidecode"
 	geo "github.com/paulmach/go.geo"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
@@ -32,6 +35,11 @@ var (
 	errInvalidItemParentCombination    = errors.New("that type of parent is not allowed for this type")
 	errGroupRequired                   = errors.New("only groups can have childs")
 	errSelfParent                      = errors.New("self parent forbidden")
+
+	CyrillicRegexp = regexp.MustCompile(`^\p{Cyrillic}`)
+	HanRegexp      = regexp.MustCompile(`^\p{Han}`)
+	LatinRegexp    = regexp.MustCompile("^[A-Za-z]$")
+	NumberRegexp   = regexp.MustCompile("^[0-9]$")
 )
 
 const (
@@ -58,9 +66,39 @@ const (
 	colInboxPicturesCount         = "inbox_pictures_count"
 	colMostsActive                = "mosts_active"
 	colCommentsAttentionsCount    = "comments_attentions_count"
+	colAcceptedPicturesCount      = "accepted_pictures_count"
 	colStarCount                  = "star_count"
 	colItemParentParentTimestamp  = "item_parent_parent_timestamp"
 )
+
+type BrandsListCategory int
+
+const (
+	BrandsListCategoryDefault BrandsListCategory = iota
+	BrandsListCategoryNumber
+	BrandsListCategoryCyrillic
+	BrandsListCategoryLatin
+)
+
+type BrandsListLine struct {
+	Category   BrandsListCategory
+	Characters []*BrandsListCharacter
+}
+
+type BrandsListCharacter struct {
+	Character string
+	ID        string
+	Items     []*BrandsListItem
+}
+
+type BrandsListItem struct {
+	ID                    int64
+	Catname               string
+	Name                  string
+	ItemsCount            int32
+	NewItemsCount         int32
+	AcceptedPicturesCount int32
+}
 
 type OrderBy int
 
@@ -111,7 +149,8 @@ type Repository struct {
 	fullTextColumn                   *TextstorageRefColumn
 	nameOnlyColumn                   *NameOnlyColumn
 	commentsAttentionsCountColumn    *CommentsAttentionsCountColumn
-	inboxPicturesCountColumn         *InboxPicturesCountColumn
+	acceptedPicturesCountColumn      *StatusPicturesCountColumn
+	inboxPicturesCountColumn         *StatusPicturesCountColumn
 	mostsActiveColumn                *MostsActiveColumn
 	descendantsParentsCountColumn    *DescendantsParentsCountColumn
 	newDescendantsParentsCountColumn *NewDescendantsParentsCountColumn
@@ -170,6 +209,7 @@ type Item struct {
 	FullName                   string
 	MostsActive                bool
 	CommentsAttentionsCount    int32
+	AcceptedPicturesCount      int32
 }
 
 type ItemLanguage struct {
@@ -212,7 +252,8 @@ func NewRepository(
 		},
 		nameOnlyColumn:                &NameOnlyColumn{db: db},
 		commentsAttentionsCountColumn: &CommentsAttentionsCountColumn{db: db},
-		inboxPicturesCountColumn:      &InboxPicturesCountColumn{db: db},
+		acceptedPicturesCountColumn:   &StatusPicturesCountColumn{db: db, status: schema.PictureStatusAccepted},
+		inboxPicturesCountColumn:      &StatusPicturesCountColumn{db: db, status: schema.PictureStatusInbox},
 		mostsActiveColumn: &MostsActiveColumn{
 			db:                db,
 			mostsMinCarsCount: mostsMinCarsCount,
@@ -272,7 +313,7 @@ type ListFields struct {
 	FullText                   bool
 	HasText                    bool
 	PreviewPictures            ListPreviewPicturesFields
-	TotalPictures              bool
+	AcceptedPicturesCount      bool
 	ChildItemsCount            bool
 	NewChildItemsCount         bool
 	DescendantsCount           bool
@@ -440,6 +481,10 @@ func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 
 	if fields.CommentsAttentionsCount {
 		columns[colCommentsAttentionsCount] = s.commentsAttentionsCountColumn
+	}
+
+	if fields.AcceptedPicturesCount {
+		columns[colAcceptedPicturesCount] = s.acceptedPicturesCountColumn
 	}
 
 	return columns
@@ -916,6 +961,8 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &row.MostsActive
 			case colCommentsAttentionsCount:
 				pointers[i] = &row.CommentsAttentionsCount
+			case colAcceptedPicturesCount:
+				pointers[i] = &row.AcceptedPicturesCount
 			default:
 				pointers[i] = nil
 			}
@@ -975,9 +1022,6 @@ func (s *Repository) List( //nolint:maintidx
 			tag = language.Hebrew
 		}
 
-		cyrillic := regexp.MustCompile(`^\p{Cyrillic}`)
-		han := regexp.MustCompile(`^\p{Han}`)
-
 		cl := collate.New(tag, collate.IgnoreCase, collate.IgnoreDiacritics)
 
 		sort.SliceStable(result, func(i, j int) bool {
@@ -986,8 +1030,8 @@ func (s *Repository) List( //nolint:maintidx
 
 			switch options.Language {
 			case "ru", "uk", "be":
-				aIsCyrillic := cyrillic.MatchString(iName)
-				bIsCyrillic := cyrillic.MatchString(jName)
+				aIsCyrillic := CyrillicRegexp.MatchString(iName)
+				bIsCyrillic := CyrillicRegexp.MatchString(jName)
 
 				if aIsCyrillic && !bIsCyrillic {
 					return true
@@ -997,8 +1041,8 @@ func (s *Repository) List( //nolint:maintidx
 					return false
 				}
 			case "zh":
-				aIsHan := han.MatchString(iName)
-				bIsHan := han.MatchString(jName)
+				aIsHan := HanRegexp.MatchString(iName)
+				bIsHan := HanRegexp.MatchString(jName)
 
 				if aIsHan && !bIsHan {
 					return true
@@ -2896,4 +2940,128 @@ func (s *Repository) ItemLocation(ctx context.Context, itemID int64) (geo.Point,
 	}
 
 	return res, nil
+}
+
+func (s *Repository) Brands(ctx context.Context, lang string) ([]*BrandsListLine, error) {
+	options := query.ItemsListOptions{
+		Language:   lang,
+		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		SortByName: true,
+	}
+
+	rows, _, err := s.List(ctx, options, ListFields{
+		NameOnly:              true,
+		DescendantsCount:      true,
+		NewDescendantsCount:   true,
+		AcceptedPicturesCount: true,
+	}, OrderByNone, false)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[BrandsListCategory]map[string][]*BrandsListItem)
+
+	for _, row := range rows {
+		name := row.NameOnly
+
+		char := ""
+		if len(name) > 0 {
+			char = string([]rune(name)[0:1])
+		}
+
+		isNumber := NumberRegexp.MatchString(char)
+		isCyrillic := false
+		isLatin := false
+
+		if !isNumber {
+			isHan := HanRegexp.MatchString(char)
+			if isHan {
+				char = unidecode.Unidecode(char)
+				if len(char) > 1 {
+					char = char[0:1]
+				}
+
+				isLatin = true
+			} else {
+				isCyrillic = CyrillicRegexp.MatchString(char)
+				if !isCyrillic {
+					char = unidecode.Unidecode(char)
+					if len(char) > 1 {
+						char = char[0:1]
+					}
+
+					isLatin = LatinRegexp.MatchString(char)
+				}
+			}
+
+			char = strings.ToUpper(char)
+		}
+
+		line := BrandsListCategoryDefault
+
+		switch {
+		case isNumber:
+			line = BrandsListCategoryNumber
+		case isCyrillic:
+			line = BrandsListCategoryCyrillic
+		case isLatin:
+			line = BrandsListCategoryLatin
+		}
+
+		if _, ok := result[line]; !ok {
+			result[line] = make(map[string][]*BrandsListItem)
+		}
+
+		if _, ok := result[line][char]; !ok {
+			result[line][char] = make([]*BrandsListItem, 0)
+		}
+
+		catname := ""
+		if row.Catname.Valid {
+			catname = row.Catname.String
+		}
+
+		result[line][char] = append(result[line][char], &BrandsListItem{
+			ID:                    row.ID,
+			Name:                  row.NameOnly,
+			Catname:               catname,
+			AcceptedPicturesCount: 0,
+			NewItemsCount:         row.NewDescendantsCount,
+			ItemsCount:            row.DescendantsCount,
+		})
+	}
+
+	resultArray := make([]*BrandsListLine, 0)
+
+	for category, line := range result {
+		charsArray := make([]*BrandsListCharacter, 0)
+
+		for char, list := range line {
+			id := ""
+			if len(char) > 0 {
+				id = strconv.Itoa(int([]rune(char)[0]))
+			}
+
+			charsArray = append(charsArray, &BrandsListCharacter{
+				ID:        id,
+				Character: char,
+				Items:     list,
+			})
+		}
+
+		slices.SortFunc(charsArray, func(i, j *BrandsListCharacter) int {
+			return cmp.Compare(i.Character, j.Character)
+		})
+
+		resultArray = append(resultArray, &BrandsListLine{
+			Category:   category,
+			Characters: charsArray,
+		})
+	}
+
+	slices.SortFunc(resultArray, func(i, j *BrandsListLine) int {
+		return cmp.Compare(i.Category, j.Category)
+	})
+
+	return resultArray, nil
 }

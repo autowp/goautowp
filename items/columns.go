@@ -160,13 +160,14 @@ func (s CommentsAttentionsCountColumn) SelectExpr(alias string, _ string) (Alias
 	return goqu.L("?", opts.CountSelect(s.db)), nil
 }
 
-type InboxPicturesCountColumn struct {
-	db *goqu.Database
+type StatusPicturesCountColumn struct {
+	status schema.PictureStatus
+	db     *goqu.Database
 }
 
-func (s InboxPicturesCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s StatusPicturesCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
 	opts := query.PictureListOptions{
-		Status: schema.PictureStatusInbox,
+		Status: s.status,
 		PictureItem: &query.PictureItemListOptions{
 			ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
 				ParentIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),

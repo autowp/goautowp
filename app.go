@@ -540,6 +540,11 @@ func (s *Application) GenerateIndexCache(ctx context.Context) error {
 	}
 
 	for lang := range s.container.Config().Languages {
+		err = idx.GenerateTopBrandsCache(ctx, lang)
+		if err != nil {
+			return err
+		}
+
 		err = idx.GenerateBrandsCache(ctx, lang)
 		if err != nil {
 			return err
