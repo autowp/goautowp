@@ -2117,6 +2117,12 @@ func TestGetBrands(t *testing.T) {
 			)
 			require.NoError(t, err)
 
+			idx, err := cnt.Index()
+			require.NoError(t, err)
+
+			err = idx.GenerateBrandsCache(ctx, testCase.Language)
+			require.NoError(t, err)
+
 			res, err := client.GetBrands(ctx, &GetBrandsRequest{Language: testCase.Language})
 			require.NoError(t, err)
 
