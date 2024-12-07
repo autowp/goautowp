@@ -2860,7 +2860,9 @@ func (s *Repository) ItemParentSelect(
 		schema.ItemParentTableCatnameCol,
 		schema.ItemParentTableTypeCol,
 		schema.ItemParentTableManualCatnameCol,
-	).From(schema.ItemParentTable)
+	).
+		From(schema.ItemParentTable).
+		GroupBy(schema.ItemParentTableItemIDCol, schema.ItemParentTableParentIDCol)
 
 	if fields.Name {
 		orderExpr, err := langPriorityOrderExpr(schema.ItemParentLanguageTableLanguageCol, listOptions.Language)
