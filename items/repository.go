@@ -71,6 +71,19 @@ const (
 	colItemParentParentTimestamp  = "item_parent_parent_timestamp"
 )
 
+const (
+	VehicleTypeIDCar     int64 = 29
+	VehicleTypeIDMoto    int64 = 43
+	VehicleTypeIDTractor int64 = 44
+	VehicleTypeIDTruck   int64 = 17
+	VehicleTypeIDBus     int64 = 19
+)
+
+const (
+	PerspectiveIDMixed int32 = 25
+	PerspectiveIDLogo  int32 = 22
+)
+
 type BrandsListCategory int
 
 const (
@@ -189,6 +202,11 @@ type Repository struct {
 	textStorageRepository            *textstorage.Repository
 }
 
+type ItemParent struct {
+	schema.ItemParentRow
+	Name string `db:"name"`
+}
+
 type Item struct {
 	schema.ItemRow
 	NameOnly                   string
@@ -303,6 +321,10 @@ type ListPreviewPicturesPictureFields struct {
 type ListPreviewPicturesFields struct {
 	Route   bool
 	Picture ListPreviewPicturesPictureFields
+}
+
+type ItemParentFields struct {
+	Name bool
 }
 
 type ListFields struct {
@@ -517,6 +539,17 @@ func (s *Repository) IDs(ctx context.Context, options query.ItemsListOptions) ([
 	}
 
 	return ids, nil
+}
+
+func (s *Repository) Exists(ctx context.Context, options query.ItemsListOptions) (bool, error) {
+	var exists bool
+
+	success, err := options.ExistsSelect(s.db).Executor().ScanValContext(ctx, &exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists && success, nil
 }
 
 func (s *Repository) Count(ctx context.Context, options query.ItemsListOptions) (int, error) {
@@ -2818,16 +2851,75 @@ func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (b
 	return true, nil
 }
 
+func (s *Repository) ItemParentSelect(
+	listOptions query.ItemParentListOptions, fields ItemParentFields,
+) (*goqu.SelectDataset, error) {
+	sqSelect := s.db.Select(
+		schema.ItemParentTableItemIDCol,
+		schema.ItemParentTableParentIDCol,
+		schema.ItemParentTableCatnameCol,
+		schema.ItemParentTableTypeCol,
+		schema.ItemParentTableManualCatnameCol,
+	).From(schema.ItemParentTable)
+
+	if fields.Name {
+		orderExpr, err := langPriorityOrderExpr(schema.ItemParentLanguageTableLanguageCol, listOptions.Language)
+		if err != nil {
+			return nil, err
+		}
+
+		sqSelect = sqSelect.SelectAppend(
+			goqu.Func(
+				"IFNULL",
+				s.db.Select(schema.ItemParentLanguageTableNameCol).
+					From(schema.ItemParentLanguageTable).
+					Where(
+						schema.ItemParentLanguageTableItemIDCol.Eq(schema.ItemParentTableItemIDCol),
+						schema.ItemParentLanguageTableParentIDCol.Eq(schema.ItemParentTableParentIDCol),
+						goqu.Func("LENGTH", schema.ItemParentLanguageTableNameCol).Gt(0),
+					).
+					Order(orderExpr).
+					Limit(1),
+				// fallback
+				s.db.Select(schema.ItemTableNameCol).
+					From(schema.ItemTable).
+					Where(schema.ItemTableIDCol.Eq(schema.ItemParentTableItemIDCol)),
+			).As("name"),
+		)
+	}
+
+	return listOptions.Apply(schema.ItemParentTableName, sqSelect), nil
+}
+
+func (s *Repository) ItemParents(
+	ctx context.Context, listOptions query.ItemParentListOptions, fields ItemParentFields,
+) ([]ItemParent, error) {
+	var res []ItemParent
+
+	sqSelect, err := s.ItemParentSelect(listOptions, fields)
+	if err != nil {
+		return nil, fmt.Errorf("ItemParentSelect(): %w", err)
+	}
+
+	err = sqSelect.ScanStructsContext(ctx, &res)
+
+	return res, err
+}
+
 func (s *Repository) ItemParent(ctx context.Context, itemID, parentID int64) (*schema.ItemParentRow, error) {
 	listOptions := query.ItemParentListOptions{
 		ItemID:   itemID,
 		ParentID: parentID,
 	}
 
+	sqSelect, err := s.ItemParentSelect(listOptions, ItemParentFields{})
+	if err != nil {
+		return nil, err
+	}
+
 	var res schema.ItemParentRow
 
-	success, err := listOptions.Apply(schema.ItemParentTableName, s.db.Select().From(schema.ItemParentTable)).
-		ScanStructContext(ctx, &res)
+	success, err := sqSelect.ScanStructContext(ctx, &res)
 	if err != nil {
 		return nil, err
 	}

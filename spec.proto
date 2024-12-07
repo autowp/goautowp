@@ -81,6 +81,7 @@ service Rating {
 
 service Items {
   rpc GetBrands(GetBrandsRequest) returns (APIBrandsList) {}
+  rpc GetBrandSections(GetBrandSectionsRequest) returns (APIBrandSections) {}
   rpc GetTopBrandsList(GetTopBrandsListRequest) returns (APITopBrandsList) {}
   rpc GetTopPersonsList(GetTopPersonsListRequest) returns (APITopPersonsList) {}
   rpc GetTopFactoriesList(GetTopFactoriesListRequest) returns (APITopFactoriesList) {}
@@ -775,6 +776,22 @@ message UserFields {
   bool last_ip = 16;
   bool last_online = 17;
   bool login = 18;
+}
+
+message APIBrandSection {
+  string name = 1;
+  repeated string routerLink = 3;
+  int32 count = 4;
+  repeated APIBrandSection groups = 5;
+}
+
+message APIBrandSections {
+  repeated APIBrandSection sections = 1;
+}
+
+message GetBrandSectionsRequest {
+  int64 item_id = 1;
+  string language = 2;
 }
 
 message GetTopBrandsListRequest {

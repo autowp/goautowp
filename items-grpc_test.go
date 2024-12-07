@@ -2148,3 +2148,201 @@ func TestGetBrands(t *testing.T) {
 		})
 	}
 }
+
+func TestBrandSections(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	defer util.Close(conn)
+	client := NewItemsClient(conn)
+
+	var ids []int64
+	err = goquDB.Select(schema.ItemTableIDCol).
+		From(schema.ItemTable).
+		Where(schema.ItemTableItemTypeIDCol.Eq(schema.ItemTableItemTypeIDBrand)).
+		ScanValsContext(ctx, &ids)
+	require.NoError(t, err)
+
+	for _, id := range ids {
+		_, err = client.GetBrandSections(ctx, &GetBrandSectionsRequest{Language: "en", ItemId: id})
+		require.NoError(t, err)
+	}
+}
+
+func TestBrandSections2(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		util.Close(conn)
+	})
+
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	// create brand
+	brandName := fmt.Sprintf("Opel-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       brandName,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDBrand,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("opel-%d", randomInt)},
+		Body:       "",
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	brandID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	// setup text
+	_, err = client.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemLanguage{
+			ItemId:   brandID,
+			Language: "en",
+			Name:     brandName,
+		},
+	)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		ItemTypeID    schema.ItemTableItemTypeID
+		Name          string
+		Catname       string
+		SectionNames  []string
+		VehicleTypeID []int64
+	}{
+		{
+			ItemTypeID:   schema.ItemTableItemTypeIDVehicle,
+			Name:         "Calibra",
+			Catname:      "calibra",
+			SectionNames: []string{""},
+		},
+		{
+			ItemTypeID:    schema.ItemTableItemTypeIDVehicle,
+			Name:          "Insignia",
+			Catname:       "Insignia",
+			SectionNames:  []string{""},
+			VehicleTypeID: []int64{items.VehicleTypeIDCar},
+		},
+		{
+			ItemTypeID:    schema.ItemTableItemTypeIDVehicle,
+			Name:          "Motoclub",
+			Catname:       "motoclub",
+			SectionNames:  []string{"catalogue/section/moto"},
+			VehicleTypeID: []int64{items.VehicleTypeIDMoto},
+		},
+		{
+			ItemTypeID:    schema.ItemTableItemTypeIDVehicle,
+			Name:          "Blitz",
+			Catname:       "blitz",
+			SectionNames:  []string{"catalogue/section/trucks", "catalogue/section/buses"},
+			VehicleTypeID: []int64{items.VehicleTypeIDTruck, items.VehicleTypeIDBus},
+		},
+		{
+			ItemTypeID:   schema.ItemTableItemTypeIDEngine,
+			Name:         "Engine",
+			Catname:      "engine",
+			SectionNames: []string{"catalogue/section/engines"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			t.Parallel()
+
+			// create child vehicle
+			childName := fmt.Sprintf("Opel-%d %s", randomInt, testCase.Name)
+			r1, err = goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+				Name:       childName,
+				IsGroup:    true,
+				ItemTypeID: testCase.ItemTypeID,
+				Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("opel-%d-%s", randomInt, testCase.Catname)},
+				Body:       "",
+			}).Executor().ExecContext(ctx)
+			require.NoError(t, err)
+
+			childID, err := r1.LastInsertId()
+			require.NoError(t, err)
+
+			// setup text
+			_, err = client.UpdateItemLanguage(
+				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+				&ItemLanguage{
+					ItemId:   childID,
+					Language: "en",
+					Name:     childName,
+				},
+			)
+			require.NoError(t, err)
+
+			for _, vehicleTypeID := range testCase.VehicleTypeID {
+				_, err = client.CreateItemVehicleType(
+					metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+					&APIItemVehicleType{
+						ItemId:        childID,
+						VehicleTypeId: vehicleTypeID,
+					},
+				)
+				require.NoError(t, err)
+			}
+
+			_, err = client.CreateItemParent(
+				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+				&ItemParent{
+					ItemId: childID, ParentId: brandID, Type: ItemParentType_ITEM_TYPE_DEFAULT,
+				},
+			)
+			require.NoError(t, err)
+
+			res, err := client.GetBrandSections(ctx, &GetBrandSectionsRequest{Language: "en", ItemId: brandID})
+			require.NoError(t, err)
+
+			for _, sectionName := range testCase.SectionNames {
+				idx := slices.IndexFunc(res.GetSections(), func(section *APIBrandSection) bool {
+					return section.GetName() == sectionName
+				})
+				require.GreaterOrEqual(t, idx, 0, "section `%s` not present in results", sectionName)
+
+				section := res.GetSections()[idx]
+
+				require.True(t, slices.ContainsFunc(section.GetGroups(), func(a *APIBrandSection) bool {
+					return a.GetName() == testCase.Name
+				}), "item `%s` not found in section `%s`", testCase.Name, sectionName)
+			}
+		})
+	}
+}

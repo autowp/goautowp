@@ -12,8 +12,10 @@ const (
 type PictureItemListOptions struct {
 	TypeID                  schema.PictureItemType
 	PictureID               int64
+	ItemID                  int64
 	Pictures                *PictureListOptions
 	PerspectiveID           int32
+	ExcludePerspectiveID    []int32
 	ItemParentCacheAncestor *ItemParentCacheListOptions
 }
 
@@ -32,8 +34,16 @@ func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDatase
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTablePictureIDColName).Eq(s.PictureID))
 	}
 
+	if s.ItemID != 0 {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTableItemIDColName).Eq(s.ItemID))
+	}
+
 	if s.PerspectiveID != 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTablePerspectiveIDColName).Eq(s.PerspectiveID))
+	}
+
+	if len(s.ExcludePerspectiveID) > 0 {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTablePerspectiveIDColName).NotIn(s.ExcludePerspectiveID))
 	}
 
 	if s.Pictures != nil {

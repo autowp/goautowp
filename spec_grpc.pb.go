@@ -2331,6 +2331,7 @@ var Rating_ServiceDesc = grpc.ServiceDesc{
 
 const (
 	Items_GetBrands_FullMethodName               = "/goautowp.Items/GetBrands"
+	Items_GetBrandSections_FullMethodName        = "/goautowp.Items/GetBrandSections"
 	Items_GetTopBrandsList_FullMethodName        = "/goautowp.Items/GetTopBrandsList"
 	Items_GetTopPersonsList_FullMethodName       = "/goautowp.Items/GetTopPersonsList"
 	Items_GetTopFactoriesList_FullMethodName     = "/goautowp.Items/GetTopFactoriesList"
@@ -2371,6 +2372,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ItemsClient interface {
 	GetBrands(ctx context.Context, in *GetBrandsRequest, opts ...grpc.CallOption) (*APIBrandsList, error)
+	GetBrandSections(ctx context.Context, in *GetBrandSectionsRequest, opts ...grpc.CallOption) (*APIBrandSections, error)
 	GetTopBrandsList(ctx context.Context, in *GetTopBrandsListRequest, opts ...grpc.CallOption) (*APITopBrandsList, error)
 	GetTopPersonsList(ctx context.Context, in *GetTopPersonsListRequest, opts ...grpc.CallOption) (*APITopPersonsList, error)
 	GetTopFactoriesList(ctx context.Context, in *GetTopFactoriesListRequest, opts ...grpc.CallOption) (*APITopFactoriesList, error)
@@ -2418,6 +2420,16 @@ func (c *itemsClient) GetBrands(ctx context.Context, in *GetBrandsRequest, opts 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(APIBrandsList)
 	err := c.cc.Invoke(ctx, Items_GetBrands_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) GetBrandSections(ctx context.Context, in *GetBrandSectionsRequest, opts ...grpc.CallOption) (*APIBrandSections, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(APIBrandSections)
+	err := c.cc.Invoke(ctx, Items_GetBrandSections_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2759,6 +2771,7 @@ func (c *itemsClient) SetItemEngine(ctx context.Context, in *SetItemEngineReques
 // for forward compatibility.
 type ItemsServer interface {
 	GetBrands(context.Context, *GetBrandsRequest) (*APIBrandsList, error)
+	GetBrandSections(context.Context, *GetBrandSectionsRequest) (*APIBrandSections, error)
 	GetTopBrandsList(context.Context, *GetTopBrandsListRequest) (*APITopBrandsList, error)
 	GetTopPersonsList(context.Context, *GetTopPersonsListRequest) (*APITopPersonsList, error)
 	GetTopFactoriesList(context.Context, *GetTopFactoriesListRequest) (*APITopFactoriesList, error)
@@ -2804,6 +2817,9 @@ type UnimplementedItemsServer struct{}
 
 func (UnimplementedItemsServer) GetBrands(context.Context, *GetBrandsRequest) (*APIBrandsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrands not implemented")
+}
+func (UnimplementedItemsServer) GetBrandSections(context.Context, *GetBrandSectionsRequest) (*APIBrandSections, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBrandSections not implemented")
 }
 func (UnimplementedItemsServer) GetTopBrandsList(context.Context, *GetTopBrandsListRequest) (*APITopBrandsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopBrandsList not implemented")
@@ -2939,6 +2955,24 @@ func _Items_GetBrands_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ItemsServer).GetBrands(ctx, req.(*GetBrandsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_GetBrandSections_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBrandSectionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetBrandSections(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_GetBrandSections_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetBrandSections(ctx, req.(*GetBrandSectionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3547,6 +3581,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBrands",
 			Handler:    _Items_GetBrands_Handler,
+		},
+		{
+			MethodName: "GetBrandSections",
+			Handler:    _Items_GetBrandSections_Handler,
 		},
 		{
 			MethodName: "GetTopBrandsList",

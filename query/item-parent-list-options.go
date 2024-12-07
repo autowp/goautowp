@@ -22,6 +22,7 @@ type ItemParentListOptions struct {
 	ParentItems                       *ItemsListOptions
 	ChildItems                        *ItemsListOptions
 	ItemParentCacheAncestorByParentID *ItemParentCacheListOptions
+	Language                          string
 }
 
 func (s *ItemParentListOptions) Select(db *goqu.Database) *goqu.SelectDataset {

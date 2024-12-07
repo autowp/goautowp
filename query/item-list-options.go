@@ -15,31 +15,35 @@ func AppendItemAlias(alias string, suffix string) string {
 }
 
 type ItemsListOptions struct {
-	Alias                     string
-	Language                  string
-	ItemID                    int64
-	ItemIDExpr                goqu.Expression
-	TypeID                    []schema.ItemTableItemTypeID
-	PictureItems              *PictureItemListOptions
-	PreviewPictures           *PictureItemListOptions
-	Limit                     uint32
-	Page                      uint32
-	SortByName                bool
-	ItemParentChild           *ItemParentListOptions
-	ItemParentParent          *ItemParentListOptions
-	ItemParentCacheDescendant *ItemParentCacheListOptions
-	ItemParentCacheAncestor   *ItemParentCacheListOptions
-	NoParents                 bool
-	Catname                   string
-	Name                      string
-	IsConcept                 bool
-	EngineItemID              int64
-	HasBeginYear              bool
-	HasEndYear                bool
-	HasBeginMonth             bool
-	HasEndMonth               bool
-	HasLogo                   bool
-	CreatedInDays             int
+	Alias                        string
+	Language                     string
+	ItemID                       int64
+	ItemIDExpr                   goqu.Expression
+	TypeID                       []schema.ItemTableItemTypeID
+	PictureItems                 *PictureItemListOptions
+	PreviewPictures              *PictureItemListOptions
+	Limit                        uint32
+	Page                         uint32
+	SortByName                   bool
+	ItemParentChild              *ItemParentListOptions
+	ItemParentParent             *ItemParentListOptions
+	ItemParentCacheDescendant    *ItemParentCacheListOptions
+	ItemParentCacheAncestor      *ItemParentCacheListOptions
+	NoParents                    bool
+	Catname                      string
+	Name                         string
+	IsConcept                    bool
+	IsNotConcept                 bool
+	EngineItemID                 int64
+	HasBeginYear                 bool
+	HasEndYear                   bool
+	HasBeginMonth                bool
+	HasEndMonth                  bool
+	HasLogo                      bool
+	CreatedInDays                int
+	VehicleTypeAncestorID        int64
+	ExcludeVehicleTypeAncestorID []int64
+	VehicleTypeIsNull            bool
 }
 
 func ItemParentNoParentAlias(alias string) string {
@@ -55,6 +59,10 @@ func (s *ItemsListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
 	sqSelect := db.Select().From(schema.ItemTable.As(alias))
 
 	return s.Apply(alias, sqSelect)
+}
+
+func (s *ItemsListOptions) ExistsSelect(db *goqu.Database) *goqu.SelectDataset {
+	return s.Select(db).Select(goqu.V(true))
 }
 
 func (s *ItemsListOptions) CountSelect(db *goqu.Database) *goqu.SelectDataset {
@@ -92,6 +100,46 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableAddDatetimeColName).Gt(
 			goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL ? DAY", s.CreatedInDays)),
 		))
+	}
+
+	if s.VehicleTypeAncestorID > 0 {
+		sqSelect = sqSelect.
+			Join(
+				schema.VehicleVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+			).
+			Join(
+				schema.CarTypesParentsTable,
+				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol)),
+			).
+			Where(schema.CarTypesParentsTableParentIDCol.Eq(s.VehicleTypeAncestorID))
+	}
+
+	if len(s.ExcludeVehicleTypeAncestorID) > 0 {
+		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
+		subSelect = subSelect.Select(schema.CarTypesParentsTableIDCol).
+			From(schema.CarTypesParentsTable).
+			Where(schema.CarTypesParentsTableParentIDCol.In(s.ExcludeVehicleTypeAncestorID))
+
+		sqSelect = sqSelect.
+			Join(
+				schema.VehicleVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+			).
+			Join(
+				schema.CarTypesParentsTable,
+				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol)),
+			).
+			Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(subSelect))
+	}
+
+	if s.VehicleTypeIsNull {
+		sqSelect = sqSelect.
+			LeftJoin(
+				schema.VehicleVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+			).
+			Where(schema.VehicleVehicleTypeTableVehicleIDCol.IsNull())
 	}
 
 	if s.ItemParentChild != nil {
@@ -163,6 +211,10 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 
 	if s.IsConcept {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableIsConceptColName))
+	}
+
+	if s.IsNotConcept {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableIsConceptColName).IsFalse())
 	}
 
 	if s.EngineItemID > 0 {

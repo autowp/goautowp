@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/autowp/goautowp/attrs"
@@ -2316,4 +2317,278 @@ func (s *ItemsGRPCServer) notifyItemSubscribers(
 	}
 
 	return nil
+}
+
+func (s *ItemsGRPCServer) GetBrandSections(
+	ctx context.Context, in *GetBrandSectionsRequest,
+) (*APIBrandSections, error) {
+	item, err := s.repository.Item(ctx, query.ItemsListOptions{
+		ItemID: in.GetItemId(),
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+	}, items.ListFields{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	sections, err := s.brandSections(ctx, in.GetLanguage(), item.ID, item.Catname.String)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &APIBrandSections{
+		Sections: sections,
+	}, nil
+}
+
+func (s *ItemsGRPCServer) brandSections(
+	ctx context.Context, lang string, brandID int64, brandCatname string,
+) ([]*APIBrandSection, error) {
+	// create groups array
+	sections, err := s.carSections(ctx, lang, brandID, brandCatname)
+	if err != nil {
+		return nil, fmt.Errorf("carSections(): %w", err)
+	}
+
+	otherGroups, err := s.otherGroups(ctx, brandID, brandCatname, lang)
+	if err != nil {
+		return nil, fmt.Errorf("otherGroups(): %w", err)
+	}
+
+	return append(
+		sections,
+		&APIBrandSection{
+			Name:       "Other",
+			RouterLink: nil,
+			Groups:     otherGroups,
+		},
+	), nil
+}
+
+func (s *ItemsGRPCServer) otherGroups(
+	ctx context.Context, brandID int64, brandCatname string, lang string,
+) ([]*APIBrandSection, error) {
+	var groups []*APIBrandSection
+
+	// concepts
+	hasConcepts, err := s.repository.Exists(ctx, query.ItemsListOptions{
+		ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+			ParentID: brandID,
+		},
+		IsConcept: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	localizer := s.i18n.Localizer(lang)
+
+	if hasConcepts {
+		translated, err := localizer.Localize(&i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{
+				ID: "concepts and prototypes",
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		groups = append(groups, &APIBrandSection{
+			RouterLink: []string{"/", brandCatname, "concepts"},
+			Name:       translated,
+		})
+	}
+
+	groupTypes := []struct {
+		PerspectiveID        int32
+		ExcludePerspectiveID []int32
+		Catname              string
+		Name                 string
+	}{
+		{
+			PerspectiveID: items.PerspectiveIDLogo,
+			Catname:       "logotypes",
+			Name:          "logotypes",
+		},
+		{
+			PerspectiveID: items.PerspectiveIDMixed,
+			Catname:       "mixed",
+			Name:          "mixed",
+		},
+		{
+			ExcludePerspectiveID: []int32{items.PerspectiveIDLogo, items.PerspectiveIDMixed},
+			Catname:              "other",
+			Name:                 "unsorted",
+		},
+	}
+
+	for _, groupType := range groupTypes {
+		picturesCount, err := s.picturesRepository.Count(ctx, &query.PictureListOptions{
+			Status: schema.PictureStatusAccepted,
+			PictureItem: &query.PictureItemListOptions{
+				ItemID:               brandID,
+				PerspectiveID:        groupType.PerspectiveID,
+				ExcludePerspectiveID: groupType.ExcludePerspectiveID,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if picturesCount > 0 {
+			translated, err := localizer.Localize(&i18n.LocalizeConfig{
+				DefaultMessage: &i18n.Message{
+					ID: groupType.Name,
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			groups = append(groups, &APIBrandSection{
+				RouterLink: []string{"/", brandCatname, groupType.Catname},
+				Name:       translated,
+				Count:      int32(picturesCount), //nolint: gosec
+			})
+		}
+	}
+
+	return groups, nil
+}
+
+type SectionPreset struct {
+	Name       string
+	CarTypeID  int64
+	ItemTypeID []schema.ItemTableItemTypeID
+	RouterLink []string
+}
+
+func (s *ItemsGRPCServer) carSections(
+	ctx context.Context, lang string, brandID int64, brandCatname string,
+) ([]*APIBrandSection, error) {
+	sectionsPresets := []SectionPreset{
+		{
+			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+		},
+		{
+			Name:       "catalogue/section/moto",
+			CarTypeID:  items.VehicleTypeIDMoto,
+			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+		},
+		{
+			Name:       "catalogue/section/buses",
+			CarTypeID:  items.VehicleTypeIDBus,
+			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+		},
+		{
+			Name:       "catalogue/section/trucks",
+			CarTypeID:  items.VehicleTypeIDTruck,
+			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+		},
+		{
+			Name:       "catalogue/section/tractors",
+			CarTypeID:  items.VehicleTypeIDTractor,
+			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+		},
+		{
+			Name:       "catalogue/section/engines",
+			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDEngine},
+			RouterLink: []string{"/", brandCatname, "engines"},
+		},
+	}
+
+	sections := make([]*APIBrandSection, 0, len(sectionsPresets))
+
+	for _, sectionsPreset := range sectionsPresets {
+		sectionGroups, err := s.carSectionGroups(
+			ctx,
+			lang,
+			brandID,
+			brandCatname,
+			sectionsPreset,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("carSectionGroups(): %w", err)
+		}
+
+		slices.SortFunc(sectionGroups, func(a, b *APIBrandSection) int {
+			return strings.Compare(a.GetName(), b.GetName())
+		})
+
+		sections = append(sections, &APIBrandSection{
+			Name:       sectionsPreset.Name,
+			RouterLink: sectionsPreset.RouterLink,
+			Groups:     sectionGroups,
+		})
+	}
+
+	return sections, nil
+}
+
+func (s *ItemsGRPCServer) carSectionGroups(
+	ctx context.Context,
+	lang string,
+	brandID int64,
+	brandCatname string,
+	section SectionPreset,
+) ([]*APIBrandSection, error) {
+	var (
+		err  error
+		rows []items.ItemParent
+	)
+
+	if section.CarTypeID > 0 {
+		rows, err = s.repository.ItemParents(ctx, query.ItemParentListOptions{
+			ParentID: brandID,
+			ChildItems: &query.ItemsListOptions{
+				TypeID:                section.ItemTypeID,
+				IsNotConcept:          true,
+				VehicleTypeAncestorID: section.CarTypeID,
+			},
+			Language: lang,
+		}, items.ItemParentFields{Name: true})
+		if err != nil {
+			return nil, fmt.Errorf("ItemParents(): %w", err)
+		}
+	} else {
+		rows, err = s.repository.ItemParents(ctx, query.ItemParentListOptions{
+			ParentID: brandID,
+			ChildItems: &query.ItemsListOptions{
+				TypeID:       section.ItemTypeID,
+				IsNotConcept: true,
+				ExcludeVehicleTypeAncestorID: []int64{
+					items.VehicleTypeIDMoto, items.VehicleTypeIDTractor, items.VehicleTypeIDTruck, items.VehicleTypeIDBus,
+				},
+			},
+			Language: lang,
+		}, items.ItemParentFields{Name: true})
+		if err != nil {
+			return nil, fmt.Errorf("ItemParents(): %w", err)
+		}
+
+		rows2, err := s.repository.ItemParents(ctx, query.ItemParentListOptions{
+			ParentID: brandID,
+			ChildItems: &query.ItemsListOptions{
+				TypeID:            section.ItemTypeID,
+				IsNotConcept:      true,
+				VehicleTypeIsNull: true,
+			},
+			Language: lang,
+		}, items.ItemParentFields{Name: true})
+		if err != nil {
+			return nil, fmt.Errorf("ItemParents(): %w", err)
+		}
+
+		rows = append(rows, rows2...)
+	}
+
+	groups := make([]*APIBrandSection, 0, len(rows))
+
+	for _, row := range rows {
+		groups = append(groups, &APIBrandSection{
+			RouterLink: []string{"/", brandCatname, row.Catname},
+			Name:       row.Name,
+		})
+	}
+
+	return groups, nil
 }
