@@ -1639,6 +1639,8 @@ const (
 	Users_DisableUserCommentsNotifications_FullMethodName = "/goautowp.Users/DisableUserCommentsNotifications"
 	Users_EnableUserCommentsNotifications_FullMethodName  = "/goautowp.Users/EnableUserCommentsNotifications"
 	Users_GetUsers_FullMethodName                         = "/goautowp.Users/GetUsers"
+	Users_GetAccounts_FullMethodName                      = "/goautowp.Users/GetAccounts"
+	Users_DeleteUserAccount_FullMethodName                = "/goautowp.Users/DeleteUserAccount"
 )
 
 // UsersClient is the client API for Users service.
@@ -1652,6 +1654,8 @@ type UsersClient interface {
 	DisableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	EnableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUsers(ctx context.Context, in *APIUsersRequest, opts ...grpc.CallOption) (*APIUsersResponse, error)
+	GetAccounts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIAccountsResponse, error)
+	DeleteUserAccount(ctx context.Context, in *DeleteUserAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type usersClient struct {
@@ -1732,6 +1736,26 @@ func (c *usersClient) GetUsers(ctx context.Context, in *APIUsersRequest, opts ..
 	return out, nil
 }
 
+func (c *usersClient) GetAccounts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIAccountsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(APIAccountsResponse)
+	err := c.cc.Invoke(ctx, Users_GetAccounts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) DeleteUserAccount(ctx context.Context, in *DeleteUserAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Users_DeleteUserAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UsersServer is the server API for Users service.
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility.
@@ -1743,6 +1767,8 @@ type UsersServer interface {
 	DisableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
 	EnableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
 	GetUsers(context.Context, *APIUsersRequest) (*APIUsersResponse, error)
+	GetAccounts(context.Context, *emptypb.Empty) (*APIAccountsResponse, error)
+	DeleteUserAccount(context.Context, *DeleteUserAccountRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -1773,6 +1799,12 @@ func (UnimplementedUsersServer) EnableUserCommentsNotifications(context.Context,
 }
 func (UnimplementedUsersServer) GetUsers(context.Context, *APIUsersRequest) (*APIUsersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUsers not implemented")
+}
+func (UnimplementedUsersServer) GetAccounts(context.Context, *emptypb.Empty) (*APIAccountsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAccounts not implemented")
+}
+func (UnimplementedUsersServer) DeleteUserAccount(context.Context, *DeleteUserAccountRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteUserAccount not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 func (UnimplementedUsersServer) testEmbeddedByValue()               {}
@@ -1921,6 +1953,42 @@ func _Users_GetUsers_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Users_GetAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).GetAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Users_GetAccounts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).GetAccounts(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_DeleteUserAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteUserAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).DeleteUserAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Users_DeleteUserAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).DeleteUserAccount(ctx, req.(*DeleteUserAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Users_ServiceDesc is the grpc.ServiceDesc for Users service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1955,6 +2023,14 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUsers",
 			Handler:    _Users_GetUsers_Handler,
+		},
+		{
+			MethodName: "GetAccounts",
+			Handler:    _Users_GetAccounts_Handler,
+		},
+		{
+			MethodName: "DeleteUserAccount",
+			Handler:    _Users_DeleteUserAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

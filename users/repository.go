@@ -1044,3 +1044,33 @@ func (s *Repository) RefreshPicturesCount(ctx context.Context, userID int64) err
 
 	return err
 }
+
+func (s *Repository) UserAccounts(ctx context.Context, userID int64) ([]*schema.UserAccountRow, error) {
+	var rows []*schema.UserAccountRow
+	err := s.db.Select(goqu.Star()).From(schema.UserAccountTable).Where(schema.UserAccountTableUserIDCol.Eq(userID)).
+		ScanStructsContext(ctx, &rows)
+
+	return rows, err
+}
+
+func (s *Repository) HaveAccountsForOtherServices(ctx context.Context, userID int64, id int64) (bool, error) {
+	var found bool
+
+	success, err := s.db.Select(goqu.V(true)).
+		From(schema.UserAccountTable).
+		Where(
+			schema.UserAccountTableIDCol.Neq(id),
+			schema.UserAccountTableUserIDCol.Eq(userID),
+		).
+		ScanValContext(ctx, &found)
+
+	return success && found, err
+}
+
+func (s *Repository) RemoveUserAccount(ctx context.Context, id int64) error {
+	_, err := s.db.Delete(schema.UserAccountTable).
+		Where(schema.UserAccountTableIDCol.Eq(id)).
+		Executor().ExecContext(ctx)
+
+	return err
+}

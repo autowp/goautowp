@@ -66,6 +66,8 @@ service Users {
   rpc DisableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
   rpc EnableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
   rpc GetUsers(APIUsersRequest) returns (APIUsersResponse) {}
+  rpc GetAccounts(google.protobuf.Empty) returns (APIAccountsResponse) {}
+  rpc DeleteUserAccount(DeleteUserAccountRequest) returns (google.protobuf.Empty) {}
 }
 
 service Rating {
@@ -1403,6 +1405,22 @@ message APIUsersRequest {
 message APIUsersResponse {
   repeated APIUser items = 1;
   Pages paginator = 2;
+}
+
+message APIAccountsResponse {
+  repeated APIAccountsAccount items = 1;
+}
+
+message APIAccountsAccount {
+  bool can_remove = 1;
+  string icon = 2;
+  int64 id = 3;
+  string link = 4;
+  string name = 5;
+}
+
+message DeleteUserAccountRequest {
+  int64 id = 1;
 }
 
 message APIUsersRatingUserBrand {

@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/query"
@@ -288,4 +289,83 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 		Items:     result,
 		Paginator: paginator,
 	}, nil
+}
+
+func (s *UsersGRPCServer) GetAccounts(ctx context.Context, _ *emptypb.Empty) (*APIAccountsResponse, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	rows, err := s.userRepository.UserAccounts(ctx, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	accounts := make([]*APIAccountsAccount, 0, len(rows))
+
+	for _, row := range rows {
+		if row.ServiceID != "keycloak" {
+			canRemove, err := s.canRemoveAccount(ctx, userID, row.ID)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			accounts = append(accounts, &APIAccountsAccount{
+				Icon:      "fa fa-" + strings.ReplaceAll(row.ServiceID, "googleplus", "google-plus"),
+				Id:        row.ID,
+				Link:      row.Link,
+				Name:      row.Name,
+				CanRemove: canRemove,
+			})
+		}
+	}
+
+	return &APIAccountsResponse{
+		Items: accounts,
+	}, nil
+}
+
+func (s *UsersGRPCServer) canRemoveAccount(ctx context.Context, userID int64, id int64) (bool, error) {
+	user, err := s.userRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{})
+	if err != nil {
+		return false, err
+	}
+
+	if user.EMail != nil && len(*user.EMail) > 0 {
+		return true, nil
+	}
+
+	return s.userRepository.HaveAccountsForOtherServices(ctx, userID, id)
+}
+
+func (s *UsersGRPCServer) DeleteUserAccount(ctx context.Context, in *DeleteUserAccountRequest) (*emptypb.Empty, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	canRemove, err := s.canRemoveAccount(ctx, userID, in.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !canRemove {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	err = s.userRepository.RemoveUserAccount(ctx, in.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
 }
