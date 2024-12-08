@@ -330,7 +330,7 @@ func mainReturnWithCode() int { //nolint: maintidx
 					parentItemTypeID := command.Int("parent_item_type_id")
 
 					return autowpApp.RefreshItemParentLanguage(ctx,
-						schema.ItemTableItemTypeID(parentItemTypeID), //nolint:gosec
+						schema.ItemTableItemTypeID(parentItemTypeID),
 						uint(command.Uint("limit")),
 					)
 				},
