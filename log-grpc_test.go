@@ -5,10 +5,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -21,15 +18,6 @@ func TestGetEvents(t *testing.T) {
 	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewLogClient(conn)
 
@@ -48,15 +36,6 @@ func TestGetEventsWithFilters(t *testing.T) {
 	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewLogClient(conn)
 

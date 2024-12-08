@@ -5,10 +5,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -17,14 +14,7 @@ func TestMessaging(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	messagingClient := NewMessagingClient(conn)
 
 	cfg := config.LoadConfig(".")

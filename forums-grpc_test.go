@@ -5,10 +5,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -17,14 +14,6 @@ func TestGetThemes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -46,14 +35,6 @@ func TestGetTheme(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -76,14 +57,6 @@ func TestGetTheme(t *testing.T) {
 //nolint:paralleltest
 func TestGetLastTopicAndLastMessage(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -132,14 +105,6 @@ func TestGetUserSummary(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -160,14 +125,6 @@ func TestCloseTopic(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")

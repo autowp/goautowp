@@ -7,11 +7,8 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -124,15 +121,6 @@ func TestSpecsRefreshUserConflicts(t *testing.T) {
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	kc := cnt.Keycloak()
 	usersClient := NewUsersClient(conn)

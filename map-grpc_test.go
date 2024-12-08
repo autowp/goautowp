@@ -8,11 +8,8 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func createItemWithPoint(ctx context.Context, t *testing.T) {
@@ -50,18 +47,9 @@ func TestGetPoints(t *testing.T) {
 
 	createItemWithPoint(ctx, t)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	client := NewMapClient(conn)
 
-	_, err = client.GetPoints(
+	_, err := client.GetPoints(
 		ctx,
 		&MapGetPointsRequest{
 			Bounds:   "0,0,60,60",
@@ -78,18 +66,9 @@ func TestGetPointsOnly(t *testing.T) {
 
 	createItemWithPoint(ctx, t)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	client := NewMapClient(conn)
 
-	_, err = client.GetPoints(
+	_, err := client.GetPoints(
 		ctx,
 		&MapGetPointsRequest{
 			Bounds:     "0,0,60,60",

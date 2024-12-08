@@ -14,10 +14,7 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -26,17 +23,10 @@ func TestTopCategoriesList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
-	_, err = client.GetTopCategoriesList(ctx, &GetTopCategoriesListRequest{
+	_, err := client.GetTopCategoriesList(ctx, &GetTopCategoriesListRequest{
 		Language: "ru",
 	})
 	require.NoError(t, err)
@@ -119,14 +109,6 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	twins, err := r5.LastInsertId()
 	require.NoError(t, err)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	kc := cnt.Keycloak()
@@ -186,14 +168,7 @@ func TestTopBrandsList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	res, err := client.GetTopBrandsList(ctx, &GetTopBrandsListRequest{
@@ -207,14 +182,7 @@ func TestTopPersonsAuthorList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	r, err := client.GetTopPersonsList(ctx, &GetTopPersonsListRequest{
@@ -229,14 +197,7 @@ func TestTopPersonsContentList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	r, err := client.GetTopPersonsList(ctx, &GetTopPersonsListRequest{
@@ -251,14 +212,7 @@ func TestTopFactoriesList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	r, err := client.GetTopFactoriesList(ctx, &GetTopFactoriesListRequest{
@@ -272,14 +226,7 @@ func TestContentLanguages(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	r, err := client.GetContentLanguages(ctx, &emptypb.Empty{})
@@ -292,12 +239,6 @@ func TestItemLinks(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
 	cfg := config.LoadConfig(".")
 
@@ -308,7 +249,6 @@ func TestItemLinks(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	r1, err := client.CreateItemLink(
@@ -370,12 +310,6 @@ func TestItemVehicleTypes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
 	cfg := config.LoadConfig(".")
 
@@ -386,7 +320,6 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	_, err = client.CreateItemVehicleType(
@@ -470,12 +403,6 @@ func TestItemParentLanguages(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
 	cfg := config.LoadConfig(".")
 
@@ -486,7 +413,6 @@ func TestItemParentLanguages(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	_, err = client.GetItemParentLanguages(
@@ -503,12 +429,6 @@ func TestItemLanguages(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
 	cfg := config.LoadConfig(".")
 
@@ -519,7 +439,6 @@ func TestItemLanguages(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	_, err = client.GetItemLanguages(
@@ -560,14 +479,6 @@ func TestCatalogueMenuList(t *testing.T) {
 	_, err = rep.RebuildCache(ctx, category)
 	require.NoError(t, err)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	res, err := client.List(ctx, &ListItemsRequest{
@@ -592,14 +503,6 @@ func TestStats(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	cfg := config.LoadConfig(".")
@@ -622,14 +525,6 @@ func TestSetItemParentLanguage(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	cfg := config.LoadConfig(".")
@@ -846,14 +741,6 @@ func TestBrandNewItems(t *testing.T) {
 	itemID, err := r1.LastInsertId()
 	require.NoError(t, err)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	_, err = client.GetBrandNewItems(ctx, &NewItemsRequest{
@@ -901,14 +788,6 @@ func TestNewItems(t *testing.T) {
 	childID, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// admin
@@ -974,14 +853,6 @@ func TestInboxPicturesCount(t *testing.T) {
 	childID, err := r2.LastInsertId()
 	require.NoError(t, err)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// login with admin
@@ -1123,14 +994,6 @@ func TestCreateMoveDeleteItemParent(t *testing.T) {
 	childID, err := r3.LastInsertId()
 	require.NoError(t, err)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// admin
@@ -1270,14 +1133,6 @@ func TestDeleteItemParentNotDeletesSecondChild(t *testing.T) {
 	childID2, err := r3.LastInsertId()
 	require.NoError(t, err)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// admin
@@ -1348,14 +1203,7 @@ func TestUpdateItemParent(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// admin
@@ -1487,14 +1335,7 @@ func TestUpdateItemLanguage(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// admin
@@ -1685,14 +1526,7 @@ func TestSetUserItemSubscription(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// admin
@@ -1752,14 +1586,7 @@ func TestSetItemEngine(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// admin
@@ -1870,14 +1697,7 @@ func TestSetItemEngineInheritance(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	// admin
@@ -1995,16 +1815,6 @@ func TestGetBrands(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		util.Close(conn)
-	})
 
 	client := NewItemsClient(conn)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -2117,14 +1927,7 @@ func TestBrandSections(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
 
-	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
 	var ids []int64
@@ -2149,16 +1952,6 @@ func TestBrandSections2(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		util.Close(conn)
-	})
 
 	client := NewItemsClient(conn)
 

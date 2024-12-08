@@ -5,10 +5,7 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -16,14 +13,6 @@ func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -51,14 +40,6 @@ func TestAddComment(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -136,14 +117,6 @@ func TestAddComment(t *testing.T) {
 
 func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) { //nolint:paralleltest
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -198,14 +171,6 @@ func TestSubscribeComment(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -238,14 +203,6 @@ func TestVoteComment(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -371,14 +328,6 @@ func TestCompleteComment(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -420,14 +369,6 @@ func TestMessagesByUserIdentity(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -452,14 +393,6 @@ func TestMessagesByUserIdentity(t *testing.T) {
 //nolint:paralleltest
 func TestMoveComment(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	forumsClient := NewForumsClient(conn)
@@ -538,14 +471,6 @@ func TestAddCommentOfUnexpectedItemType(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -573,14 +498,6 @@ func TestAddCommentToDeletedOrNotExistentParent(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")

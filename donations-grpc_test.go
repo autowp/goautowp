@@ -7,11 +7,8 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -19,14 +16,6 @@ func TestGetVODData(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewDonationsClient(conn)
 
@@ -58,15 +47,6 @@ func TestGetTransactions(t *testing.T) {
 		}).
 		Executor().ExecContext(ctx)
 	require.NoError(t, err)
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewDonationsClient(conn)
 

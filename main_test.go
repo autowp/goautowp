@@ -7,14 +7,17 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/util"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
 	cnt       *Container
 	bufDialer func(context.Context, string) (net.Conn, error)
+	conn      *grpc.ClientConn
 )
 
 func TestMain(m *testing.M) {
@@ -161,5 +164,18 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	os.Exit(m.Run())
+	conn, err = grpc.NewClient(
+		"localhost",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	res := m.Run()
+
+	util.Close(conn)
+
+	os.Exit(res)
 }

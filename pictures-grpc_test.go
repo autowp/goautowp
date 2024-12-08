@@ -14,13 +14,10 @@ import (
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/genproto/googleapis/type/latlng"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -53,15 +50,6 @@ func TestView(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	client := NewPicturesClient(conn)
 
 	_, err = client.View(ctx, &PicturesViewRequest{PictureId: getPictureID(ctx, t, goquDB)})
@@ -76,15 +64,6 @@ func TestVote(t *testing.T) {
 
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -104,15 +83,6 @@ func TestModerVoteTemplate(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -146,15 +116,6 @@ func TestModerVote(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -253,15 +214,6 @@ func TestUserSummary(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
@@ -282,15 +234,6 @@ func TestFlopNormalizeAndRepair(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -338,15 +281,6 @@ func TestDeleteSimilar(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
@@ -367,15 +301,6 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -474,15 +399,6 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -574,15 +490,6 @@ func TestPictureCrop(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -635,15 +542,6 @@ func TestPictureCropByOneAxis(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -705,15 +603,6 @@ func TestInvalidPictureCrop(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -795,15 +684,6 @@ func TestClearReplacePicture(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -847,15 +727,6 @@ func TestSetPicturePoint(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -965,15 +836,6 @@ func TestUpdatePicture(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -1055,15 +917,6 @@ func TestSetPictureCopyrights(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -1141,15 +994,6 @@ func TestSetPictureStatus(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -1270,15 +1114,6 @@ func TestReplacePicture(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 

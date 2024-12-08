@@ -12,11 +12,8 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -26,15 +23,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
 
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewUsersClient(conn)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -121,15 +110,7 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
 
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 	client := NewUsersClient(conn)
 
 	userEmail := "test" + strconv.Itoa(random.Int()) + "@example.com"
@@ -198,15 +179,6 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -263,15 +235,6 @@ func TestGetOnlineUsers(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -315,19 +278,10 @@ func TestGetUsersPagination(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewUsersClient(conn)
 
-	_, err = client.GetUsers(ctx, &APIUsersRequest{Page: 1, Limit: 10})
+	_, err := client.GetUsers(ctx, &APIUsersRequest{Page: 1, Limit: 10})
 	require.NoError(t, err)
 }
 
@@ -335,15 +289,6 @@ func TestGetUsersSearch(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 

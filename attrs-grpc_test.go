@@ -9,11 +9,8 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -41,18 +38,9 @@ func TestGetUnits(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	client := NewAttrsClient(conn)
 
-	_, err = client.GetUnits(
+	_, err := client.GetUnits(
 		ctx,
 		&emptypb.Empty{},
 	)
@@ -63,18 +51,10 @@ func TestGetZones(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewAttrsClient(conn)
 
-	_, err = client.GetZones(ctx, &emptypb.Empty{})
+	_, err := client.GetZones(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 }
 
@@ -82,18 +62,10 @@ func TestGetAttributeTypes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewAttrsClient(conn)
 
-	_, err = client.GetAttributeTypes(ctx, &emptypb.Empty{})
+	_, err := client.GetAttributeTypes(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 }
 
@@ -101,15 +73,6 @@ func TestGetAttributes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -131,18 +94,10 @@ func TestGetZoneAttributes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	client := NewAttrsClient(conn)
 
-	_, err = client.GetZoneAttributes(ctx, &AttrZoneAttributesRequest{ZoneId: 1})
+	_, err := client.GetZoneAttributes(ctx, &AttrZoneAttributesRequest{ZoneId: 1})
 	require.NoError(t, err)
 }
 
@@ -150,15 +105,6 @@ func TestGetListOptions(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -303,15 +249,6 @@ func TestGetValues(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -440,15 +377,6 @@ func TestGetEmptyValues(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -612,15 +540,6 @@ func TestConflicts(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
@@ -675,15 +594,6 @@ func TestValuesInherits(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -774,15 +684,6 @@ func TestEngineValuesApplied(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -859,15 +760,6 @@ func TestSetUserValuesList(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -975,15 +867,6 @@ func TestSetValuesRaceConditions(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -1202,15 +1085,6 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -1345,15 +1219,6 @@ func TestInheritedValueOverridden(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -1486,15 +1351,6 @@ func TestMoveValues(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -1585,15 +1441,6 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
@@ -1739,15 +1586,6 @@ func TestNonMultipleValuesFiltered(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -1808,15 +1646,6 @@ func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 
 	ctx := context.Background()
 
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
-
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -1868,15 +1697,6 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		"localhost",
-		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	require.NoError(t, err)
-
-	defer util.Close(conn)
 
 	cfg := config.LoadConfig(".")
 
