@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	pictureItemAlias = "pi"
+	PictureItemAlias = "pi"
 )
 
 type PictureItemListOptions struct {
@@ -20,7 +20,7 @@ type PictureItemListOptions struct {
 }
 
 func AppendPictureItemAlias(alias string) string {
-	return alias + "_" + pictureItemAlias
+	return alias + "_" + PictureItemAlias
 }
 
 func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {

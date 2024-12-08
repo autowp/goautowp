@@ -912,7 +912,7 @@ func (s *Repository) PictureItem(
 ) (schema.PictureItemRow, error) {
 	var row schema.PictureItemRow
 
-	alias := "pi"
+	alias := query.PictureItemAlias
 	aliasTable := goqu.T(alias)
 
 	success, err := options.Apply(
@@ -938,4 +938,33 @@ func (s *Repository) PictureItem(
 	}
 
 	return row, nil
+}
+
+func (s *Repository) PictureItems(
+	ctx context.Context, options query.PictureItemListOptions,
+) ([]schema.PictureItemRow, error) {
+	var rows []schema.PictureItemRow
+
+	alias := "pi"
+	aliasTable := goqu.T(alias)
+
+	err := options.Apply(
+		alias,
+		s.db.Select(
+			aliasTable.Col(schema.PictureItemTablePictureIDColName),
+			aliasTable.Col(schema.PictureItemTableItemIDColName),
+			aliasTable.Col(schema.PictureItemTableTypeColName),
+			aliasTable.Col(schema.PictureItemTableCropLeftColName),
+			aliasTable.Col(schema.PictureItemTableCropTopColName),
+			aliasTable.Col(schema.PictureItemTableCropWidthColName),
+			aliasTable.Col(schema.PictureItemTableCropHeightColName),
+		).
+			From(schema.PictureItemTable.As(alias)).
+			Join(schema.PictureTable, goqu.On(
+				aliasTable.Col(schema.PictureItemTablePictureIDColName).Eq(schema.PictureTableIDCol),
+			)).
+			Order(schema.PictureTableStatusCol.Asc()),
+	).ScanStructsContext(ctx, &rows)
+
+	return rows, err
 }

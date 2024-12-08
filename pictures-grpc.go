@@ -1665,7 +1665,7 @@ func (s *PicturesGRPCServer) canReplace(picture, replacedPicture *schema.Picture
 		s.enforcer.Enforce(role, "picture", "move")
 }
 
-func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *GetPictureItemRequest) (*PictureItem, error) {
+func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *GetPictureItemsRequest) (*PictureItem, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1693,4 +1693,45 @@ func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *GetPictureI
 	extractor := NewPictureItemExtractor(s.enforcer)
 
 	return extractor.Extract(row), nil
+}
+
+func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *GetPictureItemsRequest) (*PictureItems, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	pictureItemType := convertPictureItemType(in.GetType())
+
+	if in.GetPictureId() == 0 && in.GetItemId() == 0 {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	rows, err := s.repository.PictureItems(ctx, query.PictureItemListOptions{
+		PictureID: in.GetPictureId(),
+		ItemID:    in.GetItemId(),
+		TypeID:    pictureItemType,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	extractor := NewPictureItemExtractor(s.enforcer)
+
+	res := make([]*PictureItem, 0, len(rows))
+	for _, row := range rows {
+		res = append(res, extractor.Extract(row))
+	}
+
+	return &PictureItems{
+		Items: res,
+	}, nil
 }
