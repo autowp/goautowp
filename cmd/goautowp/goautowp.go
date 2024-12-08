@@ -8,6 +8,7 @@ import (
 
 	"github.com/autowp/goautowp"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
@@ -307,6 +308,29 @@ func mainReturnWithCode() int { //nolint: maintidx
 				Name: "specs-refresh-actual-values",
 				Action: func(ctx context.Context, _ *cli.Command) error {
 					return autowpApp.SpecsRefreshActualValues(ctx)
+				},
+			},
+			{
+				Name: "refresh-item-parent-language",
+				Flags: []cli.Flag{
+					&cli.UintFlag{
+						Name:     "limit",
+						Value:    0,
+						Usage:    "limit",
+						Required: true,
+					},
+					&cli.IntFlag{
+						Name:     "parent_item_type_id",
+						Value:    int64(schema.ItemTableItemTypeIDBrand),
+						Usage:    "limit",
+						Required: true,
+					},
+				},
+				Action: func(ctx context.Context, command *cli.Command) error {
+					return autowpApp.RefreshItemParentLanguage(ctx,
+						schema.ItemTableItemTypeID(command.Uint("parent_item_type_id")), //nolint:gosec
+						uint(command.Uint("limit")),
+					)
 				},
 			},
 		},

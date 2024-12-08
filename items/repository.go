@@ -21,6 +21,7 @@ import (
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/mozillazg/go-unidecode"
 	geo "github.com/paulmach/go.geo"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
@@ -2766,34 +2767,42 @@ func (s *Repository) RefreshAutoByVehicle(ctx context.Context, itemID int64) (bo
 	return somethingChanged, nil
 }
 
-func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (bool, error) {
-	var bvlRows []schema.ItemParentLanguageRow
+func (s *Repository) refreshItemParentLanguage(ctx context.Context, parentID, itemID int64) error {
+	logrus.Infof("refreshItemParentLanguage(%d, %d)", parentID, itemID)
+
+	var rows []schema.ItemParentLanguageRow
 
 	err := s.db.Select(
 		schema.ItemParentLanguageTableIsAutoCol,
 		schema.ItemParentLanguageTableNameCol,
 		schema.ItemParentLanguageTableLanguageCol,
 	).
-		From(schema.ItemParentLanguageTable).Where(
-		schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
-		schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
-	).ScanStructsContext(ctx, &bvlRows)
+		From(schema.ItemParentLanguageTable).
+		Where(
+			schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
+			schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
+		).
+		ScanStructsContext(ctx, &rows)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	values := make(map[string]schema.ItemParentLanguageRow)
 
-	for _, bvlRow := range bvlRows {
+	for _, iplRow := range rows {
 		row := schema.ItemParentLanguageRow{}
-		if !bvlRow.IsAuto {
-			row.Name = bvlRow.Name
+		if !iplRow.IsAuto {
+			row.Name = iplRow.Name
 		}
 
-		values[bvlRow.Language] = row
+		values[iplRow.Language] = row
 	}
 
-	err = s.setItemParentLanguages(ctx, parentID, itemID, values, false)
+	return s.setItemParentLanguages(ctx, parentID, itemID, values, false)
+}
+
+func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (bool, error) {
+	err := s.refreshItemParentLanguage(ctx, parentID, itemID)
 	if err != nil {
 		return false, err
 	}
@@ -3158,4 +3167,46 @@ func (s *Repository) Brands(ctx context.Context, lang string) ([]*BrandsListLine
 	})
 
 	return resultArray, nil
+}
+
+func (s *Repository) RefreshItemParentLanguage(
+	ctx context.Context, parentItemTypeID schema.ItemTableItemTypeID, limit uint,
+) error {
+	var res []struct {
+		ItemID   int64 `db:"item_id"`
+		ParentID int64 `db:"parent_id"`
+	}
+
+	sqSelect := s.db.Select(
+		schema.ItemParentTableItemIDCol,
+		schema.ItemParentTableParentIDCol,
+	).
+		From(schema.ItemParentTable).
+		LeftJoin(schema.ItemParentLanguageTable, goqu.On(
+			schema.ItemParentTableItemIDCol.Eq(schema.ItemParentLanguageTableItemIDCol),
+			schema.ItemParentTableParentIDCol.Eq(schema.ItemParentLanguageTableParentIDCol),
+		)).
+		GroupBy(schema.ItemParentTableItemIDCol, schema.ItemParentTableParentIDCol).
+		Having(goqu.COUNT(schema.ItemParentLanguageTableItemIDCol).Lt(len(s.contentLanguages))).
+		Limit(limit)
+
+	if parentItemTypeID > 0 {
+		sqSelect = sqSelect.
+			Join(schema.ItemTable, goqu.On(schema.ItemParentTableParentIDCol.Eq(schema.ItemTableIDCol))).
+			Where(schema.ItemTableItemTypeIDCol.Eq(parentItemTypeID))
+	}
+
+	err := sqSelect.ScanStructsContext(ctx, &res)
+	if err != nil {
+		return err
+	}
+
+	for _, row := range res {
+		err = s.refreshItemParentLanguage(ctx, row.ParentID, row.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

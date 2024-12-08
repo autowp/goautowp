@@ -597,6 +597,17 @@ func (s *Application) SpecsRefreshActualValues(ctx context.Context) error {
 	return repository.UpdateAllActualValues(ctx)
 }
 
+func (s *Application) RefreshItemParentLanguage(
+	ctx context.Context, parentItemTypeID schema.ItemTableItemTypeID, limit uint,
+) error {
+	repository, err := s.container.ItemsRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.RefreshItemParentLanguage(ctx, parentItemTypeID, limit)
+}
+
 func (s *Application) SpecsRefreshUsersConflicts(ctx context.Context) error {
 	repository, err := s.container.AttrsRepository()
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/schema"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
@@ -160,5 +161,16 @@ func TestSpecsRefreshActualValues(t *testing.T) {
 	ctx := context.Background()
 
 	err := app.SpecsRefreshActualValues(ctx)
+	require.NoError(t, err)
+}
+
+func TestRefreshItemParentLanguage(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+	ctx := context.Background()
+
+	err := app.RefreshItemParentLanguage(ctx, schema.ItemTableItemTypeIDBrand, 10)
 	require.NoError(t, err)
 }
