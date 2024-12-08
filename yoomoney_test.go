@@ -2,14 +2,12 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
@@ -19,12 +17,8 @@ import (
 func TestYoomoneyWebhookInvalidLabel(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.LoadConfig(".")
-
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	itemOfDayRepository := itemofday.NewRepository(goquDB)
 
@@ -54,12 +48,8 @@ func TestYoomoneyWebhookInvalidLabel(t *testing.T) {
 func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.LoadConfig(".")
-
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	itemOfDayRepository := itemofday.NewRepository(goquDB)
 	itemOfDayRepository.SetMinPictures(0)

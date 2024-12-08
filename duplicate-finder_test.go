@@ -2,13 +2,11 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,10 +15,8 @@ func TestDuplicateFinder(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	df, err := NewDuplicateFinder(goquDB)
 	require.NoError(t, err)

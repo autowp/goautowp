@@ -2,13 +2,11 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -32,10 +30,8 @@ func TestGetThemes(t *testing.T) {
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
@@ -63,10 +59,8 @@ func TestGetTheme(t *testing.T) {
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
@@ -95,10 +89,8 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
@@ -153,10 +145,8 @@ func TestGetUserSummary(t *testing.T) {
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
@@ -183,10 +173,8 @@ func TestCloseTopic(t *testing.T) {
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 

@@ -2,12 +2,10 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -30,10 +28,8 @@ func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
@@ -67,10 +63,8 @@ func TestAddComment(t *testing.T) {
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
@@ -154,10 +148,8 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) { //nolint:para
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, user1Token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 	_, user2Token := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
@@ -218,10 +210,8 @@ func TestSubscribeComment(t *testing.T) {
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
@@ -260,10 +250,8 @@ func TestVoteComment(t *testing.T) {
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
@@ -395,10 +383,8 @@ func TestCompleteComment(t *testing.T) {
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
@@ -446,10 +432,8 @@ func TestMessagesByUserIdentity(t *testing.T) {
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
@@ -481,10 +465,8 @@ func TestMoveComment(t *testing.T) {
 	forumsClient := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
@@ -568,10 +550,8 @@ func TestAddCommentOfUnexpectedItemType(t *testing.T) {
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
@@ -605,10 +585,8 @@ func TestAddCommentToDeletedOrNotExistentParent(t *testing.T) {
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, userToken := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)

@@ -11,7 +11,6 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -316,10 +315,8 @@ func TestGetValues(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -456,10 +453,8 @@ func TestGetEmptyValues(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -693,10 +688,8 @@ func TestValuesInherits(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -793,10 +786,8 @@ func TestEngineValuesApplied(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -881,10 +872,8 @@ func TestSetUserValuesList(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -999,10 +988,8 @@ func TestSetValuesRaceConditions(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1227,10 +1214,8 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1372,10 +1357,8 @@ func TestInheritedValueOverridden(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1515,10 +1498,8 @@ func TestMoveValues(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1617,10 +1598,8 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1772,10 +1751,8 @@ func TestNonMultipleValuesFiltered(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1843,10 +1820,8 @@ func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1906,10 +1881,8 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)

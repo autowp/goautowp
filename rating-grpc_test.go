@@ -2,7 +2,6 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -61,10 +60,8 @@ func TestPictureLikesRating(t *testing.T) {
 
 	cfg := config.LoadConfig("..")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 	usersClient := NewUsersClient(conn)

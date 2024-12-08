@@ -50,12 +50,9 @@ func TestView(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	conn, err := grpc.NewClient(
 		"localhost",
@@ -78,10 +75,8 @@ func TestVote(t *testing.T) {
 	ctx := context.Background()
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	conn, err := grpc.NewClient(
 		"localhost",
@@ -164,10 +159,8 @@ func TestModerVote(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -302,10 +295,8 @@ func TestFlopNormalizeAndRepair(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -389,10 +380,8 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -497,10 +486,8 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -599,10 +586,8 @@ func TestPictureCrop(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -663,10 +648,8 @@ func TestPictureCropByOneAxis(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -735,10 +718,8 @@ func TestInvalidPictureCrop(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -826,10 +807,8 @@ func TestClearReplacePicture(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -881,10 +860,8 @@ func TestSetPicturePoint(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -1000,10 +977,8 @@ func TestUpdatePicture(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -1092,10 +1067,8 @@ func TestSetPictureCopyrights(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	textStorageRepository := textstorage.New(goquDB)
 
@@ -1181,10 +1154,8 @@ func TestSetPictureStatus(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
@@ -1312,10 +1283,8 @@ func TestReplacePicture(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)

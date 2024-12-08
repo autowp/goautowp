@@ -2,13 +2,11 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
@@ -22,12 +20,8 @@ func createItemWithPoint(ctx context.Context, t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	cfg := config.LoadConfig(".")
-
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
 		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-%d", random.Int()),

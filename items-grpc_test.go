@@ -16,7 +16,6 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -49,13 +48,8 @@ func TestGetTwinsBrandsList(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	cnt := NewContainer(cfg)
-	defer util.Close(cnt)
-
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 
@@ -541,12 +535,8 @@ func TestItemLanguages(t *testing.T) {
 func TestCatalogueMenuList(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.LoadConfig(".")
-
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 
@@ -615,10 +605,8 @@ func TestStats(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
 
@@ -647,10 +635,8 @@ func TestSetItemParentLanguage(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	cases := []struct {
 		ParentName           string
@@ -841,12 +827,8 @@ func TestSetItemParentLanguage(t *testing.T) {
 func TestBrandNewItems(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.LoadConfig(".")
-
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 
@@ -887,10 +869,8 @@ func TestNewItems(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 
@@ -955,10 +935,8 @@ func TestInboxPicturesCount(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	repository := items.NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
@@ -1100,10 +1078,8 @@ func TestCreateMoveDeleteItemParent(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 
@@ -1249,10 +1225,8 @@ func TestDeleteItemParentNotDeletesSecondChild(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 
@@ -1371,10 +1345,8 @@ func TestUpdateItemParent(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
@@ -1512,10 +1484,8 @@ func TestUpdateItemLanguage(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
@@ -1712,10 +1682,8 @@ func TestSetUserItemSubscription(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
@@ -1781,10 +1749,8 @@ func TestSetItemEngine(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
@@ -1901,10 +1867,8 @@ func TestSetItemEngineInheritance(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
@@ -2028,10 +1992,8 @@ func TestGetBrands(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
@@ -2152,12 +2114,8 @@ func TestGetBrands(t *testing.T) {
 func TestBrandSections(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.LoadConfig(".")
-
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	conn, err := grpc.NewClient(
@@ -2188,10 +2146,8 @@ func TestBrandSections2(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	ctx := context.Background()
 	conn, err := grpc.NewClient(

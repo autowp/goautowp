@@ -2,7 +2,6 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -50,10 +49,8 @@ func TestGetText(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
-
-	goquDB := goqu.New("mysql", db)
 
 	res, err := goquDB.Insert(schema.TextstorageTextTable).Rows(goqu.Record{
 		schema.TextstorageTextTableTextColName:        "Text 2",

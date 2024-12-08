@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -46,6 +47,7 @@ type Container struct {
 	articlesGRPCServer     *ArticlesGRPCServer
 	attrsRepository        *attrs.Repository
 	autowpDB               *sql.DB
+	autowpDBMutex          sync.Mutex
 	banRepository          *ban.Repository
 	catalogue              *Catalogue
 	commentsRepository     *comments.Repository
@@ -134,6 +136,9 @@ func (s *Container) Close() error {
 }
 
 func (s *Container) AutowpDB() (*sql.DB, error) {
+	s.autowpDBMutex.Lock()
+	defer s.autowpDBMutex.Unlock()
+
 	if s.autowpDB != nil {
 		return s.autowpDB, nil
 	}
