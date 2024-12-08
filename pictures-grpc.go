@@ -39,6 +39,21 @@ func extractPictureModerVoteTemplate(tpl *schema.PictureModerVoteTemplateRow) *M
 	}
 }
 
+func reverseConvertPictureItemType(pictureItemType schema.PictureItemType) PictureItemType {
+	switch pictureItemType {
+	case 0:
+		return PictureItemType_PICTURE_ITEM_UNKNOWN
+	case schema.PictureItemContent:
+		return PictureItemType_PICTURE_ITEM_CONTENT
+	case schema.PictureItemAuthor:
+		return PictureItemType_PICTURE_ITEM_AUTHOR
+	case schema.PictureItemCopyrights:
+		return PictureItemType_PICTURE_ITEM_COPYRIGHTS
+	}
+
+	return PictureItemType_PICTURE_ITEM_UNKNOWN
+}
+
 func convertPictureItemType(pictureItemType PictureItemType) schema.PictureItemType {
 	switch pictureItemType {
 	case PictureItemType_PICTURE_ITEM_UNKNOWN:
@@ -1648,4 +1663,34 @@ func (s *PicturesGRPCServer) canReplace(picture, replacedPicture *schema.Picture
 				s.enforcer.Enforce(role, "picture", "unaccept") &&
 				s.enforcer.Enforce(role, "picture", "remove_by_vote")) &&
 		s.enforcer.Enforce(role, "picture", "move")
+}
+
+func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *GetPictureItemRequest) (*PictureItem, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	pictureItemType := convertPictureItemType(in.GetType())
+
+	row, err := s.repository.PictureItem(ctx, query.PictureItemListOptions{
+		PictureID: in.GetPictureId(),
+		ItemID:    in.GetItemId(),
+		TypeID:    pictureItemType,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	extractor := NewPictureItemExtractor(s.enforcer)
+
+	return extractor.Extract(row), nil
 }

@@ -906,3 +906,36 @@ func (s *Repository) QueueRemove(ctx context.Context, pictureID int64, userID in
 
 	return affected > 0, err
 }
+
+func (s *Repository) PictureItem(
+	ctx context.Context, options query.PictureItemListOptions,
+) (schema.PictureItemRow, error) {
+	var row schema.PictureItemRow
+
+	alias := "pi"
+	aliasTable := goqu.T(alias)
+
+	success, err := options.Apply(
+		alias,
+		s.db.Select(
+			aliasTable.Col(schema.PictureItemTablePictureIDColName),
+			aliasTable.Col(schema.PictureItemTableItemIDColName),
+			aliasTable.Col(schema.PictureItemTableTypeColName),
+			aliasTable.Col(schema.PictureItemTableCropLeftColName),
+			aliasTable.Col(schema.PictureItemTableCropTopColName),
+			aliasTable.Col(schema.PictureItemTableCropWidthColName),
+			aliasTable.Col(schema.PictureItemTableCropHeightColName),
+		).
+			From(schema.PictureItemTable.As(alias)).
+			Limit(1),
+	).ScanStructContext(ctx, &row)
+	if err != nil {
+		return row, err
+	}
+
+	if !success {
+		return row, sql.ErrNoRows
+	}
+
+	return row, nil
+}

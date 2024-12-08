@@ -154,6 +154,7 @@ service Pictures {
   rpc Flop(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc DeleteSimilar(DeleteSimilarRequest) returns (google.protobuf.Empty) {}
   rpc Repair(PictureIDRequest) returns (google.protobuf.Empty) {}
+  rpc GetPictureItem(GetPictureItemRequest) returns (PictureItem) {}
   rpc SetPictureItemArea(SetPictureItemAreaRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureItemPerspective(SetPictureItemPerspectiveRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureItemItemID(SetPictureItemItemIDRequest) returns (google.protobuf.Empty) {}
@@ -1220,6 +1221,22 @@ message PicturesUserSummary {
 
 message PictureIDRequest {
   int64 id = 1;
+}
+
+message GetPictureItemRequest {
+  int64 picture_id = 1;
+  int64 item_id = 2;
+  PictureItemType type = 3;
+}
+
+message PictureItem {
+  int64 picture_id = 1;
+  int64 item_id = 2;
+  PictureItemType type = 3;
+  uint32 crop_left = 4;
+  uint32 crop_top = 5;
+  uint32 crop_width = 6;
+  uint32 crop_height = 7;
 }
 
 message SetPictureItemAreaRequest {
