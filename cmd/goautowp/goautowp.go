@@ -322,8 +322,8 @@ func mainReturnWithCode() int { //nolint: maintidx
 					&cli.IntFlag{
 						Name:     "parent_item_type_id",
 						Value:    int64(schema.ItemTableItemTypeIDBrand),
-						Usage:    "limit",
-						Required: true,
+						Usage:    "parent_item_type_id",
+						Required: false,
 					},
 				},
 				Action: func(ctx context.Context, command *cli.Command) error {

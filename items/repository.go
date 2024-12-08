@@ -3172,6 +3172,8 @@ func (s *Repository) Brands(ctx context.Context, lang string) ([]*BrandsListLine
 func (s *Repository) RefreshItemParentLanguage(
 	ctx context.Context, parentItemTypeID schema.ItemTableItemTypeID, limit uint,
 ) error {
+	logrus.Infof("RefreshItemParentLanguage(%d, %d)", parentItemTypeID, limit)
+
 	var res []struct {
 		ItemID   int64 `db:"item_id"`
 		ParentID int64 `db:"parent_id"`
