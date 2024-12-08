@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -114,7 +113,7 @@ func TestGetAttributes(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -163,7 +162,7 @@ func TestGetListOptions(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -318,7 +317,7 @@ func TestGetValues(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -456,7 +455,7 @@ func TestGetEmptyValues(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -624,7 +623,7 @@ func TestConflicts(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
@@ -691,7 +690,7 @@ func TestValuesInherits(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -789,7 +788,7 @@ func TestEngineValuesApplied(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -875,7 +874,7 @@ func TestSetUserValuesList(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -991,7 +990,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -1217,7 +1216,7 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -1360,7 +1359,7 @@ func TestInheritedValueOverridden(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -1501,7 +1500,7 @@ func TestMoveValues(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -1601,7 +1600,7 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -1754,7 +1753,7 @@ func TestNonMultipleValuesFiltered(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -1823,7 +1822,7 @@ func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -1884,7 +1883,7 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)

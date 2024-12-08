@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
@@ -30,7 +29,7 @@ func TestGetBrandVehicleTypes(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// tester
 	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
@@ -62,7 +61,7 @@ func TestGetPerspectives(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// tester
 	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
@@ -92,7 +91,7 @@ func TestGetPerspectivePages(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// tester
 	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
@@ -122,7 +121,7 @@ func TestGetSpecs(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// tester
 	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)

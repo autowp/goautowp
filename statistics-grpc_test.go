@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -52,12 +51,11 @@ func TestStatisticsPulse(t *testing.T) {
 	statisticsClient := NewStatisticsClient(conn)
 
 	cfg := config.LoadConfig(".")
-	cnt := NewContainer(cfg)
 
 	db, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(ctxTimeout, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)

@@ -46,7 +46,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	password := "password"
 
 	cfg := config.LoadConfig(".")
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	clientToken, err := kc.LoginClient(
 		ctx,
@@ -138,7 +138,7 @@ func TestCreateUserWithEmptyLastName(t *testing.T) {
 	password := "password"
 
 	cfg := config.LoadConfig(".")
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	clientToken, err := kc.LoginClient(
 		ctx,
@@ -210,7 +210,7 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	client := NewUsersClient(conn)
 
 	// admin
@@ -275,7 +275,7 @@ func TestGetOnlineUsers(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	client := NewUsersClient(conn)
 
 	// tester
@@ -347,7 +347,7 @@ func TestGetUsersSearch(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	client := NewUsersClient(conn)
 
 	// tester

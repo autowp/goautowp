@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/golang-migrate/migrate/v4"
@@ -135,7 +134,7 @@ func TestSpecsRefreshUserConflicts(t *testing.T) {
 
 	defer util.Close(conn)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	usersClient := NewUsersClient(conn)
 
 	// tester

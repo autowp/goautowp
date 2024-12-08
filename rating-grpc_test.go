@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -63,7 +62,7 @@ func TestPictureLikesRating(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	usersClient := NewUsersClient(conn)
 
 	// tester

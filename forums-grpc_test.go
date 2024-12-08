@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
@@ -178,7 +177,7 @@ func TestCloseTopic(t *testing.T) {
 
 	_, token := getUserWithCleanHistory(t, conn, cfg, goquDB, testUsername, testPassword)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)

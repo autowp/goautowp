@@ -5,8 +5,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/peer"
 )
@@ -14,8 +12,6 @@ import (
 func TestFeedbackNoBody(t *testing.T) {
 	t.Parallel()
 
-	cnt := NewContainer(config.LoadConfig("."))
-	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
@@ -28,8 +24,6 @@ func TestFeedbackNoBody(t *testing.T) {
 func TestFeedbackEmptyValues(t *testing.T) {
 	t.Parallel()
 
-	cnt := NewContainer(config.LoadConfig("."))
-	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
@@ -46,8 +40,6 @@ func TestFeedbackEmptyValues(t *testing.T) {
 func TestFeedbackEmptyName(t *testing.T) {
 	t.Parallel()
 
-	cnt := NewContainer(config.LoadConfig("."))
-	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
@@ -64,8 +56,6 @@ func TestFeedbackEmptyName(t *testing.T) {
 func TestFeedbackEmptyEmail(t *testing.T) {
 	t.Parallel()
 
-	cnt := NewContainer(config.LoadConfig("."))
-	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
@@ -82,8 +72,6 @@ func TestFeedbackEmptyEmail(t *testing.T) {
 func TestFeedbackEmptyMessage(t *testing.T) {
 	t.Parallel()
 
-	cnt := NewContainer(config.LoadConfig("."))
-	defer util.Close(cnt)
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
@@ -100,9 +88,6 @@ func TestFeedbackEmptyMessage(t *testing.T) {
 /*func TestFeedbackMessage(t *testing.T) {
 	config := LoadConfig()
 	config.Feedback.Captcha = false
-	srv, err := NewContainer(config).GRPCServer()
-	defer util.Close(cnt)
-	require.NoError(t, err)
 
 	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
 

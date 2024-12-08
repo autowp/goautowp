@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
@@ -30,10 +29,7 @@ func TestMessaging(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	// cnt := NewContainer(cfg)
-	// defer util.Close(cnt)
-
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	usersClient := NewUsersClient(conn)
 
 	// admin

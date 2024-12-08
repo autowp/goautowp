@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
@@ -130,7 +129,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	defer util.Close(conn)
 	client := NewItemsClient(conn)
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// admin
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -302,7 +301,7 @@ func TestItemLinks(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// admin
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -380,7 +379,7 @@ func TestItemVehicleTypes(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// admin
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -480,7 +479,7 @@ func TestItemParentLanguages(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// admin
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -513,7 +512,7 @@ func TestItemLanguages(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	// admin
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -940,7 +939,7 @@ func TestInboxPicturesCount(t *testing.T) {
 
 	ctx := context.Background()
 	repository := items.NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 

@@ -4,9 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -17,10 +15,7 @@ func TestHttpBanPost(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	cnt := NewContainer(cfg)
-	defer util.Close(cnt)
-
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -66,10 +61,7 @@ func TestTop(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	cnt := NewContainer(cfg)
-	defer util.Close(cnt)
-
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
@@ -92,10 +84,7 @@ func TestWhitelist(t *testing.T) {
 	cfg := config.LoadConfig(".")
 	ctx := context.Background()
 
-	cnt := NewContainer(cfg)
-	defer util.Close(cnt)
-
-	kc := gocloak.NewClient(cfg.Keycloak.URL)
+	kc := cnt.Keycloak()
 	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
