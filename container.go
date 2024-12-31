@@ -312,7 +312,22 @@ func (s *Container) AttrsRepository() (*attrs.Repository, error) {
 			return nil, err
 		}
 
-		s.attrsRepository = attrs.NewRepository(db, i18n)
+		itemsRepository, err := s.ItemsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		picturesRepository, err := s.PicturesRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		is, err := s.ImageStorage()
+		if err != nil {
+			return nil, err
+		}
+
+		s.attrsRepository = attrs.NewRepository(db, i18n, itemsRepository, picturesRepository, is)
 	}
 
 	return s.attrsRepository, nil

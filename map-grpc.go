@@ -186,12 +186,14 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 
 			const decimal = 10
 
-			//nolint:exhaustive
 			switch itemTypeID {
 			case schema.ItemTableItemTypeIDFactory:
 				mapPoint.Url = []string{"/factories", strconv.FormatInt(id, decimal)}
 			case schema.ItemTableItemTypeIDMuseum:
 				mapPoint.Url = []string{"/museums", strconv.FormatInt(id, decimal)}
+			case schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine,
+				schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDTwins,
+				schema.ItemTableItemTypeIDBrand, schema.ItemTableItemTypeIDPerson, schema.ItemTableItemTypeIDCopyright:
 			}
 
 			var imageID sql.NullInt64

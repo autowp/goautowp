@@ -513,5 +513,7 @@
   "specs/unit/19/abbr": "V",
   "specs/unit/19/name": "v伏",
   "specs/unit/20/abbr": "m³",
-  "specs/unit/20/name": "立方米"
+  "specs/unit/20/name": "立方米",
+  "specifications/boolean/false": "否",
+  "specifications/boolean/true": "是"
 }

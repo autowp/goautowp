@@ -341,18 +341,29 @@ func (s *Repository) CreateModerVote(
 	return affected > 0, err
 }
 
-func (s *Repository) Picture(ctx context.Context, id int64) (*schema.PictureRow, error) {
+func (s *Repository) Picture(ctx context.Context, options query.PictureListOptions) (*schema.PictureRow, error) {
 	st := schema.PictureRow{}
 
-	success, err := s.db.Select(
-		schema.PictureTableIDCol, schema.PictureTableOwnerIDCol, schema.PictureTableChangeStatusUserIDCol,
-		schema.PictureTableIdentityCol, schema.PictureTableStatusCol, schema.PictureTableImageIDCol,
-		schema.PictureTablePointCol, schema.PictureTableCopyrightsTextIDCol, schema.PictureTableAcceptDatetimeCol,
-		schema.PictureTableReplacePictureIDCol,
+	alias := query.PictureAlias
+	aliasTable := goqu.T(alias)
+
+	sqSelect := s.db.Select(
+		aliasTable.Col(schema.PictureTableIDColName),
+		aliasTable.Col(schema.PictureTableOwnerIDColName),
+		aliasTable.Col(schema.PictureTableChangeStatusUserIDColName),
+		aliasTable.Col(schema.PictureTableIdentityColName),
+		aliasTable.Col(schema.PictureTableStatusColName),
+		aliasTable.Col(schema.PictureTableImageIDColName),
+		aliasTable.Col(schema.PictureTablePointColName),
+		aliasTable.Col(schema.PictureTableCopyrightsTextIDColName),
+		aliasTable.Col(schema.PictureTableAcceptDatetimeColName),
+		aliasTable.Col(schema.PictureTableReplacePictureIDColName),
 	).
-		From(schema.PictureTable).
-		Where(schema.PictureTableIDCol.Eq(id)).
-		ScanStructContext(ctx, &st)
+		From(schema.PictureTable.As(alias))
+
+	sqSelect = options.Apply(alias, sqSelect)
+
+	success, err := sqSelect.ScanStructContext(ctx, &st)
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +376,11 @@ func (s *Repository) Picture(ctx context.Context, id int64) (*schema.PictureRow,
 }
 
 func (s *Repository) Normalize(ctx context.Context, id int64) error {
-	pic, err := s.Picture(ctx, id)
+	if id == 0 {
+		return sql.ErrNoRows
+	}
+
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id})
 	if err != nil {
 		return err
 	}
@@ -380,7 +395,11 @@ func (s *Repository) Normalize(ctx context.Context, id int64) error {
 }
 
 func (s *Repository) Flop(ctx context.Context, id int64) error {
-	pic, err := s.Picture(ctx, id)
+	if id == 0 {
+		return sql.ErrNoRows
+	}
+
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id})
 	if err != nil {
 		return err
 	}
@@ -675,7 +694,11 @@ func (s *Repository) updateContentCount(ctx context.Context, pictureID int64) er
 }
 
 func (s *Repository) SetPictureCrop(ctx context.Context, pictureID int64, area sampler.Crop) error {
-	pic, err := s.Picture(ctx, pictureID)
+	if pictureID == 0 {
+		return sql.ErrNoRows
+	}
+
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return err
 	}
@@ -761,7 +784,11 @@ func (s *Repository) UpdatePicture(
 func (s *Repository) SetPictureCopyrights(
 	ctx context.Context, pictureID int64, text string, userID int64,
 ) (bool, int32, error) {
-	picture, err := s.Picture(ctx, pictureID)
+	if pictureID == 0 {
+		return false, 0, sql.ErrNoRows
+	}
+
+	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return false, 0, err
 	}
@@ -863,7 +890,11 @@ func (s *Repository) HasVote(ctx context.Context, pictureID int64, userID int64)
 func (s *Repository) Accept(ctx context.Context, pictureID int64, userID int64) (bool, bool, error) {
 	isFirstTimeAccepted := false
 
-	picture, err := s.Picture(ctx, pictureID)
+	if pictureID == 0 {
+		return false, false, sql.ErrNoRows
+	}
+
+	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return false, false, err
 	}

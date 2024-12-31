@@ -513,5 +513,7 @@
   "specs/unit/19/abbr": "V",
   "specs/unit/19/name": "volt",
   "specs/unit/20/abbr": "m³",
-  "specs/unit/20/name": "metro cúbico"
+  "specs/unit/20/name": "metro cúbico",
+  "specifications/boolean/false": "não",
+  "specifications/boolean/true": "sim"
 }

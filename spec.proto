@@ -207,6 +207,8 @@ service Attrs {
   rpc DeleteUserValues(DeleteAttrUserValuesRequest) returns (google.protobuf.Empty) {}
   rpc MoveUserValues(MoveAttrUserValuesRequest) returns (google.protobuf.Empty) {}
   rpc GetConflicts(AttrConflictsRequest) returns (AttrConflictsResponse) {}
+  rpc GetSpecifications(GetSpecificationsRequest) returns (GetSpecificationsResponse) {}
+  rpc GetChildSpecifications(GetSpecificationsRequest) returns (GetSpecificationsResponse) {}
 }
 
 message ErrorDetails {
@@ -366,6 +368,15 @@ message AttrConflict {
 message AttrConflictsResponse {
   repeated AttrConflict items = 1;
   Pages paginator = 2;
+}
+
+message GetSpecificationsRequest {
+  int64 item_id = 1;
+  string language = 2;
+}
+
+message GetSpecificationsResponse {
+  string html = 1;
 }
 
 message AttrUserValue {

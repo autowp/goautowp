@@ -3,6 +3,7 @@ package query
 import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 )
 
 const (
@@ -19,6 +20,7 @@ type PictureListOptions struct {
 	PictureItem   *PictureItemListOptions
 	ID            int64
 	HasCopyrights bool
+	OrderExpr     []exp.OrderedExpression
 }
 
 func (s *PictureListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
@@ -37,7 +39,7 @@ func (s *PictureListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *
 	aliasTable := goqu.T(alias)
 
 	if s.ID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableIDColName).Eq(s.Status))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableIDColName).Eq(s.ID))
 	}
 
 	if s.Status != "" {
@@ -63,6 +65,10 @@ func (s *PictureListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *
 
 	if s.HasCopyrights {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableCopyrightsTextIDColName).IsNotNull())
+	}
+
+	if len(s.OrderExpr) > 0 {
+		sqSelect = sqSelect.Order(s.OrderExpr...)
 	}
 
 	return sqSelect

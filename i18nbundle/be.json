@@ -513,5 +513,7 @@
   "specs/unit/19/abbr": "V",
   "specs/unit/19/name": "вольт",
   "specs/unit/20/abbr": "м³",
-  "specs/unit/20/name": "м³"
+  "specs/unit/20/name": "м³",
+  "specifications/boolean/false": "няма",
+  "specifications/boolean/true": "да"
 }

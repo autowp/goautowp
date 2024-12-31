@@ -12,6 +12,7 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/doug-martin/goqu/v9"
@@ -760,7 +761,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := repo.Picture(ctx, pictureID)
+	pic, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	require.NoError(t, err)
 	require.Nil(t, pic.Point)
 
@@ -776,7 +777,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = repo.Picture(ctx, pictureID)
+	pic, err = repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	require.NoError(t, err)
 	require.True(t, pic.Point.Valid)
 	require.InDelta(t, float64(10), pic.Point.Point.Lat(), 0.001)
@@ -794,7 +795,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = repo.Picture(ctx, pictureID)
+	pic, err = repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	require.NoError(t, err)
 	require.True(t, pic.Point.Valid)
 	require.InDelta(t, float64(0), pic.Point.Point.Lat(), 0.001)
@@ -812,7 +813,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = repo.Picture(ctx, pictureID)
+	pic, err = repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	require.NoError(t, err)
 	require.True(t, pic.Point.Valid)
 	require.InDelta(t, float64(-10), pic.Point.Point.Lat(), 0.001)
@@ -826,7 +827,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = repo.Picture(ctx, pictureID)
+	pic, err = repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	require.NoError(t, err)
 	require.Nil(t, pic.Point)
 }
@@ -948,7 +949,7 @@ func TestSetPictureCopyrights(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := repo.Picture(ctx, pictureID)
+	pic, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	require.NoError(t, err)
 	require.True(t, pic.CopyrightsTextID.Valid)
 	require.NotEmpty(t, pic.CopyrightsTextID.Int32)
@@ -979,7 +980,7 @@ func TestSetPictureCopyrights(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Second", text)
 
-	pic2, err := repo.Picture(ctx, pictureID2)
+	pic2, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID2})
 	require.NoError(t, err)
 	require.True(t, pic2.CopyrightsTextID.Valid)
 	require.NotEmpty(t, pic2.CopyrightsTextID.Int32)

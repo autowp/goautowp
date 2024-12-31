@@ -127,14 +127,7 @@ func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, localizer 
 	bmyf := item.BeginModelYearFraction
 	emyf := item.EndModelYearFraction
 
-	bs := by / hundred
-	es := ey / hundred
-
 	useModelYear := bmy > 0 || emy > 0
-
-	equalS := bs > 0 && es > 0 && (bs == es)
-	equalY := equalS && by > 0 && ey > 0 && (by == ey)
-	equalM := equalY && bm > 0 && em > 0 && (bm == em)
 
 	if useModelYear {
 		modelYearsMsg, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: "carlist/model-years"})
@@ -156,15 +149,12 @@ func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, localizer 
 				return "", err
 			}
 
-			renderedYears, err := s.renderYearsHTML(
+			renderedYears, err := RenderYearsHTML(
 				item.Today,
 				by,
 				bm,
 				ey,
 				em,
-				equalS,
-				equalY,
-				equalM,
 				localizer,
 			)
 			if err != nil {
@@ -176,15 +166,12 @@ func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, localizer 
 				"</span></small>"
 		}
 	} else if by > 0 || ey > 0 {
-		renderedYears, err := s.renderYearsHTML(
+		renderedYears, err := RenderYearsHTML(
 			item.Today,
 			by,
 			bm,
 			ey,
 			em,
-			equalS,
-			equalY,
-			equalM,
 			localizer,
 		)
 		if err != nil {
@@ -261,7 +248,7 @@ func (s *ItemNameFormatter) renderYears(
 
 	if equalY {
 		if bm > 0 && em > 0 {
-			return s.monthsRange(bm, em) + "." + strconv.Itoa(int(by)), nil
+			return monthsRange(bm, em) + "." + strconv.Itoa(int(by)), nil
 		}
 
 		return strconv.Itoa(int(by)), nil
@@ -310,7 +297,7 @@ func (s *ItemNameFormatter) renderYears(
 
 		result3 = rangeDelimiter + result3 + strconv.Itoa(int(ey))
 	} else {
-		result3, err = s.missedEndYearYearsSuffix(today, by, localizer)
+		result3, err = missedEndYearYearsSuffix(today, by, localizer)
 		if err != nil {
 			return "", err
 		}
@@ -319,18 +306,21 @@ func (s *ItemNameFormatter) renderYears(
 	return result1 + result2 + result3, nil
 }
 
-func (s *ItemNameFormatter) renderYearsHTML(
+func RenderYearsHTML(
 	today *bool,
 	by int32,
 	bm int16,
 	ey int32,
 	em int16,
-	equalS bool,
-	equalY bool,
-	equalM bool,
 	localizer *i18n.Localizer,
 ) (string, error) {
 	var err error
+
+	bs := by / hundred
+	es := ey / hundred
+	equalS := bs > 0 && es > 0 && (bs == es)
+	equalY := equalS && by > 0 && ey > 0 && (by == ey)
+	equalM := equalY && bm > 0 && em > 0 && (bm == em)
 
 	if equalM {
 		return fmt.Sprintf(textMonthFormat+"%d", bm, by), nil
@@ -338,7 +328,7 @@ func (s *ItemNameFormatter) renderYearsHTML(
 
 	if equalY {
 		if bm > 0 && em > 0 {
-			return `<small class="month">` + s.monthsRange(bm, em) + ".</small>" + strconv.Itoa(int(by)), nil
+			return `<small class="month">` + monthsRange(bm, em) + ".</small>" + strconv.Itoa(int(by)), nil
 		}
 
 		return strconv.Itoa(int(by)), nil
@@ -386,7 +376,7 @@ func (s *ItemNameFormatter) renderYearsHTML(
 
 		result3 = rangeDelimiter + result3 + strconv.Itoa(int(ey))
 	} else {
-		result3, err = s.missedEndYearYearsSuffix(today, by, localizer)
+		result3, err = missedEndYearYearsSuffix(today, by, localizer)
 		if err != nil {
 			return "", err
 		}
@@ -395,7 +385,7 @@ func (s *ItemNameFormatter) renderYearsHTML(
 	return result1 + result2 + result3, nil
 }
 
-func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int32, localizer *i18n.Localizer) (string, error) {
+func missedEndYearYearsSuffix(today *bool, by int32, localizer *i18n.Localizer) (string, error) {
 	currentYear := int32(time.Now().Year()) //nolint: gosec
 
 	if by >= currentYear {
@@ -414,7 +404,7 @@ func (s *ItemNameFormatter) missedEndYearYearsSuffix(today *bool, by int32, loca
 	return rangeDelimiter + unknownYear, nil
 }
 
-func (s *ItemNameFormatter) monthsRange(from int16, to int16) string {
+func monthsRange(from int16, to int16) string {
 	result1 := "??"
 	if from > 0 {
 		result1 = fmt.Sprintf("%02d", from)

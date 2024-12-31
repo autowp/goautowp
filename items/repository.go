@@ -790,8 +790,8 @@ func (s *Repository) List( //nolint:maintidx
 
 		paginator := util.Paginator{
 			SQLSelect:         sqSelect,
-			ItemCountPerPage:  int32(options.Limit), //nolint: gosec
-			CurrentPageNumber: int32(options.Page),  //nolint: gosec
+			ItemCountPerPage:  int32(options.Limit),
+			CurrentPageNumber: int32(options.Page), //nolint: gosec
 		}
 
 		if pagination {
@@ -2917,18 +2917,20 @@ func (s *Repository) ItemParents(
 	return res, err
 }
 
-func (s *Repository) ItemParent(ctx context.Context, itemID, parentID int64) (*schema.ItemParentRow, error) {
+func (s *Repository) ItemParent(
+	ctx context.Context, itemID, parentID int64, fields ItemParentFields,
+) (*ItemParent, error) {
 	listOptions := query.ItemParentListOptions{
 		ItemID:   itemID,
 		ParentID: parentID,
 	}
 
-	sqSelect, err := s.ItemParentSelect(listOptions, ItemParentFields{})
+	sqSelect, err := s.ItemParentSelect(listOptions, fields)
 	if err != nil {
 		return nil, err
 	}
 
-	var res schema.ItemParentRow
+	var res ItemParent
 
 	success, err := sqSelect.ScanStructContext(ctx, &res)
 	if err != nil {

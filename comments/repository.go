@@ -987,11 +987,15 @@ func (s *Repository) messageRowRoute(
 			return nil, sql.ErrNoRows
 		}
 
-		switch itemTypeID { //nolint:exhaustive
+		switch itemTypeID {
 		case schema.ItemTableItemTypeIDTwins:
 			return []string{"/twins", "group", strconv.FormatInt(itemID, 10)}, nil
 		case schema.ItemTableItemTypeIDMuseum:
 			return []string{"/museums", strconv.FormatInt(itemID, 10)}, nil
+		case schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDCategory,
+			schema.ItemTableItemTypeIDBrand, schema.ItemTableItemTypeIDFactory, schema.ItemTableItemTypeIDPerson,
+			schema.ItemTableItemTypeIDCopyright:
+			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
 		default:
 			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
 		}

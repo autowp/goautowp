@@ -18,6 +18,7 @@ type ItemsListOptions struct {
 	Alias                        string
 	Language                     string
 	ItemID                       int64
+	ItemIDs                      []int64
 	ItemIDExpr                   goqu.Expression
 	TypeID                       []schema.ItemTableItemTypeID
 	PictureItems                 *PictureItemListOptions
@@ -86,6 +87,10 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 
 	if s.ItemID > 0 {
 		sqSelect = sqSelect.Where(aliasIDCol.Eq(s.ItemID))
+	}
+
+	if len(s.ItemIDs) > 0 {
+		sqSelect = sqSelect.Where(aliasIDCol.In(s.ItemIDs))
 	}
 
 	if s.ItemIDExpr != nil {

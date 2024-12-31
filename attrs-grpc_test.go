@@ -3,11 +3,15 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,22 +20,22 @@ import (
 )
 
 const (
-	floatAttributeID        int64 = 11
-	intAttributeID          int64 = 1
-	stringAttributeID       int64 = 8
-	boolAttributeID         int64 = 53
-	listAttributeID         int64 = 20
-	treeAttributeID         int64 = 23
-	treeMultipleAttributeID int64 = 98
+	floatAttributeID        = attrs.TurningDiameterAttr
+	intAttributeID          = attrs.LengthAttr
+	stringAttributeID       = attrs.FrontSuspensionTypeAttr
+	boolAttributeID         = attrs.SpeedLimiterAttr
+	listAttributeID         = attrs.EnginePlacementPlacementAttr
+	treeAttributeID         = attrs.FuelSupplySystemAttr
+	treeMultipleAttributeID = attrs.FuelTypeAttr
 )
 
 const (
-	floatEmptyAttributeID  int64 = 28
-	intEmptyAttributeID    int64 = 2
-	stringEmptyAttributeID int64 = 9
-	boolEmptyAttributeID   int64 = 77
-	listEmptyAttributeID   int64 = 21
-	treeEmptyAttributeID   int64 = 41
+	floatEmptyAttributeID  = attrs.EngineCylinderDiameter
+	intEmptyAttributeID    = attrs.WidthAttr
+	stringEmptyAttributeID = attrs.RearSuspensionType
+	boolEmptyAttributeID   = attrs.ABSAttr
+	listEmptyAttributeID   = attrs.EnginePlacementOrientationAttr
+	treeEmptyAttributeID   = attrs.DriveUnitAttr
 )
 
 func TestGetUnits(t *testing.T) {
@@ -713,7 +717,7 @@ func TestEngineValuesApplied(t *testing.T) {
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
-					AttributeId: 207,
+					AttributeId: attrs.EngineTypeAttr,
 					ItemId:      engineItemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_TREE,
@@ -743,7 +747,7 @@ func TestEngineValuesApplied(t *testing.T) {
 		for _, val := range values.GetItems() {
 			require.Equal(t, val.GetItemId(), currentItemID)
 
-			if val.GetAttributeId() == 207 {
+			if val.GetAttributeId() == attrs.EngineTypeAttr {
 				attributeFound = true
 
 				require.True(t, val.GetValue().GetValid())
@@ -815,7 +819,7 @@ func TestSetUserValuesList(t *testing.T) {
 			&AttrSetUserValuesRequest{
 				Items: []*AttrUserValue{
 					{
-						AttributeId: 207,
+						AttributeId: attrs.EngineTypeAttr,
 						ItemId:      itemID,
 						Value: &AttrValueValue{
 							Type:      AttrAttributeType_TREE,
@@ -849,7 +853,7 @@ func TestSetUserValuesList(t *testing.T) {
 			for _, val := range values.GetItems() {
 				require.Equal(t, val.GetItemId(), itemID)
 
-				if val.GetAttributeId() == 207 {
+				if val.GetAttributeId() == attrs.EngineTypeAttr {
 					attributeFound = true
 
 					require.True(t, val.GetValue().GetValid())
@@ -889,7 +893,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 		Value       *AttrValueValue
 	}{
 		{
-			AttributeID: 207,
+			AttributeID: attrs.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -898,7 +902,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 			},
 		},
 		{
-			AttributeID: 207,
+			AttributeID: attrs.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -907,7 +911,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 			},
 		},
 		{
-			AttributeID: 207,
+			AttributeID: attrs.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -916,7 +920,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 			},
 		},
 		{
-			AttributeID: 207,
+			AttributeID: attrs.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -925,7 +929,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 			},
 		},
 		{
-			AttributeID: 207,
+			AttributeID: attrs.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -1055,7 +1059,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 					&AttrSetUserValuesRequest{
 						Items: []*AttrUserValue{
 							{
-								AttributeId: 207,
+								AttributeId: attrs.EngineTypeAttr,
 								ItemId:      itemID,
 								Value:       testCase.Value,
 							},
@@ -1743,4 +1747,549 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Empty(t, userValues.GetItems())
+}
+
+func TestSpecifications(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+	itemsClient := NewItemsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Name:       "Test",
+		Body:       "E31",
+	})
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	engineName := fmt.Sprintf("Peugeot-%d-Engine", randomInt)
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            engineName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDEngine,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d-engine", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	engineID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = itemsClient.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemLanguage{
+			ItemId:   engineID,
+			Language: items.DefaultLanguageCode,
+			Name:     engineName,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = itemsClient.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetItemEngineRequest{
+			ItemId:          itemID,
+			EngineItemId:    engineID,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: attrs.EngineTypeAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_TREE,
+						Valid:     true,
+						IsEmpty:   false,
+						ListValue: []int64{105},
+					},
+				},
+				{
+					AttributeId: attrs.EngineCylinderDiameter,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_FLOAT,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.WidthAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_INTEGER,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.RearSuspensionType,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_STRING,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.ABSAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_BOOLEAN,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.EnginePlacementOrientationAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						IsEmpty:   true,
+						ListValue: []int64{},
+					},
+				},
+				{
+					AttributeId: attrs.DriveUnitAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						IsEmpty:   true,
+						ListValue: []int64{},
+					},
+				},
+				{
+					AttributeId: attrs.TurningDiameterAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:       AttrAttributeType_FLOAT,
+						Valid:      true,
+						FloatValue: 7.091,
+					},
+				},
+				{
+					AttributeId: attrs.LengthAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 6,
+					},
+				},
+				{
+					AttributeId: attrs.FrontSuspensionTypeAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:        AttrAttributeType_STRING,
+						Valid:       true,
+						StringValue: "suspension test",
+					},
+				},
+				{
+					AttributeId: attrs.SpeedLimiterAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_BOOLEAN,
+						Valid:     true,
+						BoolValue: true,
+					},
+				},
+				{
+					AttributeId: attrs.EnginePlacementPlacementAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{1},
+					},
+				},
+				{
+					AttributeId: attrs.FuelSupplySystemAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{25},
+					},
+				},
+				{
+					AttributeId: attrs.FuelTypeAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{28, 29},
+					},
+				},
+				{
+					AttributeId: attrs.EngineConfigurationCylindersCountAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Valid:    true,
+						IntValue: 6,
+					},
+				},
+				{
+					AttributeId: attrs.EngineConfigurationCylindersLayoutAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Valid:     true,
+						ListValue: []int64{8},
+					},
+				},
+				{
+					AttributeId: attrs.EngineConfigurationValvesCountAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Valid:    true,
+						IntValue: 4,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetSpecifications(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&GetSpecificationsRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Contains(t, res.GetHtml(), "Piston")
+	require.NotContains(t, res.GetHtml(), "cylinder diameter")
+	require.Contains(t, res.GetHtml(), "diameter")
+	require.Contains(t, res.GetHtml(), `7.1 <span class="unit" title="meter">m</span>`)
+	require.Contains(t, res.GetHtml(), "geometry")
+	require.Contains(t, res.GetHtml(), "dimensions")
+	require.Contains(t, res.GetHtml(), "length")
+	require.Contains(t, res.GetHtml(), `6 <span class="unit" title="millimeter">mm</span>`)
+	require.Contains(t, res.GetHtml(), "suspension and steering")
+	require.Contains(t, res.GetHtml(), "front suspension type (deprecated)")
+	require.Contains(t, res.GetHtml(), "suspension test")
+	require.Contains(t, res.GetHtml(), "dynamic properties")
+	require.Contains(t, res.GetHtml(), "speed limiter")
+	require.Contains(t, res.GetHtml(), "yes")
+	require.Contains(t, res.GetHtml(), "location")
+	require.Contains(t, res.GetHtml(), "at front")
+	require.Contains(t, res.GetHtml(), "supply system")
+	require.Contains(t, res.GetHtml(), "2 carburetors")
+	require.Contains(t, res.GetHtml(), "fuel")
+	require.Contains(t, res.GetHtml(), "petrol")
+	require.Contains(t, res.GetHtml(), "hydrogen")
+	require.Contains(t, res.GetHtml(), "V6/4")
+	require.Contains(t, res.GetHtml(), engineName)
+}
+
+func TestChildSpecifications(t *testing.T) { //nolint: maintidx
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+	itemsClient := NewItemsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Name:       "Test",
+		Body:       "E31",
+		IsGroup:    true,
+	})
+
+	child1ID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Name:       "Test Child 1",
+		Body:       "E31",
+	})
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemParent{
+			ItemId:   child1ID,
+			ParentId: itemID,
+		},
+	)
+	require.NoError(t, err)
+
+	child2ID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Name:       "Test Child 1",
+		Body:       "E31",
+	})
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemParent{
+			ItemId:   child2ID,
+			ParentId: itemID,
+		},
+	)
+	require.NoError(t, err)
+
+	engineName := fmt.Sprintf("Peugeot-%d-Engine", randomInt)
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            engineName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDEngine,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d-engine", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	engineID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = itemsClient.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemLanguage{
+			ItemId:   engineID,
+			Language: items.DefaultLanguageCode,
+			Name:     engineName,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = itemsClient.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetItemEngineRequest{
+			ItemId:          child1ID,
+			EngineItemId:    engineID,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: attrs.FuelSupplySystemAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{25},
+					},
+				},
+				{
+					AttributeId: attrs.EngineCylinderDiameter,
+					ItemId:      child1ID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_FLOAT,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.WidthAttr,
+					ItemId:      child2ID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_INTEGER,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.ABSAttr,
+					ItemId:      child1ID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_BOOLEAN,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.EngineTypeAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_TREE,
+						Valid:     true,
+						IsEmpty:   false,
+						ListValue: []int64{105},
+					},
+				},
+				{
+					AttributeId: attrs.EnginePlacementOrientationAttr,
+					ItemId:      child2ID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						IsEmpty:   true,
+						ListValue: []int64{},
+					},
+				},
+				{
+					AttributeId: attrs.DriveUnitAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						IsEmpty:   true,
+						ListValue: []int64{},
+					},
+				},
+				{
+					AttributeId: attrs.TurningDiameterAttr,
+					ItemId:      child1ID,
+					Value: &AttrValueValue{
+						Type:       AttrAttributeType_FLOAT,
+						Valid:      true,
+						FloatValue: 7.091,
+					},
+				},
+				{
+					AttributeId: attrs.LengthAttr,
+					ItemId:      child2ID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 6,
+					},
+				},
+				{
+					AttributeId: attrs.FrontSuspensionTypeAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:        AttrAttributeType_STRING,
+						Valid:       true,
+						StringValue: "suspension test",
+					},
+				},
+				{
+					AttributeId: attrs.RearSuspensionType,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_STRING,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.SpeedLimiterAttr,
+					ItemId:      child1ID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_BOOLEAN,
+						Valid:     true,
+						BoolValue: true,
+					},
+				},
+				{
+					AttributeId: attrs.EnginePlacementPlacementAttr,
+					ItemId:      child2ID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{1},
+					},
+				},
+
+				{
+					AttributeId: attrs.FuelTypeAttr,
+					ItemId:      child1ID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{28, 29},
+					},
+				},
+				{
+					AttributeId: attrs.EngineConfigurationCylindersCountAttr,
+					ItemId:      child2ID,
+					Value: &AttrValueValue{
+						Valid:    true,
+						IntValue: 6,
+					},
+				},
+				{
+					AttributeId: attrs.EngineConfigurationCylindersLayoutAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Valid:     true,
+						ListValue: []int64{8},
+					},
+				},
+				{
+					AttributeId: attrs.EngineConfigurationValvesCountAttr,
+					ItemId:      child1ID,
+					Value: &AttrValueValue{
+						Valid:    true,
+						IntValue: 4,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetChildSpecifications(
+		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&GetSpecificationsRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Contains(t, res.GetHtml(), "Piston")
+	require.NotContains(t, res.GetHtml(), "cylinder diameter")
+	require.Contains(t, res.GetHtml(), "diameter")
+	require.Contains(t, res.GetHtml(), `7.1 <span class="unit" title="meter">m</span>`)
+	require.Contains(t, res.GetHtml(), "geometry")
+	require.Contains(t, res.GetHtml(), "dimensions")
+	require.Contains(t, res.GetHtml(), "length")
+	require.Contains(t, res.GetHtml(), `6 <span class="unit" title="millimeter">mm</span>`)
+	require.Contains(t, res.GetHtml(), "suspension and steering")
+	require.Contains(t, res.GetHtml(), "front suspension type (deprecated)")
+	require.Contains(t, res.GetHtml(), "suspension test")
+	require.Contains(t, res.GetHtml(), "dynamic properties")
+	require.Contains(t, res.GetHtml(), "speed limiter")
+	require.Contains(t, res.GetHtml(), "yes")
+	require.Contains(t, res.GetHtml(), "location")
+	require.Contains(t, res.GetHtml(), "at front")
+	require.Contains(t, res.GetHtml(), "supply system")
+	require.Contains(t, res.GetHtml(), "2 carburetors")
+	require.Contains(t, res.GetHtml(), "fuel")
+	require.Contains(t, res.GetHtml(), "petrol")
+	require.Contains(t, res.GetHtml(), "hydrogen")
+	require.Contains(t, res.GetHtml(), "V?/4")
+	require.Contains(t, res.GetHtml(), "V6")
+	require.Contains(t, res.GetHtml(), engineName)
 }

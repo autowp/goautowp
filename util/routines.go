@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"html/template"
 	"io"
 	"strings"
 	"time"
@@ -288,4 +289,16 @@ func RemoveDuplicate[T comparable](sliceList []T) []T {
 	}
 
 	return list
+}
+
+func StringDefault(value, defaultValue string) string {
+	if len(value) > 0 {
+		return value
+	}
+
+	return defaultValue
+}
+
+func HTMLEscapeString(value string) template.HTML {
+	return template.HTML(template.HTMLEscapeString(value)) //nolint: gosec
 }

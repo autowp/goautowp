@@ -61,7 +61,7 @@ func convertTypeID(typeID schema.AttrsAttributeTypeID) AttrAttributeType_ID {
 	return AttrAttributeType_UNKNOWN
 }
 
-func convertAttribute(row schema.AttrsAttributeRow) *AttrAttribute {
+func convertAttribute(row *schema.AttrsAttributeRow) *AttrAttribute {
 	var parentID int64
 	if row.ParentID.Valid {
 		parentID = row.ParentID.Int64
@@ -104,12 +104,12 @@ func (s *AttrsGRPCServer) GetAttribute(ctx context.Context, in *AttrAttributeID)
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	success, row, err := s.repository.Attribute(ctx, in.GetId())
+	row, err := s.repository.Attribute(ctx, in.GetId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !success {
+	if row == nil {
 		return nil, status.Error(codes.NotFound, "NotFound")
 	}
 
@@ -532,4 +532,40 @@ func (s *AttrsGRPCServer) MoveUserValues(ctx context.Context, in *MoveAttrUserVa
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *AttrsGRPCServer) GetSpecifications(
+	ctx context.Context, in *GetSpecificationsRequest,
+) (*GetSpecificationsResponse, error) {
+	table, err := s.repository.Specifications(ctx, []int64{in.GetItemId()}, 0, in.GetLanguage())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	html, err := table.Render()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &GetSpecificationsResponse{
+		Html: html,
+	}, nil
+}
+
+func (s *AttrsGRPCServer) GetChildSpecifications(
+	ctx context.Context, in *GetSpecificationsRequest,
+) (*GetSpecificationsResponse, error) {
+	table, err := s.repository.ChildSpecifications(ctx, in.GetItemId(), in.GetLanguage())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	html, err := table.Render()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &GetSpecificationsResponse{
+		Html: html,
+	}, nil
 }

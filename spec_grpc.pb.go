@@ -6212,19 +6212,21 @@ var Text_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	Attrs_GetAttribute_FullMethodName      = "/goautowp.Attrs/GetAttribute"
-	Attrs_GetAttributes_FullMethodName     = "/goautowp.Attrs/GetAttributes"
-	Attrs_GetAttributeTypes_FullMethodName = "/goautowp.Attrs/GetAttributeTypes"
-	Attrs_GetListOptions_FullMethodName    = "/goautowp.Attrs/GetListOptions"
-	Attrs_GetUnits_FullMethodName          = "/goautowp.Attrs/GetUnits"
-	Attrs_GetZoneAttributes_FullMethodName = "/goautowp.Attrs/GetZoneAttributes"
-	Attrs_GetZones_FullMethodName          = "/goautowp.Attrs/GetZones"
-	Attrs_GetValues_FullMethodName         = "/goautowp.Attrs/GetValues"
-	Attrs_GetUserValues_FullMethodName     = "/goautowp.Attrs/GetUserValues"
-	Attrs_SetUserValues_FullMethodName     = "/goautowp.Attrs/SetUserValues"
-	Attrs_DeleteUserValues_FullMethodName  = "/goautowp.Attrs/DeleteUserValues"
-	Attrs_MoveUserValues_FullMethodName    = "/goautowp.Attrs/MoveUserValues"
-	Attrs_GetConflicts_FullMethodName      = "/goautowp.Attrs/GetConflicts"
+	Attrs_GetAttribute_FullMethodName           = "/goautowp.Attrs/GetAttribute"
+	Attrs_GetAttributes_FullMethodName          = "/goautowp.Attrs/GetAttributes"
+	Attrs_GetAttributeTypes_FullMethodName      = "/goautowp.Attrs/GetAttributeTypes"
+	Attrs_GetListOptions_FullMethodName         = "/goautowp.Attrs/GetListOptions"
+	Attrs_GetUnits_FullMethodName               = "/goautowp.Attrs/GetUnits"
+	Attrs_GetZoneAttributes_FullMethodName      = "/goautowp.Attrs/GetZoneAttributes"
+	Attrs_GetZones_FullMethodName               = "/goautowp.Attrs/GetZones"
+	Attrs_GetValues_FullMethodName              = "/goautowp.Attrs/GetValues"
+	Attrs_GetUserValues_FullMethodName          = "/goautowp.Attrs/GetUserValues"
+	Attrs_SetUserValues_FullMethodName          = "/goautowp.Attrs/SetUserValues"
+	Attrs_DeleteUserValues_FullMethodName       = "/goautowp.Attrs/DeleteUserValues"
+	Attrs_MoveUserValues_FullMethodName         = "/goautowp.Attrs/MoveUserValues"
+	Attrs_GetConflicts_FullMethodName           = "/goautowp.Attrs/GetConflicts"
+	Attrs_GetSpecifications_FullMethodName      = "/goautowp.Attrs/GetSpecifications"
+	Attrs_GetChildSpecifications_FullMethodName = "/goautowp.Attrs/GetChildSpecifications"
 )
 
 // AttrsClient is the client API for Attrs service.
@@ -6244,6 +6246,8 @@ type AttrsClient interface {
 	DeleteUserValues(ctx context.Context, in *DeleteAttrUserValuesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	MoveUserValues(ctx context.Context, in *MoveAttrUserValuesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetConflicts(ctx context.Context, in *AttrConflictsRequest, opts ...grpc.CallOption) (*AttrConflictsResponse, error)
+	GetSpecifications(ctx context.Context, in *GetSpecificationsRequest, opts ...grpc.CallOption) (*GetSpecificationsResponse, error)
+	GetChildSpecifications(ctx context.Context, in *GetSpecificationsRequest, opts ...grpc.CallOption) (*GetSpecificationsResponse, error)
 }
 
 type attrsClient struct {
@@ -6384,6 +6388,26 @@ func (c *attrsClient) GetConflicts(ctx context.Context, in *AttrConflictsRequest
 	return out, nil
 }
 
+func (c *attrsClient) GetSpecifications(ctx context.Context, in *GetSpecificationsRequest, opts ...grpc.CallOption) (*GetSpecificationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSpecificationsResponse)
+	err := c.cc.Invoke(ctx, Attrs_GetSpecifications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) GetChildSpecifications(ctx context.Context, in *GetSpecificationsRequest, opts ...grpc.CallOption) (*GetSpecificationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSpecificationsResponse)
+	err := c.cc.Invoke(ctx, Attrs_GetChildSpecifications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AttrsServer is the server API for Attrs service.
 // All implementations must embed UnimplementedAttrsServer
 // for forward compatibility.
@@ -6401,6 +6425,8 @@ type AttrsServer interface {
 	DeleteUserValues(context.Context, *DeleteAttrUserValuesRequest) (*emptypb.Empty, error)
 	MoveUserValues(context.Context, *MoveAttrUserValuesRequest) (*emptypb.Empty, error)
 	GetConflicts(context.Context, *AttrConflictsRequest) (*AttrConflictsResponse, error)
+	GetSpecifications(context.Context, *GetSpecificationsRequest) (*GetSpecificationsResponse, error)
+	GetChildSpecifications(context.Context, *GetSpecificationsRequest) (*GetSpecificationsResponse, error)
 	mustEmbedUnimplementedAttrsServer()
 }
 
@@ -6449,6 +6475,12 @@ func (UnimplementedAttrsServer) MoveUserValues(context.Context, *MoveAttrUserVal
 }
 func (UnimplementedAttrsServer) GetConflicts(context.Context, *AttrConflictsRequest) (*AttrConflictsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConflicts not implemented")
+}
+func (UnimplementedAttrsServer) GetSpecifications(context.Context, *GetSpecificationsRequest) (*GetSpecificationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSpecifications not implemented")
+}
+func (UnimplementedAttrsServer) GetChildSpecifications(context.Context, *GetSpecificationsRequest) (*GetSpecificationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChildSpecifications not implemented")
 }
 func (UnimplementedAttrsServer) mustEmbedUnimplementedAttrsServer() {}
 func (UnimplementedAttrsServer) testEmbeddedByValue()               {}
@@ -6705,6 +6737,42 @@ func _Attrs_GetConflicts_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Attrs_GetSpecifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSpecificationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetSpecifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Attrs_GetSpecifications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetSpecifications(ctx, req.(*GetSpecificationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_GetChildSpecifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSpecificationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetChildSpecifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Attrs_GetChildSpecifications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetChildSpecifications(ctx, req.(*GetSpecificationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Attrs_ServiceDesc is the grpc.ServiceDesc for Attrs service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -6763,6 +6831,14 @@ var Attrs_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConflicts",
 			Handler:    _Attrs_GetConflicts_Handler,
+		},
+		{
+			MethodName: "GetSpecifications",
+			Handler:    _Attrs_GetSpecifications_Handler,
+		},
+		{
+			MethodName: "GetChildSpecifications",
+			Handler:    _Attrs_GetChildSpecifications_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

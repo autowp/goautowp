@@ -49,6 +49,7 @@ const (
 	ItemTableCarTypeInheritColName         = "car_type_inherit"
 	ItemTableCarTypeIDColName              = "car_type_id"
 	ItemTableSpecInheritColName            = "spec_inherit"
+	ItemTableProducedColName               = "produced"
 )
 
 var (
@@ -72,6 +73,8 @@ var (
 	ItemTableCarTypeInheritCol   = ItemTable.Col(ItemTableCarTypeInheritColName)
 	ItemTableCarTypeIDCol        = ItemTable.Col(ItemTableCarTypeIDColName)
 	ItemTableSpecInheritCol      = ItemTable.Col(ItemTableSpecInheritColName)
+	ItemTableProducedCol         = ItemTable.Col(ItemTableProducedColName)
+	ItemTableProducedExactlyCol  = ItemTable.Col(ItemTableProducedExactlyColName)
 )
 
 type ItemRow struct {
@@ -95,6 +98,7 @@ type ItemRow struct {
 	IsConceptInherit       bool                `db:"is_concept_inherit"`
 	BeginModelYearFraction sql.NullString      `db:"begin_model_year_fraction"`
 	EndModelYearFraction   sql.NullString      `db:"end_model_year_fraction"`
+	Produced               bool                `db:"produced"`
 	ProducedExactly        bool                `db:"produced_exactly"`
 	IsGroup                bool                `db:"is_group"`
 	CarTypeInherit         bool                `db:"car_type_inherit"`

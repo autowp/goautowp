@@ -454,7 +454,11 @@ func (s *UpdateModerVoteRequest) Validate() ([]*errdetails.BadRequest_FieldViola
 }
 
 func (s *PicturesGRPCServer) restoreFromRemoving(ctx context.Context, pictureID int64, userID int64) error {
-	pic, err := s.repository.Picture(ctx, pictureID)
+	if pictureID == 0 {
+		return sql.ErrNoRows
+	}
+
+	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return err
 	}
@@ -484,7 +488,11 @@ func (s *PicturesGRPCServer) restoreFromRemoving(ctx context.Context, pictureID 
 }
 
 func (s *PicturesGRPCServer) unaccept(ctx context.Context, pictureID int64, userID int64) error {
-	picture, err := s.repository.Picture(ctx, pictureID)
+	if pictureID == 0 {
+		return sql.ErrNoRows
+	}
+
+	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return err
 	}
@@ -516,7 +524,11 @@ func (s *PicturesGRPCServer) unaccept(ctx context.Context, pictureID int64, user
 func (s *PicturesGRPCServer) notifyVote(
 	ctx context.Context, pictureID int64, vote bool, reason string, userID int64,
 ) error {
-	picture, err := s.repository.Picture(ctx, pictureID)
+	if pictureID == 0 {
+		return sql.ErrNoRows
+	}
+
+	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return err
 	}
@@ -589,6 +601,10 @@ func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empt
 func (s *PicturesGRPCServer) enforcePictureImageOperation(
 	ctx context.Context, pictureID int64, action string,
 ) (int64, error) {
+	if pictureID == 0 {
+		return 0, status.Error(codes.NotFound, "NotFound")
+	}
+
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return 0, status.Error(codes.Internal, err.Error())
@@ -602,7 +618,7 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(
 		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	pic, err := s.repository.Picture(ctx, pictureID)
+	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return 0, status.Error(codes.Internal, err.Error())
 	}
@@ -777,7 +793,12 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 	}
 
 	if !s.enforcer.Enforce(role, "global", "moderate") {
-		pic, err := s.repository.Picture(ctx, in.GetPictureId())
+		pictureID := in.GetPictureId()
+		if pictureID == 0 {
+			return nil, status.Error(codes.NotFound, "NotFound")
+		}
+
+		pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -944,7 +965,12 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 	}
 
 	if !s.enforcer.Enforce(role, "picture", "crop") {
-		pic, err := s.repository.Picture(ctx, in.GetPictureId())
+		pictureID := in.GetPictureId()
+		if pictureID == 0 {
+			return nil, status.Error(codes.NotFound, "NotFound")
+		}
+
+		pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, status.Errorf(codes.NotFound, "NotFound")
@@ -1029,7 +1055,12 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	pic, err := s.repository.Picture(ctx, in.GetId())
+	pictureID := in.GetId()
+	if pictureID == 0 {
+		return nil, status.Errorf(codes.NotFound, "NotFound")
+	}
+
+	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1038,7 +1069,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	replacePicture, err := s.repository.Picture(ctx, pic.ReplacePictureID.Int64)
+	replacePicture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pic.ReplacePictureID.Int64})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1278,7 +1309,11 @@ func (s *PicturesGRPCServer) notifyCopyrightsEdited(
 		return err
 	}
 
-	picture, err := s.repository.Picture(ctx, pictureID)
+	if pictureID == 0 {
+		return nil
+	}
+
+	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return err
 	}
@@ -1346,7 +1381,12 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	pic, err := s.repository.Picture(ctx, in.GetId())
+	pictureID := in.GetId()
+	if pictureID == 0 {
+		return nil, status.Errorf(codes.NotFound, "NotFound")
+	}
+
+	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
