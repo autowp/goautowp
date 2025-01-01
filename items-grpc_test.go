@@ -2225,3 +2225,31 @@ func TestAutocomplete(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestTooBig(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	client := NewItemsClient(conn)
+
+	_, err = client.List(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ListItemsRequest{
+			Order: ListItemsRequest_CHILDS_COUNT,
+			Fields: &ItemFields{
+				ChildsCount: true,
+			},
+			Limit: 100,
+		},
+	)
+	require.NoError(t, err)
+}

@@ -631,16 +631,23 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		Page:     in.GetPage(),
 	}
 
-	if in.GetOrder() == ListItemsRequest_NAME_NAT {
-		options.SortByName = true
-	}
-
 	err = mapItemListOptions(inOptions, &options)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	res, pages, err := s.repository.List(ctx, options, fields, items.OrderByName, true)
+	order := items.OrderByName
+
+	switch in.GetOrder() {
+	case ListItemsRequest_NAME_NAT:
+		options.SortByName = true
+	case ListItemsRequest_NAME, ListItemsRequest_DEFAULT:
+		order = items.OrderByName
+	case ListItemsRequest_CHILDS_COUNT:
+		order = items.OrderByChildsCount
+	}
+
+	res, pages, err := s.repository.List(ctx, options, fields, order, true)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

@@ -126,6 +126,7 @@ const (
 	OrderByDescendantsParentsCount
 	OrderByStarCount
 	OrderByItemParentParentTimestamp
+	OrderByChildsCount
 )
 
 var catnameBlacklist = []string{"sport", "tuning", "related", "pictures", "specifications"}
@@ -644,6 +645,8 @@ func (s *Repository) orderBy(alias string, orderBy OrderBy, language string) ([]
 	switch orderBy {
 	case OrderByDescendantsCount:
 		columns = []columnOrder{{col: s.descendantsCountColumn, asc: false}}
+	case OrderByChildsCount:
+		columns = []columnOrder{{col: s.childsCountColumn, asc: false}}
 	case OrderByDescendantPicturesCount:
 		columns = []columnOrder{{col: s.descendantPicturesCountColumn, asc: false}}
 	case OrderByAddDatetime:
@@ -691,6 +694,8 @@ func (s *Repository) wrapperOrderBy(wrapperAlias string, wrappedAlias string, or
 	switch orderBy {
 	case OrderByDescendantsCount:
 		return []exp.OrderedExpression{wrappedAliasTable.Col(colDescendantsCount).Desc()}
+	case OrderByChildsCount:
+		return []exp.OrderedExpression{wrappedAliasTable.Col(colChildsCount).Desc()}
 	case OrderByDescendantPicturesCount:
 		return []exp.OrderedExpression{wrappedAliasTable.Col(colDescendantPicturesCount).Desc()}
 	case OrderByAddDatetime:
@@ -723,6 +728,8 @@ func (s *Repository) wrappedOrderBy(alias string, orderBy OrderBy) []exp.Ordered
 	switch orderBy {
 	case OrderByDescendantsCount:
 		orderByExp = []exp.OrderedExpression{goqu.C(colDescendantsCount).Desc()}
+	case OrderByChildsCount:
+		orderByExp = []exp.OrderedExpression{goqu.C(colChildsCount).Desc()}
 	case OrderByDescendantPicturesCount:
 		orderByExp = []exp.OrderedExpression{goqu.C(colDescendantPicturesCount).Desc()}
 	case OrderByAddDatetime:
@@ -755,6 +762,8 @@ func (s *Repository) wrappedSelectColumns(orderBy OrderBy) map[string]Column {
 	switch orderBy {
 	case OrderByDescendantsCount:
 		columns[colDescendantsCount] = s.descendantsCountColumn
+	case OrderByChildsCount:
+		columns[colChildsCount] = s.childsCountColumn
 	case OrderByDescendantPicturesCount:
 		columns[colDescendantPicturesCount] = s.descendantPicturesCountColumn
 	case OrderByDescendantsParentsCount:

@@ -1017,6 +1017,7 @@ message ListItemsRequest {
     DEFAULT = 0;
     NAME_NAT = 1;
     NAME = 2;
+    CHILDS_COUNT = 3;
   }
   string language = 1;
   ItemFields fields = 2;
