@@ -462,6 +462,7 @@ func mapItemListOptions(in *ItemListOptions, options *query.ItemsListOptions) er
 	options.EngineItemID = in.GetEngineId()
 	options.IsGroup = in.GetIsGroup()
 	options.Autocomplete = in.GetAutocomplete()
+	options.SuggestionsTo = in.GetSuggestionsTo()
 
 	if in.GetAncestor() != nil {
 		options.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
@@ -620,8 +621,8 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 
 	inOptions := in.GetOptions()
 
-	if (inOptions.GetExcludeSelfAndChilds() > 0 || inOptions.GetAutocomplete() != "") &&
-		!s.enforcer.Enforce(role, "global", "moderate") {
+	if (inOptions.GetExcludeSelfAndChilds() > 0 || inOptions.GetAutocomplete() != "" ||
+		inOptions.GetSuggestionsTo() != 0) && !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 

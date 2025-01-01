@@ -1064,6 +1064,7 @@ message ItemListOptions {
   bool is_group = 20;
   int64 exclude_self_and_childs = 21;
   string autocomplete = 22;
+  int64 suggestions_to = 23;
 }
 
 message GetTreeRequest {

@@ -54,6 +54,7 @@ type ItemsListOptions struct {
 	IsGroup                      bool
 	ExcludeSelfAndChilds         int64
 	Autocomplete                 string
+	SuggestionsTo                int64
 }
 
 func ItemParentNoParentAlias(alias string) string {
@@ -274,7 +275,46 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 			Where(esacAliasTableItemIDCol.IsNull())
 	}
 
+	sqSelect = s.applySuggestionsTo(alias, sqSelect)
+
 	sqSelect = s.applyAutocompleteFilter(alias, sqSelect)
+
+	return sqSelect
+}
+
+func (s *ItemsListOptions) applySuggestionsTo(
+	alias string, sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
+	if s.SuggestionsTo != 0 {
+		aliasTable := goqu.T(alias)
+		aliasIDCol := aliasTable.Col(schema.ItemTableIDColName)
+		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
+		ilsAlias := alias + "ils"
+		ils2Alias := alias + "ils2"
+		ilsAliasTable := goqu.T(ilsAlias)
+
+		sqSelect = sqSelect.
+			Join(schema.ItemLanguageTable.As(ilsAlias), goqu.On(
+				aliasIDCol.Eq(ilsAliasTable.Col(schema.ItemLanguageTableItemIDColName)),
+			)).
+			Join(schema.ItemLanguageTable.As(ils2Alias), goqu.On(
+				goqu.Func("INSTR", ilsAliasTable.Col(schema.ItemLanguageTableNameColName),
+					goqu.T(ils2Alias).Col(schema.ItemLanguageTableNameColName)),
+			)).
+			Where(
+				aliasTable.Col(schema.ItemTableItemTypeIDColName).Eq(schema.ItemTableItemTypeIDBrand),
+				ilsAliasTable.Col(schema.ItemLanguageTableItemIDColName).Eq(s.SuggestionsTo),
+				aliasIDCol.In(
+					subSelect.Select(schema.ItemTableIDCol).
+						From(schema.ItemTable).
+						Join(schema.ItemParentCacheTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentCacheTableParentIDCol))).
+						Where(
+							schema.ItemTableItemTypeIDCol.Eq(schema.ItemTableItemTypeIDBrand),
+							schema.ItemParentCacheTableItemIDCol.Eq(s.SuggestionsTo),
+						),
+				),
+			)
+	}
 
 	return sqSelect
 }

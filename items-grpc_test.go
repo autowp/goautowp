@@ -2253,3 +2253,30 @@ func TestTooBig(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestSuggestionsTo(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	client := NewItemsClient(conn)
+
+	_, err = client.List(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ListItemsRequest{
+			Options: &ItemListOptions{
+				SuggestionsTo: 1,
+			},
+			Limit: 1,
+		},
+	)
+	require.NoError(t, err)
+}
