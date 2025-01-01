@@ -105,3 +105,26 @@ type ItemRow struct {
 	CarTypeID              sql.NullInt64       `db:"car_type_id"`
 	SpecInherit            bool                `db:"spec_inherit"`
 }
+
+var AllowedTypeCombinations = map[ItemTableItemTypeID][]ItemTableItemTypeID{
+	ItemTableItemTypeIDVehicle: {ItemTableItemTypeIDVehicle},
+	ItemTableItemTypeIDEngine:  {ItemTableItemTypeIDEngine},
+	ItemTableItemTypeIDCategory: {
+		ItemTableItemTypeIDVehicle,
+		ItemTableItemTypeIDCategory,
+		ItemTableItemTypeIDBrand,
+	},
+	ItemTableItemTypeIDTwins: {ItemTableItemTypeIDVehicle},
+	ItemTableItemTypeIDBrand: {
+		ItemTableItemTypeIDBrand,
+		ItemTableItemTypeIDVehicle,
+		ItemTableItemTypeIDEngine,
+	},
+	ItemTableItemTypeIDFactory: {
+		ItemTableItemTypeIDVehicle,
+		ItemTableItemTypeIDEngine,
+	},
+	ItemTableItemTypeIDPerson:    {},
+	ItemTableItemTypeIDCopyright: {},
+	ItemTableItemTypeIDMuseum:    {},
+}

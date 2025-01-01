@@ -460,6 +460,8 @@ func mapItemListOptions(in *ItemListOptions, options *query.ItemsListOptions) er
 	options.Name = in.GetName()
 	options.ItemID = in.GetId()
 	options.EngineItemID = in.GetEngineId()
+	options.IsGroup = in.GetIsGroup()
+	options.Autocomplete = in.GetAutocomplete()
 
 	if in.GetAncestor() != nil {
 		options.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
@@ -505,6 +507,15 @@ func mapItemListOptions(in *ItemListOptions, options *query.ItemsListOptions) er
 	if in.GetPreviewPictures() != nil {
 		options.PreviewPictures = &query.PictureItemListOptions{}
 		mapPictureItemRequest(in.GetPreviewPictures(), options.PreviewPictures)
+	}
+
+	parentTypesOf := reverseConvertItemTypeID(in.GetParentTypesOf())
+	if parentTypesOf != 0 {
+		options.ParentTypesOf = parentTypesOf
+	}
+
+	if in.GetExcludeSelfAndChilds() != 0 {
+		options.ExcludeSelfAndChilds = in.GetExcludeSelfAndChilds()
 	}
 
 	return nil
@@ -607,6 +618,13 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
+	inOptions := in.GetOptions()
+
+	if (inOptions.GetExcludeSelfAndChilds() > 0 || inOptions.GetAutocomplete() != "") &&
+		!s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
 	options := query.ItemsListOptions{
 		Language: in.GetLanguage(),
 		Limit:    in.GetLimit(),
@@ -617,7 +635,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		options.SortByName = true
 	}
 
-	err = mapItemListOptions(in.GetOptions(), &options)
+	err = mapItemListOptions(inOptions, &options)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}

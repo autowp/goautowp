@@ -1059,6 +1059,10 @@ message ItemListOptions {
   ItemParentListOptions parent = 16;
   int64 engine_id = 17;
   ItemParentListOptions child = 18;
+  ItemType parent_types_of = 19;
+  bool is_group = 20;
+  int64 exclude_self_and_childs = 21;
+  string autocomplete = 22;
 }
 
 message GetTreeRequest {

@@ -2196,3 +2196,32 @@ func TestTwinsGroupBrands(t *testing.T) {
 
 	require.True(t, found)
 }
+
+func TestAutocomplete(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	client := NewItemsClient(conn)
+
+	_, err = client.List(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ListItemsRequest{
+			Options: &ItemListOptions{
+				ParentTypesOf:        ItemType_ITEM_TYPE_BRAND,
+				IsGroup:              true,
+				ExcludeSelfAndChilds: 3,
+				Autocomplete:         "Test",
+			},
+		},
+	)
+	require.NoError(t, err)
+}

@@ -2117,30 +2117,7 @@ func toSortedColumns(cols map[string]Column) []sortedColumnMapItem {
 }
 
 func (s *Repository) isAllowedCombination(itemTypeID, parentItemTypeID schema.ItemTableItemTypeID) bool {
-	allowed := map[schema.ItemTableItemTypeID][]schema.ItemTableItemTypeID{
-		schema.ItemTableItemTypeIDVehicle: {schema.ItemTableItemTypeIDVehicle},
-		schema.ItemTableItemTypeIDEngine:  {schema.ItemTableItemTypeIDEngine},
-		schema.ItemTableItemTypeIDCategory: {
-			schema.ItemTableItemTypeIDVehicle,
-			schema.ItemTableItemTypeIDCategory,
-			schema.ItemTableItemTypeIDBrand,
-		},
-		schema.ItemTableItemTypeIDTwins: {schema.ItemTableItemTypeIDVehicle},
-		schema.ItemTableItemTypeIDBrand: {
-			schema.ItemTableItemTypeIDBrand,
-			schema.ItemTableItemTypeIDVehicle,
-			schema.ItemTableItemTypeIDEngine,
-		},
-		schema.ItemTableItemTypeIDFactory: {
-			schema.ItemTableItemTypeIDVehicle,
-			schema.ItemTableItemTypeIDEngine,
-		},
-		schema.ItemTableItemTypeIDPerson:    {},
-		schema.ItemTableItemTypeIDCopyright: {},
-		schema.ItemTableItemTypeIDMuseum:    {},
-	}
-
-	itemTypes, ok := allowed[parentItemTypeID]
+	itemTypes, ok := schema.AllowedTypeCombinations[parentItemTypeID]
 	if !ok {
 		return false
 	}
