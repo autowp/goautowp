@@ -124,9 +124,11 @@ func (s *ItemExtractor) Extract(
 		ChildsCount:                row.ChildsCount,
 		DescendantTwinsGroupsCount: row.DescendantTwinsGroupsCount,
 		InboxPicturesCount:         row.InboxPicturesCount,
+		AcceptedPicturesCount:      row.AcceptedPicturesCount,
 		FullName:                   row.FullName,
 		MostsActive:                row.MostsActive,
 		CommentsAttentionsCount:    row.CommentsAttentionsCount,
+		HasChildSpecs:              row.HasChildSpecs,
 	}
 
 	if fields.GetLogo120() && row.LogoID.Valid {

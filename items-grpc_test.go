@@ -2094,3 +2094,105 @@ func TestBrandSections2(t *testing.T) {
 		})
 	}
 }
+
+func TestTwinsGroupBrands(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	groupName := fmt.Sprintf("Twins-Group-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       groupName,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDTwins,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("twins-group-%d", randomInt)},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	groupID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	brandName := fmt.Sprintf("Brand-%d", randomInt)
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       brandName,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDBrand,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("brand-%d", randomInt)},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	brandID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	vehicleName := fmt.Sprintf("Vehicle-%d", randomInt)
+	r3, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       vehicleName,
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", randomInt)},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	vehicleID, err := r3.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: vehicleID, ParentId: groupID,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: vehicleID, ParentId: brandID,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.List(
+		ctx,
+		&ListItemsRequest{
+			Options: &ItemListOptions{
+				TypeId: ItemType_ITEM_TYPE_BRAND,
+				Child: &ItemParentListOptions{
+					ItemParentParentByChild: &ItemParentListOptions{
+						ParentId: groupID,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
+
+	list := res.GetItems()
+
+	require.Len(t, list, 1)
+
+	var found bool
+
+	for _, item := range list {
+		if item.GetId() == brandID {
+			found = true
+
+			break
+		}
+	}
+
+	require.True(t, found)
+}

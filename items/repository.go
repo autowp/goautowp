@@ -70,6 +70,7 @@ const (
 	colAcceptedPicturesCount      = "accepted_pictures_count"
 	colStarCount                  = "star_count"
 	colItemParentParentTimestamp  = "item_parent_parent_timestamp"
+	colHasChildSpecs              = "has_child_specs"
 )
 
 const (
@@ -170,6 +171,7 @@ type Repository struct {
 	newDescendantsParentsCountColumn *NewDescendantsParentsCountColumn
 	childItemsCountColumn            *ChildItemsCountColumn
 	newChildItemsCountColumn         *NewChildItemsCountColumn
+	hasChildSpecsColumn              *HasChildSpecsColumn
 	logoColumn                       *SimpleColumn
 	fullNameColumn                   *SimpleColumn
 	idColumn                         *SimpleColumn
@@ -229,6 +231,7 @@ type Item struct {
 	MostsActive                bool
 	CommentsAttentionsCount    int32
 	AcceptedPicturesCount      int32
+	HasChildSpecs              bool
 }
 
 type ItemLanguage struct {
@@ -281,37 +284,40 @@ func NewRepository(
 		newDescendantsParentsCountColumn: &NewDescendantsParentsCountColumn{},
 		childItemsCountColumn:            &ChildItemsCountColumn{},
 		newChildItemsCountColumn:         &NewChildItemsCountColumn{},
-		idColumn:                         &SimpleColumn{col: schema.ItemTableIDColName},
-		logoColumn:                       &SimpleColumn{col: schema.ItemTableLogoIDColName},
-		fullNameColumn:                   &SimpleColumn{col: schema.ItemTableFullNameColName},
-		catnameColumn:                    &SimpleColumn{col: schema.ItemTableCatnameColName},
-		engineItemIDColumn:               &SimpleColumn{col: schema.ItemTableEngineItemIDColName},
-		engineInheritColumn:              &SimpleColumn{col: schema.ItemTableEngineInheritColName},
-		itemTypeIDColumn:                 &SimpleColumn{col: schema.ItemTableItemTypeIDColName},
-		isGroupColumn:                    &SimpleColumn{col: schema.ItemTableIsGroupColName},
-		isConceptColumn:                  &SimpleColumn{col: schema.ItemTableIsConceptColName},
-		isConceptInheritColumn:           &SimpleColumn{col: schema.ItemTableIsConceptInheritColName},
-		specIDColumn:                     &SimpleColumn{col: schema.ItemTableSpecIDColName},
-		beginYearColumn:                  &SimpleColumn{col: schema.ItemTableBeginYearColName},
-		endYearColumn:                    &SimpleColumn{col: schema.ItemTableEndYearColName},
-		beginMonthColumn:                 &SimpleColumn{col: schema.ItemTableBeginMonthColName},
-		endMonthColumn:                   &SimpleColumn{col: schema.ItemTableEndMonthColName},
-		beginModelYearColumn:             &SimpleColumn{col: schema.ItemTableBeginModelYearColName},
-		endModelYearColumn:               &SimpleColumn{col: schema.ItemTableEndModelYearColName},
-		beginModelYearFractionColumn:     &SimpleColumn{col: schema.ItemTableBeginModelYearFractionColName},
-		endModelYearFractionColumn:       &SimpleColumn{col: schema.ItemTableEndModelYearFractionColName},
-		todayColumn:                      &SimpleColumn{col: schema.ItemTableTodayColName},
-		bodyColumn:                       &SimpleColumn{col: schema.ItemTableBodyColName},
-		addDatetimeColumn:                &SimpleColumn{col: schema.ItemTableAddDatetimeColName},
-		beginOrderCacheColumn:            &SimpleColumn{col: schema.ItemTableBeginOrderCacheColName},
-		endOrderCacheColumn:              &SimpleColumn{col: schema.ItemTableEndOrderCacheColName},
-		nameColumn:                       &SimpleColumn{col: schema.ItemTableNameColName},
-		specNameColumn:                   &SpecNameColumn{},
-		specShortNameColumn:              &SpecShortNameColumn{},
-		starCountColumn:                  &StarCountColumn{},
-		itemParentParentTimestampColumn:  &ItemParentParentTimestampColumn{},
-		contentLanguages:                 contentLanguages,
-		textStorageRepository:            textStorageRepository,
+		hasChildSpecsColumn: &HasChildSpecsColumn{
+			db: db,
+		},
+		idColumn:                        &SimpleColumn{col: schema.ItemTableIDColName},
+		logoColumn:                      &SimpleColumn{col: schema.ItemTableLogoIDColName},
+		fullNameColumn:                  &SimpleColumn{col: schema.ItemTableFullNameColName},
+		catnameColumn:                   &SimpleColumn{col: schema.ItemTableCatnameColName},
+		engineItemIDColumn:              &SimpleColumn{col: schema.ItemTableEngineItemIDColName},
+		engineInheritColumn:             &SimpleColumn{col: schema.ItemTableEngineInheritColName},
+		itemTypeIDColumn:                &SimpleColumn{col: schema.ItemTableItemTypeIDColName},
+		isGroupColumn:                   &SimpleColumn{col: schema.ItemTableIsGroupColName},
+		isConceptColumn:                 &SimpleColumn{col: schema.ItemTableIsConceptColName},
+		isConceptInheritColumn:          &SimpleColumn{col: schema.ItemTableIsConceptInheritColName},
+		specIDColumn:                    &SimpleColumn{col: schema.ItemTableSpecIDColName},
+		beginYearColumn:                 &SimpleColumn{col: schema.ItemTableBeginYearColName},
+		endYearColumn:                   &SimpleColumn{col: schema.ItemTableEndYearColName},
+		beginMonthColumn:                &SimpleColumn{col: schema.ItemTableBeginMonthColName},
+		endMonthColumn:                  &SimpleColumn{col: schema.ItemTableEndMonthColName},
+		beginModelYearColumn:            &SimpleColumn{col: schema.ItemTableBeginModelYearColName},
+		endModelYearColumn:              &SimpleColumn{col: schema.ItemTableEndModelYearColName},
+		beginModelYearFractionColumn:    &SimpleColumn{col: schema.ItemTableBeginModelYearFractionColName},
+		endModelYearFractionColumn:      &SimpleColumn{col: schema.ItemTableEndModelYearFractionColName},
+		todayColumn:                     &SimpleColumn{col: schema.ItemTableTodayColName},
+		bodyColumn:                      &SimpleColumn{col: schema.ItemTableBodyColName},
+		addDatetimeColumn:               &SimpleColumn{col: schema.ItemTableAddDatetimeColName},
+		beginOrderCacheColumn:           &SimpleColumn{col: schema.ItemTableBeginOrderCacheColName},
+		endOrderCacheColumn:             &SimpleColumn{col: schema.ItemTableEndOrderCacheColName},
+		nameColumn:                      &SimpleColumn{col: schema.ItemTableNameColName},
+		specNameColumn:                  &SpecNameColumn{},
+		specShortNameColumn:             &SpecShortNameColumn{},
+		starCountColumn:                 &StarCountColumn{},
+		itemParentParentTimestampColumn: &ItemParentParentTimestampColumn{},
+		contentLanguages:                contentLanguages,
+		textStorageRepository:           textStorageRepository,
 	}
 }
 
@@ -352,6 +358,7 @@ type ListFields struct {
 	CommentsAttentionsCount    bool
 	DescendantsParentsCount    bool
 	NewDescendantsParentsCount bool
+	HasChildSpecs              bool
 }
 
 func yearsPrefix(begin int32, end int32) string {
@@ -508,6 +515,10 @@ func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 
 	if fields.AcceptedPicturesCount {
 		columns[colAcceptedPicturesCount] = s.acceptedPicturesCountColumn
+	}
+
+	if fields.HasChildSpecs {
+		columns[colHasChildSpecs] = s.hasChildSpecsColumn
 	}
 
 	return columns
@@ -997,6 +1008,8 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &row.CommentsAttentionsCount
 			case colAcceptedPicturesCount:
 				pointers[i] = &row.AcceptedPicturesCount
+			case colHasChildSpecs:
+				pointers[i] = &row.HasChildSpecs
 			default:
 				pointers[i] = nil
 			}

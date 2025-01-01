@@ -21,6 +21,7 @@ type ItemParentListOptions struct {
 	LinkedInDays                      int
 	ParentItems                       *ItemsListOptions
 	ChildItems                        *ItemsListOptions
+	ItemParentParentByChildID         *ItemParentListOptions
 	ItemParentCacheAncestorByParentID *ItemParentCacheListOptions
 	Language                          string
 }
@@ -89,12 +90,25 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 		sqSelect = sqSelect.
 			Join(
 				schema.ItemParentCacheTable.As(ipcaAlias),
-				goqu.On(aliasTable.Col(schema.ItemParentCacheTableParentIDColName).Eq(
+				goqu.On(aliasTable.Col(schema.ItemParentTableParentIDColName).Eq(
 					goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableItemIDColName),
 				)),
 			)
 
 		sqSelect = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
+	}
+
+	if s.ItemParentParentByChildID != nil {
+		ippAlias := AppendItemParentAlias(alias, "p")
+		sqSelect = sqSelect.
+			Join(
+				schema.ItemParentTable.As(ippAlias),
+				goqu.On(aliasTable.Col(schema.ItemParentTableItemIDColName).Eq(
+					goqu.T(ippAlias).Col(schema.ItemParentTableItemIDColName),
+				)),
+			)
+
+		sqSelect = s.ItemParentParentByChildID.Apply(ippAlias, sqSelect)
 	}
 
 	return sqSelect

@@ -410,6 +410,15 @@ func mapItemParentListOptions(in *ItemParentListOptions, options *query.ItemPare
 		}
 	}
 
+	if in.GetItemParentParentByChild() != nil {
+		options.ItemParentParentByChildID = &query.ItemParentListOptions{}
+
+		err := mapItemParentListOptions(in.GetItemParentParentByChild(), options.ItemParentParentByChildID)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -484,6 +493,15 @@ func mapItemListOptions(in *ItemListOptions, options *query.ItemsListOptions) er
 		}
 	}
 
+	if in.GetChild() != nil {
+		options.ItemParentChild = &query.ItemParentListOptions{}
+
+		err := mapItemParentListOptions(in.GetChild(), options.ItemParentChild)
+		if err != nil {
+			return err
+		}
+	}
+
 	if in.GetPreviewPictures() != nil {
 		options.PreviewPictures = &query.PictureItemListOptions{}
 		mapPictureItemRequest(in.GetPreviewPictures(), options.PreviewPictures)
@@ -538,10 +556,12 @@ func convertFields(fields *ItemFields) items.ListFields {
 		ChildsCount:                fields.GetChildsCount(),
 		DescendantTwinsGroupsCount: fields.GetDescendantTwinsGroupsCount(),
 		InboxPicturesCount:         fields.GetInboxPicturesCount(),
+		AcceptedPicturesCount:      fields.GetAcceptedPicturesCount(),
 		FullName:                   fields.GetFullName(),
 		Logo:                       fields.GetLogo120(),
 		MostsActive:                fields.GetMostsActive(),
 		CommentsAttentionsCount:    fields.GetCommentsAttentionsCount(),
+		HasChildSpecs:              fields.GetHasChildSpecs(),
 	}
 
 	return result

@@ -283,3 +283,19 @@ func (s ItemParentParentTimestampColumn) SelectExpr(_ string, _ string) (Aliasea
 		),
 		nil
 }
+
+type HasChildSpecsColumn struct {
+	db *goqu.Database
+}
+
+func (s HasChildSpecsColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+	return goqu.Func("EXISTS",
+		s.db.Select(goqu.V(true)).
+			From(schema.ItemParentTable).
+			Join(schema.AttrsValuesTable, goqu.On(
+				schema.ItemParentTableItemIDCol.Eq(schema.AttrsValuesTableItemIDCol),
+			)).
+			Where(schema.ItemParentTableParentIDCol.Eq(goqu.T(alias).Col(schema.ItemTableIDColName))).
+			Limit(1),
+	), nil
+}

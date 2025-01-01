@@ -1002,6 +1002,8 @@ message ItemFields {
   bool brandicon = 19;
   bool attr_zone_id = 20;
   bool location = 21;
+  bool accepted_pictures_count = 22;
+  bool has_child_specs = 23;
 }
 
 message ItemRequest {
@@ -1033,6 +1035,7 @@ message PictureItemOptions {
 message ItemParentListOptions {
   int64 parent_id = 1;
   ItemListOptions parent = 2;
+  ItemParentListOptions item_parent_parent_by_child = 3;
 }
 
 message ItemParentCacheListOptions {
@@ -1055,6 +1058,7 @@ message ItemListOptions {
   ItemParentCacheListOptions ancestor = 13;
   ItemParentListOptions parent = 16;
   int64 engine_id = 17;
+  ItemParentListOptions child = 18;
 }
 
 message GetTreeRequest {
@@ -1095,6 +1099,8 @@ message APIItem {
   int64 attr_zone_id = 24;
   bool engine_inherit = 25;
   google.type.LatLng location = 26;
+  int32 accepted_pictures_count = 27;
+  bool has_child_specs = 28;
 }
 
 message APIItemList {
