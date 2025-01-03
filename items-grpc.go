@@ -415,6 +415,8 @@ func mapPicturesRequest(request *PicturesOptions, dest *query.PictureListOptions
 
 func mapItemParentListOptions(in *ItemParentListOptions, options *query.ItemParentListOptions) error {
 	options.ParentID = in.GetParentId()
+	options.ItemID = in.GetItemId()
+	options.Type = reverseConvertItemParentType(in.GetType())
 
 	if in.GetParent() != nil {
 		options.ParentItems = &query.ItemsListOptions{}
@@ -429,6 +431,24 @@ func mapItemParentListOptions(in *ItemParentListOptions, options *query.ItemPare
 		options.ItemParentParentByChildID = &query.ItemParentListOptions{}
 
 		err := mapItemParentListOptions(in.GetItemParentParentByChild(), options.ItemParentParentByChildID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if in.GetItem() != nil {
+		options.ChildItems = &query.ItemsListOptions{}
+
+		err := mapItemListOptions(in.GetItem(), options.ChildItems)
+		if err != nil {
+			return err
+		}
+	}
+
+	if in.GetItemParentCacheItemByChild() != nil {
+		options.ItemParentCacheAncestorByChildID = &query.ItemParentCacheListOptions{}
+
+		err := mapItemParentCacheListOptions(in.GetItemParentCacheItemByChild(), options.ItemParentCacheAncestorByChildID)
 		if err != nil {
 			return err
 		}
@@ -2657,15 +2677,20 @@ func (s *ItemsGRPCServer) carSectionGroups(
 func (s *ItemsGRPCServer) GetItemParents(
 	ctx context.Context, in *GetItemParentsRequest,
 ) (*GetItemParentsResponse, error) {
-	if in.GetItemId() == 0 && in.GetParentId() == 0 {
+	inOptions := in.GetOptions()
+
+	if inOptions.GetItemId() == 0 && inOptions.GetParentId() == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.ItemParents(ctx, query.ItemParentListOptions{
-		ItemID:   in.GetItemId(),
-		ParentID: in.GetParentId(),
-		Type:     reverseConvertItemParentType(in.GetType()),
-	}, items.ItemParentFields{})
+	options := query.ItemParentListOptions{}
+
+	err := mapItemParentListOptions(inOptions, &options)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	rows, err := s.repository.ItemParents(ctx, options, items.ItemParentFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

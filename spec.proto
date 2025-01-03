@@ -1038,6 +1038,10 @@ message ItemParentListOptions {
   int64 parent_id = 1;
   ItemListOptions parent = 2;
   ItemParentListOptions item_parent_parent_by_child = 3;
+  int64 item_id = 4;
+  ItemParentType type = 5;
+  ItemListOptions item = 6;
+  ItemParentCacheListOptions item_parent_cache_item_by_child = 7;
 }
 
 message ItemParentCacheListOptions {
@@ -1630,9 +1634,7 @@ message NewItemsResponse {
 }
 
 message GetItemParentsRequest {
-  int64 item_id = 1;
-  int64 parent_id = 2;
-  ItemParentType type = 3;
+  ItemParentListOptions options = 1;
 }
 
 message GetItemParentsResponse {

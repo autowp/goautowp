@@ -2286,6 +2286,10 @@ func TestGetItemParents(t *testing.T) {
 
 	client := NewItemsClient(conn)
 
-	_, err := client.GetItemParents(context.Background(), &GetItemParentsRequest{})
+	_, err := client.GetItemParents(context.Background(), &GetItemParentsRequest{
+		Options: &ItemParentListOptions{
+			ItemId: 1,
+		},
+	})
 	require.NoError(t, err)
 }

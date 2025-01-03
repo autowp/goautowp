@@ -24,6 +24,7 @@ type ItemParentListOptions struct {
 	ChildItems                        *ItemsListOptions
 	ItemParentParentByChildID         *ItemParentListOptions
 	ItemParentCacheAncestorByParentID *ItemParentCacheListOptions
+	ItemParentCacheAncestorByChildID  *ItemParentCacheListOptions
 	Language                          string
 }
 
@@ -91,11 +92,24 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 	}
 
 	if s.ItemParentCacheAncestorByParentID != nil {
-		ipcaAlias := AppendItemParentCacheAlias(alias, "a")
+		ipcaAlias := AppendItemParentCacheAlias(alias, "ap")
 		sqSelect = sqSelect.
 			Join(
 				schema.ItemParentCacheTable.As(ipcaAlias),
 				goqu.On(aliasTable.Col(schema.ItemParentTableParentIDColName).Eq(
+					goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableItemIDColName),
+				)),
+			)
+
+		sqSelect = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
+	}
+
+	if s.ItemParentCacheAncestorByChildID != nil {
+		ipcaAlias := AppendItemParentCacheAlias(alias, "ac")
+		sqSelect = sqSelect.
+			Join(
+				schema.ItemParentCacheTable.As(ipcaAlias),
+				goqu.On(aliasTable.Col(schema.ItemParentTableItemIDColName).Eq(
 					goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableItemIDColName),
 				)),
 			)
