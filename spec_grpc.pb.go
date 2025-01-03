@@ -2434,6 +2434,7 @@ const (
 	Items_GetStats_FullMethodName                = "/goautowp.Items/GetStats"
 	Items_GetBrandNewItems_FullMethodName        = "/goautowp.Items/GetBrandNewItems"
 	Items_GetNewItems_FullMethodName             = "/goautowp.Items/GetNewItems"
+	Items_GetItemParents_FullMethodName          = "/goautowp.Items/GetItemParents"
 	Items_CreateItemParent_FullMethodName        = "/goautowp.Items/CreateItemParent"
 	Items_UpdateItemParent_FullMethodName        = "/goautowp.Items/UpdateItemParent"
 	Items_DeleteItemParent_FullMethodName        = "/goautowp.Items/DeleteItemParent"
@@ -2475,6 +2476,7 @@ type ItemsClient interface {
 	GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error)
 	GetBrandNewItems(ctx context.Context, in *NewItemsRequest, opts ...grpc.CallOption) (*NewItemsResponse, error)
 	GetNewItems(ctx context.Context, in *NewItemsRequest, opts ...grpc.CallOption) (*NewItemsResponse, error)
+	GetItemParents(ctx context.Context, in *GetItemParentsRequest, opts ...grpc.CallOption) (*GetItemParentsResponse, error)
 	CreateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -2772,6 +2774,16 @@ func (c *itemsClient) GetNewItems(ctx context.Context, in *NewItemsRequest, opts
 	return out, nil
 }
 
+func (c *itemsClient) GetItemParents(ctx context.Context, in *GetItemParentsRequest, opts ...grpc.CallOption) (*GetItemParentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetItemParentsResponse)
+	err := c.cc.Invoke(ctx, Items_GetItemParents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *itemsClient) CreateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -2874,6 +2886,7 @@ type ItemsServer interface {
 	GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error)
 	GetBrandNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error)
 	GetNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error)
+	GetItemParents(context.Context, *GetItemParentsRequest) (*GetItemParentsResponse, error)
 	CreateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error)
 	UpdateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error)
 	DeleteItemParent(context.Context, *DeleteItemParentRequest) (*emptypb.Empty, error)
@@ -2974,6 +2987,9 @@ func (UnimplementedItemsServer) GetBrandNewItems(context.Context, *NewItemsReque
 }
 func (UnimplementedItemsServer) GetNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNewItems not implemented")
+}
+func (UnimplementedItemsServer) GetItemParents(context.Context, *GetItemParentsRequest) (*GetItemParentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItemParents not implemented")
 }
 func (UnimplementedItemsServer) CreateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateItemParent not implemented")
@@ -3521,6 +3537,24 @@ func _Items_GetNewItems_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetItemParents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetItemParentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetItemParents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_GetItemParents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetItemParents(ctx, req.(*GetItemParentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Items_CreateItemParent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ItemParent)
 	if err := dec(in); err != nil {
@@ -3765,6 +3799,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNewItems",
 			Handler:    _Items_GetNewItems_Handler,
+		},
+		{
+			MethodName: "GetItemParents",
+			Handler:    _Items_GetItemParents_Handler,
 		},
 		{
 			MethodName: "CreateItemParent",

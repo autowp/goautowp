@@ -17,6 +17,7 @@ func AppendItemParentAlias(alias string, suffix string) string {
 type ItemParentListOptions struct {
 	ItemID                            int64
 	ParentID                          int64
+	Type                              schema.ItemParentType
 	ParentIDExpr                      exp.Expression
 	LinkedInDays                      int
 	ParentItems                       *ItemsListOptions
@@ -49,6 +50,10 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 
 	if s.ParentIDExpr != nil {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableParentIDColName).Eq(s.ParentIDExpr))
+	}
+
+	if s.Type != 0 {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableTypeCol).Eq(s.Type))
 	}
 
 	if s.LinkedInDays > 0 {

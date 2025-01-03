@@ -2280,3 +2280,12 @@ func TestSuggestionsTo(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestGetItemParents(t *testing.T) {
+	t.Parallel()
+
+	client := NewItemsClient(conn)
+
+	_, err := client.GetItemParents(context.Background(), &GetItemParentsRequest{})
+	require.NoError(t, err)
+}

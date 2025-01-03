@@ -110,6 +110,7 @@ service Items {
   rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
   rpc GetBrandNewItems(NewItemsRequest) returns (NewItemsResponse) {}
   rpc GetNewItems(NewItemsRequest) returns (NewItemsResponse) {}
+  rpc GetItemParents(GetItemParentsRequest) returns (GetItemParentsResponse) {}
   rpc CreateItemParent(ItemParent) returns (google.protobuf.Empty) {}
   rpc UpdateItemParent(ItemParent) returns (google.protobuf.Empty) {}
   rpc DeleteItemParent(DeleteItemParentRequest) returns (google.protobuf.Empty) {}
@@ -1626,6 +1627,16 @@ message NewItemsRequest {
 message NewItemsResponse {
   APIItem brand = 1;
   repeated APIItem items = 2;
+}
+
+message GetItemParentsRequest {
+  int64 item_id = 1;
+  int64 parent_id = 2;
+  ItemParentType type = 3;
+}
+
+message GetItemParentsResponse {
+  repeated ItemParent items = 1;
 }
 
 message ItemParent {

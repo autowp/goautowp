@@ -36,6 +36,21 @@ const itemLinkNameMaxLength = 255
 
 const typicalPicturesInList = 4
 
+func convertItemParentType(itemParentType schema.ItemParentType) ItemParentType {
+	switch itemParentType {
+	case schema.ItemParentTypeDefault:
+		return ItemParentType_ITEM_TYPE_DEFAULT
+	case schema.ItemParentTypeTuning:
+		return ItemParentType_ITEM_TYPE_TUNING
+	case schema.ItemParentTypeSport:
+		return ItemParentType_ITEM_TYPE_SPORT
+	case schema.ItemParentTypeDesign:
+		return ItemParentType_ITEM_TYPE_DESIGN
+	}
+
+	return ItemParentType_ITEM_TYPE_DEFAULT
+}
+
 func reverseConvertItemParentType(itemParentType ItemParentType) schema.ItemParentType {
 	switch itemParentType {
 	case ItemParentType_ITEM_TYPE_DEFAULT:
@@ -712,7 +727,7 @@ func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *APIItemLinkReques
 	}
 
 	if !success {
-		return nil, status.Error(codes.NotFound, err.Error())
+		return nil, status.Error(codes.NotFound, "item not found")
 	}
 
 	return &APIItemLink{
@@ -2637,4 +2652,35 @@ func (s *ItemsGRPCServer) carSectionGroups(
 	}
 
 	return groups, nil
+}
+
+func (s *ItemsGRPCServer) GetItemParents(
+	ctx context.Context, in *GetItemParentsRequest,
+) (*GetItemParentsResponse, error) {
+	if in.GetItemId() == 0 && in.GetParentId() == 0 {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	rows, err := s.repository.ItemParents(ctx, query.ItemParentListOptions{
+		ItemID:   in.GetItemId(),
+		ParentID: in.GetParentId(),
+		Type:     reverseConvertItemParentType(in.GetType()),
+	}, items.ItemParentFields{})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	res := make([]*ItemParent, 0, len(rows))
+	for _, row := range rows {
+		res = append(res, &ItemParent{
+			ItemId:   row.ItemID,
+			ParentId: row.ParentID,
+			Type:     convertItemParentType(row.Type),
+			Catname:  row.Catname,
+		})
+	}
+
+	return &GetItemParentsResponse{
+		Items: res,
+	}, nil
 }
