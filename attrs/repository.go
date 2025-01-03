@@ -2622,9 +2622,9 @@ func (s *Repository) ZoneIDByVehicleTypeIDs(itemTypeID schema.ItemTableItemTypeI
 func (s *Repository) ChildSpecifications(
 	ctx context.Context, itemID int64, lang string,
 ) (*CarSpecTable, error) {
-	rows, err := s.itemsRepository.ItemParents(ctx, query.ItemParentListOptions{
+	rows, _, err := s.itemsRepository.ItemParents(ctx, query.ItemParentListOptions{
 		ParentID: itemID,
-	}, items.ItemParentFields{})
+	}, items.ItemParentFields{}, items.ItemParentOrderByAuto)
 	if err != nil {
 		return nil, err
 	}
@@ -3262,7 +3262,7 @@ func (s *Repository) specPicture(
 
 	var result *CarSpecTableItemImage
 
-	if err == nil && row.ImageID.Valid {
+	if row.ImageID.Valid {
 		image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb")
 		if err != nil {
 			return nil, "", fmt.Errorf("FormattedImage(): %w", err)
@@ -3277,10 +3277,7 @@ func (s *Repository) specPicture(
 		}
 	}
 
-	pictureURL := ""
-	if row != nil {
-		pictureURL = frontend.PicturePath(row.Identity)
-	}
+	pictureURL := frontend.PicturePath(row.Identity)
 
 	return result, pictureURL, nil
 }

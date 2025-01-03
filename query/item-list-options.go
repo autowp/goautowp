@@ -150,7 +150,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 			goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col(schema.ItemParentTableParentIDColName))),
 		)
 
-		sqSelect = s.ItemParentChild.Apply(ipcAlias, sqSelect)
+		sqSelect, _ = s.ItemParentChild.Apply(ipcAlias, sqSelect)
 	}
 
 	if s.ItemParentParent != nil {
@@ -160,7 +160,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 			goqu.On(aliasIDCol.Eq(goqu.T(ippAlias).Col(schema.ItemParentTableItemIDColName))),
 		)
 
-		sqSelect = s.ItemParentParent.Apply(ippAlias, sqSelect)
+		sqSelect, _ = s.ItemParentParent.Apply(ippAlias, sqSelect)
 	}
 
 	if s.PictureItems != nil {

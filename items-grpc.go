@@ -2618,7 +2618,7 @@ func (s *ItemsGRPCServer) carSectionGroups(
 	)
 
 	if section.CarTypeID > 0 {
-		rows, err = s.repository.ItemParents(ctx, query.ItemParentListOptions{
+		rows, _, err = s.repository.ItemParents(ctx, query.ItemParentListOptions{
 			ParentID: brandID,
 			ChildItems: &query.ItemsListOptions{
 				TypeID:                section.ItemTypeID,
@@ -2626,12 +2626,12 @@ func (s *ItemsGRPCServer) carSectionGroups(
 				VehicleTypeAncestorID: section.CarTypeID,
 			},
 			Language: lang,
-		}, items.ItemParentFields{Name: true})
+		}, items.ItemParentFields{Name: true}, items.ItemParentOrderByAuto)
 		if err != nil {
 			return nil, fmt.Errorf("ItemParents(): %w", err)
 		}
 	} else {
-		rows, err = s.repository.ItemParents(ctx, query.ItemParentListOptions{
+		rows, _, err = s.repository.ItemParents(ctx, query.ItemParentListOptions{
 			ParentID: brandID,
 			ChildItems: &query.ItemsListOptions{
 				TypeID:       section.ItemTypeID,
@@ -2641,12 +2641,12 @@ func (s *ItemsGRPCServer) carSectionGroups(
 				},
 			},
 			Language: lang,
-		}, items.ItemParentFields{Name: true})
+		}, items.ItemParentFields{Name: true}, items.ItemParentOrderByAuto)
 		if err != nil {
 			return nil, fmt.Errorf("ItemParents(): %w", err)
 		}
 
-		rows2, err := s.repository.ItemParents(ctx, query.ItemParentListOptions{
+		rows2, _, err := s.repository.ItemParents(ctx, query.ItemParentListOptions{
 			ParentID: brandID,
 			ChildItems: &query.ItemsListOptions{
 				TypeID:            section.ItemTypeID,
@@ -2654,7 +2654,7 @@ func (s *ItemsGRPCServer) carSectionGroups(
 				VehicleTypeIsNull: true,
 			},
 			Language: lang,
-		}, items.ItemParentFields{Name: true})
+		}, items.ItemParentFields{Name: true}, items.ItemParentOrderByAuto)
 		if err != nil {
 			return nil, fmt.Errorf("ItemParents(): %w", err)
 		}
@@ -2683,14 +2683,27 @@ func (s *ItemsGRPCServer) GetItemParents(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	options := query.ItemParentListOptions{}
+	options := query.ItemParentListOptions{
+		Limit: in.GetLimit(),
+		Page:  in.GetPage(),
+	}
 
 	err := mapItemParentListOptions(inOptions, &options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	rows, err := s.repository.ItemParents(ctx, options, items.ItemParentFields{})
+	order := items.ItemParentOrderByNone
+
+	switch in.GetOrder() {
+	case GetItemParentsRequest_NONE:
+	case GetItemParentsRequest_CATEGORIES_FIRST:
+		order = items.ItemParentOrderByCategoriesFirst
+	case GetItemParentsRequest_AUTO:
+		order = items.ItemParentOrderByAuto
+	}
+
+	rows, pages, err := s.repository.ItemParents(ctx, options, items.ItemParentFields{}, order)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2705,7 +2718,24 @@ func (s *ItemsGRPCServer) GetItemParents(
 		})
 	}
 
+	var paginator *Pages
+	if pages != nil {
+		paginator = &Pages{
+			PageCount:        pages.PageCount,
+			First:            pages.First,
+			Last:             pages.Last,
+			Current:          pages.Current,
+			FirstPageInRange: pages.FirstPageInRange,
+			LastPageInRange:  pages.LastPageInRange,
+			PagesInRange:     pages.PagesInRange,
+			TotalItemCount:   pages.TotalItemCount,
+			Next:             pages.Next,
+			Previous:         pages.Previous,
+		}
+	}
+
 	return &GetItemParentsResponse{
-		Items: res,
+		Items:     res,
+		Paginator: paginator,
 	}, nil
 }

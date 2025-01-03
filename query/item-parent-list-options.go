@@ -7,11 +7,11 @@ import (
 )
 
 const (
-	itemParentAlias = "ip"
+	ItemParentAlias = "ip"
 )
 
 func AppendItemParentAlias(alias string, suffix string) string {
-	return alias + "_" + itemParentAlias + suffix
+	return alias + "_" + ItemParentAlias + suffix
 }
 
 type ItemParentListOptions struct {
@@ -26,19 +26,30 @@ type ItemParentListOptions struct {
 	ItemParentCacheAncestorByParentID *ItemParentCacheListOptions
 	ItemParentCacheAncestorByChildID  *ItemParentCacheListOptions
 	Language                          string
+	Limit                             uint32
+	Page                              uint32
 }
 
-func (s *ItemParentListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
-	sqSelect := db.Select().From(schema.ItemParentTable.As(itemParentAlias))
+func (s *ItemParentListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, bool) {
+	sqSelect := db.Select().From(schema.ItemParentTable.As(ItemParentAlias))
 
-	return s.Apply(itemParentAlias, sqSelect)
+	return s.Apply(ItemParentAlias, sqSelect)
 }
 
 func (s *ItemParentListOptions) CountSelect(db *goqu.Database) *goqu.SelectDataset {
-	return s.Select(db).Select(goqu.COUNT(goqu.Star()))
+	sqSelect, groupBy := s.Select(db)
+
+	if groupBy {
+		sqSelect = sqSelect.Select(goqu.COUNT(goqu.DISTINCT(goqu.Star())))
+	} else {
+		sqSelect = sqSelect.Select(goqu.COUNT(goqu.Star()))
+	}
+
+	return sqSelect
 }
 
-func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool) {
+	groupBy := false
 	aliasTable := goqu.T(alias)
 
 	if s.ItemID != 0 {
@@ -102,6 +113,7 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 			)
 
 		sqSelect = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
+		groupBy = true
 	}
 
 	if s.ItemParentCacheAncestorByChildID != nil {
@@ -115,6 +127,7 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 			)
 
 		sqSelect = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
+		groupBy = true
 	}
 
 	if s.ItemParentParentByChildID != nil {
@@ -127,8 +140,9 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 				)),
 			)
 
-		sqSelect = s.ItemParentParentByChildID.Apply(ippAlias, sqSelect)
+		sqSelect, _ = s.ItemParentParentByChildID.Apply(ippAlias, sqSelect)
+		groupBy = true
 	}
 
-	return sqSelect
+	return sqSelect, groupBy
 }

@@ -129,6 +129,14 @@ const (
 	OrderByChildsCount
 )
 
+type ItemParentOrderBy int
+
+const (
+	ItemParentOrderByNone ItemParentOrderBy = iota
+	ItemParentOrderByAuto
+	ItemParentOrderByCategoriesFirst
+)
+
 var catnameBlacklist = []string{"sport", "tuning", "related", "pictures", "specifications"}
 
 type TreeItem struct {
@@ -2860,17 +2868,19 @@ func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (b
 }
 
 func (s *Repository) ItemParentSelect(
-	listOptions query.ItemParentListOptions, fields ItemParentFields,
+	listOptions query.ItemParentListOptions, fields ItemParentFields, orderBy ItemParentOrderBy,
 ) (*goqu.SelectDataset, error) {
-	sqSelect := s.db.Select(
-		schema.ItemParentTableItemIDCol,
-		schema.ItemParentTableParentIDCol,
-		schema.ItemParentTableCatnameCol,
-		schema.ItemParentTableTypeCol,
-		schema.ItemParentTableManualCatnameCol,
-	).
-		From(schema.ItemParentTable).
-		GroupBy(schema.ItemParentTableItemIDCol, schema.ItemParentTableParentIDCol)
+	aliasTable := goqu.T(query.ItemParentAlias)
+
+	sqSelect, groupBy := listOptions.Select(s.db)
+
+	sqSelect = sqSelect.Select(
+		aliasTable.Col(schema.ItemParentTableItemIDColName),
+		aliasTable.Col(schema.ItemParentTableParentIDColName),
+		aliasTable.Col(schema.ItemParentTableCatnameColName),
+		aliasTable.Col(schema.ItemParentTableTypeColName),
+		aliasTable.Col(schema.ItemParentTableManualCatnameColName),
+	)
 
 	if fields.Name {
 		orderExpr, err := langPriorityOrderExpr(schema.ItemParentLanguageTableLanguageCol, listOptions.Language)
@@ -2884,8 +2894,8 @@ func (s *Repository) ItemParentSelect(
 				s.db.Select(schema.ItemParentLanguageTableNameCol).
 					From(schema.ItemParentLanguageTable).
 					Where(
-						schema.ItemParentLanguageTableItemIDCol.Eq(schema.ItemParentTableItemIDCol),
-						schema.ItemParentLanguageTableParentIDCol.Eq(schema.ItemParentTableParentIDCol),
+						schema.ItemParentLanguageTableItemIDCol.Eq(aliasTable.Col(schema.ItemParentTableItemIDColName)),
+						schema.ItemParentLanguageTableParentIDCol.Eq(aliasTable.Col(schema.ItemParentTableParentIDColName)),
 						goqu.Func("LENGTH", schema.ItemParentLanguageTableNameCol).Gt(0),
 					).
 					Order(orderExpr).
@@ -2893,27 +2903,92 @@ func (s *Repository) ItemParentSelect(
 				// fallback
 				s.db.Select(schema.ItemTableNameCol).
 					From(schema.ItemTable).
-					Where(schema.ItemTableIDCol.Eq(schema.ItemParentTableItemIDCol)),
+					Where(schema.ItemTableIDCol.Eq(aliasTable.Col(schema.ItemParentTableItemIDColName))),
 			).As("name"),
 		)
 	}
 
-	return listOptions.Apply(schema.ItemParentTableName, sqSelect), nil
+	itemOrderAlias := "io"
+	itemOrderAliasTable := goqu.T(itemOrderAlias)
+
+	joinItem := false
+
+	switch orderBy {
+	case ItemParentOrderByNone:
+	case ItemParentOrderByAuto:
+		joinItem = true
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.ItemParentTableTypeColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableBeginOrderCacheColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableEndOrderCacheColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableNameColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableBodyColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableSpecIDColName).Asc(),
+		)
+	case ItemParentOrderByCategoriesFirst:
+		joinItem = true
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.ItemParentTableTypeColName).Asc(),
+			goqu.L("?",
+				itemOrderAliasTable.Col(schema.ItemTableItemTypeIDColName).Eq(schema.ItemTableItemTypeIDCategory),
+			).Desc(),
+			itemOrderAliasTable.Col(schema.ItemTableBeginOrderCacheColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableEndOrderCacheColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableNameColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableBodyColName).Asc(),
+			itemOrderAliasTable.Col(schema.ItemTableSpecIDColName).Asc(),
+		)
+	}
+
+	if joinItem {
+		sqSelect = sqSelect.Join(schema.ItemTable.As(itemOrderAlias), goqu.On(
+			aliasTable.Col(schema.ItemParentTableItemIDColName).Eq(itemOrderAliasTable.Col(schema.ItemTableIDColName)),
+		))
+	}
+
+	if groupBy {
+		sqSelect = sqSelect.GroupBy(
+			aliasTable.Col(schema.ItemParentTableItemIDColName),
+			aliasTable.Col(schema.ItemParentTableParentIDColName),
+		)
+	}
+
+	return sqSelect, nil
 }
 
 func (s *Repository) ItemParents(
-	ctx context.Context, listOptions query.ItemParentListOptions, fields ItemParentFields,
-) ([]ItemParent, error) {
-	var res []ItemParent
-
-	sqSelect, err := s.ItemParentSelect(listOptions, fields)
+	ctx context.Context, listOptions query.ItemParentListOptions, fields ItemParentFields, orderBy ItemParentOrderBy,
+) ([]ItemParent, *util.Pages, error) {
+	sqSelect, err := s.ItemParentSelect(listOptions, fields, orderBy)
 	if err != nil {
-		return nil, fmt.Errorf("ItemParentSelect(): %w", err)
+		return nil, nil, fmt.Errorf("ItemParentSelect(): %w", err)
 	}
+
+	var pages *util.Pages
+
+	if listOptions.Limit > 0 {
+		paginator := util.Paginator{
+			SQLSelect:         sqSelect,
+			ItemCountPerPage:  int32(listOptions.Limit), //nolint: gosec
+			CurrentPageNumber: int32(listOptions.Page),  //nolint: gosec
+		}
+
+		pages, err = paginator.GetPages(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		sqSelect, err = paginator.GetCurrentItems(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var res []ItemParent
 
 	err = sqSelect.ScanStructsContext(ctx, &res)
 
-	return res, err
+	return res, pages, err
 }
 
 func (s *Repository) ItemParent(
@@ -2924,7 +2999,7 @@ func (s *Repository) ItemParent(
 		ParentID: parentID,
 	}
 
-	sqSelect, err := s.ItemParentSelect(listOptions, fields)
+	sqSelect, err := s.ItemParentSelect(listOptions, fields, ItemParentOrderByNone)
 	if err != nil {
 		return nil, err
 	}

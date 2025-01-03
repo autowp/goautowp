@@ -84,7 +84,7 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 			)),
 		)
 
-		sqSelect = s.ItemParentByItemID.Apply(ippAlias, sqSelect)
+		sqSelect, _ = s.ItemParentByItemID.Apply(ippAlias, sqSelect)
 	}
 
 	if s.PictureItemsByItemID != nil {

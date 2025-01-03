@@ -2284,12 +2284,97 @@ func TestSuggestionsTo(t *testing.T) {
 func TestGetItemParents(t *testing.T) {
 	t.Parallel()
 
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
 	client := NewItemsClient(conn)
 
-	_, err := client.GetItemParents(context.Background(), &GetItemParentsRequest{
-		Options: &ItemParentListOptions{
-			ItemId: 1,
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	parentName := fmt.Sprintf("Parent-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       parentName,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDCategory,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("parent-%d", randomInt)},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	parentID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	child1Name := fmt.Sprintf("Child1-%d", randomInt)
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       child1Name,
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("child1-%d", randomInt)},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	child1ID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	child2Name := fmt.Sprintf("Child2-%d", randomInt)
+	r3, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       child2Name,
+		ItemTypeID: schema.ItemTableItemTypeIDCategory,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("child2-%d", randomInt)},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	child2ID, err := r3.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: child1ID, ParentId: parentID,
 		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: child2ID, ParentId: parentID,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetItemParents(context.Background(), &GetItemParentsRequest{
+		Options: &ItemParentListOptions{
+			ParentId: parentID,
+		},
+		Order: GetItemParentsRequest_AUTO,
 	})
 	require.NoError(t, err)
+	require.Len(t, res.GetItems(), 2)
+
+	for _, row := range res.GetItems() {
+		require.Equal(t, parentID, row.GetParentId())
+		require.Contains(t, []int64{child1ID, child2ID}, row.GetItemId())
+	}
+
+	res, err = client.GetItemParents(context.Background(), &GetItemParentsRequest{
+		Options: &ItemParentListOptions{
+			ParentId: parentID,
+		},
+		Order: GetItemParentsRequest_CATEGORIES_FIRST,
+		Limit: 1,
+	})
+	require.NoError(t, err)
+	require.Len(t, res.GetItems(), 1)
+	require.Equal(t, int32(2), res.GetPaginator().GetTotalItemCount())
+	require.Equal(t, int32(2), res.GetPaginator().GetPageCount())
+	require.Equal(t, int32(1), res.GetPaginator().GetCurrent())
+	require.Equal(t, parentID, res.GetItems()[0].GetParentId())
+	require.Equal(t, child2ID, res.GetItems()[0].GetItemId())
 }

@@ -1634,11 +1634,21 @@ message NewItemsResponse {
 }
 
 message GetItemParentsRequest {
+  enum Order {
+    NONE = 0;
+    AUTO = 1;
+    CATEGORIES_FIRST = 2;
+  }
+
   ItemParentListOptions options = 1;
+  Order order = 2;
+  uint32 limit = 3;
+  uint32 page = 4;
 }
 
 message GetItemParentsResponse {
   repeated ItemParent items = 1;
+  Pages paginator = 2;
 }
 
 message ItemParent {
