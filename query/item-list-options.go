@@ -235,22 +235,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableEngineItemIDColName).Eq(s.EngineItemID))
 	}
 
-	if len(s.Name) > 0 {
-		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
-
-		// WHERE EXISTS(SELECT item_id FROM item_language WHERE item.id = item_id AND name ILIKE ?)
-		sqSelect = sqSelect.Where(
-			goqu.L(
-				"EXISTS ?",
-				subSelect.
-					From(schema.ItemLanguageTable).
-					Where(
-						aliasIDCol.Eq(schema.ItemLanguageTableItemIDCol),
-						schema.ItemLanguageTableNameCol.ILike(s.Name),
-					),
-			),
-		)
-	}
+	sqSelect = s.applyName(alias, sqSelect)
 
 	if s.HasBeginYear {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableBeginYearColName))
@@ -289,6 +274,29 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 	}
 
 	return sqSelect, groupBy
+}
+
+func (s *ItemsListOptions) applyName(
+	alias string, sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
+	if len(s.Name) > 0 {
+		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
+
+		// WHERE EXISTS(SELECT item_id FROM item_language WHERE item.id = item_id AND name ILIKE ?)
+		sqSelect = sqSelect.Where(
+			goqu.L(
+				"EXISTS ?",
+				subSelect.
+					From(schema.ItemLanguageTable).
+					Where(
+						goqu.T(alias).Col(schema.ItemTableIDColName).Eq(schema.ItemLanguageTableItemIDCol),
+						schema.ItemLanguageTableNameCol.ILike(s.Name),
+					),
+			),
+		)
+	}
+
+	return sqSelect
 }
 
 func (s *ItemsListOptions) applyExcludeSelfAndChilds(
