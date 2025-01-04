@@ -68,8 +68,9 @@ func (s *ItemsListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
 	}
 
 	sqSelect := db.Select().From(schema.ItemTable.As(alias))
+	sqSelect, _ = s.Apply(alias, sqSelect)
 
-	return s.Apply(alias, sqSelect)
+	return sqSelect
 }
 
 func (s *ItemsListOptions) ExistsSelect(db *goqu.Database) *goqu.SelectDataset {
@@ -91,7 +92,8 @@ func (s *ItemsListOptions) CountDistinctSelect(db *goqu.Database) *goqu.SelectDa
 	)
 }
 
-func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool) {
+	groupBy := false
 	aliasTable := goqu.T(alias)
 	aliasIDCol := aliasTable.Col(schema.ItemTableIDColName)
 
@@ -120,6 +122,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 	}
 
 	if s.VehicleTypeAncestorID > 0 {
+		groupBy = true
 		sqSelect = sqSelect.
 			Join(
 				schema.VehicleVehicleTypeTable,
@@ -144,6 +147,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 	}
 
 	if s.ItemParentChild != nil {
+		groupBy = true
 		ipcAlias := AppendItemParentAlias(alias, "c")
 		sqSelect = sqSelect.Join(
 			schema.ItemParentTable.As(ipcAlias),
@@ -154,6 +158,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 	}
 
 	if s.ItemParentParent != nil {
+		groupBy = true
 		ippAlias := AppendItemParentAlias(alias, "p")
 		sqSelect = sqSelect.Join(
 			schema.ItemParentTable.As(ippAlias),
@@ -164,6 +169,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 	}
 
 	if s.PictureItems != nil {
+		groupBy = true
 		piAlias := AppendPictureItemAlias(alias)
 
 		sqSelect = sqSelect.Join(
@@ -175,6 +181,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 	}
 
 	if s.ItemParentCacheDescendant != nil {
+		groupBy = true
 		ipcdAlias := AppendItemParentCacheAlias(alias, "d")
 		sqSelect = sqSelect.
 			Join(
@@ -186,6 +193,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 	}
 
 	if s.ItemParentCacheAncestor != nil {
+		groupBy = true
 		ipcaAlias := AppendItemParentCacheAlias(alias, "a")
 		sqSelect = sqSelect.
 			Join(
@@ -263,7 +271,28 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableIsGroupColName).IsTrue())
 	}
 
+	sqSelect = s.applyExcludeSelfAndChilds(alias, sqSelect)
+
+	var subGroupBy bool
+
+	sqSelect, subGroupBy = s.applySuggestionsTo(alias, sqSelect)
+	if subGroupBy {
+		groupBy = true
+	}
+
+	sqSelect, subGroupBy = s.applyAutocompleteFilter(alias, sqSelect)
+	if subGroupBy {
+		groupBy = true
+	}
+
+	return sqSelect, groupBy
+}
+
+func (s *ItemsListOptions) applyExcludeSelfAndChilds(
+	alias string, sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	if s.ExcludeSelfAndChilds != 0 {
+		aliasTable := goqu.T(alias)
 		esacAlias := "esac"
 		esacAliasTable := goqu.T(esacAlias)
 		esacAliasTableItemIDCol := esacAliasTable.Col(schema.ItemParentCacheTableItemIDColName)
@@ -275,17 +304,15 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *go
 			Where(esacAliasTableItemIDCol.IsNull())
 	}
 
-	sqSelect = s.applySuggestionsTo(alias, sqSelect)
-
-	sqSelect = s.applyAutocompleteFilter(alias, sqSelect)
-
 	return sqSelect
 }
 
 func (s *ItemsListOptions) applySuggestionsTo(
 	alias string, sqSelect *goqu.SelectDataset,
-) *goqu.SelectDataset {
+) (*goqu.SelectDataset, bool) {
+	groupBy := false
 	if s.SuggestionsTo != 0 {
+		groupBy = true
 		aliasTable := goqu.T(alias)
 		aliasIDCol := aliasTable.Col(schema.ItemTableIDColName)
 		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
@@ -316,7 +343,7 @@ func (s *ItemsListOptions) applySuggestionsTo(
 			)
 	}
 
-	return sqSelect
+	return sqSelect, groupBy
 }
 
 func (s *ItemsListOptions) applyExcludeVehicleTypeAncestorID(
@@ -346,9 +373,9 @@ func (s *ItemsListOptions) applyExcludeVehicleTypeAncestorID(
 
 func (s *ItemsListOptions) applyAutocompleteFilter(
 	alias string, sqSelect *goqu.SelectDataset,
-) *goqu.SelectDataset {
+) (*goqu.SelectDataset, bool) {
 	if s.Autocomplete == "" {
-		return sqSelect
+		return sqSelect, false
 	}
 
 	query := s.Autocomplete
@@ -427,8 +454,10 @@ func (s *ItemsListOptions) applyAutocompleteFilter(
 	}
 
 	aliasTable := goqu.T(alias)
+	groupBy := false
 
 	if query != "" {
+		groupBy = true
 		ilAlias := alias + "il"
 		ilAliasTable := goqu.T(ilAlias)
 		sqSelect = sqSelect.
@@ -460,7 +489,7 @@ func (s *ItemsListOptions) applyAutocompleteFilter(
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableEndModelYearColName).Eq(endModelYear))
 	}
 
-	return sqSelect
+	return sqSelect, groupBy
 }
 
 func (s *ItemsListOptions) applyParentTypesOf(

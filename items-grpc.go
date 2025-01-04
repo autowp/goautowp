@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"slices"
 	"strings"
@@ -35,36 +36,6 @@ import (
 const itemLinkNameMaxLength = 255
 
 const typicalPicturesInList = 4
-
-func convertItemParentType(itemParentType schema.ItemParentType) ItemParentType {
-	switch itemParentType {
-	case schema.ItemParentTypeDefault:
-		return ItemParentType_ITEM_TYPE_DEFAULT
-	case schema.ItemParentTypeTuning:
-		return ItemParentType_ITEM_TYPE_TUNING
-	case schema.ItemParentTypeSport:
-		return ItemParentType_ITEM_TYPE_SPORT
-	case schema.ItemParentTypeDesign:
-		return ItemParentType_ITEM_TYPE_DESIGN
-	}
-
-	return ItemParentType_ITEM_TYPE_DEFAULT
-}
-
-func reverseConvertItemParentType(itemParentType ItemParentType) schema.ItemParentType {
-	switch itemParentType {
-	case ItemParentType_ITEM_TYPE_DEFAULT:
-		return schema.ItemParentTypeDefault
-	case ItemParentType_ITEM_TYPE_TUNING:
-		return schema.ItemParentTypeTuning
-	case ItemParentType_ITEM_TYPE_SPORT:
-		return schema.ItemParentTypeSport
-	case ItemParentType_ITEM_TYPE_DESIGN:
-		return schema.ItemParentTypeDesign
-	}
-
-	return schema.ItemParentTypeDefault
-}
 
 func (s *ItemParent) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
 	var (
@@ -392,228 +363,6 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	}, nil
 }
 
-func mapPicturesRequest(request *PicturesOptions, dest *query.PictureListOptions) {
-	dest.OwnerID = request.GetOwnerId()
-
-	switch request.GetStatus() {
-	case PictureStatus_PICTURE_STATUS_UNKNOWN:
-	case PictureStatus_PICTURE_STATUS_ACCEPTED:
-		dest.Status = schema.PictureStatusAccepted
-	case PictureStatus_PICTURE_STATUS_REMOVING:
-		dest.Status = schema.PictureStatusRemoving
-	case PictureStatus_PICTURE_STATUS_INBOX:
-		dest.Status = schema.PictureStatusInbox
-	case PictureStatus_PICTURE_STATUS_REMOVED:
-		dest.Status = schema.PictureStatusRemoved
-	}
-
-	if request.GetPictureItem() != nil {
-		dest.PictureItem = &query.PictureItemListOptions{}
-		mapPictureItemRequest(request.GetPictureItem(), dest.PictureItem)
-	}
-}
-
-func mapItemParentListOptions(in *ItemParentListOptions, options *query.ItemParentListOptions) error {
-	options.ParentID = in.GetParentId()
-	options.ItemID = in.GetItemId()
-	options.Type = reverseConvertItemParentType(in.GetType())
-
-	if in.GetParent() != nil {
-		options.ParentItems = &query.ItemsListOptions{}
-
-		err := mapItemListOptions(in.GetParent(), options.ParentItems)
-		if err != nil {
-			return err
-		}
-	}
-
-	if in.GetItemParentParentByChild() != nil {
-		options.ItemParentParentByChildID = &query.ItemParentListOptions{}
-
-		err := mapItemParentListOptions(in.GetItemParentParentByChild(), options.ItemParentParentByChildID)
-		if err != nil {
-			return err
-		}
-	}
-
-	if in.GetItem() != nil {
-		options.ChildItems = &query.ItemsListOptions{}
-
-		err := mapItemListOptions(in.GetItem(), options.ChildItems)
-		if err != nil {
-			return err
-		}
-	}
-
-	if in.GetItemParentCacheItemByChild() != nil {
-		options.ItemParentCacheAncestorByChildID = &query.ItemParentCacheListOptions{}
-
-		err := mapItemParentCacheListOptions(in.GetItemParentCacheItemByChild(), options.ItemParentCacheAncestorByChildID)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func mapItemParentCacheListOptions(in *ItemParentCacheListOptions, options *query.ItemParentCacheListOptions) error {
-	options.ItemID = in.GetItemId()
-	options.ParentID = in.GetParentId()
-
-	if in.GetItemsByItemId() != nil {
-		options.ItemsByItemID = &query.ItemsListOptions{}
-
-		err := mapItemListOptions(in.GetItemsByItemId(), options.ItemsByItemID)
-		if err != nil {
-			return err
-		}
-	}
-
-	if in.GetPictureItemsByItemId() != nil {
-		options.PictureItemsByItemID = &query.PictureItemListOptions{}
-
-		mapPictureItemRequest(in.GetPictureItemsByItemId(), options.PictureItemsByItemID)
-	}
-
-	if in.GetItemParentByItemId() != nil {
-		options.ItemParentByItemID = &query.ItemParentListOptions{}
-
-		err := mapItemParentListOptions(in.GetItemParentByItemId(), options.ItemParentByItemID)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func mapItemListOptions(in *ItemListOptions, options *query.ItemsListOptions) error {
-	options.NoParents = in.GetNoParent()
-	options.Catname = in.GetCatname()
-	options.IsConcept = in.GetIsConcept()
-	options.Name = in.GetName()
-	options.ItemID = in.GetId()
-	options.EngineItemID = in.GetEngineId()
-	options.IsGroup = in.GetIsGroup()
-	options.Autocomplete = in.GetAutocomplete()
-	options.SuggestionsTo = in.GetSuggestionsTo()
-
-	if in.GetAncestor() != nil {
-		options.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
-
-		err := mapItemParentCacheListOptions(in.GetAncestor(), options.ItemParentCacheAncestor)
-		if err != nil {
-			return err
-		}
-	}
-
-	itemTypeID := reverseConvertItemTypeID(in.GetTypeId())
-	if itemTypeID != 0 {
-		options.TypeID = []schema.ItemTableItemTypeID{itemTypeID}
-	}
-
-	if in.GetDescendant() != nil {
-		options.ItemParentCacheDescendant = &query.ItemParentCacheListOptions{}
-
-		err := mapItemParentCacheListOptions(in.GetDescendant(), options.ItemParentCacheDescendant)
-		if err != nil {
-			return err
-		}
-	}
-
-	if in.GetParent() != nil {
-		options.ItemParentParent = &query.ItemParentListOptions{}
-
-		err := mapItemParentListOptions(in.GetParent(), options.ItemParentParent)
-		if err != nil {
-			return err
-		}
-	}
-
-	if in.GetChild() != nil {
-		options.ItemParentChild = &query.ItemParentListOptions{}
-
-		err := mapItemParentListOptions(in.GetChild(), options.ItemParentChild)
-		if err != nil {
-			return err
-		}
-	}
-
-	if in.GetPreviewPictures() != nil {
-		options.PreviewPictures = &query.PictureItemListOptions{}
-		mapPictureItemRequest(in.GetPreviewPictures(), options.PreviewPictures)
-	}
-
-	parentTypesOf := reverseConvertItemTypeID(in.GetParentTypesOf())
-	if parentTypesOf != 0 {
-		options.ParentTypesOf = parentTypesOf
-	}
-
-	if in.GetExcludeSelfAndChilds() != 0 {
-		options.ExcludeSelfAndChilds = in.GetExcludeSelfAndChilds()
-	}
-
-	return nil
-}
-
-func mapPictureItemRequest(request *PictureItemOptions, dest *query.PictureItemListOptions) {
-	if request.GetPictures() != nil {
-		dest.Pictures = &query.PictureListOptions{}
-		mapPicturesRequest(request.GetPictures(), dest.Pictures)
-	}
-
-	switch request.GetTypeId() {
-	case PictureItemType_PICTURE_ITEM_UNKNOWN:
-	case PictureItemType_PICTURE_ITEM_CONTENT:
-		dest.TypeID = schema.PictureItemContent
-	case PictureItemType_PICTURE_ITEM_AUTHOR:
-		dest.TypeID = schema.PictureItemAuthor
-	case PictureItemType_PICTURE_ITEM_COPYRIGHTS:
-		dest.TypeID = schema.PictureItemCopyrights
-	}
-
-	dest.PerspectiveID = request.GetPerspectiveId()
-}
-
-func convertFields(fields *ItemFields) items.ListFields {
-	if fields == nil {
-		return items.ListFields{}
-	}
-
-	previewPictures := items.ListPreviewPicturesFields{}
-	if fields.GetPreviewPictures() != nil {
-		previewPictures.Route = fields.GetPreviewPictures().GetRoute()
-		previewPictures.Picture = items.ListPreviewPicturesPictureFields{
-			NameText: fields.GetPreviewPictures().GetPicture().GetNameText(),
-		}
-	}
-
-	result := items.ListFields{
-		NameOnly:        fields.GetNameOnly(),
-		NameHTML:        fields.GetNameHtml(),
-		NameText:        fields.GetNameText(),
-		NameDefault:     fields.GetNameDefault(),
-		Description:     fields.GetDescription(),
-		HasText:         fields.GetHasText(),
-		PreviewPictures: previewPictures,
-		// TotalPictures:              fields.GetTotalPictures(),
-		DescendantsCount:           fields.GetDescendantsCount(),
-		DescendantPicturesCount:    fields.GetDescendantPicturesCount(),
-		ChildsCount:                fields.GetChildsCount(),
-		DescendantTwinsGroupsCount: fields.GetDescendantTwinsGroupsCount(),
-		InboxPicturesCount:         fields.GetInboxPicturesCount(),
-		AcceptedPicturesCount:      fields.GetAcceptedPicturesCount(),
-		FullName:                   fields.GetFullName(),
-		Logo:                       fields.GetLogo120(),
-		MostsActive:                fields.GetMostsActive(),
-		CommentsAttentionsCount:    fields.GetCommentsAttentionsCount(),
-		HasChildSpecs:              fields.GetHasChildSpecs(),
-	}
-
-	return result
-}
-
 func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, error) {
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
@@ -640,7 +389,7 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 
 	localizer := s.i18n.Localizer(in.GetLanguage())
 
-	return s.extractor.Extract(ctx, res, in.GetFields(), localizer)
+	return s.extractor.Extract(ctx, res, in.GetFields(), localizer, in.GetLanguage())
 }
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
@@ -692,7 +441,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 
 	is := make([]*APIItem, len(res))
 	for idx, i := range res {
-		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), localizer)
+		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), localizer, in.GetLanguage())
 		if err != nil {
 			return nil, err
 		}
@@ -1603,7 +1352,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 
 	localizer := s.i18n.Localizer(lang)
 
-	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, localizer)
+	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, localizer, lang)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1628,7 +1377,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, localizer)
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, localizer, lang)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1665,7 +1414,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 
 	localizer := s.i18n.Localizer(lang)
 
-	extractedBrand, err := s.extractor.Extract(ctx, category, nil, localizer)
+	extractedBrand, err := s.extractor.Extract(ctx, category, nil, localizer, lang)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1693,7 +1442,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, localizer)
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, localizer, lang)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -2703,19 +2452,60 @@ func (s *ItemsGRPCServer) GetItemParents(
 		order = items.ItemParentOrderByAuto
 	}
 
-	rows, pages, err := s.repository.ItemParents(ctx, options, items.ItemParentFields{}, order)
+	fields := convertItemParentFields(in.GetFields())
+
+	rows, pages, err := s.repository.ItemParents(ctx, options, fields, order)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	localizer := s.i18n.Localizer(in.GetLanguage())
+	itemFields := in.GetFields().GetItem()
+	itemsMap := make(map[int64]*items.Item, len(rows))
+
+	if itemFields != nil && len(rows) > 0 {
+		repoItemFields := convertFields(itemFields)
+
+		for _, row := range rows {
+			itemsMap[row.ItemID] = nil
+		}
+
+		keys := slices.Collect(maps.Keys(itemsMap))
+
+		itemRows, _, err := s.repository.List(ctx, query.ItemsListOptions{
+			ItemIDs:  keys,
+			Language: in.GetLanguage(),
+		}, repoItemFields, items.OrderByNone, false)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		for _, itemRow := range itemRows {
+			itemsMap[itemRow.ID] = &itemRow
+		}
+	}
+
 	res := make([]*ItemParent, 0, len(rows))
+
 	for _, row := range rows {
-		res = append(res, &ItemParent{
+		resRow := &ItemParent{
 			ItemId:   row.ItemID,
 			ParentId: row.ParentID,
 			Type:     convertItemParentType(row.Type),
 			Catname:  row.Catname,
-		})
+		}
+
+		if in.GetFields().GetItem() != nil {
+			itemRow := itemsMap[row.ItemID]
+			if itemRow != nil {
+				resRow.Item, err = s.extractor.Extract(ctx, *itemRow, itemFields, localizer, in.GetLanguage())
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+			}
+		}
+
+		res = append(res, resRow)
 	}
 
 	var paginator *Pages

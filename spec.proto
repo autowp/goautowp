@@ -1005,6 +1005,12 @@ message ItemFields {
   bool location = 21;
   bool accepted_pictures_count = 22;
   bool has_child_specs = 23;
+  bool has_specs = 24;
+  bool full_text = 25;
+  bool other_names = 26;
+  bool design = 27;
+  bool specs_route = 28;
+  bool childs_counts = 29;
 }
 
 message ItemRequest {
@@ -1042,6 +1048,7 @@ message ItemParentListOptions {
   ItemParentType type = 5;
   ItemListOptions item = 6;
   ItemParentCacheListOptions item_parent_cache_item_by_child = 7;
+  string catname = 8;
 }
 
 message ItemParentCacheListOptions {
@@ -1070,6 +1077,7 @@ message ItemListOptions {
   int64 exclude_self_and_childs = 21;
   string autocomplete = 22;
   int64 suggestions_to = 23;
+  bool is_not_concept = 24;
 }
 
 message GetTreeRequest {
@@ -1112,6 +1120,24 @@ message APIItem {
   google.type.LatLng location = 26;
   int32 accepted_pictures_count = 27;
   bool has_child_specs = 28;
+  bool has_specs = 29;
+  int32 produced = 30;
+  bool produced_exactly = 31;
+  repeated string other_names = 32;
+  Design design = 33;
+  repeated string specs_route = 34;
+  bool is_group = 35;
+  repeated ChildsCount childs_counts = 36;
+}
+
+message ChildsCount {
+  ItemParentType type = 1;
+  int32 count = 2;
+}
+
+message Design {
+  string name = 1;
+  repeated string route = 2;
 }
 
 message APIItemList {
@@ -1633,6 +1659,10 @@ message NewItemsResponse {
   repeated APIItem items = 2;
 }
 
+message ItemParentFields {
+  ItemFields item = 1;
+}
+
 message GetItemParentsRequest {
   enum Order {
     NONE = 0;
@@ -1644,6 +1674,8 @@ message GetItemParentsRequest {
   Order order = 2;
   uint32 limit = 3;
   uint32 page = 4;
+  ItemParentFields fields = 5;
+  string language = 6;
 }
 
 message GetItemParentsResponse {
@@ -1656,6 +1688,7 @@ message ItemParent {
   int64 parent_id = 2;
   ItemParentType type = 3;
   string catname = 4;
+  APIItem item = 5;
 }
 
 message DeleteItemParentRequest {

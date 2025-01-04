@@ -98,7 +98,7 @@ type ItemRow struct {
 	IsConceptInherit       bool                `db:"is_concept_inherit"`
 	BeginModelYearFraction sql.NullString      `db:"begin_model_year_fraction"`
 	EndModelYearFraction   sql.NullString      `db:"end_model_year_fraction"`
-	Produced               bool                `db:"produced"`
+	Produced               sql.NullInt32       `db:"produced"`
 	ProducedExactly        bool                `db:"produced_exactly"`
 	IsGroup                bool                `db:"is_group"`
 	CarTypeInherit         bool                `db:"car_type_inherit"`

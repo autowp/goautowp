@@ -28,6 +28,7 @@ type ItemParentListOptions struct {
 	Language                          string
 	Limit                             uint32
 	Page                              uint32
+	Catname                           string
 }
 
 func (s *ItemParentListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, bool) {
@@ -50,6 +51,7 @@ func (s *ItemParentListOptions) CountSelect(db *goqu.Database) *goqu.SelectDatas
 
 func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool) {
 	groupBy := false
+	subGroupBy := false
 	aliasTable := goqu.T(alias)
 
 	if s.ItemID != 0 {
@@ -65,13 +67,17 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 	}
 
 	if s.Type != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableTypeCol).Eq(s.Type))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableTypeColName).Eq(s.Type))
 	}
 
 	if s.LinkedInDays > 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableTimestampColName).Gt(
 			goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL ? DAY", s.LinkedInDays)),
 		))
+	}
+
+	if s.Catname != "" {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableCatnameColName).Eq(s.Catname))
 	}
 
 	if s.ParentItems != nil {
@@ -85,7 +91,10 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 				)),
 			)
 
-		sqSelect = s.ParentItems.Apply(iAlias, sqSelect)
+		sqSelect, subGroupBy = s.ParentItems.Apply(iAlias, sqSelect)
+		if subGroupBy {
+			groupBy = true
+		}
 	}
 
 	if s.ChildItems != nil {
@@ -99,7 +108,10 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 				)),
 			)
 
-		sqSelect = s.ChildItems.Apply(iAlias, sqSelect)
+		sqSelect, groupBy = s.ChildItems.Apply(iAlias, sqSelect)
+		if subGroupBy {
+			groupBy = true
+		}
 	}
 
 	if s.ItemParentCacheAncestorByParentID != nil {

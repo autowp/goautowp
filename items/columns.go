@@ -299,3 +299,16 @@ func (s HasChildSpecsColumn) SelectExpr(alias string, _ string) (AliaseableExpre
 			Limit(1),
 	), nil
 }
+
+type HasSpecsColumn struct {
+	db *goqu.Database
+}
+
+func (s HasSpecsColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+	return goqu.Func("EXISTS",
+		s.db.Select(goqu.V(true)).
+			From(schema.AttrsValuesTable).
+			Where(schema.AttrsValuesTableItemIDCol.Eq(goqu.T(alias).Col(schema.ItemTableIDColName))).
+			Limit(1),
+	), nil
+}

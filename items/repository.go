@@ -27,6 +27,7 @@ import (
 )
 
 var (
+	errUnexpectedID                    = errors.New("unexpected `id`")
 	ErrItemNotFound                    = errors.New("item not found")
 	errLangNotFound                    = errors.New("language not found")
 	errFieldsIsRequired                = errors.New("fields is required")
@@ -71,6 +72,7 @@ const (
 	colStarCount                  = "star_count"
 	colItemParentParentTimestamp  = "item_parent_parent_timestamp"
 	colHasChildSpecs              = "has_child_specs"
+	colHasSpecs                   = "has_specs"
 )
 
 const (
@@ -135,6 +137,7 @@ const (
 	ItemParentOrderByNone ItemParentOrderBy = iota
 	ItemParentOrderByAuto
 	ItemParentOrderByCategoriesFirst
+	ItemParentOrderByStockFirst
 )
 
 var catnameBlacklist = []string{"sport", "tuning", "related", "pictures", "specifications"}
@@ -160,6 +163,32 @@ var languagePriority = map[string][]string{
 	"he":                {"he", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", DefaultLanguageCode},
 }
 
+type CataloguePathOptions struct {
+	ToBrand      bool
+	ToBrandID    int64
+	BreakOnFirst bool
+	StockFirst   bool
+}
+
+type CataloguePathResult struct {
+	Type            CataloguePathResultType
+	BrandCatname    string
+	CarCatname      string
+	Path            []string
+	Stock           bool
+	CategotyCatname string
+	ID              int64
+}
+
+type CataloguePathResultType = int
+
+const (
+	CataloguePathResultTypeBrand CataloguePathResultType = iota
+	CataloguePathResultTypeCategory
+	CataloguePathResultTypePerson
+	CataloguePathResultTypeBrandItem
+)
+
 // Repository Main Object.
 type Repository struct {
 	db                               *goqu.Database
@@ -181,6 +210,7 @@ type Repository struct {
 	childItemsCountColumn            *ChildItemsCountColumn
 	newChildItemsCountColumn         *NewChildItemsCountColumn
 	hasChildSpecsColumn              *HasChildSpecsColumn
+	hasSpecsColumn                   *HasSpecsColumn
 	logoColumn                       *SimpleColumn
 	fullNameColumn                   *SimpleColumn
 	idColumn                         *SimpleColumn
@@ -241,6 +271,7 @@ type Item struct {
 	CommentsAttentionsCount    int32
 	AcceptedPicturesCount      int32
 	HasChildSpecs              bool
+	HasSpecs                   bool
 }
 
 type ItemLanguage struct {
@@ -294,6 +325,9 @@ func NewRepository(
 		childItemsCountColumn:            &ChildItemsCountColumn{},
 		newChildItemsCountColumn:         &NewChildItemsCountColumn{},
 		hasChildSpecsColumn: &HasChildSpecsColumn{
+			db: db,
+		},
+		hasSpecsColumn: &HasSpecsColumn{
 			db: db,
 		},
 		idColumn:                        &SimpleColumn{col: schema.ItemTableIDColName},
@@ -368,6 +402,8 @@ type ListFields struct {
 	DescendantsParentsCount    bool
 	NewDescendantsParentsCount bool
 	HasChildSpecs              bool
+	HasSpecs                   bool
+	OtherNames                 bool
 }
 
 func yearsPrefix(begin int32, end int32) string {
@@ -530,6 +566,10 @@ func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 		columns[colHasChildSpecs] = s.hasChildSpecsColumn
 	}
 
+	if fields.HasSpecs {
+		columns[colHasSpecs] = s.hasSpecsColumn
+	}
+
 	return columns
 }
 
@@ -540,8 +580,9 @@ func (s *Repository) IDsSelect(options query.ItemsListOptions) (*goqu.SelectData
 	}
 
 	sqSelect := s.db.Select(goqu.I(alias).Col(schema.ItemTableIDColName)).From(schema.ItemTable.As(alias))
+	sqSelect, _ = options.Apply(alias, sqSelect)
 
-	return options.Apply(alias, sqSelect), nil
+	return sqSelect, nil
 }
 
 func (s *Repository) IDs(ctx context.Context, options query.ItemsListOptions) ([]int64, error) {
@@ -1027,6 +1068,12 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &row.AcceptedPicturesCount
 			case colHasChildSpecs:
 				pointers[i] = &row.HasChildSpecs
+			case colHasSpecs:
+				pointers[i] = &row.HasSpecs
+			case schema.ItemTableProducedColName:
+				pointers[i] = &row.Produced
+			case schema.ItemTableProducedExactlyColName:
+				pointers[i] = &row.ProducedExactly
 			default:
 				pointers[i] = nil
 			}
@@ -2938,6 +2985,12 @@ func (s *Repository) ItemParentSelect(
 			itemOrderAliasTable.Col(schema.ItemTableBodyColName).Asc(),
 			itemOrderAliasTable.Col(schema.ItemTableSpecIDColName).Asc(),
 		)
+	case ItemParentOrderByStockFirst:
+		sqSelect = sqSelect.Order(
+			goqu.L("?",
+				aliasTable.Col(schema.ItemParentTableTypeColName).Eq(schema.ItemParentTypeDefault),
+			).Desc(),
+		)
 	}
 
 	if joinItem {
@@ -3287,4 +3340,293 @@ func (s *Repository) RefreshItemParentLanguage(
 	}
 
 	return nil
+}
+
+func (s *Repository) Names(ctx context.Context, id int64) ([]string, error) {
+	res := make([]string, 0)
+
+	err := s.db.Select(schema.ItemLanguageTableNameCol).
+		From(schema.ItemLanguageTable).
+		Where(
+			schema.ItemLanguageTableItemIDCol.Eq(id),
+			goqu.Func("length", schema.ItemLanguageTableNameCol).Gt(0),
+		).
+		ScanValsContext(ctx, &res)
+
+	return res, err
+}
+
+type DesignInfo struct {
+	Name  string
+	Route []string
+}
+
+func (s *Repository) DesignInfo(ctx context.Context, id int64, lang string) (*DesignInfo, error) {
+	row := struct {
+		Name             string `db:"name"`
+		Catname          string `db:"catname"`
+		BrandItemCatname string `db:"brand_item_catname"`
+	}{}
+
+	nameColumn := NameOnlyColumn{
+		db: s.db,
+	}
+
+	expr, err := nameColumn.SelectExpr(schema.ItemTableName, lang)
+	if err != nil {
+		return nil, err
+	}
+
+	sqSelect := s.db.Select(
+		schema.ItemTableCatnameCol, expr.As("name"), schema.ItemParentTableCatnameCol.As("brand_item_catname"),
+	).
+		From(schema.ItemTable).
+		Join(schema.ItemParentTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentTableParentIDCol))).
+		Join(schema.ItemParentCacheTable, goqu.On(
+			schema.ItemParentTableItemIDCol.Eq(schema.ItemParentCacheTableParentIDCol),
+		)).
+		Where(
+			schema.ItemTableItemTypeIDCol.Eq(schema.ItemTableItemTypeIDBrand),
+			schema.ItemParentCacheTableItemIDCol.Eq(id),
+		).
+		Order(schema.ItemParentCacheTableDiffCol.Asc()).
+		Limit(1)
+
+	success, err := sqSelect.Where(schema.ItemParentTableTypeCol.Eq(schema.ItemParentTypeDesign)).
+		ScanStructContext(ctx, &row)
+	if err != nil {
+		return nil, err
+	}
+
+	if success {
+		return &DesignInfo{
+			Name:  row.Name,
+			Route: []string{"/", row.Catname, row.BrandItemCatname},
+		}, nil
+	}
+
+	success, err = sqSelect.Where(schema.ItemParentCacheTableDesignCol.IsTrue()).
+		ScanStructContext(ctx, &row)
+	if err != nil {
+		return nil, err
+	}
+
+	if success {
+		return &DesignInfo{
+			Name:  row.Name,
+			Route: []string{"/", row.Catname, row.BrandItemCatname},
+		}, nil
+	}
+
+	return nil, nil //nolint: nilnil
+}
+
+func (s *Repository) SpecsRoute(ctx context.Context, id int64) ([]string, error) {
+	cataloguePaths, err := s.CataloguePath(ctx, id, CataloguePathOptions{
+		ToBrand:      true,
+		BreakOnFirst: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, path := range cataloguePaths {
+		res := []string{"/", path.BrandCatname, path.CarCatname}
+		res = append(res, path.Path...)
+		res = append(res, "specifications")
+
+		return res, nil
+	}
+
+	return nil, nil
+}
+
+func (s *Repository) CataloguePath(
+	ctx context.Context, id int64, options CataloguePathOptions,
+) ([]CataloguePathResult, error) {
+	paths, err := s.CataloguePaths(ctx, id, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return paths, nil
+}
+
+func (s *Repository) CataloguePaths(
+	ctx context.Context, id int64, options CataloguePathOptions,
+) ([]CataloguePathResult, error) {
+	if id <= 0 {
+		return nil, errUnexpectedID
+	}
+
+	breakOnFirst := options.BreakOnFirst
+	stockFirst := options.StockFirst
+	toBrand := options.ToBrand
+	toBrandID := options.ToBrandID
+
+	result := make([]CataloguePathResult, 0)
+
+	if toBrandID == 0 || id == toBrandID {
+		var brandCatname string
+
+		success, err := s.db.Select(schema.ItemTableCatnameCol).From(schema.ItemTable).Where(
+			schema.ItemTableIDCol.Eq(id),
+			schema.ItemTableItemTypeIDCol.Eq(schema.ItemTableItemTypeIDBrand),
+		).ScanValContext(ctx, &brandCatname)
+		if err != nil {
+			return nil, err
+		}
+
+		if success {
+			result = append(result, CataloguePathResult{
+				Type:         CataloguePathResultTypeBrand,
+				BrandCatname: brandCatname,
+				CarCatname:   "",
+				Path:         []string{},
+				Stock:        true,
+			})
+
+			if breakOnFirst {
+				return result, nil
+			}
+		}
+	}
+
+	if !toBrand {
+		var category schema.ItemRow
+
+		success, err := s.db.Select(schema.ItemTableIDCol, schema.ItemTableCatnameCol, schema.ItemTableItemTypeIDCol).
+			From(schema.ItemTable).
+			Where(
+				schema.ItemTableIDCol.Eq(id),
+				schema.ItemTableItemTypeIDCol.In(
+					[]schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDPerson},
+				),
+			).
+			ScanStructContext(ctx, &category)
+		if err != nil {
+			return nil, err
+		}
+
+		if success {
+			switch category.ItemTypeID {
+			case schema.ItemTableItemTypeIDCategory:
+				result = append(result, CataloguePathResult{
+					Type:            CataloguePathResultTypeCategory,
+					CategotyCatname: util.NullStringToString(category.Catname),
+				})
+
+				if breakOnFirst {
+					return result, nil
+				}
+
+			case schema.ItemTableItemTypeIDPerson:
+				result = append(result, CataloguePathResult{
+					Type: CataloguePathResultTypePerson,
+					ID:   category.ID,
+				})
+
+				if breakOnFirst {
+					return result, nil
+				}
+
+			case schema.ItemTableItemTypeIDVehicle,
+				schema.ItemTableItemTypeIDEngine,
+				schema.ItemTableItemTypeIDTwins,
+				schema.ItemTableItemTypeIDBrand,
+				schema.ItemTableItemTypeIDFactory,
+				schema.ItemTableItemTypeIDMuseum,
+				schema.ItemTableItemTypeIDCopyright:
+			}
+		}
+	}
+
+	parentRows, _, err := s.ItemParents(ctx, query.ItemParentListOptions{
+		ItemID: id,
+	}, ItemParentFields{}, ItemParentOrderByStockFirst)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, parentRow := range parentRows {
+		paths, err := s.CataloguePaths(ctx, parentRow.ParentID, options)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, path := range paths {
+			switch path.Type {
+			case CataloguePathResultTypeBrand:
+				result = append(result, CataloguePathResult{
+					Type:         CataloguePathResultTypeBrandItem,
+					BrandCatname: path.BrandCatname,
+					CarCatname:   parentRow.Catname,
+					Path:         []string{},
+					Stock:        parentRow.Type == schema.ItemParentTypeDefault,
+				})
+
+			case CataloguePathResultTypeBrandItem:
+				isStock := path.Stock && (parentRow.Type == schema.ItemParentTypeDefault)
+				result = append(result, CataloguePathResult{
+					Type:         path.Type,
+					BrandCatname: path.BrandCatname,
+					CarCatname:   path.CarCatname,
+					Path:         append(path.Path, parentRow.Catname),
+					Stock:        isStock,
+				})
+			default:
+			}
+		}
+
+		if stockFirst {
+			slices.SortFunc(result, func(aItem, bItem CataloguePathResult) int {
+				if aItem.Stock {
+					if bItem.Stock {
+						return 0
+					}
+
+					return -1
+				}
+
+				if bItem.Stock {
+					return 1
+				}
+
+				return 0
+			})
+		}
+
+		if breakOnFirst && len(result) > 0 {
+			result = []CataloguePathResult{result[0]} // truncate to first
+			if stockFirst {
+				if result[0].Stock {
+					return result, nil
+				}
+			} else {
+				return []CataloguePathResult{result[0]}, nil
+			}
+		}
+	}
+
+	if breakOnFirst && len(result) > 1 {
+		result = []CataloguePathResult{result[0]} // truncate to first
+	}
+
+	return result, nil
+}
+
+type ChildCount struct {
+	Type  schema.ItemParentType `db:"type"`
+	Count int32                 `db:"count"`
+}
+
+func (s *Repository) ChildsCounts(ctx context.Context, id int64) ([]ChildCount, error) {
+	res := make([]ChildCount, 0)
+
+	err := s.db.Select(schema.ItemParentTableTypeCol, goqu.COUNT(goqu.Star()).As("count")).
+		From(schema.ItemParentTable).
+		Where(schema.ItemParentTableParentIDCol.Eq(id)).
+		GroupBy(schema.ItemParentTableTypeCol).ScanStructsContext(ctx, &res)
+
+	return res, err
 }

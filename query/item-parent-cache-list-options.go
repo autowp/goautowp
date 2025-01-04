@@ -59,7 +59,7 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 				goqu.On(aliasTable.Col(schema.ItemParentCacheTableItemIDColName).Eq(goqu.T(iAlias).Col(schema.ItemTableIDColName))),
 			)
 
-		sqSelect = s.ItemsByItemID.Apply(iAlias, sqSelect)
+		sqSelect, _ = s.ItemsByItemID.Apply(iAlias, sqSelect)
 	}
 
 	if s.ItemsByParentID != nil {
@@ -72,7 +72,7 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 				)),
 			)
 
-		sqSelect = s.ItemsByParentID.Apply(iAlias, sqSelect)
+		sqSelect, _ = s.ItemsByParentID.Apply(iAlias, sqSelect)
 	}
 
 	if s.ItemParentByItemID != nil {

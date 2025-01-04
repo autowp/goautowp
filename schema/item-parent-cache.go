@@ -16,4 +16,6 @@ var (
 	ItemParentCacheTable            = goqu.T(ItemParentCacheTableName)
 	ItemParentCacheTableItemIDCol   = ItemParentCacheTable.Col(ItemParentCacheTableItemIDColName)
 	ItemParentCacheTableParentIDCol = ItemParentCacheTable.Col(ItemParentCacheTableParentIDColName)
+	ItemParentCacheTableDiffCol     = ItemParentCacheTable.Col(ItemParentCacheTableDiffColName)
+	ItemParentCacheTableDesignCol   = ItemParentCacheTable.Col(ItemParentCacheTableDesignColName)
 )

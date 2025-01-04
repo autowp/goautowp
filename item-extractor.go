@@ -17,58 +17,6 @@ import (
 	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
-func convertItemTypeID(itemTypeID schema.ItemTableItemTypeID) ItemType {
-	switch itemTypeID {
-	case schema.ItemTableItemTypeIDVehicle:
-		return ItemType_ITEM_TYPE_VEHICLE
-	case schema.ItemTableItemTypeIDEngine:
-		return ItemType_ITEM_TYPE_ENGINE
-	case schema.ItemTableItemTypeIDCategory:
-		return ItemType_ITEM_TYPE_CATEGORY
-	case schema.ItemTableItemTypeIDTwins:
-		return ItemType_ITEM_TYPE_TWINS
-	case schema.ItemTableItemTypeIDBrand:
-		return ItemType_ITEM_TYPE_BRAND
-	case schema.ItemTableItemTypeIDFactory:
-		return ItemType_ITEM_TYPE_FACTORY
-	case schema.ItemTableItemTypeIDMuseum:
-		return ItemType_ITEM_TYPE_MUSEUM
-	case schema.ItemTableItemTypeIDPerson:
-		return ItemType_ITEM_TYPE_PERSON
-	case schema.ItemTableItemTypeIDCopyright:
-		return ItemType_ITEM_TYPE_COPYRIGHT
-	}
-
-	return ItemType_ITEM_TYPE_UNKNOWN
-}
-
-func reverseConvertItemTypeID(itemTypeID ItemType) schema.ItemTableItemTypeID {
-	switch itemTypeID {
-	case ItemType_ITEM_TYPE_UNKNOWN:
-		return 0
-	case ItemType_ITEM_TYPE_VEHICLE:
-		return schema.ItemTableItemTypeIDVehicle
-	case ItemType_ITEM_TYPE_ENGINE:
-		return schema.ItemTableItemTypeIDEngine
-	case ItemType_ITEM_TYPE_CATEGORY:
-		return schema.ItemTableItemTypeIDCategory
-	case ItemType_ITEM_TYPE_TWINS:
-		return schema.ItemTableItemTypeIDTwins
-	case ItemType_ITEM_TYPE_BRAND:
-		return schema.ItemTableItemTypeIDBrand
-	case ItemType_ITEM_TYPE_FACTORY:
-		return schema.ItemTableItemTypeIDFactory
-	case ItemType_ITEM_TYPE_MUSEUM:
-		return schema.ItemTableItemTypeIDMuseum
-	case ItemType_ITEM_TYPE_PERSON:
-		return schema.ItemTableItemTypeIDPerson
-	case ItemType_ITEM_TYPE_COPYRIGHT:
-		return schema.ItemTableItemTypeIDCopyright
-	}
-
-	return 0
-}
-
 type ItemExtractor struct {
 	enforcer            *casbin.Enforcer
 	nameFormatter       *items.ItemNameFormatter
@@ -102,7 +50,7 @@ func NewItemExtractor(
 }
 
 func (s *ItemExtractor) Extract(
-	ctx context.Context, row items.Item, fields *ItemFields, localizer *i18n.Localizer,
+	ctx context.Context, row items.Item, fields *ItemFields, localizer *i18n.Localizer, lang string,
 ) (*APIItem, error) {
 	if fields == nil {
 		fields = &ItemFields{}
@@ -129,6 +77,10 @@ func (s *ItemExtractor) Extract(
 		MostsActive:                row.MostsActive,
 		CommentsAttentionsCount:    row.CommentsAttentionsCount,
 		HasChildSpecs:              row.HasChildSpecs,
+		HasSpecs:                   row.HasSpecs,
+		Produced:                   util.NullInt32ToScalar(row.Produced),
+		ProducedExactly:            row.ProducedExactly,
+		IsGroup:                    row.IsGroup,
 	}
 
 	if fields.GetLogo120() && row.LogoID.Valid {
@@ -187,38 +139,92 @@ func (s *ItemExtractor) Extract(
 
 			result.NameHtml = nameHTML
 		}
+	}
 
-		if fields.GetIsCompilesItemOfDay() {
-			IsCompiles, err := s.itemOfDayRepository.IsComplies(ctx, row.ID)
+	if fields.GetIsCompilesItemOfDay() {
+		IsCompiles, err := s.itemOfDayRepository.IsComplies(ctx, row.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		result.IsCompilesItemOfDay = IsCompiles
+	}
+
+	if fields.GetAttrZoneId() {
+		vehicleTypes, err := s.itemRepository.VehicleTypes(ctx, row.ID, false)
+		if err != nil {
+			return nil, err
+		}
+
+		result.AttrZoneId = s.attrs.ZoneIDByVehicleTypeIDs(row.ItemTypeID, vehicleTypes)
+	}
+
+	if fields.GetLocation() {
+		location, err := s.itemRepository.ItemLocation(ctx, row.ID)
+		if err != nil {
+			if !errors.Is(err, items.ErrItemNotFound) {
+				return nil, err
+			}
+		} else {
+			result.Location = &latlng.LatLng{
+				Latitude:  location.Lat(),
+				Longitude: location.Lng(),
+			}
+		}
+	}
+
+	if fields.GetOtherNames() {
+		rows, err := s.itemRepository.Names(ctx, row.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		otherNames := make([]string, 0, len(rows))
+		for _, name := range rows {
+			if row.Name != name && !util.Contains(otherNames, name) {
+				otherNames = append(otherNames, name)
+			}
+		}
+
+		result.OtherNames = otherNames
+	}
+
+	if fields.GetDesign() {
+		designInfo, err := s.itemRepository.DesignInfo(ctx, row.ID, lang)
+		if err != nil {
+			return nil, err
+		}
+
+		if designInfo != nil {
+			result.Design = &Design{
+				Name:  designInfo.Name,
+				Route: designInfo.Route,
+			}
+		}
+	}
+
+	if fields.GetSpecsRoute() {
+		itemTypeCanHaveSpecs := []schema.ItemTableItemTypeID{
+			schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDTwins,
+			schema.ItemTableItemTypeIDVehicle,
+		}
+		if util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) && row.HasSpecs {
+			specsRoute, err := s.itemRepository.SpecsRoute(ctx, row.ID)
 			if err != nil {
 				return nil, err
 			}
 
-			result.IsCompilesItemOfDay = IsCompiles
+			result.SpecsRoute = specsRoute
+		}
+	}
+
+	if fields.GetChildsCounts() {
+		childCounts, err := s.itemRepository.ChildsCounts(ctx, row.ID)
+		if err != nil {
+			return nil, err
 		}
 
-		if fields.GetAttrZoneId() {
-			vehicleTypes, err := s.itemRepository.VehicleTypes(ctx, row.ID, false)
-			if err != nil {
-				return nil, err
-			}
-
-			result.AttrZoneId = s.attrs.ZoneIDByVehicleTypeIDs(row.ItemTypeID, vehicleTypes)
-		}
-
-		if fields.GetLocation() {
-			location, err := s.itemRepository.ItemLocation(ctx, row.ID)
-			if err != nil {
-				if !errors.Is(err, items.ErrItemNotFound) {
-					return nil, err
-				}
-			} else {
-				result.Location = &latlng.LatLng{
-					Latitude:  location.Lat(),
-					Longitude: location.Lng(),
-				}
-			}
-		}
+		result.ChildsCounts = convertChildsCounts(childCounts)
 	}
 
 	return result, nil
