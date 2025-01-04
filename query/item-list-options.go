@@ -135,7 +135,12 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 			Where(schema.CarTypesParentsTableParentIDCol.Eq(s.VehicleTypeAncestorID))
 	}
 
-	sqSelect = s.applyExcludeVehicleTypeAncestorID(alias, sqSelect)
+	var subGroupBy bool
+
+	sqSelect, subGroupBy = s.applyExcludeVehicleTypeAncestorID(alias, sqSelect)
+	if subGroupBy {
+		groupBy = true
+	}
 
 	if s.VehicleTypeIsNull {
 		sqSelect = sqSelect.
@@ -273,8 +278,6 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 
 	sqSelect = s.applyExcludeSelfAndChilds(alias, sqSelect)
 
-	var subGroupBy bool
-
 	sqSelect, subGroupBy = s.applySuggestionsTo(alias, sqSelect)
 	if subGroupBy {
 		groupBy = true
@@ -348,9 +351,9 @@ func (s *ItemsListOptions) applySuggestionsTo(
 
 func (s *ItemsListOptions) applyExcludeVehicleTypeAncestorID(
 	alias string, sqSelect *goqu.SelectDataset,
-) *goqu.SelectDataset {
+) (*goqu.SelectDataset, bool) {
 	if len(s.ExcludeVehicleTypeAncestorID) == 0 {
-		return sqSelect
+		return sqSelect, false
 	}
 
 	aliasTable := goqu.T(alias)
@@ -360,15 +363,16 @@ func (s *ItemsListOptions) applyExcludeVehicleTypeAncestorID(
 		Where(schema.CarTypesParentsTableParentIDCol.In(s.ExcludeVehicleTypeAncestorID))
 
 	return sqSelect.
-		Join(
-			schema.VehicleVehicleTypeTable,
-			goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
-		).
-		Join(
-			schema.CarTypesParentsTable,
-			goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol)),
-		).
-		Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(subSelect))
+			Join(
+				schema.VehicleVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+			).
+			Join(
+				schema.CarTypesParentsTable,
+				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol)),
+			).
+			Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(subSelect)),
+		true
 }
 
 func (s *ItemsListOptions) applyAutocompleteFilter(
