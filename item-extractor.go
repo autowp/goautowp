@@ -83,6 +83,8 @@ func (s *ItemExtractor) Extract(
 		Produced:                   util.NullInt32ToScalar(row.Produced),
 		ProducedExactly:            row.ProducedExactly,
 		IsGroup:                    row.IsGroup,
+		NameOnly:                   row.NameOnly,
+		NameDefault:                row.NameDefault,
 	}
 
 	if fields.GetLogo120() && row.LogoID.Valid {
@@ -101,10 +103,6 @@ func (s *ItemExtractor) Extract(
 		}
 
 		result.Brandicon = APIImageToGRPC(brandicon2)
-	}
-
-	if fields.GetNameOnly() {
-		result.NameOnly = row.NameOnly
 	}
 
 	if fields.GetNameText() || fields.GetNameHtml() {

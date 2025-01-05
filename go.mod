@@ -36,10 +36,10 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v3 v3.0.0-alpha10
-	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
+	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329
 	golang.org/x/text v0.21.0
-	google.golang.org/genproto v0.0.0-20241230172942-26aa7a208def
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241230172942-26aa7a208def
+	google.golang.org/genproto v0.0.0-20250102185135-69823020774d
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.36.1
 	gopkg.in/gographics/imagick.v2 v2.7.0
@@ -61,7 +61,7 @@ require (
 	github.com/desertbit/timer v1.0.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gin-contrib/sse v1.0.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -107,10 +107,10 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/arch v0.12.0 // indirect
+	golang.org/x/arch v0.13.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -117,6 +117,25 @@ func (s TextstorageRefColumn) SelectExpr(alias string, language string) (Aliasea
 		nil
 }
 
+type NameDefaultColumn struct {
+	db *goqu.Database
+}
+
+func (s NameDefaultColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+	return goqu.Func(
+			"IFNULL",
+			s.db.Select(schema.ItemLanguageTableNameCol).
+				From(schema.ItemLanguageTable).
+				Where(
+					schema.ItemLanguageTableItemIDCol.Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
+					schema.ItemLanguageTableLanguageCol.Eq(DefaultLanguageCode),
+				).
+				Limit(1),
+			goqu.V(""),
+		),
+		nil
+}
+
 type NameOnlyColumn struct {
 	db *goqu.Database
 }

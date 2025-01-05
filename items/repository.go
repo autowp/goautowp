@@ -52,6 +52,7 @@ const (
 	ItemLanguageFullTextMaxLength = 65536
 
 	colNameOnly                   = "name_only"
+	colNameDefault                = "name_default"
 	colSpecName                   = "spec_name"
 	colSpecShortName              = "spec_short_name"
 	colDescription                = "description"
@@ -201,6 +202,7 @@ type Repository struct {
 	descriptionColumn                *TextstorageRefColumn
 	fullTextColumn                   *TextstorageRefColumn
 	nameOnlyColumn                   *NameOnlyColumn
+	nameDefaultColumn                *NameDefaultColumn
 	commentsAttentionsCountColumn    *CommentsAttentionsCountColumn
 	acceptedPicturesCountColumn      *StatusPicturesCountColumn
 	inboxPicturesCountColumn         *StatusPicturesCountColumn
@@ -252,6 +254,7 @@ type ItemParent struct {
 type Item struct {
 	schema.ItemRow
 	NameOnly                   string
+	NameDefault                string
 	DescendantsParentsCount    int32
 	NewDescendantsParentsCount int32
 	ChildItemsCount            int32
@@ -313,6 +316,7 @@ func NewRepository(
 			col: schema.ItemLanguageTableFullTextIDColName,
 		},
 		nameOnlyColumn:                &NameOnlyColumn{db: db},
+		nameDefaultColumn:             &NameDefaultColumn{db: db},
 		commentsAttentionsCountColumn: &CommentsAttentionsCountColumn{db: db},
 		acceptedPicturesCountColumn:   &StatusPicturesCountColumn{db: db, status: schema.PictureStatusAccepted},
 		inboxPicturesCountColumn:      &StatusPicturesCountColumn{db: db, status: schema.PictureStatusInbox},
@@ -459,6 +463,24 @@ func langPriorityOrderExpr( //nolint: ireturn
 	return goqu.Func("FIELD", langs...).Asc(), nil
 }
 
+func (s *Repository) LanguageName(ctx context.Context, itemID int64, lang string) (string, error) {
+	var res string
+
+	success, err := s.db.Select(schema.ItemLanguageTableNameCol).From(schema.ItemLanguageTable).Where(
+		schema.ItemLanguageTableItemIDCol.Eq(itemID),
+		schema.ItemLanguageTableLanguageCol.Eq(lang),
+	).ScanValContext(ctx, &res)
+	if err != nil {
+		return "", err
+	}
+
+	if !success {
+		return "", nil
+	}
+
+	return res, nil
+}
+
 func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 	columns := map[string]Column{
 		schema.ItemTableIDColName:               s.idColumn,
@@ -508,6 +530,10 @@ func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 
 	if fields.NameOnly || fields.NameText || fields.NameHTML {
 		columns[colNameOnly] = s.nameOnlyColumn
+	}
+
+	if fields.NameDefault {
+		columns[colNameDefault] = s.nameDefaultColumn
 	}
 
 	if fields.ChildItemsCount {
@@ -992,6 +1018,8 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &row.ID
 			case colNameOnly:
 				pointers[i] = &row.NameOnly
+			case colNameDefault:
+				pointers[i] = &row.NameDefault
 			case schema.ItemTableCatnameColName:
 				pointers[i] = &row.Catname
 			case schema.ItemTableFullNameColName:

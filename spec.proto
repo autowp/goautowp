@@ -1099,6 +1099,7 @@ message APIItem {
   string name_only = 3;
   string name_text = 4;
   string name_html = 5;
+  string name_default = 38;
   int32 descendants_count = 6;
   int64 engine_item_id = 7;
   ItemType item_type_id = 8;
