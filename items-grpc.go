@@ -2531,9 +2531,9 @@ func (s *ItemsGRPCServer) GetItemParents(
 		}
 
 		if parentFields != nil {
-			itemRow, ok := parentsMap[row.ItemID]
+			itemRow, ok := parentsMap[row.ParentID]
 			if ok && itemRow != nil {
-				resRow.Item, err = s.extractor.Extract(ctx, *itemRow, parentFields, localizer, in.GetLanguage())
+				resRow.Parent, err = s.extractor.Extract(ctx, *itemRow, parentFields, localizer, in.GetLanguage())
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}
