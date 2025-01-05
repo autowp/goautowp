@@ -1011,6 +1011,7 @@ message ItemFields {
   bool design = 27;
   bool specs_route = 28;
   bool childs_counts = 29;
+  bool public_routes = 30;
 }
 
 message ItemRequest {
@@ -1128,6 +1129,11 @@ message APIItem {
   repeated string specs_route = 34;
   bool is_group = 35;
   repeated ChildsCount childs_counts = 36;
+  repeated PublicRoute public_routes = 37;
+}
+
+message PublicRoute {
+  repeated string route = 1;
 }
 
 message ChildsCount {
@@ -1661,6 +1667,9 @@ message NewItemsResponse {
 
 message ItemParentFields {
   ItemFields item = 1;
+  ItemFields parent = 2;
+  ItemFields duplicate_parent = 3;
+  ItemFields duplicate_child = 4;
 }
 
 message GetItemParentsRequest {
@@ -1689,6 +1698,9 @@ message ItemParent {
   ItemParentType type = 3;
   string catname = 4;
   APIItem item = 5;
+  APIItem parent = 8;
+  APIItem duplicate_parent = 6;
+  APIItem duplicate_child = 7;
 }
 
 message DeleteItemParentRequest {

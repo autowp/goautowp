@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"maps"
 	"net/url"
 	"slices"
 	"strings"
@@ -2423,6 +2422,26 @@ func (s *ItemsGRPCServer) carSectionGroups(
 	return groups, nil
 }
 
+func (s *ItemsGRPCServer) prefetchItems(
+	ctx context.Context, ids []int64, lang string, fields items.ListFields,
+) (map[int64]*items.Item, error) {
+	itemRows, _, err := s.repository.List(ctx, query.ItemsListOptions{
+		ItemIDs:  ids,
+		Language: lang,
+	}, fields, items.OrderByNone, false)
+	if err != nil {
+		return nil, err
+	}
+
+	itemsMap := make(map[int64]*items.Item, len(itemRows))
+
+	for _, itemRow := range itemRows {
+		itemsMap[itemRow.ID] = &itemRow
+	}
+
+	return itemsMap, nil
+}
+
 func (s *ItemsGRPCServer) GetItemParents(
 	ctx context.Context, in *GetItemParentsRequest,
 ) (*GetItemParentsResponse, error) {
@@ -2460,28 +2479,34 @@ func (s *ItemsGRPCServer) GetItemParents(
 	}
 
 	localizer := s.i18n.Localizer(in.GetLanguage())
+
 	itemFields := in.GetFields().GetItem()
-	itemsMap := make(map[int64]*items.Item, len(rows))
+	itemsMap := make(map[int64]*items.Item, 0)
 
 	if itemFields != nil && len(rows) > 0 {
-		repoItemFields := convertFields(itemFields)
-
+		ids := make([]int64, 0, len(rows))
 		for _, row := range rows {
-			itemsMap[row.ItemID] = nil
+			ids = append(ids, row.ItemID)
 		}
 
-		keys := slices.Collect(maps.Keys(itemsMap))
-
-		itemRows, _, err := s.repository.List(ctx, query.ItemsListOptions{
-			ItemIDs:  keys,
-			Language: in.GetLanguage(),
-		}, repoItemFields, items.OrderByNone, false)
+		itemsMap, err = s.prefetchItems(ctx, ids, in.GetLanguage(), convertFields(itemFields))
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+	}
 
-		for _, itemRow := range itemRows {
-			itemsMap[itemRow.ID] = &itemRow
+	parentFields := in.GetFields().GetParent()
+	parentsMap := make(map[int64]*items.Item, len(rows))
+
+	if parentFields != nil && len(rows) > 0 {
+		ids := make([]int64, 0, len(rows))
+		for _, row := range rows {
+			ids = append(ids, row.ParentID)
+		}
+
+		parentsMap, err = s.prefetchItems(ctx, ids, in.GetLanguage(), convertFields(parentFields))
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
@@ -2495,10 +2520,73 @@ func (s *ItemsGRPCServer) GetItemParents(
 			Catname:  row.Catname,
 		}
 
-		if in.GetFields().GetItem() != nil {
-			itemRow := itemsMap[row.ItemID]
-			if itemRow != nil {
+		if itemFields != nil {
+			itemRow, ok := itemsMap[row.ItemID]
+			if ok && itemRow != nil {
 				resRow.Item, err = s.extractor.Extract(ctx, *itemRow, itemFields, localizer, in.GetLanguage())
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+			}
+		}
+
+		if parentFields != nil {
+			itemRow, ok := parentsMap[row.ItemID]
+			if ok && itemRow != nil {
+				resRow.Item, err = s.extractor.Extract(ctx, *itemRow, parentFields, localizer, in.GetLanguage())
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+			}
+		}
+
+		duplicateParentFields := in.GetFields().GetDuplicateParent()
+		if duplicateParentFields != nil {
+			duplicateRow, err := s.repository.Item(ctx, query.ItemsListOptions{
+				ExcludeID: row.ParentID,
+				ItemParentChild: &query.ItemParentListOptions{
+					ItemID: row.ItemID,
+					Type:   schema.ItemParentTypeDefault,
+				},
+				ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+					ParentID:  row.ParentID,
+					StockOnly: true,
+				},
+			}, convertFields(duplicateParentFields))
+			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			if err == nil {
+				resRow.DuplicateParent, err = s.extractor.Extract(
+					ctx, duplicateRow, duplicateParentFields, localizer, in.GetLanguage(),
+				)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+			}
+		}
+
+		duplicateChildFields := in.GetFields().GetDuplicateChild()
+		if duplicateChildFields != nil {
+			duplicateRow, err := s.repository.Item(ctx, query.ItemsListOptions{
+				ExcludeID: row.ItemID,
+				ItemParentParent: &query.ItemParentListOptions{
+					ParentID: row.ParentID,
+					Type:     row.Type,
+				},
+				ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+					ItemID: row.ItemID,
+				},
+			}, convertFields(duplicateChildFields))
+			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			if err == nil {
+				resRow.DuplicateChild, err = s.extractor.Extract(
+					ctx, duplicateRow, duplicateChildFields, localizer, in.GetLanguage(),
+				)
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}

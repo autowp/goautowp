@@ -23,6 +23,7 @@ type ItemsListOptions struct {
 	Alias                        string
 	Language                     string
 	ItemID                       int64
+	ExcludeID                    int64
 	ItemIDs                      []int64
 	ItemIDExpr                   goqu.Expression
 	TypeID                       []schema.ItemTableItemTypeID
@@ -99,6 +100,10 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 
 	if s.ItemID > 0 {
 		sqSelect = sqSelect.Where(aliasIDCol.Eq(s.ItemID))
+	}
+
+	if s.ExcludeID != 0 {
+		sqSelect = sqSelect.Where(aliasIDCol.Neq(s.ExcludeID))
 	}
 
 	if len(s.ItemIDs) > 0 {

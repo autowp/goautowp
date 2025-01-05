@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/comments"
@@ -10,6 +11,7 @@ import (
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
@@ -203,19 +205,11 @@ func (s *ItemExtractor) Extract(
 		}
 	}
 
-	if fields.GetSpecsRoute() {
-		itemTypeCanHaveSpecs := []schema.ItemTableItemTypeID{
-			schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDTwins,
-			schema.ItemTableItemTypeIDVehicle,
-		}
-		if util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) && row.HasSpecs {
-			specsRoute, err := s.itemRepository.SpecsRoute(ctx, row.ID)
-			if err != nil {
-				return nil, err
-			}
+	var err error
 
-			result.SpecsRoute = specsRoute
-		}
+	result.SpecsRoute, err = s.extractSpecsRoute(ctx, fields, row)
+	if err != nil {
+		return nil, err
 	}
 
 	if fields.GetChildsCounts() {
@@ -227,5 +221,95 @@ func (s *ItemExtractor) Extract(
 		result.ChildsCounts = convertChildsCounts(childCounts)
 	}
 
+	if fields.GetPublicRoutes() {
+		result.PublicRoutes, err = s.ItemPublicRoutes(ctx, row)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return result, nil
+}
+
+func (s *ItemExtractor) extractSpecsRoute(ctx context.Context, fields *ItemFields, row items.Item) ([]string, error) {
+	if fields.GetSpecsRoute() {
+		itemTypeCanHaveSpecs := []schema.ItemTableItemTypeID{
+			schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDTwins,
+			schema.ItemTableItemTypeIDVehicle,
+		}
+		if util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) && row.HasSpecs {
+			specsRoute, err := s.itemRepository.SpecsRoute(ctx, row.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			return specsRoute, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (s *ItemExtractor) ItemPublicRoutes(ctx context.Context, item items.Item) ([]*PublicRoute, error) {
+	if item.ItemTypeID == schema.ItemTableItemTypeIDFactory {
+		return []*PublicRoute{
+			{Route: []string{"/factories", strconv.FormatInt(item.ID, decimal)}},
+		}, nil
+	}
+
+	if item.ItemTypeID == schema.ItemTableItemTypeIDCategory {
+		return []*PublicRoute{
+			{Route: []string{"/category", util.NullStringToString(item.Catname)}},
+		}, nil
+	}
+
+	if item.ItemTypeID == schema.ItemTableItemTypeIDTwins {
+		return []*PublicRoute{
+			{Route: []string{"/twins", "group", strconv.FormatInt(item.ID, decimal)}},
+		}, nil
+	}
+
+	if item.ItemTypeID == schema.ItemTableItemTypeIDBrand {
+		return []*PublicRoute{
+			{Route: []string{"/" + util.NullStringToString(item.Catname)}},
+		}, nil
+	}
+
+	return s.walkUpUntilBrand(ctx, item.ID, []string{})
+}
+
+func (s *ItemExtractor) walkUpUntilBrand(ctx context.Context, id int64, path []string) ([]*PublicRoute, error) {
+	routes := make([]*PublicRoute, 0)
+
+	parentRows, _, err := s.itemRepository.ItemParents(ctx, query.ItemParentListOptions{
+		ItemID: id,
+	}, items.ItemParentFields{}, items.ItemParentOrderByNone)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, parentRow := range parentRows {
+		brand, err := s.itemRepository.Item(ctx, query.ItemsListOptions{
+			TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+			ItemID: parentRow.ParentID,
+		}, items.ListFields{})
+		if err != nil && !errors.Is(err, items.ErrItemNotFound) {
+			return nil, err
+		}
+
+		if err == nil {
+			routes = append(routes, &PublicRoute{
+				Route: append([]string{"/", util.NullStringToString(brand.Catname), parentRow.Catname}, path...),
+			})
+		}
+
+		nextRoutes, err := s.walkUpUntilBrand(ctx, parentRow.ParentID, append([]string{parentRow.Catname}, path...))
+		if err != nil {
+			return nil, err
+		}
+
+		routes = append(routes, nextRoutes...)
+	}
+
+	return routes, nil
 }

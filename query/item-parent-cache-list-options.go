@@ -24,6 +24,7 @@ type ItemParentCacheListOptions struct {
 	PictureItemsByItemID            *PictureItemListOptions
 	ItemParentCacheAncestorByItemID *ItemParentCacheListOptions
 	ExcludeSelf                     bool
+	StockOnly                       bool
 }
 
 func (s *ItemParentCacheListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
@@ -117,6 +118,13 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentCacheTableItemIDColName).Neq(
 			aliasTable.Col(schema.ItemParentCacheTableParentIDColName),
 		))
+	}
+
+	if s.StockOnly {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemParentCacheTableTuningColName).IsFalse(),
+			aliasTable.Col(schema.ItemParentCacheTableSportColName).IsFalse(),
+		)
 	}
 
 	return sqSelect
