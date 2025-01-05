@@ -45,6 +45,7 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 			Where(schema.ArticlesTableEnabledCol).
 			Order(schema.ArticlesTableAddDateCol.Desc()),
 		CurrentPageNumber: int32(in.GetPage()), //nolint: gosec
+		ItemCountPerPage:  util.DefaultItemCountPerPage,
 	}
 
 	sqlSelect, err := paginator.GetCurrentItems(ctx)

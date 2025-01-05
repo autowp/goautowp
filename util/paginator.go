@@ -56,7 +56,11 @@ func (s *Paginator) calculatePageCount(ctx context.Context) (int32, error) {
 		return 0, err
 	}
 
-	return int32(math.Ceil(float64(count) / float64(s.getItemCountPerPage()))), nil
+	if s.ItemCountPerPage <= 0 {
+		return 0, nil
+	}
+
+	return int32(math.Ceil(float64(count) / float64(s.ItemCountPerPage))), nil
 }
 
 func (s *Paginator) calculateCount(ctx context.Context) (int32, error) {
@@ -101,14 +105,6 @@ func (s *Paginator) calculateCount(ctx context.Context) (int32, error) {
 	return int32(res), nil //nolint: gosec
 }
 
-func (s *Paginator) getItemCountPerPage() int32 {
-	if s.ItemCountPerPage <= 0 {
-		s.ItemCountPerPage = DefaultItemCountPerPage
-	}
-
-	return s.ItemCountPerPage
-}
-
 func MinMax(array []int32) (int32, int32) {
 	maxValue, minValue := array[0], array[0]
 
@@ -143,7 +139,7 @@ func (s *Paginator) GetPages(ctx context.Context) (*Pages, error) {
 
 	pages := Pages{
 		PageCount:        pageCount,
-		ItemCountPerPage: s.getItemCountPerPage(),
+		ItemCountPerPage: s.ItemCountPerPage,
 		First:            1,
 		Current:          currentPageNumber,
 		Last:             pageCount,
@@ -249,10 +245,10 @@ func (s *Paginator) GetItemsByPage(ctx context.Context, pageNumber int32) (*goqu
 		return nil, err
 	}
 
-	offset := (pageNumber - 1) * s.getItemCountPerPage()
+	offset := (pageNumber - 1) * s.ItemCountPerPage
 	ds := *s.SQLSelect
 
-	return ds.Offset(uint(offset)).Limit(uint(s.getItemCountPerPage())), nil //nolint:gosec
+	return ds.Offset(uint(offset)).Limit(uint(s.ItemCountPerPage)), nil //nolint:gosec
 }
 
 func (s *Paginator) GetCurrentItems(ctx context.Context) (*goqu.SelectDataset, error) {

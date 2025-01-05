@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
@@ -341,9 +342,7 @@ func (s *Repository) CreateModerVote(
 	return affected > 0, err
 }
 
-func (s *Repository) Picture(ctx context.Context, options query.PictureListOptions) (*schema.PictureRow, error) {
-	st := schema.PictureRow{}
-
+func (s *Repository) PictureSelect(options query.PictureListOptions) (*goqu.SelectDataset, error) {
 	alias := query.PictureAlias
 	aliasTable := goqu.T(alias)
 
@@ -362,6 +361,60 @@ func (s *Repository) Picture(ctx context.Context, options query.PictureListOptio
 		From(schema.PictureTable.As(alias))
 
 	sqSelect = options.Apply(alias, sqSelect)
+
+	return sqSelect, nil
+}
+
+func (s *Repository) Pictures(
+	ctx context.Context, options query.PictureListOptions, pagination bool,
+) ([]schema.PictureRow, *util.Pages, error) {
+	sqSelect, err := s.PictureSelect(options)
+	if err != nil {
+		return nil, nil, fmt.Errorf("PictureSelect(): %w", err)
+	}
+
+	var pages *util.Pages
+
+	if pagination {
+		paginator := util.Paginator{
+			SQLSelect:         sqSelect,
+			ItemCountPerPage:  int32(options.Limit),
+			CurrentPageNumber: int32(options.Page), //nolint: gosec
+		}
+
+		pages, err = paginator.GetPages(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		sqSelect, err = paginator.GetCurrentItems(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else if options.Limit > 0 {
+		sqSelect.Limit(uint(options.Limit))
+	}
+
+	var res []schema.PictureRow
+
+	if options.Limit > 0 {
+		err = sqSelect.ScanStructsContext(ctx, &res)
+	} else {
+		err = nil
+	}
+
+	return res, pages, err
+}
+
+func (s *Repository) Picture(ctx context.Context, options query.PictureListOptions) (*schema.PictureRow, error) {
+	sqSelect, err := s.PictureSelect(options)
+	if err != nil {
+		return nil, fmt.Errorf("PictureSelect(): %w", err)
+	}
+
+	sqSelect = sqSelect.Limit(1)
+
+	st := schema.PictureRow{}
 
 	success, err := sqSelect.ScanStructContext(ctx, &st)
 	if err != nil {

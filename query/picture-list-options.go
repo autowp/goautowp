@@ -21,6 +21,8 @@ type PictureListOptions struct {
 	ID            int64
 	HasCopyrights bool
 	OrderExpr     []exp.OrderedExpression
+	Limit         uint32
+	Page          uint32
 }
 
 func (s *PictureListOptions) Select(db *goqu.Database) *goqu.SelectDataset {

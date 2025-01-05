@@ -487,6 +487,7 @@ func (s *Forums) Topics(
 	paginator := util.Paginator{
 		SQLSelect:         sqSelect,
 		CurrentPageNumber: page,
+		ItemCountPerPage:  util.DefaultItemCountPerPage,
 	}
 
 	sqSelect, err := paginator.GetCurrentItems(ctx)

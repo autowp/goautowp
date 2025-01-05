@@ -1775,3 +1775,71 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *GetPicture
 		Items: res,
 	}, nil
 }
+
+func convertPictureStatus(status PictureStatus) schema.PictureStatus {
+	switch status {
+	case PictureStatus_PICTURE_STATUS_UNKNOWN:
+		return ""
+	case PictureStatus_PICTURE_STATUS_ACCEPTED:
+		return schema.PictureStatusAccepted
+	case PictureStatus_PICTURE_STATUS_REMOVING:
+		return schema.PictureStatusRemoving
+	case PictureStatus_PICTURE_STATUS_REMOVED:
+		return schema.PictureStatusRemoved
+	case PictureStatus_PICTURE_STATUS_INBOX:
+		return schema.PictureStatusInbox
+	}
+
+	return ""
+}
+
+func mapPictureListOptions(in *PicturesOptions, options *query.PictureListOptions) {
+	options.Status = convertPictureStatus(in.GetStatus())
+}
+
+func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesRequest) (*GetPicturesResponse, error) {
+	inOptions := in.GetOptions()
+
+	options := query.PictureListOptions{
+		Limit: in.GetLimit(),
+		Page:  in.GetPage(),
+	}
+
+	mapPictureListOptions(inOptions, &options)
+
+	rows, pages, err := s.repository.Pictures(ctx, options, in.GetPaginator())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	res := make([]*Picture, 0, len(rows))
+
+	for _, row := range rows {
+		resRow := &Picture{
+			Id: row.ID,
+		}
+
+		res = append(res, resRow)
+	}
+
+	var paginator *Pages
+	if pages != nil {
+		paginator = &Pages{
+			PageCount:        pages.PageCount,
+			First:            pages.First,
+			Last:             pages.Last,
+			Current:          pages.Current,
+			FirstPageInRange: pages.FirstPageInRange,
+			LastPageInRange:  pages.LastPageInRange,
+			PagesInRange:     pages.PagesInRange,
+			TotalItemCount:   pages.TotalItemCount,
+			Next:             pages.Next,
+			Previous:         pages.Previous,
+		}
+	}
+
+	return &GetPicturesResponse{
+		Items:     res,
+		Paginator: paginator,
+	}, nil
+}
