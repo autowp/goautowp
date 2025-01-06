@@ -1325,9 +1325,14 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
+		is, err := s.ImageStorage()
+		if err != nil {
+			return nil, err
+		}
+
 		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer(), events, s.HostsManager(),
 			messagingRepository, userRepository, i18n, duplicateFinder, textStorageRepository, tg, itemRepository,
-			commentsRepository,
+			commentsRepository, is,
 		)
 	}
 

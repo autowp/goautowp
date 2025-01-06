@@ -44,6 +44,10 @@ type Repository struct {
 	textStorageRepository *textstorage.Repository
 }
 
+type PictureFields struct {
+	NameText bool
+}
+
 func NewRepository(
 	db *goqu.Database, imageStorage *storage.Storage, textStorageRepository *textstorage.Repository,
 ) *Repository {
@@ -342,7 +346,9 @@ func (s *Repository) CreateModerVote(
 	return affected > 0, err
 }
 
-func (s *Repository) PictureSelect(options query.PictureListOptions) (*goqu.SelectDataset, error) {
+func (s *Repository) PictureSelect(
+	options query.PictureListOptions, _ PictureFields,
+) (*goqu.SelectDataset, error) {
 	alias := query.PictureAlias
 	aliasTable := goqu.T(alias)
 
@@ -357,6 +363,8 @@ func (s *Repository) PictureSelect(options query.PictureListOptions) (*goqu.Sele
 		aliasTable.Col(schema.PictureTableCopyrightsTextIDColName),
 		aliasTable.Col(schema.PictureTableAcceptDatetimeColName),
 		aliasTable.Col(schema.PictureTableReplacePictureIDColName),
+		aliasTable.Col(schema.PictureTableWidthColName),
+		aliasTable.Col(schema.PictureTableHeightCol),
 	).
 		From(schema.PictureTable.As(alias))
 
@@ -366,9 +374,9 @@ func (s *Repository) PictureSelect(options query.PictureListOptions) (*goqu.Sele
 }
 
 func (s *Repository) Pictures(
-	ctx context.Context, options query.PictureListOptions, pagination bool,
+	ctx context.Context, options query.PictureListOptions, fields PictureFields, pagination bool,
 ) ([]schema.PictureRow, *util.Pages, error) {
-	sqSelect, err := s.PictureSelect(options)
+	sqSelect, err := s.PictureSelect(options, fields)
 	if err != nil {
 		return nil, nil, fmt.Errorf("PictureSelect(): %w", err)
 	}
@@ -406,26 +414,21 @@ func (s *Repository) Pictures(
 	return res, pages, err
 }
 
-func (s *Repository) Picture(ctx context.Context, options query.PictureListOptions) (*schema.PictureRow, error) {
-	sqSelect, err := s.PictureSelect(options)
+func (s *Repository) Picture(
+	ctx context.Context, options query.PictureListOptions, fields PictureFields,
+) (*schema.PictureRow, error) {
+	options.Limit = 1
+
+	rows, _, err := s.Pictures(ctx, options, fields, false)
 	if err != nil {
-		return nil, fmt.Errorf("PictureSelect(): %w", err)
+		return nil, fmt.Errorf("Pictures(): %w", err)
 	}
 
-	sqSelect = sqSelect.Limit(1)
-
-	st := schema.PictureRow{}
-
-	success, err := sqSelect.ScanStructContext(ctx, &st)
-	if err != nil {
-		return nil, err
-	}
-
-	if !success {
+	if len(rows) == 0 {
 		return nil, sql.ErrNoRows
 	}
 
-	return &st, nil
+	return &rows[0], nil
 }
 
 func (s *Repository) Normalize(ctx context.Context, id int64) error {
@@ -433,7 +436,7 @@ func (s *Repository) Normalize(ctx context.Context, id int64) error {
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id})
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id}, PictureFields{})
 	if err != nil {
 		return err
 	}
@@ -452,7 +455,7 @@ func (s *Repository) Flop(ctx context.Context, id int64) error {
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id})
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id}, PictureFields{})
 	if err != nil {
 		return err
 	}
@@ -751,7 +754,7 @@ func (s *Repository) SetPictureCrop(ctx context.Context, pictureID int64, area s
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{})
 	if err != nil {
 		return err
 	}
@@ -841,7 +844,7 @@ func (s *Repository) SetPictureCopyrights(
 		return false, 0, sql.ErrNoRows
 	}
 
-	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{})
 	if err != nil {
 		return false, 0, err
 	}
@@ -947,7 +950,7 @@ func (s *Repository) Accept(ctx context.Context, pictureID int64, userID int64) 
 		return false, false, sql.ErrNoRows
 	}
 
-	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{})
 	if err != nil {
 		return false, false, err
 	}

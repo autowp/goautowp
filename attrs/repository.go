@@ -3255,7 +3255,7 @@ func (s *Repository) specPicture(
 			},
 		},
 		OrderExpr: order,
-	})
+	}, pictures.PictureFields{})
 	if err != nil {
 		return nil, "", err
 	}

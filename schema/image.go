@@ -39,8 +39,8 @@ type ImageRow struct {
 	Filesize   int    `db:"filesize"`
 	Filepath   string `db:"filepath"`
 	Dir        string `db:"dir"`
-	CropLeft   int    `db:"crop_left"`
-	CropTop    int    `db:"crop_top"`
-	CropWidth  int    `db:"crop_width"`
-	CropHeight int    `db:"crop_height"`
+	CropLeft   uint16 `db:"crop_left"`
+	CropTop    uint16 `db:"crop_top"`
+	CropWidth  uint16 `db:"crop_width"`
+	CropHeight uint16 `db:"crop_height"`
 }

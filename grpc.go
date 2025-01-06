@@ -27,11 +27,15 @@ func APIImageToGRPC(image *storage.Image) *APIImage {
 	}
 
 	return &APIImage{ //nolint:exhaustruct
-		Id:       int32(image.ID()), //nolint: gosec
-		Src:      image.Src(),
-		Width:    int32(image.Width()),    //nolint: gosec
-		Height:   int32(image.Height()),   //nolint: gosec
-		Filesize: int32(image.FileSize()), //nolint: gosec
+		Id:         int32(image.ID()), //nolint: gosec
+		Src:        image.Src(),
+		Width:      int32(image.Width()),    //nolint: gosec
+		Height:     int32(image.Height()),   //nolint: gosec
+		Filesize:   int32(image.FileSize()), //nolint: gosec
+		CropLeft:   int32(image.CropLeft()),
+		CropTop:    int32(image.CropTop()),
+		CropWidth:  int32(image.CropWidth()),
+		CropHeight: int32(image.CropHeight()),
 	}
 }
 

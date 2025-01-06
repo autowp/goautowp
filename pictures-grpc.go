@@ -12,6 +12,7 @@ import (
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/sampler"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
@@ -84,13 +85,14 @@ type PicturesGRPCServer struct {
 	telegramService       *telegram.Service
 	itemRepository        *items.Repository
 	commentRepository     *comments.Repository
+	imageStorage          *storage.Storage
 }
 
 func NewPicturesGRPCServer(
 	repository *pictures.Repository, auth *Auth, enforcer *casbin.Enforcer, events *Events, hostManager *hosts.Manager,
 	messagingRepository *messaging.Repository, userRepository *users.Repository, i18n *i18nbundle.I18n,
 	duplicateFinder *DuplicateFinder, textStorageRepository *textstorage.Repository, telegramService *telegram.Service,
-	itemRepository *items.Repository, commentRepository *comments.Repository,
+	itemRepository *items.Repository, commentRepository *comments.Repository, imageStorage *storage.Storage,
 ) *PicturesGRPCServer {
 	return &PicturesGRPCServer{
 		repository:            repository,
@@ -106,6 +108,7 @@ func NewPicturesGRPCServer(
 		telegramService:       telegramService,
 		itemRepository:        itemRepository,
 		commentRepository:     commentRepository,
+		imageStorage:          imageStorage,
 	}
 }
 
@@ -458,7 +461,7 @@ func (s *PicturesGRPCServer) restoreFromRemoving(ctx context.Context, pictureID 
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 	if err != nil {
 		return err
 	}
@@ -492,7 +495,7 @@ func (s *PicturesGRPCServer) unaccept(ctx context.Context, pictureID int64, user
 		return sql.ErrNoRows
 	}
 
-	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 	if err != nil {
 		return err
 	}
@@ -528,7 +531,7 @@ func (s *PicturesGRPCServer) notifyVote(
 		return sql.ErrNoRows
 	}
 
-	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 	if err != nil {
 		return err
 	}
@@ -618,7 +621,7 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(
 		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 	if err != nil {
 		return 0, status.Error(codes.Internal, err.Error())
 	}
@@ -798,7 +801,7 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 			return nil, status.Error(codes.NotFound, "NotFound")
 		}
 
-		pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+		pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -970,7 +973,7 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 			return nil, status.Error(codes.NotFound, "NotFound")
 		}
 
-		pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+		pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, status.Errorf(codes.NotFound, "NotFound")
@@ -1060,7 +1063,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1069,7 +1072,9 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	replacePicture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pic.ReplacePictureID.Int64})
+	replacePicture, err := s.repository.Picture(
+		ctx, query.PictureListOptions{ID: pic.ReplacePictureID.Int64}, pictures.PictureFields{},
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1313,7 +1318,7 @@ func (s *PicturesGRPCServer) notifyCopyrightsEdited(
 		return nil
 	}
 
-	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 	if err != nil {
 		return err
 	}
@@ -1386,7 +1391,7 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1794,7 +1799,40 @@ func convertPictureStatus(status PictureStatus) schema.PictureStatus {
 }
 
 func mapPictureListOptions(in *PicturesOptions, options *query.PictureListOptions) {
+	options.ID = in.GetId()
 	options.Status = convertPictureStatus(in.GetStatus())
+}
+
+func convertPictureFields(fields *PictureFields) pictures.PictureFields {
+	return pictures.PictureFields{
+		NameText: fields.GetNameText(),
+	}
+}
+
+func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *GetPicturesRequest) (*Picture, error) {
+	inOptions := in.GetOptions()
+
+	options := query.PictureListOptions{
+		Limit: in.GetLimit(),
+		Page:  in.GetPage(),
+	}
+
+	mapPictureListOptions(inOptions, &options)
+
+	fields := convertPictureFields(in.GetFields())
+
+	row, err := s.repository.Picture(ctx, options, fields)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	extractor := NewPictureExtractor(s.imageStorage)
+
+	return extractor.Extract(ctx, row, in.GetFields())
 }
 
 func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesRequest) (*GetPicturesResponse, error) {
@@ -1807,16 +1845,20 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 
 	mapPictureListOptions(inOptions, &options)
 
-	rows, pages, err := s.repository.Pictures(ctx, options, in.GetPaginator())
+	fields := convertPictureFields(in.GetFields())
+
+	rows, pages, err := s.repository.Pictures(ctx, options, fields, in.GetPaginator())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	res := make([]*Picture, 0, len(rows))
+	extractor := NewPictureExtractor(s.imageStorage)
 
 	for _, row := range rows {
-		resRow := &Picture{
-			Id: row.ID,
+		resRow, err := extractor.Extract(ctx, &row, in.GetFields())
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		res = append(res, resRow)

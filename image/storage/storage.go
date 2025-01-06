@@ -118,14 +118,7 @@ func NewStorage(db *goqu.Database, config config.ImageStorageConfig) (*Storage, 
 func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
 	var img Image
 
-	st := struct {
-		ID       int    `db:"id"`
-		Width    int    `db:"width"`
-		Height   int    `db:"height"`
-		Filepath string `db:"filepath"`
-		Filesize int    `db:"filesize"`
-		Dir      string `db:"dir"`
-	}{}
+	var st schema.ImageRow
 
 	success, err := s.db.Select(
 		schema.ImageTableIDCol,
@@ -134,6 +127,10 @@ func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
 		schema.ImageTableFilesizeCol,
 		schema.ImageTableFilepathCol,
 		schema.ImageTableDirCol,
+		schema.ImageTableCropLeftCol,
+		schema.ImageTableCropTopCol,
+		schema.ImageTableCropWidthCol,
+		schema.ImageTableCropHeightCol,
 	).
 		From(schema.ImageTable).
 		Where(schema.ImageTableIDCol.Eq(id)).
@@ -152,6 +149,10 @@ func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
 	img.filepath = st.Filepath
 	img.filesize = st.Filesize
 	img.dir = st.Dir
+	img.cropLeft = st.CropLeft
+	img.cropTop = st.CropTop
+	img.cropWidth = st.CropWidth
+	img.cropHeight = st.CropHeight
 
 	err = s.populateSrc(&img)
 	if err != nil {
@@ -410,10 +411,10 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 	cropSuffix := getCropSuffix(iRow)
 
 	crop := sampler.Crop{
-		Left:   iRow.CropLeft,
-		Top:    iRow.CropTop,
-		Width:  iRow.CropWidth,
-		Height: iRow.CropHeight,
+		Left:   int(iRow.CropLeft),
+		Top:    int(iRow.CropTop),
+		Width:  int(iRow.CropWidth),
+		Height: int(iRow.CropHeight),
 	}
 
 	mw, err = s.sampler.ConvertImage(mw, crop, *format)

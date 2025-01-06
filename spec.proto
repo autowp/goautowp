@@ -155,6 +155,7 @@ service Pictures {
   rpc Flop(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc DeleteSimilar(DeleteSimilarRequest) returns (google.protobuf.Empty) {}
   rpc Repair(PictureIDRequest) returns (google.protobuf.Empty) {}
+  rpc GetPicture(GetPicturesRequest) returns (Picture) {}
   rpc GetPictures(GetPicturesRequest) returns (GetPicturesResponse) {}
   rpc GetPictureItem(GetPictureItemsRequest) returns (PictureItem) {}
   rpc GetPictureItems(GetPictureItemsRequest) returns (PictureItems) {}
@@ -545,6 +546,10 @@ message APIImage {
   int32 width = 3;
   int32 height = 4;
   int32 filesize = 5;
+  int32 crop_left = 6;
+  int32 crop_top = 7;
+  int32 crop_width = 8;
+  int32 crop_height = 9;
 }
 
 message APIUser {
@@ -968,6 +973,7 @@ message APITopFactoriesListItem {
 }
 
 message PicturesOptions {
+  int64 id = 4;
   PictureStatus status = 1;
   PictureItemOptions picture_item = 2;
   int64 owner_id = 3;
@@ -975,6 +981,7 @@ message PicturesOptions {
 
 message PictureFields {
   bool name_text = 1;
+  bool image = 2;
 }
 
 message PreviewPicturesFields {
@@ -1291,10 +1298,15 @@ message GetPicturesRequest {
   uint32 limit = 2;
   uint32 page = 3;
   bool paginator = 4;
+  PictureFields fields = 5;
 }
 
 message Picture {
   int64 id = 1;
+  uint32 width = 2;
+  uint32 height = 3;
+  APIImage image = 4;
+  google.type.LatLng point = 5;
 }
 
 message GetPicturesResponse {

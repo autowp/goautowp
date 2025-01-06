@@ -737,9 +737,6 @@ func TestSetPicturePoint(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	textStorageRepository := textstorage.New(goquDB)
-	repo := pictures.NewRepository(goquDB, imageStorage, textStorageRepository)
-
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 
 	kc := cnt.Keycloak()
@@ -761,9 +758,9 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err := client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
 	require.NoError(t, err)
-	require.Nil(t, pic.Point)
+	require.Nil(t, pic.GetPoint())
 
 	_, err = client.SetPicturePoint(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -777,11 +774,11 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err = client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
 	require.NoError(t, err)
-	require.True(t, pic.Point.Valid)
-	require.InDelta(t, float64(10), pic.Point.Point.Lat(), 0.001)
-	require.InDelta(t, float64(0), pic.Point.Point.Lng(), 0.001)
+	require.NotNil(t, pic.GetPoint())
+	require.InDelta(t, float64(10), pic.GetPoint().GetLatitude(), 0.001)
+	require.InDelta(t, float64(0), pic.GetPoint().GetLongitude(), 0.001)
 
 	_, err = client.SetPicturePoint(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -795,11 +792,11 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err = client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
 	require.NoError(t, err)
-	require.True(t, pic.Point.Valid)
-	require.InDelta(t, float64(0), pic.Point.Point.Lat(), 0.001)
-	require.InDelta(t, float64(10), pic.Point.Point.Lng(), 0.001)
+	require.NotNil(t, pic.GetPoint())
+	require.InDelta(t, float64(0), pic.GetPoint().GetLatitude(), 0.001)
+	require.InDelta(t, float64(10), pic.GetPoint().GetLongitude(), 0.001)
 
 	_, err = client.SetPicturePoint(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -813,11 +810,11 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err = client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
 	require.NoError(t, err)
-	require.True(t, pic.Point.Valid)
-	require.InDelta(t, float64(-10), pic.Point.Point.Lat(), 0.001)
-	require.InDelta(t, float64(10), pic.Point.Point.Lng(), 0.001)
+	require.NotNil(t, pic.GetPoint())
+	require.InDelta(t, float64(-10), pic.GetPoint().GetLatitude(), 0.001)
+	require.InDelta(t, float64(10), pic.GetPoint().GetLongitude(), 0.001)
 
 	_, err = client.SetPicturePoint(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -827,9 +824,9 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err = client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
 	require.NoError(t, err)
-	require.Nil(t, pic.Point)
+	require.Nil(t, pic.GetPoint())
 }
 
 func TestUpdatePicture(t *testing.T) {
@@ -949,7 +946,7 @@ func TestSetPictureCopyrights(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID})
+	pic, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
 	require.NoError(t, err)
 	require.True(t, pic.CopyrightsTextID.Valid)
 	require.NotEmpty(t, pic.CopyrightsTextID.Int32)
@@ -980,7 +977,7 @@ func TestSetPictureCopyrights(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Second", text)
 
-	pic2, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID2})
+	pic2, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID2}, pictures.PictureFields{})
 	require.NoError(t, err)
 	require.True(t, pic2.CopyrightsTextID.Valid)
 	require.NotEmpty(t, pic2.CopyrightsTextID.Int32)
