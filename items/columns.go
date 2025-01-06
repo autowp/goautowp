@@ -121,14 +121,39 @@ type NameDefaultColumn struct {
 	db *goqu.Database
 }
 
-func (s NameDefaultColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s NameDefaultColumn) SelectExpr(alias string, lang string) (AliaseableExpression, error) {
+	il1Alias := alias + "il1"
+	il1AliasTable := goqu.T(il1Alias)
+	il2Alias := alias + "il2"
+	il2AliasTable := goqu.T(il2Alias)
+
+	orderExpr, err := langPriorityOrderExpr(il2AliasTable.Col(schema.ItemLanguageTableLanguageColName), lang)
+	if err != nil {
+		return nil, err
+	}
+
+	subQuery := s.db.Select(il2AliasTable.Col(schema.ItemLanguageTableNameColName)).
+		From(schema.ItemLanguageTable.As(il2Alias)).
+		Where(
+			il2AliasTable.Col(schema.ItemLanguageTableItemIDColName).Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
+			goqu.Func("LENGTH", il2AliasTable.Col(schema.ItemLanguageTableNameColName)).Gt(0),
+		).
+		Order(orderExpr).
+		Limit(1)
+	subQueryAlias := alias + "subquery"
+
 	return goqu.Func(
 			"IFNULL",
-			s.db.Select(schema.ItemLanguageTableNameCol).
-				From(schema.ItemLanguageTable).
+			s.db.Select(il1AliasTable.Col(schema.ItemLanguageTableNameColName)).
+				From(schema.ItemLanguageTable.As(il1Alias)).
+				Join(subQuery.As(subQueryAlias), goqu.On(
+					il1AliasTable.Col(schema.ItemLanguageTableNameColName).Neq(
+						goqu.T(subQueryAlias).Col(schema.ItemLanguageTableNameColName),
+					),
+				)).
 				Where(
-					schema.ItemLanguageTableItemIDCol.Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
-					schema.ItemLanguageTableLanguageCol.Eq(DefaultLanguageCode),
+					il1AliasTable.Col(schema.ItemLanguageTableItemIDColName).Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
+					il1AliasTable.Col(schema.ItemLanguageTableLanguageColName).Eq(DefaultLanguageCode),
 				).
 				Limit(1),
 			goqu.V(""),

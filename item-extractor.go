@@ -181,7 +181,7 @@ func (s *ItemExtractor) Extract(
 
 		otherNames := make([]string, 0, len(rows))
 		for _, name := range rows {
-			if row.Name != name && !util.Contains(otherNames, name) {
+			if row.NameOnly != name && !util.Contains(otherNames, name) {
 				otherNames = append(otherNames, name)
 			}
 		}
