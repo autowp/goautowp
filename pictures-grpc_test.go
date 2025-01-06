@@ -1210,7 +1210,7 @@ func TestGetPictures(t *testing.T) {
 		Image:       true,
 		ThumbMedium: true,
 	}, Limit: 100})
-	require.ErrorContains(t, err, "PictureItem.ItemID or OwnerID is required")
+	require.ErrorContains(t, err, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
 
 	cfg := config.LoadConfig(".")
 

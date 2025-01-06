@@ -1779,6 +1779,17 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 
 	inOptions := in.GetOptions()
 
+	if inOptions.Status == PictureStatus_PICTURE_STATUS_INBOX && userID == 0 {
+		return nil, status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
+	restricted := !isModer && inOptions.GetPictureItem().GetItemParentCacheAncestor().GetItemId() == 0 && inOptions.GetOwnerId() == 0
+	if restricted {
+		return nil, status.Error(codes.PermissionDenied, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
+	}
+
 	options := query.PictureListOptions{
 		Limit: in.GetLimit(),
 		Page:  in.GetPage(),
@@ -1787,17 +1798,6 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 	err = mapPictureListOptions(inOptions, &options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if options.Status == schema.PictureStatusInbox && userID == 0 {
-		return nil, status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
-	}
-
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
-	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
-	restricted := !isModer && (options.PictureItem == nil || options.PictureItem.ItemID == 0) && options.OwnerID == 0
-	if restricted {
-		return nil, status.Error(codes.PermissionDenied, "PictureItem.ItemID or OwnerID is required")
 	}
 
 	fields := convertPictureFields(in.GetFields())
