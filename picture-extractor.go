@@ -47,5 +47,16 @@ func (s *PictureExtractor) Extract(
 		}
 	}
 
+	if fields.GetThumbMedium() {
+		if row.ImageID.Valid {
+			image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-medium")
+			if err != nil {
+				return nil, err
+			}
+
+			result.ThumbMedium = APIImageToGRPC(image)
+		}
+	}
+
 	return result, nil
 }

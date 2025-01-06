@@ -1197,3 +1197,35 @@ func TestReplacePicture(t *testing.T) {
 	require.True(t, success)
 	require.Equal(t, schema.PictureStatusAccepted, picStatus)
 }
+
+func TestGetPictures(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	client := NewPicturesClient(conn)
+
+	_, err := client.GetPictures(ctx, &GetPicturesRequest{Fields: &PictureFields{
+		NameText:    true,
+		Image:       true,
+		ThumbMedium: true,
+	}, Limit: 100})
+	require.ErrorContains(t, err, "PictureItem.ItemID or OwnerID is required")
+
+	cfg := config.LoadConfig(".")
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	_, err = client.GetPictures(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&GetPicturesRequest{Fields: &PictureFields{
+			NameText:    true,
+			Image:       true,
+			ThumbMedium: true,
+		}, Limit: 100},
+	)
+	require.NoError(t, err)
+}

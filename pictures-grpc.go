@@ -31,45 +31,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func extractPictureModerVoteTemplate(tpl *schema.PictureModerVoteTemplateRow) *ModerVoteTemplate {
-	return &ModerVoteTemplate{
-		Id:      tpl.ID,
-		UserId:  tpl.UserID,
-		Message: tpl.Message,
-		Vote:    int32(tpl.Vote),
-	}
-}
-
-func reverseConvertPictureItemType(pictureItemType schema.PictureItemType) PictureItemType {
-	switch pictureItemType {
-	case 0:
-		return PictureItemType_PICTURE_ITEM_UNKNOWN
-	case schema.PictureItemContent:
-		return PictureItemType_PICTURE_ITEM_CONTENT
-	case schema.PictureItemAuthor:
-		return PictureItemType_PICTURE_ITEM_AUTHOR
-	case schema.PictureItemCopyrights:
-		return PictureItemType_PICTURE_ITEM_COPYRIGHTS
-	}
-
-	return PictureItemType_PICTURE_ITEM_UNKNOWN
-}
-
-func convertPictureItemType(pictureItemType PictureItemType) schema.PictureItemType {
-	switch pictureItemType {
-	case PictureItemType_PICTURE_ITEM_UNKNOWN:
-		return 0
-	case PictureItemType_PICTURE_ITEM_CONTENT:
-		return schema.PictureItemContent
-	case PictureItemType_PICTURE_ITEM_AUTHOR:
-		return schema.PictureItemAuthor
-	case PictureItemType_PICTURE_ITEM_COPYRIGHTS:
-		return schema.PictureItemCopyrights
-	}
-
-	return 0
-}
-
 type PicturesGRPCServer struct {
 	UnimplementedPicturesServer
 	repository            *pictures.Repository
@@ -1781,34 +1742,6 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *GetPicture
 	}, nil
 }
 
-func convertPictureStatus(status PictureStatus) schema.PictureStatus {
-	switch status {
-	case PictureStatus_PICTURE_STATUS_UNKNOWN:
-		return ""
-	case PictureStatus_PICTURE_STATUS_ACCEPTED:
-		return schema.PictureStatusAccepted
-	case PictureStatus_PICTURE_STATUS_REMOVING:
-		return schema.PictureStatusRemoving
-	case PictureStatus_PICTURE_STATUS_REMOVED:
-		return schema.PictureStatusRemoved
-	case PictureStatus_PICTURE_STATUS_INBOX:
-		return schema.PictureStatusInbox
-	}
-
-	return ""
-}
-
-func mapPictureListOptions(in *PicturesOptions, options *query.PictureListOptions) {
-	options.ID = in.GetId()
-	options.Status = convertPictureStatus(in.GetStatus())
-}
-
-func convertPictureFields(fields *PictureFields) pictures.PictureFields {
-	return pictures.PictureFields{
-		NameText: fields.GetNameText(),
-	}
-}
-
 func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *GetPicturesRequest) (*Picture, error) {
 	inOptions := in.GetOptions()
 
@@ -1817,7 +1750,10 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *GetPicturesRequ
 		Page:  in.GetPage(),
 	}
 
-	mapPictureListOptions(inOptions, &options)
+	err := mapPictureListOptions(inOptions, &options)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	fields := convertPictureFields(in.GetFields())
 
@@ -1836,6 +1772,11 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *GetPicturesRequ
 }
 
 func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesRequest) (*GetPicturesResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	inOptions := in.GetOptions()
 
 	options := query.PictureListOptions{
@@ -1843,7 +1784,21 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 		Page:  in.GetPage(),
 	}
 
-	mapPictureListOptions(inOptions, &options)
+	err = mapPictureListOptions(inOptions, &options)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if options.Status == schema.PictureStatusInbox && userID == 0 {
+		return nil, status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
+	restricted := !isModer && (options.PictureItem == nil || options.PictureItem.ItemID == 0) && options.OwnerID == 0
+	if restricted {
+		return nil, status.Error(codes.PermissionDenied, "PictureItem.ItemID or OwnerID is required")
+	}
 
 	fields := convertPictureFields(in.GetFields())
 

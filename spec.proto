@@ -982,6 +982,7 @@ message PicturesOptions {
 message PictureFields {
   bool name_text = 1;
   bool image = 2;
+  bool thumb_medium = 3;
 }
 
 message PreviewPicturesFields {
@@ -1047,6 +1048,8 @@ message PictureItemOptions {
   PictureItemType type_id = 1;
   PicturesOptions pictures = 2;
   int32 perspective_id = 3;
+  int64 item_id = 4;
+  ItemParentCacheListOptions item_parent_cache_ancestor = 5;
 }
 
 message ItemParentListOptions {
@@ -1308,6 +1311,7 @@ message Picture {
   APIImage image = 4;
   google.type.LatLng point = 5;
   int32 copyrights_text_id = 6;
+  APIImage thumb_medium = 7;
 }
 
 message GetPicturesResponse {
