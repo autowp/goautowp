@@ -364,7 +364,7 @@ func (s *Repository) PictureSelect(
 		aliasTable.Col(schema.PictureTableAcceptDatetimeColName),
 		aliasTable.Col(schema.PictureTableReplacePictureIDColName),
 		aliasTable.Col(schema.PictureTableWidthColName),
-		aliasTable.Col(schema.PictureTableHeightCol),
+		aliasTable.Col(schema.PictureTableHeightColName),
 	).
 		From(schema.PictureTable.As(alias))
 

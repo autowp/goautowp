@@ -11,8 +11,6 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
-	"github.com/autowp/goautowp/pictures"
-	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/doug-martin/goqu/v9"
@@ -925,8 +923,6 @@ func TestSetPictureCopyrights(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	repo := pictures.NewRepository(goquDB, imageStorage, textStorageRepository)
-
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
 
@@ -946,12 +942,12 @@ func TestSetPictureCopyrights(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+	pic, err := client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
 	require.NoError(t, err)
-	require.True(t, pic.CopyrightsTextID.Valid)
-	require.NotEmpty(t, pic.CopyrightsTextID.Int32)
+	require.NotZero(t, pic.GetCopyrightsTextId())
+	require.NotEmpty(t, pic.GetCopyrightsTextId())
 
-	text, err := textStorageRepository.Text(ctx, pic.CopyrightsTextID.Int32)
+	text, err := textStorageRepository.Text(ctx, pic.GetCopyrightsTextId())
 	require.NoError(t, err)
 	require.Equal(t, "First", text)
 
@@ -973,17 +969,17 @@ func TestSetPictureCopyrights(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	text, err = textStorageRepository.Text(ctx, pic.CopyrightsTextID.Int32)
+	text, err = textStorageRepository.Text(ctx, pic.GetCopyrightsTextId())
 	require.NoError(t, err)
 	require.Equal(t, "Second", text)
 
-	pic2, err := repo.Picture(ctx, query.PictureListOptions{ID: pictureID2}, pictures.PictureFields{})
+	pic2, err := client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID2}})
 	require.NoError(t, err)
-	require.True(t, pic2.CopyrightsTextID.Valid)
-	require.NotEmpty(t, pic2.CopyrightsTextID.Int32)
-	require.NotEqual(t, pic.CopyrightsTextID.Int32, pic2.CopyrightsTextID.Int32)
+	require.NotZero(t, pic2.GetCopyrightsTextId())
+	require.NotEmpty(t, pic2.GetCopyrightsTextId())
+	require.NotEqual(t, pic.GetCopyrightsTextId(), pic2.GetCopyrightsTextId())
 
-	text, err = textStorageRepository.Text(ctx, pic2.CopyrightsTextID.Int32)
+	text, err = textStorageRepository.Text(ctx, pic2.GetCopyrightsTextId())
 	require.NoError(t, err)
 	require.Equal(t, "Third", text)
 }

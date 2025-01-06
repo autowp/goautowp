@@ -1307,6 +1307,7 @@ message Picture {
   uint32 height = 3;
   APIImage image = 4;
   google.type.LatLng point = 5;
+  int32 copyrights_text_id = 6;
 }
 
 message GetPicturesResponse {

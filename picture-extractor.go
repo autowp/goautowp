@@ -5,6 +5,7 @@ import (
 
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/util"
 	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
@@ -22,9 +23,10 @@ func (s *PictureExtractor) Extract(
 	ctx context.Context, row *schema.PictureRow, fields *PictureFields,
 ) (*Picture, error) {
 	result := &Picture{
-		Id:     row.ID,
-		Width:  uint32(row.Width),
-		Height: uint32(row.Height),
+		Id:               row.ID,
+		Width:            uint32(row.Width),
+		Height:           uint32(row.Height),
+		CopyrightsTextId: util.NullInt32ToScalar(row.CopyrightsTextID),
 	}
 
 	if row.Point.Valid {
