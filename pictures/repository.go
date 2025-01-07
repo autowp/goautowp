@@ -559,7 +559,7 @@ func (s *Repository) Pictures(
 			return nil, nil, err
 		}
 	} else if options.Limit > 0 {
-		sqSelect.Limit(uint(options.Limit))
+		sqSelect = sqSelect.Limit(uint(options.Limit))
 	}
 
 	var res []*schema.PictureRow
