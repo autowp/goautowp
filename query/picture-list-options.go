@@ -33,6 +33,7 @@ type PictureListOptions struct {
 	AddDate        *util.Date
 	AcceptDate     *util.Date
 	Timezone       *time.Location
+	Identity       string
 }
 
 func (s *PictureListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, error) {
@@ -60,6 +61,10 @@ func (s *PictureListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (
 
 	if s.ID != 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableIDColName).Eq(s.ID))
+	}
+
+	if s.Identity != "" {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableIdentityColName).Eq(s.Identity))
 	}
 
 	if s.Status != "" {

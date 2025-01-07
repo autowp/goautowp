@@ -974,6 +974,7 @@ message APITopFactoriesListItem {
 
 message PicturesOptions {
   int64 id = 4;
+  string identity = 8;
   PictureStatus status = 1;
   PictureItemOptions picture_item = 2;
   int64 owner_id = 3;

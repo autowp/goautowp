@@ -97,6 +97,7 @@ func mapPictureListOptions(in *PicturesOptions, options *query.PictureListOption
 	options.Status = convertPictureStatus(in.GetStatus())
 	options.AcceptedInDays = in.GetAcceptedInDays()
 	options.OwnerID = in.GetOwnerId()
+	options.Identity = in.GetIdentity()
 
 	addDate := in.GetAddDate()
 	if addDate != nil {
