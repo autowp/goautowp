@@ -46,9 +46,11 @@ func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, 
 
 	imageID, err := imageStorage.AddImageFromFile(ctx, filepath, "picture", storage.GenerateOptions{})
 	require.NoError(t, err)
+	require.NotEmpty(t, imageID)
 
 	img, err := imageStorage.Image(ctx, imageID)
 	require.NoError(t, err)
+	require.NotNil(t, img)
 
 	identity := randomHexString(t, schema.PicturesTableIdentityLength/2)
 

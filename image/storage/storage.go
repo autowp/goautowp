@@ -131,7 +131,7 @@ func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
 func (s *Storage) Images(ctx context.Context, ids []int) ([]*Image, error) {
 	var (
 		sts    []schema.ImageRow
-		result = make([]*Image, len(ids))
+		result = make([]*Image, 0, len(ids))
 	)
 
 	if len(ids) == 0 {

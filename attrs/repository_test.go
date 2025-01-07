@@ -35,7 +35,7 @@ func createRepository(t *testing.T) *Repository {
 	require.NoError(t, err)
 
 	itemsRepository := items.NewRepository(goquDB, 0, cfg.ContentLanguages, textstorageRepository)
-	picturesRepository := pictures.NewRepository(goquDB, imageStorage, textstorageRepository)
+	picturesRepository := pictures.NewRepository(goquDB, imageStorage, textstorageRepository, itemsRepository)
 
 	repo := NewRepository(goquDB, i18n, itemsRepository, picturesRepository, imageStorage)
 

@@ -48,6 +48,7 @@ type Repository struct {
 	db                    *goqu.Database
 	imageStorage          *storage.Storage
 	textStorageRepository *textstorage.Repository
+	itemsRepository       *items.Repository
 }
 
 type PictureFields struct {
@@ -70,11 +71,13 @@ const (
 
 func NewRepository(
 	db *goqu.Database, imageStorage *storage.Storage, textStorageRepository *textstorage.Repository,
+	itemsRepository *items.Repository,
 ) *Repository {
 	return &Repository{
 		db:                    db,
 		imageStorage:          imageStorage,
 		textStorageRepository: textStorageRepository,
+		itemsRepository:       itemsRepository,
 	}
 }
 
@@ -151,7 +154,7 @@ func (s *Repository) GetVote(ctx context.Context, id int64, userID int64) (*Vote
 		}
 
 		if !success {
-			return nil, sql.ErrNoRows
+			value = 0
 		}
 	}
 
@@ -169,7 +172,8 @@ func (s *Repository) GetVote(ctx context.Context, id int64, userID int64) (*Vote
 	}
 
 	if !success {
-		return nil, sql.ErrNoRows
+		st.Positive = 0
+		st.Negative = 0
 	}
 
 	return &VoteSummary{
@@ -387,8 +391,8 @@ func (s *Repository) CreateModerVote(
 
 func (s *Repository) ModerVoteCount(ctx context.Context, pictureID int64) (int32, int32, error) {
 	st := struct {
-		Sum   int32 `db:"sum"`
-		Count int32 `db:"count"`
+		Sum   sql.NullInt32 `db:"sum"`
+		Count int32         `db:"count"`
 	}{}
 
 	success, err := s.db.Select(
@@ -397,6 +401,7 @@ func (s *Repository) ModerVoteCount(ctx context.Context, pictureID int64) (int32
 	).
 		From(schema.PicturesModerVotesTable).
 		Where(schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID)).
+		GroupBy().
 		ScanStructContext(ctx, &st)
 	if err != nil {
 		return 0, 0, err
@@ -406,7 +411,11 @@ func (s *Repository) ModerVoteCount(ctx context.Context, pictureID int64) (int32
 		return 0, 0, nil
 	}
 
-	return st.Count, st.Sum, nil
+	if !st.Sum.Valid {
+		st.Sum.Int32 = 0
+	}
+
+	return st.Count, st.Sum.Int32, nil
 }
 
 func (s *Repository) PictureSelect(
@@ -1218,7 +1227,6 @@ func (s *Repository) PictureItems(
 
 type NameDataOptions struct {
 	Language string
-	Large    bool
 }
 
 func (s *Repository) NameData(
@@ -1226,7 +1234,6 @@ func (s *Repository) NameData(
 ) (map[int64]PictureNameFormatterOptions, error) {
 	var (
 		result = make(map[int64]PictureNameFormatterOptions, len(rows))
-		large  = options.Large
 		// prefetch
 		itemIDs        = make(map[int64]int32)
 		perspectiveIDs = make(map[int64]bool)
@@ -1255,43 +1262,15 @@ func (s *Repository) NameData(
 		}
 	}
 
-	itemsCache := make(map[int64]items.ItemNameFormatterOptions, 0)
+	itemsCache := make(map[int64]items.ItemNameFormatterOptions)
 
 	if len(itemIDs) > 0 {
-		nameColumn := items.NameOnlyColumn{
-			DB: s.db,
-		}
-
-		expr, err := nameColumn.SelectExpr(schema.ItemTableName, options.Language)
-		if err != nil {
-			return nil, err
-		}
-
-		columns := []interface{}{
-			schema.ItemTableIDCol,
-			schema.ItemTableBeginModelYearCol,
-			schema.ItemTableEndModelYearCol,
-			schema.ItemTableBeginModelYearFractionCol,
-			schema.ItemTableEndModelYearFractionCol,
-			schema.ItemTableBodyCol,
-			expr.As("name"),
-			schema.ItemTableBeginYearCol,
-			schema.ItemTableEndYearCol,
-			schema.ItemTableTodayCol,
-			schema.SpecTableShortNameCol.As("spec"),
-			schema.SpecTableNameCol.As("spec_full"),
-		}
-		if large {
-			columns = append(columns, schema.ItemTableBeginMonthCol)
-			columns = append(columns, schema.ItemTableEndMonthCol)
-		}
-
-		var itemRows []items.Item
-
-		err = s.db.Select(columns...).From(schema.ItemTable).
-			Where(schema.ItemTableIDCol.In(slices.Collect(maps.Keys(itemIDs)))).
-			LeftJoin(schema.SpecTable, goqu.On(schema.ItemTableSpecIDCol.Eq(schema.SpecTableIDCol))).
-			ScanStructsContext(ctx, &itemRows)
+		itemRows, _, err := s.itemsRepository.List(ctx, query.ItemsListOptions{
+			ItemIDs:  slices.Collect(maps.Keys(itemIDs)),
+			Language: options.Language,
+		}, items.ListFields{
+			NameOnly: true,
+		}, items.OrderByNone, false)
 		if err != nil {
 			return nil, err
 		}
@@ -1305,7 +1284,7 @@ func (s *Repository) NameData(
 				Spec:                   row.SpecShortName,
 				SpecFull:               row.SpecName,
 				Body:                   row.Body,
-				Name:                   row.Name,
+				Name:                   row.NameOnly,
 				BeginYear:              util.NullInt32ToScalar(row.BeginYear),
 				EndYear:                util.NullInt32ToScalar(row.EndYear),
 				Today:                  util.NullBoolToBoolPtr(row.Today),

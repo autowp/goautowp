@@ -61,7 +61,7 @@ func (s *PictureExtractor) ExtractRows(
 	var (
 		namesData map[int64]pictures.PictureNameFormatterOptions
 		err       error
-		result    = make([]*Picture, len(rows))
+		result    = make([]*Picture, 0, len(rows))
 		localizer = s.i18n.Localizer(lang)
 		images    = make(map[int]*storage.Image, 0)
 	)
