@@ -123,7 +123,7 @@ func (s *UserExtractor) Extract(
 			user.Timezone = row.Timezone
 		}
 
-		if fields.GetImg() {
+		if fields.GetImg() && row.Img != nil {
 			img, err := s.imageStorage.Image(ctx, *row.Img)
 			if err != nil {
 				return nil, err
