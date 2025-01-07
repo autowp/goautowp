@@ -992,6 +992,7 @@ message PictureFields {
   bool votes = 6;
   bool comments_count = 7;
   bool moder_vote = 8;
+  bool thumb = 9;
 }
 
 message PreviewPicturesFields {
@@ -1350,6 +1351,7 @@ message Picture {
   int32 comments_count_new = 19;
   int32 moder_vote_vote = 20;
   int32 moder_vote_count = 21;
+  APIImage thumb = 22;
 }
 
 message GetPicturesResponse {

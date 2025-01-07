@@ -55,7 +55,7 @@ func (s *PictureExtractor) Extract(
 	return result[0], nil
 }
 
-func (s *PictureExtractor) ExtractRows(
+func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 	ctx context.Context, rows []*schema.PictureRow, fields *PictureFields, lang string, isModer bool, userID int64,
 ) ([]*Picture, error) {
 	var (
@@ -144,6 +144,17 @@ func (s *PictureExtractor) ExtractRows(
 		if fields.GetImage() && row.ImageID.Valid {
 			if image, ok := images[int(row.ImageID.Int64)]; ok {
 				resultRow.Image = APIImageToGRPC(image)
+			}
+		}
+
+		if fields.GetThumb() {
+			if row.ImageID.Valid {
+				image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb")
+				if err != nil {
+					return nil, err
+				}
+
+				resultRow.Thumb = APIImageToGRPC(image)
 			}
 		}
 
