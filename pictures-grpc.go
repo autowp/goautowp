@@ -1869,12 +1869,14 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 		return nil, status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
 	}
 
+	const acceptedInDaysMax = 3
+
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
 	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
 	restricted := !isModer && inOptions.GetPictureItem().GetItemId() == 0 &&
 		inOptions.GetPictureItem().GetItemParentCacheAncestor().GetItemId() == 0 &&
 		inOptions.GetPictureItem().GetPerspectiveId() == 0 &&
-		inOptions.GetOwnerId() == 0
+		inOptions.GetOwnerId() == 0 && inOptions.GetAcceptedInDays() < acceptedInDaysMax
 	if restricted {
 		return nil, status.Error(codes.PermissionDenied, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
 	}
