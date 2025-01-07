@@ -11,6 +11,7 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/doug-martin/goqu/v9"
@@ -1233,4 +1234,92 @@ func TestGetPictures(t *testing.T) {
 		}, Limit: 100},
 	)
 	require.NoError(t, err)
+}
+
+func TestGetPictureWithPerspectivePrefix(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := NewPicturesClient(conn)
+	itemsClient := NewItemsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	itemName := fmt.Sprintf("vehicle-%d", random.Int())
+
+	res, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            itemName,
+		IsGroup:         false,
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Body:            "",
+		Produced:        sql.NullInt32{Valid: true, Int32: 777},
+		ProducedExactly: true,
+		BeginYear:       sql.NullInt32{Valid: true, Int32: 1999},
+		EndYear:         sql.NullInt32{Valid: true, Int32: 2001},
+		BeginModelYear:  sql.NullInt32{Valid: true, Int32: 2000},
+		EndModelYear:    sql.NullInt32{Valid: true, Int32: 2001},
+		SpecID:          sql.NullInt32{Valid: true, Int32: schema.SpecIDWorldwide},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = itemsClient.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemLanguage{
+			ItemId:   itemID,
+			Language: items.DefaultLanguageCode,
+			Name:     itemName,
+		},
+	)
+	require.NoError(t, err)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+
+	_, err = client.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&CreatePictureItemRequest{
+			PictureId:     pictureID,
+			ItemId:        itemID,
+			Type:          PictureItemType_PICTURE_ITEM_CONTENT,
+			PerspectiveId: schema.PerspectiveIDUnderTheHood,
+		},
+	)
+	require.NoError(t, err)
+
+	picture, err := client.GetPicture(
+		ctx,
+		&GetPicturesRequest{
+			Options: &PicturesOptions{Id: pictureID},
+			Fields:  &PictureFields{NameText: true, NameHtml: true},
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, picture.GetNameText())
+	require.NotEmpty(t, picture.GetNameHtml())
+
+	item, err := itemsClient.Item(ctx, &ItemRequest{
+		Id:       itemID,
+		Fields:   &ItemFields{NameText: true, NameHtml: true},
+		Language: "en",
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, item.GetNameText())
+	require.NotEmpty(t, item.GetNameHtml())
+
+	require.Equal(t, picture.GetNameText(), "Under The Hood "+item.GetNameText())
+	require.Equal(t, picture.GetNameHtml(), "Under The Hood "+item.GetNameHtml())
 }

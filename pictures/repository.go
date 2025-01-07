@@ -26,7 +26,7 @@ var (
 	errImageIDIsNil                       = errors.New("image_id is null")
 )
 
-var prefixedPerspectives = []int64{5, 6, 17, 20, 21, 22, 23, 24, 28}
+var prefixedPerspectives = []int64{5, 6, schema.PerspectiveIDUnderTheHood, 20, 21, 22, 23, 24, 28}
 
 type VoteSummary struct {
 	Value    int32
@@ -1157,11 +1157,7 @@ func (s *Repository) QueueRemove(ctx context.Context, pictureID int64, userID in
 	return affected > 0, err
 }
 
-func (s *Repository) PictureItem(
-	ctx context.Context, options query.PictureItemListOptions,
-) (schema.PictureItemRow, error) {
-	var row schema.PictureItemRow
-
+func (s *Repository) PictureItemSelect(options query.PictureItemListOptions) (*goqu.SelectDataset, error) {
 	alias := query.PictureItemAlias
 	aliasTable := goqu.T(alias)
 
@@ -1175,15 +1171,28 @@ func (s *Repository) PictureItem(
 			aliasTable.Col(schema.PictureItemTableCropTopColName),
 			aliasTable.Col(schema.PictureItemTableCropWidthColName),
 			aliasTable.Col(schema.PictureItemTableCropHeightColName),
+			aliasTable.Col(schema.PictureItemTablePerspectiveIDColName),
 		).
-			From(schema.PictureItemTable.As(alias)).
-			Limit(1),
+			From(schema.PictureItemTable.As(alias)),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect, nil
+}
+
+func (s *Repository) PictureItem(
+	ctx context.Context, options query.PictureItemListOptions,
+) (schema.PictureItemRow, error) {
+	var row schema.PictureItemRow
+
+	sqSelect, err := s.PictureItemSelect(options)
 	if err != nil {
 		return row, err
 	}
 
-	success, err := sqSelect.ScanStructContext(ctx, &row)
+	success, err := sqSelect.Limit(1).ScanStructContext(ctx, &row)
 	if err != nil {
 		return row, err
 	}
@@ -1200,26 +1209,7 @@ func (s *Repository) PictureItems(
 ) ([]schema.PictureItemRow, error) {
 	var rows []schema.PictureItemRow
 
-	alias := "pi"
-	aliasTable := goqu.T(alias)
-
-	sqSelect, err := options.Apply(
-		alias,
-		s.db.Select(
-			aliasTable.Col(schema.PictureItemTablePictureIDColName),
-			aliasTable.Col(schema.PictureItemTableItemIDColName),
-			aliasTable.Col(schema.PictureItemTableTypeColName),
-			aliasTable.Col(schema.PictureItemTableCropLeftColName),
-			aliasTable.Col(schema.PictureItemTableCropTopColName),
-			aliasTable.Col(schema.PictureItemTableCropWidthColName),
-			aliasTable.Col(schema.PictureItemTableCropHeightColName),
-		).
-			From(schema.PictureItemTable.As(alias)).
-			Join(schema.PictureTable, goqu.On(
-				aliasTable.Col(schema.PictureItemTablePictureIDColName).Eq(schema.PictureTableIDCol),
-			)).
-			Order(schema.PictureTableStatusCol.Asc()),
-	)
+	sqSelect, err := s.PictureItemSelect(options)
 	if err != nil {
 		return nil, err
 	}
@@ -1246,7 +1236,10 @@ func (s *Repository) NameData(
 	for _, row := range rows {
 		var pictureItemRows []schema.PictureItemRow
 
-		err := s.db.Select(schema.PictureItemTableItemIDCol, schema.PictureItemTableCropLeftCol).
+		err := s.db.Select(
+			schema.PictureItemTableItemIDCol, schema.PictureItemTableCropLeftCol,
+			schema.PictureItemTablePerspectiveIDCol,
+		).
 			From(schema.PictureItemTable).
 			Where(
 				schema.PictureItemTablePictureIDCol.Eq(row.ID),
@@ -1274,6 +1267,8 @@ func (s *Repository) NameData(
 			Language: options.Language,
 		}, items.ListFields{
 			NameOnly: true,
+			NameText: true,
+			NameHTML: true,
 		}, items.OrderByNone, false)
 		if err != nil {
 			return nil, err

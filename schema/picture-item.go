@@ -25,14 +25,15 @@ const (
 )
 
 var (
-	PictureItemTable              = goqu.T(PictureItemTableName)
-	PictureItemTablePictureIDCol  = PictureItemTable.Col(PictureItemTablePictureIDColName)
-	PictureItemTableItemIDCol     = PictureItemTable.Col(PictureItemTableItemIDColName)
-	PictureItemTableTypeCol       = PictureItemTable.Col(PictureItemTableTypeColName)
-	PictureItemTableCropLeftCol   = PictureItemTable.Col(PictureItemTableCropLeftColName)
-	PictureItemTableCropTopCol    = PictureItemTable.Col(PictureItemTableCropTopColName)
-	PictureItemTableCropWidthCol  = PictureItemTable.Col(PictureItemTableCropWidthColName)
-	PictureItemTableCropHeightCol = PictureItemTable.Col(PictureItemTableCropHeightColName)
+	PictureItemTable                 = goqu.T(PictureItemTableName)
+	PictureItemTablePictureIDCol     = PictureItemTable.Col(PictureItemTablePictureIDColName)
+	PictureItemTableItemIDCol        = PictureItemTable.Col(PictureItemTableItemIDColName)
+	PictureItemTableTypeCol          = PictureItemTable.Col(PictureItemTableTypeColName)
+	PictureItemTableCropLeftCol      = PictureItemTable.Col(PictureItemTableCropLeftColName)
+	PictureItemTableCropTopCol       = PictureItemTable.Col(PictureItemTableCropTopColName)
+	PictureItemTableCropWidthCol     = PictureItemTable.Col(PictureItemTableCropWidthColName)
+	PictureItemTableCropHeightCol    = PictureItemTable.Col(PictureItemTableCropHeightColName)
+	PictureItemTablePerspectiveIDCol = PictureItemTable.Col(PictureItemTablePerspectiveIDColName)
 )
 
 type PictureItemRow struct {

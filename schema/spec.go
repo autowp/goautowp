@@ -8,6 +8,8 @@ const (
 	SpecTableNameColName      = "name"
 	SpecTableShortNameColName = "short_name"
 	SpecTableParentIDColName  = "parent_id"
+
+	SpecIDWorldwide = 29
 )
 
 var (

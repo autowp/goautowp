@@ -4,6 +4,8 @@ import "github.com/doug-martin/goqu/v9"
 
 const (
 	PerspectivesTableName = "perspectives"
+
+	PerspectiveIDUnderTheHood = 17
 )
 
 var (
@@ -15,5 +17,5 @@ var (
 
 type PerspectiveRow struct {
 	ID   int64  `db:"id"`
-	Name string `db:"string"`
+	Name string `db:"name"`
 }
