@@ -478,7 +478,9 @@ func (s *Repository) PictureSelect(
 		pvsAlias := alias + "pvs"
 		sqSelect = sqSelect.
 			LeftJoin(schema.PictureVoteSummaryTable.As(pvsAlias), goqu.On(
-				aliasTable.Col(schema.PictureTableIDCol).Eq(goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTablePictureIDColName)),
+				aliasTable.Col(schema.PictureTableIDColName).Eq(
+					goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTablePictureIDColName),
+				),
 			)).
 			Order(
 				goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTablePositiveColName).Desc(),
@@ -489,7 +491,9 @@ func (s *Repository) PictureSelect(
 		pvsAlias := alias + "pvs"
 		sqSelect = sqSelect.
 			LeftJoin(schema.PictureVoteSummaryTable.As(pvsAlias), goqu.On(
-				aliasTable.Col(schema.PictureTableIDCol).Eq(goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTablePictureIDColName)),
+				aliasTable.Col(schema.PictureTableIDColName).Eq(
+					goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTablePictureIDColName),
+				),
 			)).
 			Order(
 				goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTableNegativeColName).Desc(),
