@@ -1222,9 +1222,14 @@ func TestGetPictures(t *testing.T) {
 	_, err = client.GetPictures(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&GetPicturesRequest{Fields: &PictureFields{
-			NameText:    true,
-			Image:       true,
-			ThumbMedium: true,
+			NameText:      true,
+			NameHtml:      true,
+			Image:         true,
+			ThumbMedium:   true,
+			Views:         true,
+			Votes:         true,
+			CommentsCount: true,
+			ModerVote:     true,
 		}, Limit: 100},
 	)
 	require.NoError(t, err)

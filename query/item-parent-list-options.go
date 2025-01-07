@@ -31,14 +31,17 @@ type ItemParentListOptions struct {
 	Catname                           string
 }
 
-func (s *ItemParentListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, bool) {
+func (s *ItemParentListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, bool, error) {
 	sqSelect := db.Select().From(schema.ItemParentTable.As(ItemParentAlias))
 
 	return s.Apply(ItemParentAlias, sqSelect)
 }
 
-func (s *ItemParentListOptions) CountSelect(db *goqu.Database) *goqu.SelectDataset {
-	sqSelect, groupBy := s.Select(db)
+func (s *ItemParentListOptions) CountSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
+	sqSelect, groupBy, err := s.Select(db)
+	if err != nil {
+		return nil, err
+	}
 
 	if groupBy {
 		sqSelect = sqSelect.Select(goqu.COUNT(goqu.DISTINCT(goqu.Star())))
@@ -46,13 +49,16 @@ func (s *ItemParentListOptions) CountSelect(db *goqu.Database) *goqu.SelectDatas
 		sqSelect = sqSelect.Select(goqu.COUNT(goqu.Star()))
 	}
 
-	return sqSelect
+	return sqSelect, nil
 }
 
-func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool) {
-	groupBy := false
-	subGroupBy := false
-	aliasTable := goqu.T(alias)
+func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool, error) {
+	var (
+		err        error
+		groupBy    = false
+		subGroupBy = false
+		aliasTable = goqu.T(alias)
+	)
 
 	if s.ItemID != 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableItemIDColName).Eq(s.ItemID))
@@ -91,7 +97,11 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 				)),
 			)
 
-		sqSelect, subGroupBy = s.ParentItems.Apply(iAlias, sqSelect)
+		sqSelect, subGroupBy, err = s.ParentItems.Apply(iAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+
 		if subGroupBy {
 			groupBy = true
 		}
@@ -108,7 +118,11 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 				)),
 			)
 
-		sqSelect, groupBy = s.ChildItems.Apply(iAlias, sqSelect)
+		sqSelect, groupBy, err = s.ChildItems.Apply(iAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+
 		if subGroupBy {
 			groupBy = true
 		}
@@ -124,7 +138,11 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 				)),
 			)
 
-		sqSelect = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
+		sqSelect, err = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+
 		groupBy = true
 	}
 
@@ -138,7 +156,11 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 				)),
 			)
 
-		sqSelect = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
+		sqSelect, err = s.ItemParentCacheAncestorByParentID.Apply(ipcaAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+
 		groupBy = true
 	}
 
@@ -152,9 +174,13 @@ func (s *ItemParentListOptions) Apply(alias string, sqSelect *goqu.SelectDataset
 				)),
 			)
 
-		sqSelect, _ = s.ItemParentParentByChildID.Apply(ippAlias, sqSelect)
+		sqSelect, _, err = s.ItemParentParentByChildID.Apply(ippAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+
 		groupBy = true
 	}
 
-	return sqSelect, groupBy
+	return sqSelect, groupBy, nil
 }

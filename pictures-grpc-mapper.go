@@ -1,9 +1,12 @@
 package goautowp
 
 import (
+	"time"
+
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/util"
 )
 
 func extractPictureModerVoteTemplate(tpl *schema.PictureModerVoteTemplateRow) *ModerVoteTemplate {
@@ -65,6 +68,7 @@ func convertPictureStatus(status PictureStatus) schema.PictureStatus {
 func mapPictureItemListOptions(in *PictureItemOptions, options *query.PictureItemListOptions) error {
 	options.TypeID = convertPictureItemType(in.GetTypeId())
 	options.PerspectiveID = in.GetPerspectiveId()
+	options.ExcludePerspectiveID = in.GetExcludePerspectiveId()
 	options.ItemID = in.GetItemId()
 
 	if in.GetPictures() != nil {
@@ -91,11 +95,31 @@ func mapPictureItemListOptions(in *PictureItemOptions, options *query.PictureIte
 func mapPictureListOptions(in *PicturesOptions, options *query.PictureListOptions) error {
 	options.ID = in.GetId()
 	options.Status = convertPictureStatus(in.GetStatus())
+	options.AcceptedInDays = in.GetAcceptedInDays()
 
-	if in.GetPictureItem() != nil {
+	addDate := in.GetAddDate()
+	if addDate != nil {
+		options.AddDate = &util.Date{
+			Year:  int(addDate.GetYear()),
+			Month: time.Month(addDate.GetMonth()),
+			Day:   int(addDate.GetDay()),
+		}
+	}
+
+	acceptDate := in.GetAcceptDate()
+	if acceptDate != nil {
+		options.AcceptDate = &util.Date{
+			Year:  int(acceptDate.GetYear()),
+			Month: time.Month(acceptDate.GetMonth()),
+			Day:   int(acceptDate.GetDay()),
+		}
+	}
+
+	pictureItem := in.GetPictureItem()
+	if pictureItem != nil {
 		options.PictureItem = &query.PictureItemListOptions{}
 
-		err := mapPictureItemListOptions(in.GetPictureItem(), options.PictureItem)
+		err := mapPictureItemListOptions(pictureItem, options.PictureItem)
 		if err != nil {
 			return err
 		}
@@ -108,4 +132,29 @@ func convertPictureFields(fields *PictureFields) pictures.PictureFields {
 	return pictures.PictureFields{
 		NameText: fields.GetNameText(),
 	}
+}
+
+func convertPicturesOrder(order GetPicturesRequest_Order) pictures.OrderBy {
+	switch order {
+	case GetPicturesRequest_NONE:
+		return pictures.OrderByNone
+	case GetPicturesRequest_ADD_DATE_DESC:
+		return pictures.OrderByAddDateDesc
+	case GetPicturesRequest_ADD_DATE_ASC:
+		return pictures.OrderByAddDateAsc
+	case GetPicturesRequest_RESOLUTION_DESC:
+		return pictures.OrderByResolutionDesc
+	case GetPicturesRequest_RESOLUTION_ASC:
+		return pictures.OrderByResolutionAsc
+	case GetPicturesRequest_LIKES:
+		return pictures.OrderByLikes
+	case GetPicturesRequest_DISLIKES:
+		return pictures.OrderByDislikes
+	case GetPicturesRequest_ACCEPT_DATETIME_DESC:
+		return pictures.OrderByAcceptDatetimeDesc
+	case GetPicturesRequest_PERSPECTIVES:
+		return pictures.OrderByPerspectives
+	}
+
+	return pictures.OrderByNone
 }

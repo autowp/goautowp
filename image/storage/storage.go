@@ -116,11 +116,29 @@ func NewStorage(db *goqu.Database, config config.ImageStorageConfig) (*Storage, 
 }
 
 func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
-	var img Image
+	imgs, err := s.Images(ctx, []int{id})
+	if err != nil {
+		return nil, err
+	}
 
-	var st schema.ImageRow
+	if len(imgs) == 0 {
+		return nil, ErrImageNotFound
+	}
 
-	success, err := s.db.Select(
+	return imgs[0], nil
+}
+
+func (s *Storage) Images(ctx context.Context, ids []int) ([]*Image, error) {
+	var (
+		sts    []schema.ImageRow
+		result = make([]*Image, len(ids))
+	)
+
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	err := s.db.Select(
 		schema.ImageTableIDCol,
 		schema.ImageTableWidthCol,
 		schema.ImageTableHeightCol,
@@ -133,33 +151,35 @@ func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
 		schema.ImageTableCropHeightCol,
 	).
 		From(schema.ImageTable).
-		Where(schema.ImageTableIDCol.Eq(id)).
-		ScanStructContext(ctx, &st)
+		Where(schema.ImageTableIDCol.In(ids)).
+		ScanStructsContext(ctx, &sts)
 	if err != nil {
 		return nil, err
 	}
 
-	if !success {
-		return nil, ErrImageNotFound
+	for _, st := range sts {
+		var img Image
+
+		img.id = st.ID
+		img.width = st.Width
+		img.height = st.Height
+		img.filepath = st.Filepath
+		img.filesize = st.Filesize
+		img.dir = st.Dir
+		img.cropLeft = st.CropLeft
+		img.cropTop = st.CropTop
+		img.cropWidth = st.CropWidth
+		img.cropHeight = st.CropHeight
+
+		err = s.populateSrc(&img)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, &img)
 	}
 
-	img.id = st.ID
-	img.width = st.Width
-	img.height = st.Height
-	img.filepath = st.Filepath
-	img.filesize = st.Filesize
-	img.dir = st.Dir
-	img.cropLeft = st.CropLeft
-	img.cropTop = st.CropTop
-	img.cropWidth = st.CropWidth
-	img.cropHeight = st.CropHeight
-
-	err = s.populateSrc(&img)
-	if err != nil {
-		return nil, err
-	}
-
-	return &img, nil
+	return result, nil
 }
 
 func (s *Storage) populateSrc(img *Image) error {

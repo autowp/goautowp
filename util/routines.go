@@ -21,6 +21,12 @@ const (
 	mysqlDeadlockErrorCode     = 1213
 )
 
+type Date struct {
+	Year  int
+	Month time.Month
+	Day   int
+}
+
 // Close resource and prints error.
 func Close(c io.Closer) {
 	if err := c.Close(); err != nil {

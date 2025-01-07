@@ -27,18 +27,26 @@ type ItemParentCacheListOptions struct {
 	StockOnly                       bool
 }
 
-func (s *ItemParentCacheListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
+func (s *ItemParentCacheListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, error) {
 	sqSelect := db.Select().From(schema.ItemParentCacheTable.As(itemParentCacheAlias))
 
 	return s.Apply(itemParentCacheAlias, sqSelect)
 }
 
-func (s *ItemParentCacheListOptions) CountSelect(db *goqu.Database) *goqu.SelectDataset {
-	return s.Select(db).Select(goqu.COUNT(goqu.Star()))
+func (s *ItemParentCacheListOptions) CountSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
+	sqSelect, err := s.Select(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect.Select(goqu.COUNT(goqu.Star())), nil
 }
 
-func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
-	aliasTable := goqu.T(alias)
+func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+	var (
+		err        error
+		aliasTable = goqu.T(alias)
+	)
 
 	if s.ParentID != 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentCacheTableParentIDColName).Eq(s.ParentID))
@@ -60,7 +68,10 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 				goqu.On(aliasTable.Col(schema.ItemParentCacheTableItemIDColName).Eq(goqu.T(iAlias).Col(schema.ItemTableIDColName))),
 			)
 
-		sqSelect, _ = s.ItemsByItemID.Apply(iAlias, sqSelect)
+		sqSelect, _, err = s.ItemsByItemID.Apply(iAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.ItemsByParentID != nil {
@@ -73,7 +84,10 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 				)),
 			)
 
-		sqSelect, _ = s.ItemsByParentID.Apply(iAlias, sqSelect)
+		sqSelect, _, err = s.ItemsByParentID.Apply(iAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.ItemParentByItemID != nil {
@@ -85,7 +99,10 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 			)),
 		)
 
-		sqSelect, _ = s.ItemParentByItemID.Apply(ippAlias, sqSelect)
+		sqSelect, _, err = s.ItemParentByItemID.Apply(ippAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.PictureItemsByItemID != nil {
@@ -98,7 +115,10 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 			)),
 		)
 
-		sqSelect = s.PictureItemsByItemID.Apply(piAlias, sqSelect)
+		sqSelect, err = s.PictureItemsByItemID.Apply(piAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.ItemParentCacheAncestorByItemID != nil {
@@ -111,7 +131,10 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 				)),
 			)
 
-		sqSelect = s.ItemParentCacheAncestorByItemID.Apply(ipcdAlias, sqSelect)
+		sqSelect, err = s.ItemParentCacheAncestorByItemID.Apply(ipcdAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.ExcludeSelf {
@@ -127,5 +150,5 @@ func (s *ItemParentCacheListOptions) Apply(alias string, sqSelect *goqu.SelectDa
 		)
 	}
 
-	return sqSelect
+	return sqSelect, nil
 }

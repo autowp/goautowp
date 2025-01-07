@@ -23,8 +23,11 @@ func AppendPictureItemAlias(alias string) string {
 	return alias + "_" + PictureItemAlias
 }
 
-func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
-	aliasTable := goqu.T(alias)
+func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+	var (
+		err        error
+		aliasTable = goqu.T(alias)
+	)
 
 	if s.TypeID != 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTableTypeColName).Eq(s.TypeID))
@@ -58,7 +61,10 @@ func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDatase
 			),
 		)
 
-		sqSelect = s.Pictures.Apply(pAlias, sqSelect)
+		sqSelect, err = s.Pictures.Apply(pAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.ItemParentCacheAncestor != nil {
@@ -71,8 +77,11 @@ func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDatase
 				)),
 			)
 
-		sqSelect = s.ItemParentCacheAncestor.Apply(ipcaAlias, sqSelect)
+		sqSelect, err = s.ItemParentCacheAncestor.Apply(ipcaAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return sqSelect
+	return sqSelect, nil
 }

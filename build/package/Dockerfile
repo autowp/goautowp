@@ -54,6 +54,7 @@ RUN apt-get update -qqy && \
     apt-get install -qqy \
         ca-certificates \
         imagemagick \
+        tzdata \
     && \
     apt-get clean && \
     update-ca-certificates && \

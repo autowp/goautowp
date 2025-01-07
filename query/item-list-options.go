@@ -62,41 +62,63 @@ func ItemParentNoParentAlias(alias string) string {
 	return alias + itemParentNoParentAliasSuffix
 }
 
-func (s *ItemsListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
-	alias := ItemAlias
+func (s *ItemsListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, error) {
+	var (
+		err   error
+		alias = ItemAlias
+	)
+
 	if s.Alias != "" {
 		alias = s.Alias
 	}
 
 	sqSelect := db.Select().From(schema.ItemTable.As(alias))
-	sqSelect, _ = s.Apply(alias, sqSelect)
+	sqSelect, _, err = s.Apply(alias, sqSelect)
 
-	return sqSelect
+	return sqSelect, err
 }
 
-func (s *ItemsListOptions) ExistsSelect(db *goqu.Database) *goqu.SelectDataset {
-	return s.Select(db).Select(goqu.V(true))
+func (s *ItemsListOptions) ExistsSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
+	sqSelect, err := s.Select(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect.Select(goqu.V(true)), nil
 }
 
-func (s *ItemsListOptions) CountSelect(db *goqu.Database) *goqu.SelectDataset {
-	return s.Select(db).Select(goqu.COUNT(goqu.Star()))
+func (s *ItemsListOptions) CountSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
+	sqSelect, err := s.Select(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect.Select(goqu.COUNT(goqu.Star())), nil
 }
 
-func (s *ItemsListOptions) CountDistinctSelect(db *goqu.Database) *goqu.SelectDataset {
+func (s *ItemsListOptions) CountDistinctSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
 	alias := ItemAlias
 	if s.Alias != "" {
 		alias = s.Alias
 	}
 
-	return s.Select(db).Select(
+	sqSelect, err := s.Select(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect.Select(
 		goqu.COUNT(goqu.DISTINCT(goqu.T(alias).Col(schema.ItemTableIDColName))),
-	)
+	), nil
 }
 
-func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool) {
-	groupBy := false
-	aliasTable := goqu.T(alias)
-	aliasIDCol := aliasTable.Col(schema.ItemTableIDColName)
+func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool, error) {
+	var (
+		err        error
+		groupBy    = false
+		aliasTable = goqu.T(alias)
+		aliasIDCol = aliasTable.Col(schema.ItemTableIDColName)
+	)
 
 	if s.ItemID > 0 {
 		sqSelect = sqSelect.Where(aliasIDCol.Eq(s.ItemID))
@@ -124,104 +146,6 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableAddDatetimeColName).Gt(
 			goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL ? DAY", s.CreatedInDays)),
 		))
-	}
-
-	if s.VehicleTypeAncestorID > 0 {
-		groupBy = true
-		sqSelect = sqSelect.
-			Join(
-				schema.VehicleVehicleTypeTable,
-				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
-			).
-			Join(
-				schema.CarTypesParentsTable,
-				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol)),
-			).
-			Where(schema.CarTypesParentsTableParentIDCol.Eq(s.VehicleTypeAncestorID))
-	}
-
-	var subGroupBy bool
-
-	sqSelect, subGroupBy = s.applyExcludeVehicleTypeAncestorID(alias, sqSelect)
-	if subGroupBy {
-		groupBy = true
-	}
-
-	if s.VehicleTypeIsNull {
-		sqSelect = sqSelect.
-			LeftJoin(
-				schema.VehicleVehicleTypeTable,
-				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
-			).
-			Where(schema.VehicleVehicleTypeTableVehicleIDCol.IsNull())
-	}
-
-	if s.ItemParentChild != nil {
-		groupBy = true
-		ipcAlias := AppendItemParentAlias(alias, "c")
-		sqSelect = sqSelect.Join(
-			schema.ItemParentTable.As(ipcAlias),
-			goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col(schema.ItemParentTableParentIDColName))),
-		)
-
-		sqSelect, _ = s.ItemParentChild.Apply(ipcAlias, sqSelect)
-	}
-
-	if s.ItemParentParent != nil {
-		groupBy = true
-		ippAlias := AppendItemParentAlias(alias, "p")
-		sqSelect = sqSelect.Join(
-			schema.ItemParentTable.As(ippAlias),
-			goqu.On(aliasIDCol.Eq(goqu.T(ippAlias).Col(schema.ItemParentTableItemIDColName))),
-		)
-
-		sqSelect, _ = s.ItemParentParent.Apply(ippAlias, sqSelect)
-	}
-
-	if s.PictureItems != nil {
-		groupBy = true
-		piAlias := AppendPictureItemAlias(alias)
-
-		sqSelect = sqSelect.Join(
-			schema.PictureItemTable.As(piAlias),
-			goqu.On(aliasIDCol.Eq(goqu.T(piAlias).Col(schema.PictureItemTableItemIDColName))),
-		)
-
-		sqSelect = s.PictureItems.Apply(piAlias, sqSelect)
-	}
-
-	if s.ItemParentCacheDescendant != nil {
-		groupBy = true
-		ipcdAlias := AppendItemParentCacheAlias(alias, "d")
-		sqSelect = sqSelect.
-			Join(
-				schema.ItemParentCacheTable.As(ipcdAlias),
-				goqu.On(aliasIDCol.Eq(goqu.T(ipcdAlias).Col(schema.ItemParentCacheTableParentIDColName))),
-			)
-
-		sqSelect = s.ItemParentCacheDescendant.Apply(ipcdAlias, sqSelect)
-	}
-
-	if s.ItemParentCacheAncestor != nil {
-		groupBy = true
-		ipcaAlias := AppendItemParentCacheAlias(alias, "a")
-		sqSelect = sqSelect.
-			Join(
-				schema.ItemParentCacheTable.As(ipcaAlias),
-				goqu.On(aliasIDCol.Eq(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableItemIDColName))),
-			)
-
-		sqSelect = s.ItemParentCacheAncestor.Apply(ipcaAlias, sqSelect)
-	}
-
-	if s.NoParents {
-		ipnpAlias := ItemParentNoParentAlias(alias)
-		sqSelect = sqSelect.
-			LeftJoin(
-				schema.ItemParentTable.As(ipnpAlias),
-				goqu.On(aliasIDCol.Eq(goqu.T(ipnpAlias).Col(schema.ItemParentTableItemIDColName))),
-			).
-			Where(goqu.T(ipnpAlias).Col(schema.ItemParentTableParentIDColName).IsNull())
 	}
 
 	if len(s.Catname) > 0 {
@@ -266,7 +190,16 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableIsGroupColName).IsTrue())
 	}
 
-	sqSelect = s.applyExcludeSelfAndChilds(alias, sqSelect)
+	var subGroupBy bool
+
+	sqSelect, subGroupBy, err = s.applyJoins(alias, sqSelect)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if subGroupBy {
+		groupBy = true
+	}
 
 	sqSelect, subGroupBy = s.applySuggestionsTo(alias, sqSelect)
 	if subGroupBy {
@@ -276,6 +209,170 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 	sqSelect, subGroupBy = s.applyAutocompleteFilter(alias, sqSelect)
 	if subGroupBy {
 		groupBy = true
+	}
+
+	return sqSelect, groupBy, nil
+}
+
+func (s *ItemsListOptions) applyJoins(
+	alias string, sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, bool, error) {
+	var (
+		err        error
+		groupBy    bool
+		subGroupBy bool
+		aliasTable = goqu.T(alias)
+		aliasIDCol = aliasTable.Col(schema.ItemTableIDColName)
+	)
+
+	sqSelect, subGroupBy = s.applyVehicleTypeAncestorID(alias, sqSelect)
+	if subGroupBy {
+		groupBy = true
+	}
+
+	sqSelect, subGroupBy = s.applyExcludeVehicleTypeAncestorID(alias, sqSelect)
+	if subGroupBy {
+		groupBy = true
+	}
+
+	if s.VehicleTypeIsNull {
+		sqSelect = sqSelect.
+			LeftJoin(
+				schema.VehicleVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+			).
+			Where(schema.VehicleVehicleTypeTableVehicleIDCol.IsNull())
+	}
+
+	if s.ItemParentChild != nil {
+		groupBy = true
+		ipcAlias := AppendItemParentAlias(alias, "c")
+		sqSelect = sqSelect.Join(
+			schema.ItemParentTable.As(ipcAlias),
+			goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col(schema.ItemParentTableParentIDColName))),
+		)
+
+		sqSelect, _, err = s.ItemParentChild.Apply(ipcAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	sqSelect, subGroupBy, err = s.applyItemParentParent(alias, sqSelect)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if subGroupBy {
+		groupBy = true
+	}
+
+	if s.PictureItems != nil {
+		groupBy = true
+		piAlias := AppendPictureItemAlias(alias)
+
+		sqSelect = sqSelect.Join(
+			schema.PictureItemTable.As(piAlias),
+			goqu.On(aliasIDCol.Eq(goqu.T(piAlias).Col(schema.PictureItemTableItemIDColName))),
+		)
+
+		sqSelect, err = s.PictureItems.Apply(piAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	if s.ItemParentCacheDescendant != nil {
+		groupBy = true
+		ipcdAlias := AppendItemParentCacheAlias(alias, "d")
+		sqSelect = sqSelect.
+			Join(
+				schema.ItemParentCacheTable.As(ipcdAlias),
+				goqu.On(aliasIDCol.Eq(goqu.T(ipcdAlias).Col(schema.ItemParentCacheTableParentIDColName))),
+			)
+
+		sqSelect, err = s.ItemParentCacheDescendant.Apply(ipcdAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	if s.ItemParentCacheAncestor != nil {
+		groupBy = true
+		ipcaAlias := AppendItemParentCacheAlias(alias, "a")
+		sqSelect = sqSelect.
+			Join(
+				schema.ItemParentCacheTable.As(ipcaAlias),
+				goqu.On(aliasIDCol.Eq(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableItemIDColName))),
+			)
+
+		sqSelect, err = s.ItemParentCacheAncestor.Apply(ipcaAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	if s.NoParents {
+		ipnpAlias := ItemParentNoParentAlias(alias)
+		sqSelect = sqSelect.
+			LeftJoin(
+				schema.ItemParentTable.As(ipnpAlias),
+				goqu.On(aliasIDCol.Eq(goqu.T(ipnpAlias).Col(schema.ItemParentTableItemIDColName))),
+			).
+			Where(goqu.T(ipnpAlias).Col(schema.ItemParentTableParentIDColName).IsNull())
+	}
+
+	sqSelect = s.applyExcludeSelfAndChilds(alias, sqSelect)
+
+	return sqSelect, groupBy, err
+}
+
+func (s *ItemsListOptions) applyItemParentParent(
+	alias string, sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, bool, error) {
+	var (
+		err        error
+		groupBy    = false
+		aliasTable = goqu.T(alias)
+	)
+
+	if s.ItemParentParent != nil {
+		groupBy = true
+		ippAlias := AppendItemParentAlias(alias, "p")
+		sqSelect = sqSelect.Join(
+			schema.ItemParentTable.As(ippAlias),
+			goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(
+				goqu.T(ippAlias).Col(schema.ItemParentTableItemIDColName)),
+			),
+		)
+
+		sqSelect, _, err = s.ItemParentParent.Apply(ippAlias, sqSelect)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	return sqSelect, groupBy, nil
+}
+
+func (s *ItemsListOptions) applyVehicleTypeAncestorID(
+	alias string, sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, bool) {
+	groupBy := false
+
+	if s.VehicleTypeAncestorID > 0 {
+		aliasTable := goqu.T(alias)
+		groupBy = true
+		sqSelect = sqSelect.
+			Join(
+				schema.VehicleVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+			).
+			Join(
+				schema.CarTypesParentsTable,
+				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol)),
+			).
+			Where(schema.CarTypesParentsTableParentIDCol.Eq(s.VehicleTypeAncestorID))
 	}
 
 	return sqSelect, groupBy

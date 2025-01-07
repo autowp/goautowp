@@ -315,7 +315,7 @@ func NewRepository(
 			db:  db,
 			col: schema.ItemLanguageTableFullTextIDColName,
 		},
-		nameOnlyColumn:                &NameOnlyColumn{db: db},
+		nameOnlyColumn:                &NameOnlyColumn{DB: db},
 		nameDefaultColumn:             &NameDefaultColumn{db: db},
 		commentsAttentionsCountColumn: &CommentsAttentionsCountColumn{db: db},
 		acceptedPicturesCountColumn:   &StatusPicturesCountColumn{db: db, status: schema.PictureStatusAccepted},
@@ -600,15 +600,19 @@ func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 }
 
 func (s *Repository) IDsSelect(options query.ItemsListOptions) (*goqu.SelectDataset, error) {
-	alias := query.ItemAlias
+	var (
+		err   error
+		alias = query.ItemAlias
+	)
+
 	if options.Alias != "" {
 		alias = options.Alias
 	}
 
 	sqSelect := s.db.Select(goqu.I(alias).Col(schema.ItemTableIDColName)).From(schema.ItemTable.As(alias))
-	sqSelect, _ = options.Apply(alias, sqSelect)
+	sqSelect, _, err = options.Apply(alias, sqSelect)
 
-	return sqSelect, nil
+	return sqSelect, err
 }
 
 func (s *Repository) IDs(ctx context.Context, options query.ItemsListOptions) ([]int64, error) {
@@ -632,7 +636,12 @@ func (s *Repository) IDs(ctx context.Context, options query.ItemsListOptions) ([
 func (s *Repository) Exists(ctx context.Context, options query.ItemsListOptions) (bool, error) {
 	var exists bool
 
-	success, err := options.ExistsSelect(s.db).Executor().ScanValContext(ctx, &exists)
+	sqSelect, err := options.ExistsSelect(s.db)
+	if err != nil {
+		return false, err
+	}
+
+	success, err := sqSelect.Executor().ScanValContext(ctx, &exists)
 	if err != nil {
 		return false, err
 	}
@@ -643,7 +652,12 @@ func (s *Repository) Exists(ctx context.Context, options query.ItemsListOptions)
 func (s *Repository) Count(ctx context.Context, options query.ItemsListOptions) (int, error) {
 	var count int
 
-	success, err := options.CountSelect(s.db).Executor().ScanValContext(ctx, &count)
+	sqSelect, err := options.CountSelect(s.db)
+	if err != nil {
+		return 0, err
+	}
+
+	success, err := sqSelect.Executor().ScanValContext(ctx, &count)
 	if err != nil {
 		return 0, err
 	}
@@ -658,7 +672,12 @@ func (s *Repository) Count(ctx context.Context, options query.ItemsListOptions) 
 func (s *Repository) CountDistinct(ctx context.Context, options query.ItemsListOptions) (int, error) {
 	var count int
 
-	success, err := options.CountDistinctSelect(s.db).Executor().ScanValContext(ctx, &count)
+	sqSelect, err := options.CountDistinctSelect(s.db)
+	if err != nil {
+		return 0, err
+	}
+
+	success, err := sqSelect.Executor().ScanValContext(ctx, &count)
 	if err != nil {
 		return 0, err
 	}
@@ -870,7 +889,12 @@ func (s *Repository) List( //nolint:maintidx
 		return nil, nil, fmt.Errorf("%w: NameOnly for SortByName", errFieldsIsRequired)
 	}
 
-	sqSelect := options.Select(s.db).GroupBy(aliasTable.Col(schema.ItemTableIDColName))
+	sqSelect, err := options.Select(s.db)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sqSelect = sqSelect.GroupBy(aliasTable.Col(schema.ItemTableIDColName))
 
 	var pages *util.Pages
 
@@ -937,9 +961,16 @@ func (s *Repository) List( //nolint:maintidx
 
 		options.Alias = schema.ItemTableName
 
-		sqSelect = options.Select(s.db).Select(wrapperColumnsExpr...).
+		wrappedSqSelect := sqSelect
+
+		sqSelect, err = options.Select(s.db)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		sqSelect = sqSelect.Select(wrapperColumnsExpr...).
 			From(schema.ItemTable).
-			Join(sqSelect.Select(wrappedColumnsExpr...).As(wrappedAlias), goqu.On(
+			Join(wrappedSqSelect.Select(wrappedColumnsExpr...).As(wrappedAlias), goqu.On(
 				schema.ItemTableIDCol.Eq(wrappedIDCol),
 			)).
 			GroupBy(schema.ItemTableIDCol)
@@ -2947,7 +2978,10 @@ func (s *Repository) ItemParentSelect(
 ) (*goqu.SelectDataset, error) {
 	aliasTable := goqu.T(query.ItemParentAlias)
 
-	sqSelect, groupBy := listOptions.Select(s.db)
+	sqSelect, groupBy, err := listOptions.Select(s.db)
+	if err != nil {
+		return nil, err
+	}
 
 	sqSelect = sqSelect.Select(
 		aliasTable.Col(schema.ItemParentTableItemIDColName),
@@ -3397,7 +3431,7 @@ func (s *Repository) DesignInfo(ctx context.Context, id int64, lang string) (*De
 	}{}
 
 	nameColumn := NameOnlyColumn{
-		db: s.db,
+		DB: s.db,
 	}
 
 	expr, err := nameColumn.SelectExpr(schema.ItemTableName, lang)

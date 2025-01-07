@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/frontend"
@@ -47,6 +49,8 @@ type PicturesGRPCServer struct {
 	itemRepository        *items.Repository
 	commentRepository     *comments.Repository
 	imageStorage          *storage.Storage
+	locations             map[string]*time.Location
+	locationsMutex        sync.Mutex
 }
 
 func NewPicturesGRPCServer(
@@ -70,6 +74,8 @@ func NewPicturesGRPCServer(
 		itemRepository:        itemRepository,
 		commentRepository:     commentRepository,
 		imageStorage:          imageStorage,
+		locations:             make(map[string]*time.Location),
+		locationsMutex:        sync.Mutex{},
 	}
 }
 
@@ -422,7 +428,9 @@ func (s *PicturesGRPCServer) restoreFromRemoving(ctx context.Context, pictureID 
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+	pic, err := s.repository.Picture(
+		ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+	)
 	if err != nil {
 		return err
 	}
@@ -456,7 +464,9 @@ func (s *PicturesGRPCServer) unaccept(ctx context.Context, pictureID int64, user
 		return sql.ErrNoRows
 	}
 
-	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+	picture, err := s.repository.Picture(
+		ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+	)
 	if err != nil {
 		return err
 	}
@@ -492,7 +502,9 @@ func (s *PicturesGRPCServer) notifyVote(
 		return sql.ErrNoRows
 	}
 
-	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+	picture, err := s.repository.Picture(
+		ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+	)
 	if err != nil {
 		return err
 	}
@@ -582,7 +594,9 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(
 		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+	pic, err := s.repository.Picture(
+		ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+	)
 	if err != nil {
 		return 0, status.Error(codes.Internal, err.Error())
 	}
@@ -762,7 +776,9 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 			return nil, status.Error(codes.NotFound, "NotFound")
 		}
 
-		pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+		pic, err := s.repository.Picture(
+			ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -934,7 +950,9 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 			return nil, status.Error(codes.NotFound, "NotFound")
 		}
 
-		pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+		pic, err := s.repository.Picture(
+			ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, status.Errorf(codes.NotFound, "NotFound")
@@ -1024,7 +1042,9 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+	pic, err := s.repository.Picture(
+		ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1034,7 +1054,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 	}
 
 	replacePicture, err := s.repository.Picture(
-		ctx, query.PictureListOptions{ID: pic.ReplacePictureID.Int64}, pictures.PictureFields{},
+		ctx, query.PictureListOptions{ID: pic.ReplacePictureID.Int64}, pictures.PictureFields{}, pictures.OrderByNone,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1279,7 +1299,9 @@ func (s *PicturesGRPCServer) notifyCopyrightsEdited(
 		return nil
 	}
 
-	picture, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+	picture, err := s.repository.Picture(
+		ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+	)
 	if err != nil {
 		return err
 	}
@@ -1352,7 +1374,9 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	pic, err := s.repository.Picture(ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{})
+	pic, err := s.repository.Picture(
+		ctx, query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1743,21 +1767,32 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *GetPicture
 }
 
 func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *GetPicturesRequest) (*Picture, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
 	inOptions := in.GetOptions()
+	order := convertPicturesOrder(in.GetOrder())
+
+	if inOptions.GetStatus() == PictureStatus_PICTURE_STATUS_INBOX && userID == 0 {
+		return nil, status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
+	}
 
 	options := query.PictureListOptions{
 		Limit: in.GetLimit(),
 		Page:  in.GetPage(),
 	}
 
-	err := mapPictureListOptions(inOptions, &options)
+	err = mapPictureListOptions(inOptions, &options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	fields := convertPictureFields(in.GetFields())
 
-	row, err := s.repository.Picture(ctx, options, fields)
+	row, err := s.repository.Picture(ctx, options, fields, order)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -1766,9 +1801,59 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *GetPicturesRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractor := NewPictureExtractor(s.imageStorage)
+	extractor := NewPictureExtractor(s.repository, s.imageStorage, s.i18n, s.commentRepository)
 
-	return extractor.Extract(ctx, row, in.GetFields())
+	return extractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID)
+}
+
+func (s *PicturesGRPCServer) LoadLocation(timezone string) (*time.Location, error) {
+	s.locationsMutex.Lock()
+	defer s.locationsMutex.Unlock()
+
+	var err error
+
+	loc, ok := s.locations[timezone]
+
+	if !ok {
+		loc, err = time.LoadLocation(timezone)
+		if err != nil {
+			return nil, err
+		}
+
+		s.locations[timezone] = loc
+	}
+
+	return loc, nil
+}
+
+func (s *PicturesGRPCServer) resolveTimezone(ctx context.Context, userID int64, lang string) (*time.Location, error) {
+	var (
+		err      error
+		timezone = ""
+	)
+
+	if userID > 0 {
+		user, err := s.userRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{Timezone: true})
+		if err != nil {
+			return nil, err
+		}
+
+		timezone = user.Timezone
+	}
+
+	if timezone == "" {
+		timezone, err = s.hostManager.TimezoneByLanguage(lang)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	loc, err := s.LoadLocation(timezone)
+	if err != nil {
+		return nil, err
+	}
+
+	return loc, nil
 }
 
 func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesRequest) (*GetPicturesResponse, error) {
@@ -1778,6 +1863,7 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 	}
 
 	inOptions := in.GetOptions()
+	order := convertPicturesOrder(in.GetOrder())
 
 	if inOptions.GetStatus() == PictureStatus_PICTURE_STATUS_INBOX && userID == 0 {
 		return nil, status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
@@ -1785,7 +1871,8 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
 	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
-	restricted := !isModer && inOptions.GetPictureItem().GetItemParentCacheAncestor().GetItemId() == 0 &&
+	restricted := !isModer && inOptions.GetPictureItem().GetItemId() == 0 &&
+		inOptions.GetPictureItem().GetItemParentCacheAncestor().GetItemId() == 0 &&
 		inOptions.GetOwnerId() == 0
 	if restricted {
 		return nil, status.Error(codes.PermissionDenied, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
@@ -1801,23 +1888,25 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	if options.AddDate != nil || options.AcceptDate != nil {
+		options.Timezone, err = s.resolveTimezone(ctx, userID, in.GetLanguage())
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
 	fields := convertPictureFields(in.GetFields())
 
-	rows, pages, err := s.repository.Pictures(ctx, options, fields, in.GetPaginator())
+	rows, pages, err := s.repository.Pictures(ctx, options, fields, order, in.GetPaginator())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res := make([]*Picture, 0, len(rows))
-	extractor := NewPictureExtractor(s.imageStorage)
+	extractor := NewPictureExtractor(s.repository, s.imageStorage, s.i18n, s.commentRepository)
 
-	for _, row := range rows {
-		resRow, err := extractor.Extract(ctx, &row, in.GetFields())
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		res = append(res, resRow)
+	res, err := extractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var paginator *Pages

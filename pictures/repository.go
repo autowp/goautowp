@@ -5,9 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
@@ -18,9 +21,12 @@ import (
 
 var (
 	errIsAllowedForPictureItemContentOnly = errors.New("is allowed only for picture-item-content")
+	errJoinNeededToSortByPerspective      = errors.New("can't sort by perspective: need a join with picture_item")
 	errCombinationNotAllowed              = errors.New("combination not allowed")
 	errImageIDIsNil                       = errors.New("image_id is null")
 )
+
+var prefixedPerspectives = []int64{5, 6, 17, 20, 21, 22, 23, 24, 28}
 
 type VoteSummary struct {
 	Value    int32
@@ -48,6 +54,20 @@ type PictureFields struct {
 	NameText bool
 }
 
+type OrderBy = int
+
+const (
+	OrderByNone OrderBy = iota
+	OrderByAddDateDesc
+	OrderByAddDateAsc
+	OrderByResolutionDesc
+	OrderByResolutionAsc
+	OrderByLikes
+	OrderByDislikes
+	OrderByAcceptDatetimeDesc
+	OrderByPerspectives
+)
+
 func NewRepository(
 	db *goqu.Database, imageStorage *storage.Storage, textStorageRepository *textstorage.Repository,
 ) *Repository {
@@ -56,6 +76,20 @@ func NewRepository(
 		imageStorage:          imageStorage,
 		textStorageRepository: textStorageRepository,
 	}
+}
+
+func (s *Repository) PictureViews(ctx context.Context, id int64) (int32, error) {
+	var res int32
+
+	success, err := s.db.Select(schema.PictureViewTableViewsCol).
+		From(schema.PictureViewTable).
+		Where(schema.PictureViewTablePictureIDCol.Eq(id)).
+		ScanValContext(ctx, &res)
+	if err != nil || !success {
+		return 0, err
+	}
+
+	return res, nil
 }
 
 func (s *Repository) IncView(ctx context.Context, id int64) error {
@@ -218,7 +252,7 @@ func (s *Repository) IsModerVoteTemplateExists(ctx context.Context, userID int64
 func (s *Repository) GetModerVoteTemplates(
 	ctx context.Context, userID int64,
 ) ([]schema.PictureModerVoteTemplateRow, error) {
-	var items []schema.PictureModerVoteTemplateRow
+	var rows []schema.PictureModerVoteTemplateRow
 
 	err := s.db.Select(
 		schema.PictureModerVoteTemplateTableIDCol,
@@ -228,9 +262,9 @@ func (s *Repository) GetModerVoteTemplates(
 		From(schema.PictureModerVoteTemplateTable).
 		Where(schema.PictureModerVoteTemplateTableUserIDCol.Eq(userID)).
 		Order(schema.PictureModerVoteTemplateTableReasonCol.Asc()).
-		Executor().ScanStructsContext(ctx, &items)
+		Executor().ScanStructsContext(ctx, &rows)
 
-	return items, err
+	return rows, err
 }
 
 func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
@@ -257,7 +291,12 @@ func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
 func (s *Repository) Count(ctx context.Context, options *query.PictureListOptions) (int, error) {
 	var count int
 
-	success, err := options.CountSelect(s.db).Executor().ScanValContext(ctx, &count)
+	sqSelect, err := options.CountSelect(s.db)
+	if err != nil {
+		return 0, err
+	}
+
+	success, err := sqSelect.Executor().ScanValContext(ctx, &count)
 	if err != nil {
 		return 0, err
 	}
@@ -346,11 +385,38 @@ func (s *Repository) CreateModerVote(
 	return affected > 0, err
 }
 
+func (s *Repository) ModerVoteCount(ctx context.Context, pictureID int64) (int32, int32, error) {
+	st := struct {
+		Sum   int32 `db:"sum"`
+		Count int32 `db:"count"`
+	}{}
+
+	success, err := s.db.Select(
+		goqu.SUM(goqu.Func("IF", schema.PicturesModerVotesTableVoteCol, goqu.V(1), goqu.V(-1))).As("sum"),
+		goqu.COUNT(goqu.Star()).As("count"),
+	).
+		From(schema.PicturesModerVotesTable).
+		Where(schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID)).
+		ScanStructContext(ctx, &st)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if !success {
+		return 0, 0, nil
+	}
+
+	return st.Count, st.Sum, nil
+}
+
 func (s *Repository) PictureSelect(
-	options query.PictureListOptions, _ PictureFields,
+	options query.PictureListOptions, _ PictureFields, order OrderBy,
 ) (*goqu.SelectDataset, error) {
-	alias := query.PictureAlias
-	aliasTable := goqu.T(alias)
+	var (
+		err        error
+		alias      = query.PictureAlias
+		aliasTable = goqu.T(alias)
+	)
 
 	sqSelect := s.db.Select(
 		aliasTable.Col(schema.PictureTableIDColName),
@@ -365,18 +431,102 @@ func (s *Repository) PictureSelect(
 		aliasTable.Col(schema.PictureTableReplacePictureIDColName),
 		aliasTable.Col(schema.PictureTableWidthColName),
 		aliasTable.Col(schema.PictureTableHeightColName),
+		aliasTable.Col(schema.PictureTableNameColName),
 	).
 		From(schema.PictureTable.As(alias))
 
-	sqSelect = options.Apply(alias, sqSelect)
+	sqSelect, err = options.Apply(alias, sqSelect)
+	if err != nil {
+		return nil, err
+	}
+
+	groupBy := false
+
+	switch order {
+	case OrderByAddDateDesc:
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
+			aliasTable.Col(schema.PictureTableIDColName).Desc(),
+		)
+	case OrderByAddDateAsc:
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.PictureTableAddDateColName).Asc(),
+			aliasTable.Col(schema.PictureTableIDColName).Asc(),
+		)
+	case OrderByResolutionDesc:
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.PictureTableWidthColName).Desc(),
+			aliasTable.Col(schema.PictureTableHeightColName).Desc(),
+			aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
+			aliasTable.Col(schema.PictureTableIDColName).Desc(),
+		)
+	case OrderByResolutionAsc:
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.PictureTableWidthColName).Asc(),
+			aliasTable.Col(schema.PictureTableHeightColName).Asc(),
+		)
+	case OrderByLikes:
+		pvsAlias := alias + "pvs"
+		sqSelect = sqSelect.
+			LeftJoin(schema.PictureVoteSummaryTable.As(pvsAlias), goqu.On(
+				aliasTable.Col(schema.PictureTableIDCol).Eq(goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTablePictureIDColName)),
+			)).
+			Order(
+				goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTablePositiveColName).Desc(),
+				aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
+				aliasTable.Col(schema.PictureTableIDColName).Desc(),
+			)
+	case OrderByDislikes:
+		pvsAlias := alias + "pvs"
+		sqSelect = sqSelect.
+			LeftJoin(schema.PictureVoteSummaryTable.As(pvsAlias), goqu.On(
+				aliasTable.Col(schema.PictureTableIDCol).Eq(goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTablePictureIDColName)),
+			)).
+			Order(
+				goqu.T(pvsAlias).Col(schema.PictureVoteSummaryTableNegativeColName).Desc(),
+				aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
+				aliasTable.Col(schema.PictureTableIDColName).Desc(),
+			)
+	case OrderByAcceptDatetimeDesc:
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Desc(),
+			aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
+			aliasTable.Col(schema.PictureTableIDColName).Desc(),
+		)
+	case OrderByPerspectives:
+		if options.PictureItem == nil {
+			return nil, errJoinNeededToSortByPerspective
+		}
+
+		piAlias := query.AppendPictureItemAlias(alias)
+
+		groupBy = true
+		sqSelect = sqSelect.
+			LeftJoin(schema.PerspectivesTable, goqu.On(
+				goqu.T(piAlias).Col(schema.PictureItemTablePerspectiveIDColName).Eq(schema.PerspectivesTableIDCol),
+			)).
+			Order(
+				goqu.MIN(schema.PerspectivesTablePositionCol).Asc(),
+				aliasTable.Col(schema.PictureTableWidthColName).Desc(),
+				aliasTable.Col(schema.PictureTableHeightColName).Desc(),
+				aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
+				aliasTable.Col(schema.PictureTableIDColName).Desc(),
+			)
+
+	case OrderByNone:
+	}
+
+	if groupBy {
+		sqSelect = sqSelect.GroupBy(aliasTable.Col(schema.PictureTableIDColName))
+	}
 
 	return sqSelect, nil
 }
 
 func (s *Repository) Pictures(
-	ctx context.Context, options query.PictureListOptions, fields PictureFields, pagination bool,
-) ([]schema.PictureRow, *util.Pages, error) {
-	sqSelect, err := s.PictureSelect(options, fields)
+	ctx context.Context, options query.PictureListOptions, fields PictureFields, order OrderBy, pagination bool,
+) ([]*schema.PictureRow, *util.Pages, error) {
+	sqSelect, err := s.PictureSelect(options, fields, order)
 	if err != nil {
 		return nil, nil, fmt.Errorf("PictureSelect(): %w", err)
 	}
@@ -403,7 +553,7 @@ func (s *Repository) Pictures(
 		sqSelect.Limit(uint(options.Limit))
 	}
 
-	var res []schema.PictureRow
+	var res []*schema.PictureRow
 
 	if options.Limit > 0 {
 		err = sqSelect.ScanStructsContext(ctx, &res)
@@ -415,11 +565,11 @@ func (s *Repository) Pictures(
 }
 
 func (s *Repository) Picture(
-	ctx context.Context, options query.PictureListOptions, fields PictureFields,
+	ctx context.Context, options query.PictureListOptions, fields PictureFields, order OrderBy,
 ) (*schema.PictureRow, error) {
 	options.Limit = 1
 
-	rows, _, err := s.Pictures(ctx, options, fields, false)
+	rows, _, err := s.Pictures(ctx, options, fields, order, false)
 	if err != nil {
 		return nil, fmt.Errorf("Pictures(): %w", err)
 	}
@@ -428,7 +578,7 @@ func (s *Repository) Picture(
 		return nil, sql.ErrNoRows
 	}
 
-	return &rows[0], nil
+	return rows[0], nil
 }
 
 func (s *Repository) Normalize(ctx context.Context, id int64) error {
@@ -436,7 +586,7 @@ func (s *Repository) Normalize(ctx context.Context, id int64) error {
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id}, PictureFields{})
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -455,7 +605,7 @@ func (s *Repository) Flop(ctx context.Context, id int64) error {
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id}, PictureFields{})
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -754,7 +904,7 @@ func (s *Repository) SetPictureCrop(ctx context.Context, pictureID int64, area s
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{})
+	pic, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -844,7 +994,7 @@ func (s *Repository) SetPictureCopyrights(
 		return false, 0, sql.ErrNoRows
 	}
 
-	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{})
+	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return false, 0, err
 	}
@@ -950,7 +1100,7 @@ func (s *Repository) Accept(ctx context.Context, pictureID int64, userID int64) 
 		return false, false, sql.ErrNoRows
 	}
 
-	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{})
+	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return false, false, err
 	}
@@ -1002,7 +1152,7 @@ func (s *Repository) PictureItem(
 	alias := query.PictureItemAlias
 	aliasTable := goqu.T(alias)
 
-	success, err := options.Apply(
+	sqSelect, err := options.Apply(
 		alias,
 		s.db.Select(
 			aliasTable.Col(schema.PictureItemTablePictureIDColName),
@@ -1015,7 +1165,12 @@ func (s *Repository) PictureItem(
 		).
 			From(schema.PictureItemTable.As(alias)).
 			Limit(1),
-	).ScanStructContext(ctx, &row)
+	)
+	if err != nil {
+		return row, err
+	}
+
+	success, err := sqSelect.ScanStructContext(ctx, &row)
 	if err != nil {
 		return row, err
 	}
@@ -1035,7 +1190,7 @@ func (s *Repository) PictureItems(
 	alias := "pi"
 	aliasTable := goqu.T(alias)
 
-	err := options.Apply(
+	sqSelect, err := options.Apply(
 		alias,
 		s.db.Select(
 			aliasTable.Col(schema.PictureItemTablePictureIDColName),
@@ -1051,7 +1206,213 @@ func (s *Repository) PictureItems(
 				aliasTable.Col(schema.PictureItemTablePictureIDColName).Eq(schema.PictureTableIDCol),
 			)).
 			Order(schema.PictureTableStatusCol.Asc()),
-	).ScanStructsContext(ctx, &rows)
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sqSelect.ScanStructsContext(ctx, &rows)
 
 	return rows, err
+}
+
+type NameDataOptions struct {
+	Language string
+	Large    bool
+}
+
+func (s *Repository) NameData(
+	ctx context.Context, rows []*schema.PictureRow, options NameDataOptions,
+) (map[int64]PictureNameFormatterOptions, error) {
+	var (
+		result = make(map[int64]PictureNameFormatterOptions, len(rows))
+		large  = options.Large
+		// prefetch
+		itemIDs        = make(map[int64]int32)
+		perspectiveIDs = make(map[int64]bool)
+	)
+
+	for _, row := range rows {
+		var pictureItemRows []schema.PictureItemRow
+
+		err := s.db.Select(schema.PictureItemTableItemIDCol, schema.PictureItemTableCropLeftCol).
+			From(schema.PictureItemTable).
+			Where(
+				schema.PictureItemTablePictureIDCol.Eq(row.ID),
+				schema.PictureItemTableTypeCol.Eq(schema.PictureItemContent),
+			).
+			ScanStructsContext(ctx, &pictureItemRows)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, pictureItemRow := range pictureItemRows {
+			itemIDs[pictureItemRow.ItemID] = util.NullInt32ToScalar(pictureItemRow.CropLeft)
+
+			if pictureItemRow.PerspectiveID.Valid && util.Contains(prefixedPerspectives, pictureItemRow.PerspectiveID.Int64) {
+				perspectiveIDs[pictureItemRow.PerspectiveID.Int64] = true
+			}
+		}
+	}
+
+	itemsCache := make(map[int64]items.ItemNameFormatterOptions, 0)
+
+	if len(itemIDs) > 0 {
+		nameColumn := items.NameOnlyColumn{
+			DB: s.db,
+		}
+
+		expr, err := nameColumn.SelectExpr(schema.ItemTableName, options.Language)
+		if err != nil {
+			return nil, err
+		}
+
+		columns := []interface{}{
+			schema.ItemTableIDCol,
+			schema.ItemTableBeginModelYearCol,
+			schema.ItemTableEndModelYearCol,
+			schema.ItemTableBeginModelYearFractionCol,
+			schema.ItemTableEndModelYearFractionCol,
+			schema.ItemTableBodyCol,
+			expr.As("name"),
+			schema.ItemTableBeginYearCol,
+			schema.ItemTableEndYearCol,
+			schema.ItemTableTodayCol,
+			schema.SpecTableShortNameCol.As("spec"),
+			schema.SpecTableNameCol.As("spec_full"),
+		}
+		if large {
+			columns = append(columns, schema.ItemTableBeginMonthCol)
+			columns = append(columns, schema.ItemTableEndMonthCol)
+		}
+
+		var itemRows []items.Item
+
+		err = s.db.Select(columns...).From(schema.ItemTable).
+			Where(schema.ItemTableIDCol.In(slices.Collect(maps.Keys(itemIDs)))).
+			LeftJoin(schema.SpecTable, goqu.On(schema.ItemTableSpecIDCol.Eq(schema.SpecTableIDCol))).
+			ScanStructsContext(ctx, &itemRows)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, row := range itemRows {
+			itemsCache[row.ID] = items.ItemNameFormatterOptions{
+				BeginModelYear:         util.NullInt32ToScalar(row.BeginModelYear),
+				EndModelYear:           util.NullInt32ToScalar(row.EndModelYear),
+				BeginModelYearFraction: util.NullStringToString(row.BeginModelYearFraction),
+				EndModelYearFraction:   util.NullStringToString(row.EndModelYearFraction),
+				Spec:                   row.SpecShortName,
+				SpecFull:               row.SpecName,
+				Body:                   row.Body,
+				Name:                   row.Name,
+				BeginYear:              util.NullInt32ToScalar(row.BeginYear),
+				EndYear:                util.NullInt32ToScalar(row.EndYear),
+				Today:                  util.NullBoolToBoolPtr(row.Today),
+				BeginMonth:             util.NullInt16ToScalar(row.BeginMonth),
+				EndMonth:               util.NullInt16ToScalar(row.EndMonth),
+			}
+		}
+	}
+
+	perspectives, err := s.PerspectivesPairs(ctx, slices.Collect(maps.Keys(perspectiveIDs)))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		if row.Name.Valid && row.Name.String != "" {
+			result[row.ID] = PictureNameFormatterOptions{
+				Name: row.Name.String,
+			}
+
+			continue
+		}
+
+		pictureItemRows, err := s.PictureItems(ctx, query.PictureItemListOptions{
+			PictureID: row.ID,
+			TypeID:    schema.PictureItemContent,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		slices.SortFunc(pictureItemRows, func(rowA, rowB schema.PictureItemRow) int {
+			cropLeftA, ok := itemIDs[rowA.ItemID]
+			if !ok {
+				cropLeftA = 0
+			}
+
+			cropLeftB, ok := itemIDs[rowB.ItemID]
+			if !ok {
+				cropLeftB = 0
+			}
+
+			if cropLeftA == cropLeftB {
+				return 0
+			}
+
+			if cropLeftA < cropLeftB {
+				return -1
+			}
+
+			return 1
+		})
+
+		resultItems := make([]PictureNameFormatterItem, 0)
+
+		for _, pictureItemRow := range pictureItemRows {
+			itemID := pictureItemRow.ItemID
+			perspectiveID := pictureItemRow.PerspectiveID
+
+			item, ok := itemsCache[itemID]
+			if !ok {
+				item = items.ItemNameFormatterOptions{}
+			}
+
+			perspective := ""
+
+			if perspectiveID.Valid {
+				if val, ok := perspectives[perspectiveID.Int64]; ok {
+					perspective = val
+				}
+			}
+
+			resultItems = append(resultItems, PictureNameFormatterItem{
+				Item:        item,
+				Perspective: perspective,
+			})
+		}
+
+		result[row.ID] = PictureNameFormatterOptions{
+			Items: resultItems,
+		}
+	}
+
+	return result, nil
+}
+
+func (s *Repository) PerspectivesPairs(ctx context.Context, ids []int64) (map[int64]string, error) {
+	result := make(map[int64]string, len(ids))
+
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	var rows []schema.PerspectiveRow
+
+	err := s.db.Select(schema.PerspectivesTableIDCol, schema.PerspectivesTableNameCol).
+		From(schema.PerspectivesTable).
+		Where(schema.PerspectivesTableIDCol.In(ids)).
+		Order(schema.PerspectivesTablePositionCol.Asc()).
+		ScanStructsContext(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		result[row.ID] = row.Name
+	}
+
+	return result, nil
 }

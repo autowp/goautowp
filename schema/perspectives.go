@@ -12,3 +12,8 @@ var (
 	PerspectivesTablePositionCol = PerspectivesTable.Col("position")
 	PerspectivesTableNameCol     = PerspectivesTable.Col("name")
 )
+
+type PerspectiveRow struct {
+	ID   int64  `db:"id"`
+	Name string `db:"string"`
+}

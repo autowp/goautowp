@@ -73,7 +73,6 @@ type Container struct {
 	ratingGrpcServer       *RatingGRPCServer
 	itemsRepository        *items.Repository
 	keyCloak               *gocloak.GoCloak
-	location               *time.Location
 	messagingGrpcServer    *MessagingGRPCServer
 	messagingRepository    *messaging.Repository
 	privateHTTPServer      *http.Server
@@ -407,20 +406,6 @@ func (s *Container) HostsManager() *hosts.Manager {
 	}
 
 	return s.hostsManager
-}
-
-// Location Location.
-func (s *Container) Location() (*time.Location, error) {
-	if s.location == nil {
-		loc, err := time.LoadLocation("UTC")
-		if err != nil {
-			return nil, err
-		}
-
-		s.location = loc
-	}
-
-	return s.location, nil
 }
 
 func (s *Container) LogRepository() (*log.Repository, error) {

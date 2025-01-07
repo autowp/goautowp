@@ -15,18 +15,26 @@ type CommentMessageListOptions struct {
 	PictureItems *PictureItemListOptions
 }
 
-func (s *CommentMessageListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
+func (s *CommentMessageListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, error) {
 	sqSelect := db.From(schema.CommentMessageTable.As(CommentMessageAlias))
 
 	return s.Apply(CommentMessageAlias, sqSelect)
 }
 
-func (s *CommentMessageListOptions) CountSelect(db *goqu.Database) *goqu.SelectDataset {
-	return s.Select(db).Select(goqu.COUNT(goqu.Star()))
+func (s *CommentMessageListOptions) CountSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
+	sqSelect, err := s.Select(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect.Select(goqu.COUNT(goqu.Star())), nil
 }
 
-func (s *CommentMessageListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
-	aliasTable := goqu.T(alias)
+func (s *CommentMessageListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+	var (
+		err        error
+		aliasTable = goqu.T(alias)
+	)
 
 	sqSelect = sqSelect.Where(
 		aliasTable.Col(schema.CommentMessageTableModeratorAttentionColName).Eq(s.Attention),
@@ -45,8 +53,11 @@ func (s *CommentMessageListOptions) Apply(alias string, sqSelect *goqu.SelectDat
 			),
 		)
 
-		sqSelect = s.PictureItems.Apply(piAlias, sqSelect)
+		sqSelect, err = s.PictureItems.Apply(piAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return sqSelect
+	return sqSelect, nil
 }

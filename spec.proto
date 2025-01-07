@@ -977,12 +977,20 @@ message PicturesOptions {
   PictureStatus status = 1;
   PictureItemOptions picture_item = 2;
   int64 owner_id = 3;
+  int32 accepted_in_days = 5;
+  google.type.Date add_date = 6;
+  google.type.Date accept_date = 7;
 }
 
 message PictureFields {
   bool name_text = 1;
+  bool name_html = 4;
   bool image = 2;
   bool thumb_medium = 3;
+  bool views = 5;
+  bool votes = 6;
+  bool comments_count = 7;
+  bool moder_vote = 8;
 }
 
 message PreviewPicturesFields {
@@ -1048,6 +1056,7 @@ message PictureItemOptions {
   PictureItemType type_id = 1;
   PicturesOptions pictures = 2;
   int32 perspective_id = 3;
+  repeated int32 exclude_perspective_id = 6;
   int64 item_id = 4;
   ItemParentCacheListOptions item_parent_cache_ancestor = 5;
 }
@@ -1297,21 +1306,49 @@ message PictureIDRequest {
 }
 
 message GetPicturesRequest {
+  enum Order {
+    NONE = 0;
+    ADD_DATE_DESC = 1;
+    ADD_DATE_ASC = 2;
+    RESOLUTION_DESC = 3;
+    RESOLUTION_ASC = 4;
+    LIKES = 12;
+    DISLIKES = 13;
+    ACCEPT_DATETIME_DESC = 15;
+    PERSPECTIVES = 16;
+  }
+
   PicturesOptions options = 1;
   uint32 limit = 2;
   uint32 page = 3;
   bool paginator = 4;
   PictureFields fields = 5;
+  string language = 6;
+  Order order = 7;
 }
 
 message Picture {
   int64 id = 1;
+  string identity = 8;
   uint32 width = 2;
   uint32 height = 3;
   APIImage image = 4;
   google.type.LatLng point = 5;
   int32 copyrights_text_id = 6;
   APIImage thumb_medium = 7;
+  string name_text = 9;
+  string name_html = 10;
+  int64 owner_id = 11;
+  PictureStatus status = 12;
+  bool cropped = 13;
+  string crop_resolution = 14;
+  string resolution = 15;
+  int32 views = 16;
+  PicturesVoteSummary votes = 17;
+  int32 comments_count_total = 18;
+  int32 comments_count_new = 19;
+  int32 moder_vote_vote = 20;
+  int32 moder_vote_count = 21;
 }
 
 message GetPicturesResponse {

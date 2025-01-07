@@ -34,6 +34,7 @@ const (
 	PictureTableCopyrightsTextIDColName   = "copyrights_text_id"
 	PictureTableAcceptDatetimeColName     = "accept_datetime"
 	PictureTableRemovingDateColName       = "removing_date"
+	PictureTableAddDateColName            = "add_date"
 
 	PicturesTableIdentityLength = 6
 )
@@ -55,20 +56,21 @@ var (
 )
 
 type PictureRow struct {
-	ID                 int64         `db:"id"`
-	OwnerID            sql.NullInt64 `db:"owner_id"`
-	ChangeStatusUserID sql.NullInt64 `db:"change_status_user_id"`
-	Identity           string        `db:"identity"`
-	Status             PictureStatus `db:"status"`
-	ImageID            sql.NullInt64 `db:"image_id"`
-	Width              uint16        `db:"width"`
-	Height             uint16        `db:"height"`
-	Point              NullPoint     `db:"point"`
-	TakenYear          sql.NullInt16 `db:"taken_year"`
-	TakenMonth         sql.NullByte  `db:"taken_month"`
-	TakenDay           sql.NullByte  `db:"taken_day"`
-	CopyrightsTextID   sql.NullInt32 `db:"copyrights_text_id"`
-	AcceptDatetime     sql.NullTime  `db:"accept_datetime"`
-	ReplacePictureID   sql.NullInt64 `db:"replace_picture_id"`
-	IP                 string        `db:"ip"`
+	ID                 int64          `db:"id"`
+	OwnerID            sql.NullInt64  `db:"owner_id"`
+	ChangeStatusUserID sql.NullInt64  `db:"change_status_user_id"`
+	Identity           string         `db:"identity"`
+	Status             PictureStatus  `db:"status"`
+	ImageID            sql.NullInt64  `db:"image_id"`
+	Width              uint16         `db:"width"`
+	Height             uint16         `db:"height"`
+	Point              NullPoint      `db:"point"`
+	TakenYear          sql.NullInt16  `db:"taken_year"`
+	TakenMonth         sql.NullByte   `db:"taken_month"`
+	TakenDay           sql.NullByte   `db:"taken_day"`
+	CopyrightsTextID   sql.NullInt32  `db:"copyrights_text_id"`
+	AcceptDatetime     sql.NullTime   `db:"accept_datetime"`
+	ReplacePictureID   sql.NullInt64  `db:"replace_picture_id"`
+	IP                 string         `db:"ip"`
+	Name               sql.NullString `db:"name"`
 }

@@ -27,7 +27,12 @@ func (s DescendantsCountColumn) SelectExpr(alias string, _ string) (AliaseableEx
 		ExcludeSelf:  true,
 	}
 
-	return goqu.L("?", options.CountSelect(s.db)), nil
+	sqSelect, err := options.CountSelect(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("?", sqSelect), nil
 }
 
 type NewDescendantsCountColumn struct {
@@ -44,7 +49,12 @@ func (s NewDescendantsCountColumn) SelectExpr(alias string, _ string) (Aliaseabl
 		CreatedInDays: NewDays,
 	}
 
-	return goqu.L("?", options.CountDistinctSelect(s.db)), nil
+	sqSelect, err := options.CountDistinctSelect(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("?", sqSelect), nil
 }
 
 type DescendantTwinsGroupsCountColumn struct {
@@ -64,7 +74,12 @@ func (s DescendantTwinsGroupsCountColumn) SelectExpr(alias string, _ string) (Al
 		},
 	}
 
-	return goqu.L("?", options.CountSelect(s.db)), nil
+	sqSelect, err := options.CountSelect(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("?", sqSelect), nil
 }
 
 type DescendantPicturesCountColumn struct{}
@@ -86,7 +101,12 @@ func (s ChildsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpress
 		ParentIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 	}
 
-	return goqu.L("?", options.CountSelect(s.db)), nil
+	sqSelect, err := options.CountSelect(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("?", sqSelect), nil
 }
 
 type TextstorageRefColumn struct {
@@ -162,7 +182,7 @@ func (s NameDefaultColumn) SelectExpr(alias string, lang string) (AliaseableExpr
 }
 
 type NameOnlyColumn struct {
-	db *goqu.Database
+	DB *goqu.Database
 }
 
 func (s NameOnlyColumn) SelectExpr(alias string, language string) (AliaseableExpression, error) {
@@ -173,7 +193,7 @@ func (s NameOnlyColumn) SelectExpr(alias string, language string) (AliaseableExp
 
 	return goqu.Func(
 			"IFNULL",
-			s.db.Select(schema.ItemLanguageTableNameCol).
+			s.DB.Select(schema.ItemLanguageTableNameCol).
 				From(schema.ItemLanguageTable).
 				Where(
 					schema.ItemLanguageTableItemIDCol.Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
@@ -201,7 +221,12 @@ func (s CommentsAttentionsCountColumn) SelectExpr(alias string, _ string) (Alias
 		},
 	}
 
-	return goqu.L("?", opts.CountSelect(s.db)), nil
+	sqSelect, err := opts.CountSelect(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("?", sqSelect), nil
 }
 
 type StatusPicturesCountColumn struct {
@@ -219,7 +244,12 @@ func (s StatusPicturesCountColumn) SelectExpr(alias string, _ string) (Aliaseabl
 		},
 	}
 
-	return goqu.L("?", opts.CountSelect(s.db)), nil
+	sqSelect, err := opts.CountSelect(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("?", sqSelect), nil
 }
 
 type MostsActiveColumn struct {
@@ -234,7 +264,12 @@ func (s MostsActiveColumn) SelectExpr(alias string, _ string) (AliaseableExpress
 		},
 	}
 
-	return goqu.L("? >= ?", opts.CountSelect(s.db), s.mostsMinCarsCount), nil
+	sqSelect, err := opts.CountSelect(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("? >= ?", sqSelect, s.mostsMinCarsCount), nil
 }
 
 type DescendantsParentsCountColumn struct{}

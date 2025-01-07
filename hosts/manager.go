@@ -29,3 +29,13 @@ func (s *Manager) URIByLanguage(language string) (*url.URL, error) {
 
 	return url.Parse("https://" + langConfig.Hostname)
 }
+
+func (s *Manager) TimezoneByLanguage(language string) (string, error) {
+	langConfig, ok := s.languages[language]
+
+	if !ok {
+		return "", fmt.Errorf("%w: `%s`", errHostForLanguageNotFound, language)
+	}
+
+	return langConfig.Timezone, nil
+}

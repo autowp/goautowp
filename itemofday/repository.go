@@ -35,11 +35,9 @@ type CandidateRecord struct {
 }
 
 func NewRepository(db *goqu.Database) *Repository {
-	loc, _ := time.LoadLocation("UTC")
-
 	return &Repository{
 		db:          db,
-		loc:         loc,
+		loc:         time.UTC,
 		minPictures: defaultMinPictures,
 	}
 }
