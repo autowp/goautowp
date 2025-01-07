@@ -1873,6 +1873,7 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
 	restricted := !isModer && inOptions.GetPictureItem().GetItemId() == 0 &&
 		inOptions.GetPictureItem().GetItemParentCacheAncestor().GetItemId() == 0 &&
+		inOptions.GetPictureItem().GetPerspectiveId() == 0 &&
 		inOptions.GetOwnerId() == 0
 	if restricted {
 		return nil, status.Error(codes.PermissionDenied, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
