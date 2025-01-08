@@ -983,6 +983,22 @@ message PicturesOptions {
   google.type.Date accept_date = 7;
 }
 
+message PathTreeItem {
+  string catname = 1;
+  ItemType item_type_id = 2;
+  repeated PathTreeItemParent parents = 3;
+}
+
+message PathTreeItemParent {
+  string catname = 1;
+  PathTreeItem item = 2;
+}
+
+message PathTreePictureItem {
+  PathTreeItem item = 1;
+  int64 perspective_id = 2;
+}
+
 message PictureFields {
   bool name_text = 1;
   bool name_html = 4;
@@ -993,6 +1009,11 @@ message PictureFields {
   bool comments_count = 7;
   bool moder_vote = 8;
   bool thumb = 9;
+  PicturePathRequest path = 10;
+}
+
+message PicturePathRequest {
+  int64 parent_id = 1;
 }
 
 message PreviewPicturesFields {
@@ -1352,6 +1373,7 @@ message Picture {
   int32 moder_vote_vote = 20;
   int32 moder_vote_count = 21;
   APIImage thumb = 22;
+  repeated PathTreePictureItem path = 23;
 }
 
 message GetPicturesResponse {

@@ -10,6 +10,7 @@ import (
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"google.golang.org/genproto/googleapis/type/latlng"
@@ -23,17 +24,19 @@ type PictureExtractor struct {
 	repository           *pictures.Repository
 	i18n                 *i18nbundle.I18n
 	commentsRepository   *comments.Repository
+	itemsRepository      *items.Repository
 }
 
 func NewPictureExtractor(
 	repository *pictures.Repository, imageStorage *storage.Storage, i18n *i18nbundle.I18n,
-	commentsRepository *comments.Repository,
+	commentsRepository *comments.Repository, itemsRepository *items.Repository,
 ) *PictureExtractor {
 	return &PictureExtractor{
 		repository:         repository,
 		imageStorage:       imageStorage,
 		i18n:               i18n,
 		commentsRepository: commentsRepository,
+		itemsRepository:    itemsRepository,
 		pictureNameFormatter: pictures.PictureNameFormatter{
 			ItemNameFormatter: items.ItemNameFormatter{},
 		},
@@ -219,7 +222,113 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			resultRow.ModerVoteVote = sum
 		}
 
+		path := fields.GetPath()
+		if path != nil {
+			resultRow.Path, err = s.path(ctx, row.ID, path.GetParentId())
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		result = append(result, resultRow)
+	}
+
+	return result, nil
+}
+
+func (s *PictureExtractor) path(
+	ctx context.Context, pictureID int64, targetItemID int64,
+) ([]*PathTreePictureItem, error) {
+	piRows, err := s.repository.PictureItems(ctx, query.PictureItemListOptions{
+		PictureID: pictureID,
+		TypeID:    schema.PictureItemContent,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*PathTreePictureItem, 0)
+
+	for _, piRow := range piRows {
+		item, err := s.itemRoute(ctx, piRow.ItemID, targetItemID)
+		if err != nil {
+			return nil, err
+		}
+
+		if item != nil {
+			result = append(result, &PathTreePictureItem{
+				PerspectiveId: util.NullInt64ToScalar(piRow.PerspectiveID),
+				Item:          item,
+			})
+		}
+	}
+
+	return result, nil
+}
+
+func (s *PictureExtractor) itemRoute(ctx context.Context, itemID int64, targetItemID int64) (*PathTreeItem, error) {
+	row, err := s.itemsRepository.Item(ctx, query.ItemsListOptions{
+		ItemID: itemID,
+	}, items.ListFields{})
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, nil //nolint: nilnil
+		}
+
+		return nil, err
+	}
+
+	parentItemTypes := []schema.ItemTableItemTypeID{
+		schema.ItemTableItemTypeIDCategory,
+		schema.ItemTableItemTypeIDEngine,
+		schema.ItemTableItemTypeIDVehicle,
+	}
+
+	parents := make([]*PathTreeItemParent, 0)
+	if util.Contains(parentItemTypes, row.ItemTypeID) {
+		parents, err = s.itemParentRoute(ctx, row.ID, targetItemID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(parents) == 0 && targetItemID != 0 && itemID != targetItemID {
+		return nil, nil //nolint: nilnil
+	}
+
+	return &PathTreeItem{
+		ItemTypeId: convertItemTypeID(row.ItemTypeID),
+		Catname:    util.NullStringToString(row.Catname),
+		Parents:    parents,
+	}, nil
+}
+
+func (s *PictureExtractor) itemParentRoute(
+	ctx context.Context, itemID int64, targetItemID int64,
+) ([]*PathTreeItemParent, error) {
+	result := make([]*PathTreeItemParent, 0)
+
+	if itemID > 0 {
+		rows, _, err := s.itemsRepository.ItemParents(ctx, query.ItemParentListOptions{
+			ItemID: itemID,
+		}, items.ItemParentFields{}, items.ItemParentOrderByNone)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, row := range rows {
+			item, err := s.itemRoute(ctx, row.ParentID, targetItemID)
+			if err != nil {
+				return nil, err
+			}
+
+			if item != nil {
+				result = append(result, &PathTreeItemParent{
+					Catname: row.Catname,
+					Item:    item,
+				})
+			}
+		}
 	}
 
 	return result, nil

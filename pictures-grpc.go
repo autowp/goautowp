@@ -1801,7 +1801,7 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *GetPicturesRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractor := NewPictureExtractor(s.repository, s.imageStorage, s.i18n, s.commentRepository)
+	extractor := NewPictureExtractor(s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository)
 
 	return extractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID)
 }
@@ -1906,7 +1906,7 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractor := NewPictureExtractor(s.repository, s.imageStorage, s.i18n, s.commentRepository)
+	extractor := NewPictureExtractor(s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository)
 
 	res, err := extractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID)
 	if err != nil {

@@ -1323,3 +1323,105 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 	require.Equal(t, picture.GetNameText(), "Under The Hood "+item.GetNameText())
 	require.Equal(t, picture.GetNameHtml(), "Under The Hood "+item.GetNameHtml())
 }
+
+func TestGetPicturePath(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := NewPicturesClient(conn)
+	itemsClient := NewItemsClient(conn)
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	randomInt := random.Int()
+
+	// create brand
+	brandName := fmt.Sprintf("Opel-%d", randomInt)
+	res, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       brandName,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDBrand,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("opel-%d", randomInt)},
+		Body:       "",
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	brandID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	itemName := fmt.Sprintf("vehicle-%d", randomInt)
+	res, err = goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       itemName,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	itemID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	childName := fmt.Sprintf("child-%d", randomInt)
+	res, err = goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       childName,
+		IsGroup:    false,
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	childID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemParent{
+			ItemId: itemID, ParentId: brandID, Type: ItemParentType_ITEM_TYPE_DEFAULT, Catname: "item",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemParent{
+			ItemId: childID, ParentId: itemID, Type: ItemParentType_ITEM_TYPE_DEFAULT, Catname: "child",
+		},
+	)
+	require.NoError(t, err)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+
+	_, err = client.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&CreatePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    childID,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		},
+	)
+	require.NoError(t, err)
+
+	picture, err := client.GetPicture(
+		ctx,
+		&GetPicturesRequest{
+			Options: &PicturesOptions{Id: pictureID},
+			Fields: &PictureFields{Path: &PicturePathRequest{
+				ParentId: brandID,
+			}},
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, picture.GetPath())
+	require.Equal(t, "child", picture.GetPath()[0].GetItem().GetParents()[0].GetCatname())
+	require.Equal(t, "item", picture.GetPath()[0].GetItem().GetParents()[0].GetItem().GetParents()[0].GetCatname())
+}
