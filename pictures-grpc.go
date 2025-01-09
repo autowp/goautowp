@@ -1879,7 +1879,8 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 		inOptions.GetPictureItem().GetItemParentCacheAncestor().GetItemId() == 0 &&
 		inOptions.GetPictureItem().GetItemParentCacheAncestor().GetParentId() == 0 &&
 		inOptions.GetPictureItem().GetPerspectiveId() == 0 &&
-		inOptions.GetOwnerId() == 0 && inOptions.GetAcceptedInDays() < acceptedInDaysMax
+		inOptions.GetOwnerId() == 0 && inOptions.GetAcceptedInDays() < acceptedInDaysMax &&
+		inOptions.GetAddDate() == nil
 	if restricted {
 		return nil, status.Error(codes.PermissionDenied, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
 	}
