@@ -1336,6 +1336,16 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, picture.GetNameText())
 	require.NotEmpty(t, picture.GetNameHtml())
+
+	item, err = itemsClient.Item(ctx, &ItemRequest{
+		Id:       itemID,
+		Fields:   &ItemFields{NameText: true, NameHtml: true},
+		Language: "ru",
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, item.GetNameText())
+	require.NotEmpty(t, item.GetNameHtml())
+
 	require.Equal(t, picture.GetNameText(), "Под капотом "+item.GetNameText())
 	require.Equal(t, picture.GetNameHtml(), "Под капотом "+item.GetNameHtml())
 }
