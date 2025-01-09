@@ -6,7 +6,7 @@ import (
 
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/items"
-	"github.com/gohugoio/hugo/helpers"
+	"github.com/autowp/goautowp/util"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
@@ -60,7 +60,7 @@ func (s *PictureNameFormatter) FormatText(
 				return "", err
 			}
 
-			prefix = helpers.FirstUpper(translated) + " "
+			prefix = util.TitleCase(translated, s.i18nBundle.Tag(lang)) + " "
 		}
 
 		formatted, err := s.ItemNameFormatter.FormatText(item.Item, lang)
@@ -100,7 +100,7 @@ func (s *PictureNameFormatter) FormatHTML(
 				return "", err
 			}
 
-			prefix = html.EscapeString(helpers.FirstUpper(translated)) + " "
+			prefix = html.EscapeString(util.TitleCase(translated, s.i18nBundle.Tag(lang))) + " "
 		}
 
 		formatted, err := s.ItemNameFormatter.FormatHTML(item.Item, lang)

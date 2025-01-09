@@ -8,12 +8,16 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/doug-martin/goqu/v9/exec"
 	"github.com/go-sql-driver/mysql"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/constraints"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -307,4 +311,22 @@ func StringDefault(value, defaultValue string) string {
 
 func HTMLEscapeString(value string) template.HTML {
 	return template.HTML(template.HTMLEscapeString(value)) //nolint: gosec
+}
+
+func TitleCase(str string, tag language.Tag) string {
+	if str == "" {
+		return ""
+	}
+
+	base, _ := tag.Base()
+
+	if base.String() == "en" {
+		caser := cases.Title(language.English)
+
+		return caser.String(str)
+	}
+
+	r, n := utf8.DecodeRuneInString(str)
+
+	return string(unicode.ToUpper(r)) + str[n:]
 }

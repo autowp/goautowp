@@ -1304,8 +1304,9 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 	picture, err := client.GetPicture(
 		ctx,
 		&GetPicturesRequest{
-			Options: &PicturesOptions{Id: pictureID},
-			Fields:  &PictureFields{NameText: true, NameHtml: true},
+			Language: "en",
+			Options:  &PicturesOptions{Id: pictureID},
+			Fields:   &PictureFields{NameText: true, NameHtml: true},
 		},
 	)
 	require.NoError(t, err)
@@ -1323,6 +1324,20 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 
 	require.Equal(t, picture.GetNameText(), "Under The Hood "+item.GetNameText())
 	require.Equal(t, picture.GetNameHtml(), "Under The Hood "+item.GetNameHtml())
+
+	picture, err = client.GetPicture(
+		ctx,
+		&GetPicturesRequest{
+			Language: "ru",
+			Options:  &PicturesOptions{Id: pictureID},
+			Fields:   &PictureFields{NameText: true, NameHtml: true},
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, picture.GetNameText())
+	require.NotEmpty(t, picture.GetNameHtml())
+	require.Equal(t, picture.GetNameText(), "Под капотом "+item.GetNameText())
+	require.Equal(t, picture.GetNameHtml(), "Под капотом "+item.GetNameHtml())
 }
 
 func TestGetPicturePath(t *testing.T) {
