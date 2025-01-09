@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
@@ -20,7 +21,13 @@ const rangeDelimiter = "–"
 
 const unknownYear = "????"
 
-type ItemNameFormatter struct{}
+type ItemNameFormatter struct {
+	i18nBundle *i18nbundle.I18n
+}
+
+func NewItemNameFormatter(i18nBundle *i18nbundle.I18n) *ItemNameFormatter {
+	return &ItemNameFormatter{i18nBundle: i18nBundle}
+}
 
 type ItemNameFormatterOptions struct {
 	BeginModelYear         int32
@@ -38,7 +45,7 @@ type ItemNameFormatterOptions struct {
 	EndMonth               int16
 }
 
-func (s *ItemNameFormatter) FormatText(item ItemNameFormatterOptions, localizer *i18n.Localizer) (string, error) {
+func (s *ItemNameFormatter) FormatText(item ItemNameFormatterOptions, lang string) (string, error) {
 	result := item.Name
 
 	if len(item.Spec) > 0 {
@@ -68,6 +75,8 @@ func (s *ItemNameFormatter) FormatText(item ItemNameFormatterOptions, localizer 
 	equalS := bs > 0 && es > 0 && (bs == es)
 	equalY := equalS && by > 0 && ey > 0 && (by == ey)
 	equalM := equalY && bm > 0 && em > 0 && (bm == em)
+
+	localizer := s.i18nBundle.Localizer(lang)
 
 	if useModelYear {
 		modelYearsPrefix, err := s.getModelYearsPrefix(bmy, bmyf, emy, emyf, item.Today, localizer)
@@ -100,7 +109,7 @@ func (s *ItemNameFormatter) FormatText(item ItemNameFormatterOptions, localizer 
 	return result, nil
 }
 
-func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, localizer *i18n.Localizer) (string, error) {
+func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, lang string) (string, error) {
 	result := html.EscapeString(item.Name)
 
 	if len(item.Spec) > 0 {
@@ -128,6 +137,8 @@ func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, localizer 
 	emyf := item.EndModelYearFraction
 
 	useModelYear := bmy > 0 || emy > 0
+
+	localizer := s.i18nBundle.Localizer(lang)
 
 	if useModelYear {
 		modelYearsMsg, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: "carlist/model-years"})

@@ -21,7 +21,7 @@ var errItemNotFound = errors.New("item not found")
 
 type PictureExtractor struct {
 	imageStorage         *storage.Storage
-	pictureNameFormatter pictures.PictureNameFormatter
+	pictureNameFormatter *pictures.PictureNameFormatter
 	repository           *pictures.Repository
 	i18n                 *i18nbundle.I18n
 	commentsRepository   *comments.Repository
@@ -34,15 +34,13 @@ func NewPictureExtractor(
 	commentsRepository *comments.Repository, itemsRepository *items.Repository, enforcer *casbin.Enforcer,
 ) *PictureExtractor {
 	return &PictureExtractor{
-		repository:         repository,
-		imageStorage:       imageStorage,
-		i18n:               i18n,
-		commentsRepository: commentsRepository,
-		itemsRepository:    itemsRepository,
-		enforcer:           enforcer,
-		pictureNameFormatter: pictures.PictureNameFormatter{
-			ItemNameFormatter: items.ItemNameFormatter{},
-		},
+		repository:           repository,
+		imageStorage:         imageStorage,
+		i18n:                 i18n,
+		commentsRepository:   commentsRepository,
+		itemsRepository:      itemsRepository,
+		enforcer:             enforcer,
+		pictureNameFormatter: pictures.NewPictureNameFormatter(items.NewItemNameFormatter(i18n), i18n),
 	}
 }
 
@@ -68,8 +66,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		namesData map[int64]pictures.PictureNameFormatterOptions
 		err       error
 		result    = make([]*Picture, 0, len(rows))
-		localizer = s.i18n.Localizer(lang)
-		images    = make(map[int]*storage.Image, 0)
+		images    = make(map[int]*storage.Image)
 	)
 
 	if fields.GetNameText() || fields.GetNameHtml() {
@@ -125,14 +122,14 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			nameData, ok := namesData[row.ID]
 			if ok {
 				if fields.GetNameText() {
-					resultRow.NameText, err = s.pictureNameFormatter.FormatText(nameData, localizer)
+					resultRow.NameText, err = s.pictureNameFormatter.FormatText(nameData, lang)
 					if err != nil {
 						return nil, err
 					}
 				}
 
 				if fields.GetNameHtml() {
-					resultRow.NameHtml, err = s.pictureNameFormatter.FormatHTML(nameData, localizer)
+					resultRow.NameHtml, err = s.pictureNameFormatter.FormatHTML(nameData, lang)
 					if err != nil {
 						return nil, err
 					}

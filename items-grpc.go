@@ -386,9 +386,7 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	localizer := s.i18n.Localizer(in.GetLanguage())
-
-	return s.extractor.Extract(ctx, res, in.GetFields(), localizer, in.GetLanguage())
+	return s.extractor.Extract(ctx, res, in.GetFields(), in.GetLanguage())
 }
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
@@ -436,11 +434,9 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	localizer := s.i18n.Localizer(in.GetLanguage())
-
 	is := make([]*APIItem, len(res))
 	for idx, i := range res {
-		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), localizer, in.GetLanguage())
+		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), in.GetLanguage())
 		if err != nil {
 			return nil, err
 		}
@@ -1349,9 +1345,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	localizer := s.i18n.Localizer(lang)
-
-	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, localizer, lang)
+	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, lang)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1376,7 +1370,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, localizer, lang)
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1411,9 +1405,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	localizer := s.i18n.Localizer(lang)
-
-	extractedBrand, err := s.extractor.Extract(ctx, category, nil, localizer, lang)
+	extractedBrand, err := s.extractor.Extract(ctx, category, nil, lang)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1441,7 +1433,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, localizer, lang)
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1455,9 +1447,8 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 	}, nil
 }
 
-func (s *ItemsGRPCServer) formatItemNameText(row items.Item, language string) (string, error) {
-	nameFormatter := items.ItemNameFormatter{}
-	localizer := s.i18n.Localizer(language)
+func (s *ItemsGRPCServer) formatItemNameText(row items.Item, lang string) (string, error) {
+	nameFormatter := items.NewItemNameFormatter(s.i18n)
 
 	return nameFormatter.FormatText(items.ItemNameFormatterOptions{
 		BeginModelYear:         util.NullInt32ToScalar(row.BeginModelYear),
@@ -1473,7 +1464,7 @@ func (s *ItemsGRPCServer) formatItemNameText(row items.Item, language string) (s
 		Today:                  util.NullBoolToBoolPtr(row.Today),
 		BeginMonth:             util.NullInt16ToScalar(row.BeginMonth),
 		EndMonth:               util.NullInt16ToScalar(row.EndMonth),
-	}, localizer)
+	}, lang)
 }
 
 func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) (*emptypb.Empty, error) {
@@ -2478,8 +2469,6 @@ func (s *ItemsGRPCServer) GetItemParents(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	localizer := s.i18n.Localizer(in.GetLanguage())
-
 	itemFields := in.GetFields().GetItem()
 	itemsMap := make(map[int64]*items.Item, 0)
 
@@ -2523,7 +2512,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 		if itemFields != nil {
 			itemRow, ok := itemsMap[row.ItemID]
 			if ok && itemRow != nil {
-				resRow.Item, err = s.extractor.Extract(ctx, *itemRow, itemFields, localizer, in.GetLanguage())
+				resRow.Item, err = s.extractor.Extract(ctx, *itemRow, itemFields, in.GetLanguage())
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}
@@ -2533,7 +2522,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 		if parentFields != nil {
 			itemRow, ok := parentsMap[row.ParentID]
 			if ok && itemRow != nil {
-				resRow.Parent, err = s.extractor.Extract(ctx, *itemRow, parentFields, localizer, in.GetLanguage())
+				resRow.Parent, err = s.extractor.Extract(ctx, *itemRow, parentFields, in.GetLanguage())
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}
@@ -2559,7 +2548,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 
 			if err == nil {
 				resRow.DuplicateParent, err = s.extractor.Extract(
-					ctx, duplicateRow, duplicateParentFields, localizer, in.GetLanguage(),
+					ctx, duplicateRow, duplicateParentFields, in.GetLanguage(),
 				)
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
@@ -2585,7 +2574,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 
 			if err == nil {
 				resRow.DuplicateChild, err = s.extractor.Extract(
-					ctx, duplicateRow, duplicateChildFields, localizer, in.GetLanguage(),
+					ctx, duplicateRow, duplicateChildFields, in.GetLanguage(),
 				)
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())

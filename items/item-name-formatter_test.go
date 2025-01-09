@@ -4,21 +4,18 @@ import (
 	"testing"
 
 	"github.com/autowp/goautowp/i18nbundle"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/text/language"
 )
 
 func TestYears(t *testing.T) {
 	t.Parallel()
 
-	formatter := ItemNameFormatter{}
+	i18nBundle, err := i18nbundle.New()
+	require.NoError(t, err)
 
-	bundle := i18n.NewBundle(language.English)
-	localizer := i18n.NewLocalizer(bundle, "en")
-
+	formatter := NewItemNameFormatter(i18nBundle)
+	lang := "en"
 	falseVal := false
-
 	itemOptions := ItemNameFormatterOptions{
 		BeginModelYear:         0,
 		EndModelYear:           0,
@@ -35,12 +32,12 @@ func TestYears(t *testing.T) {
 		EndMonth:               0,
 	}
 
-	result, err := formatter.FormatText(itemOptions, localizer)
+	result, err := formatter.FormatText(itemOptions, lang)
 
 	require.NoError(t, err)
 	require.Equal(t, "Autobianchi '1957–96", result)
 
-	result, err = formatter.FormatHTML(itemOptions, localizer)
+	result, err = formatter.FormatHTML(itemOptions, lang)
 
 	require.NoError(t, err)
 	require.Equal(t, "Autobianchi '1957–96", result)
@@ -49,14 +46,14 @@ func TestYears(t *testing.T) {
 func TestModelYears(t *testing.T) {
 	t.Parallel()
 
-	formatter := ItemNameFormatter{}
-
 	bundle, err := i18nbundle.New()
 	require.NoError(t, err)
 
-	localizer := bundle.Localizer("en")
-
-	falseVal := false
+	var (
+		formatter = NewItemNameFormatter(bundle)
+		lang      = "en"
+		falseVal  = false
+	)
 
 	itemOptions := ItemNameFormatterOptions{
 		BeginModelYear:         1957,
@@ -74,12 +71,12 @@ func TestModelYears(t *testing.T) {
 		EndMonth:               7,
 	}
 
-	result, err := formatter.FormatText(itemOptions, localizer)
+	result, err := formatter.FormatText(itemOptions, lang)
 
 	require.NoError(t, err)
 	require.Equal(t, "1957½–96½ Autobianchi [Japan] (E39) '03.1957–07.1996", result)
 
-	result, err = formatter.FormatHTML(itemOptions, localizer)
+	result, err = formatter.FormatHTML(itemOptions, lang)
 
 	require.NoError(t, err)
 	require.Equal(t, `<span title="model years">1957½–96½</span> `+

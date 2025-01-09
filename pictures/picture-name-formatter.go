@@ -4,14 +4,24 @@ import (
 	"html"
 	"strings"
 
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/items"
+	"github.com/gohugoio/hugo/helpers"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type PictureNameFormatter struct {
-	ItemNameFormatter items.ItemNameFormatter
+	ItemNameFormatter *items.ItemNameFormatter
+	i18nBundle        *i18nbundle.I18n
+}
+
+func NewPictureNameFormatter(
+	itemNameFormatter *items.ItemNameFormatter, i18nBundle *i18nbundle.I18n,
+) *PictureNameFormatter {
+	return &PictureNameFormatter{
+		ItemNameFormatter: itemNameFormatter,
+		i18nBundle:        i18nBundle,
+	}
 }
 
 type PictureNameFormatterOptions struct {
@@ -25,7 +35,7 @@ type PictureNameFormatterItem struct {
 }
 
 func (s *PictureNameFormatter) FormatText(
-	picture PictureNameFormatterOptions, localizer *i18n.Localizer,
+	picture PictureNameFormatterOptions, lang string,
 ) (string, error) {
 	if picture.Name != "" {
 		return picture.Name, nil
@@ -43,17 +53,17 @@ func (s *PictureNameFormatter) FormatText(
 		prefix := ""
 
 		if item.Perspective != "" {
+			localizer := s.i18nBundle.Localizer(lang)
+
 			translated, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: item.Perspective})
 			if err != nil {
 				return "", err
 			}
 
-			caser := cases.Title(language.English)
-
-			prefix = caser.String(translated) + " "
+			prefix = helpers.FirstUpper(translated) + " "
 		}
 
-		formatted, err := s.ItemNameFormatter.FormatText(item.Item, localizer)
+		formatted, err := s.ItemNameFormatter.FormatText(item.Item, lang)
 		if err != nil {
 			return "", err
 		}
@@ -65,7 +75,7 @@ func (s *PictureNameFormatter) FormatText(
 }
 
 func (s *PictureNameFormatter) FormatHTML(
-	picture PictureNameFormatterOptions, localizer *i18n.Localizer,
+	picture PictureNameFormatterOptions, lang string,
 ) (string, error) {
 	if picture.Name != "" {
 		return html.EscapeString(picture.Name), nil
@@ -83,17 +93,17 @@ func (s *PictureNameFormatter) FormatHTML(
 		prefix := ""
 
 		if item.Perspective != "" {
+			localizer := s.i18nBundle.Localizer(lang)
+
 			translated, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: item.Perspective})
 			if err != nil {
 				return "", err
 			}
 
-			caser := cases.Title(language.English)
-
-			prefix = html.EscapeString(caser.String(translated)) + " "
+			prefix = html.EscapeString(helpers.FirstUpper(translated)) + " "
 		}
 
-		formatted, err := s.ItemNameFormatter.FormatHTML(item.Item, localizer)
+		formatted, err := s.ItemNameFormatter.FormatHTML(item.Item, lang)
 		if err != nil {
 			return "", err
 		}

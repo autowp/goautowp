@@ -7,6 +7,7 @@ import (
 
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/comments"
+	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
@@ -15,7 +16,6 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
@@ -38,10 +38,11 @@ func NewItemExtractor(
 	itemRepository *items.Repository,
 	itemOfDayRepository *itemofday.Repository,
 	attrs *attrs.Repository,
+	i18nBundle *i18nbundle.I18n,
 ) *ItemExtractor {
 	return &ItemExtractor{
 		enforcer:            enforcer,
-		nameFormatter:       &items.ItemNameFormatter{},
+		nameFormatter:       items.NewItemNameFormatter(i18nBundle),
 		imageStorage:        imageStorage,
 		commentsRepository:  commentsRepository,
 		picturesRepository:  picturesRepository,
@@ -52,7 +53,7 @@ func NewItemExtractor(
 }
 
 func (s *ItemExtractor) Extract(
-	ctx context.Context, row items.Item, fields *ItemFields, localizer *i18n.Localizer, lang string,
+	ctx context.Context, row items.Item, fields *ItemFields, lang string,
 ) (*APIItem, error) {
 	if fields == nil {
 		fields = &ItemFields{}
@@ -123,7 +124,7 @@ func (s *ItemExtractor) Extract(
 		}
 
 		if fields.GetNameText() {
-			nameText, err := s.nameFormatter.FormatText(formatterOptions, localizer)
+			nameText, err := s.nameFormatter.FormatText(formatterOptions, lang)
 			if err != nil {
 				return nil, err
 			}
@@ -132,7 +133,7 @@ func (s *ItemExtractor) Extract(
 		}
 
 		if fields.GetNameHtml() {
-			nameHTML, err := s.nameFormatter.FormatHTML(formatterOptions, localizer)
+			nameHTML, err := s.nameFormatter.FormatHTML(formatterOptions, lang)
 			if err != nil {
 				return nil, err
 			}

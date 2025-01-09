@@ -169,7 +169,7 @@ func NewRepository(
 		zoneAttributesTreeMutex: sync.Mutex{},
 		zoneAttributes:          make(map[int64][]*schema.AttrsAttributeRow),
 		zoneAttributesTree:      make(map[int64]map[int64][]*schema.AttrsAttributeRow),
-		nameFormatter:           &items.ItemNameFormatter{},
+		nameFormatter:           items.NewItemNameFormatter(i18n),
 	}
 }
 
@@ -2755,7 +2755,7 @@ func (s *Repository) Specifications(
 					EndMonth:               util.NullInt16ToScalar(engineRow.EndMonth),
 				}
 
-				nameText, err := s.nameFormatter.FormatText(formatterOptions, localizer)
+				nameText, err := s.nameFormatter.FormatText(formatterOptions, lang)
 				if err != nil {
 					return nil, err
 				}
@@ -2794,7 +2794,7 @@ func (s *Repository) Specifications(
 				EndMonth:               util.NullInt16ToScalar(car.EndMonth),
 			}
 
-			nameText, err := s.nameFormatter.FormatText(formatterOptions, localizer)
+			nameText, err := s.nameFormatter.FormatText(formatterOptions, lang)
 			if err != nil {
 				return nil, err
 			}

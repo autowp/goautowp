@@ -131,8 +131,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 
 		defer util.Close(rows)
 
-		nameFormatter := items.ItemNameFormatter{}
-		localizer := s.i18n.Localizer(in.GetLanguage())
+		nameFormatter := items.NewItemNameFormatter(s.i18n)
 
 		for rows.Next() {
 			var (
@@ -170,7 +169,7 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				BeginYear: beginYear,
 				EndYear:   endYear,
 				Today:     todayRef,
-			}, localizer)
+			}, in.GetLanguage())
 			if err != nil {
 				return nil, err
 			}

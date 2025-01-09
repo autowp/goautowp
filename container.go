@@ -848,9 +848,14 @@ func (s *Container) ItemExtractor() (*ItemExtractor, error) {
 		return nil, err
 	}
 
+	i18nBundle, err := s.I18n()
+	if err != nil {
+		return nil, err
+	}
+
 	return NewItemExtractor(
 		s.Enforcer(), imageStorage, commentsRepository, picturesRepository, itemRepository, itemOfDayRepository,
-		attrsRepository,
+		attrsRepository, i18nBundle,
 	), nil
 }
 
