@@ -157,8 +157,8 @@ service Pictures {
   rpc Repair(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc GetPicture(GetPicturesRequest) returns (Picture) {}
   rpc GetPictures(GetPicturesRequest) returns (GetPicturesResponse) {}
-  rpc GetPictureItem(GetPictureItemsRequest) returns (PictureItem) {}
-  rpc GetPictureItems(GetPictureItemsRequest) returns (PictureItems) {}
+  rpc GetPictureItem(PictureItemsRequest) returns (PictureItem) {}
+  rpc GetPictureItems(PictureItemsRequest) returns (PictureItems) {}
   rpc SetPictureItemArea(SetPictureItemAreaRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureItemPerspective(SetPictureItemPerspectiveRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureItemItemID(SetPictureItemItemIDRequest) returns (google.protobuf.Empty) {}
@@ -996,7 +996,7 @@ message PathTreeItemParent {
 
 message PathTreePictureItem {
   PathTreeItem item = 1;
-  int64 perspective_id = 2;
+  int32 perspective_id = 2;
 }
 
 message PictureFields {
@@ -1010,6 +1010,8 @@ message PictureFields {
   bool moder_vote = 8;
   bool thumb = 9;
   PicturePathRequest path = 10;
+  PictureItemsRequest picture_item = 11;
+  bool image_gallery_full = 12;
 }
 
 message PicturePathRequest {
@@ -1076,11 +1078,13 @@ message ListItemsRequest {
 }
 
 message PictureItemOptions {
+  int64 picture_id = 7;
+  int64 item_id = 4;
   PictureItemType type_id = 1;
   PicturesOptions pictures = 2;
   int32 perspective_id = 3;
   repeated int32 exclude_perspective_id = 6;
-  int64 item_id = 4;
+  ItemListOptions item = 8;
   ItemParentCacheListOptions item_parent_cache_ancestor = 5;
 }
 
@@ -1122,6 +1126,7 @@ message ItemListOptions {
   string autocomplete = 22;
   int64 suggestions_to = 23;
   bool is_not_concept = 24;
+  repeated ItemType type_ids = 25;
 }
 
 message GetTreeRequest {
@@ -1374,6 +1379,8 @@ message Picture {
   int32 moder_vote_count = 21;
   APIImage thumb = 22;
   repeated PathTreePictureItem path = 23;
+  PictureItems picture_items = 24;
+  APIImage image_gallery_full = 25;
 }
 
 message GetPicturesResponse {
@@ -1381,10 +1388,8 @@ message GetPicturesResponse {
   Pages paginator = 2;
 }
 
-message GetPictureItemsRequest {
-  int64 picture_id = 1;
-  int64 item_id = 2;
-  PictureItemType type = 3;
+message PictureItemsRequest {
+  PictureItemOptions options = 4;
 }
 
 message PictureItems {
@@ -1399,6 +1404,7 @@ message PictureItem {
   uint32 crop_top = 5;
   uint32 crop_width = 6;
   uint32 crop_height = 7;
+  int32 perspective_id = 8;
 }
 
 message SetPictureItemAreaRequest {

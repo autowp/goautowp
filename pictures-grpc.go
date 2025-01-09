@@ -1695,7 +1695,7 @@ func (s *PicturesGRPCServer) canReplace(picture, replacedPicture *schema.Picture
 		s.enforcer.Enforce(role, "picture", "move")
 }
 
-func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *GetPictureItemsRequest) (*PictureItem, error) {
+func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *PictureItemsRequest) (*PictureItem, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1709,13 +1709,12 @@ func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *GetPictureI
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	pictureItemType := convertPictureItemType(in.GetType())
+	options, err := convertPictureItemOptions(in.GetOptions())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
-	row, err := s.repository.PictureItem(ctx, query.PictureItemListOptions{
-		PictureID: in.GetPictureId(),
-		ItemID:    in.GetItemId(),
-		TypeID:    pictureItemType,
-	})
+	row, err := s.repository.PictureItem(ctx, options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1725,7 +1724,7 @@ func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *GetPictureI
 	return extractor.Extract(row), nil
 }
 
-func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *GetPictureItemsRequest) (*PictureItems, error) {
+func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureItemsRequest) (*PictureItems, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1739,17 +1738,18 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *GetPicture
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	pictureItemType := convertPictureItemType(in.GetType())
+	inOptions := in.GetOptions()
 
-	if in.GetPictureId() == 0 && in.GetItemId() == 0 {
+	if inOptions.GetPictureId() == 0 && inOptions.GetItemId() == 0 {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.PictureItems(ctx, query.PictureItemListOptions{
-		PictureID: in.GetPictureId(),
-		ItemID:    in.GetItemId(),
-		TypeID:    pictureItemType,
-	})
+	options, err := convertPictureItemOptions(inOptions)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	rows, err := s.repository.PictureItems(ctx, options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1801,7 +1801,9 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *GetPicturesRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractor := NewPictureExtractor(s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository)
+	extractor := NewPictureExtractor(
+		s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository, s.enforcer,
+	)
 
 	return extractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID)
 }
@@ -1906,7 +1908,9 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *GetPicturesReq
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractor := NewPictureExtractor(s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository)
+	extractor := NewPictureExtractor(
+		s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository, s.enforcer,
+	)
 
 	res, err := extractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID)
 	if err != nil {

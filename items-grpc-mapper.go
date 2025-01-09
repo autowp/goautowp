@@ -224,6 +224,16 @@ func mapItemListOptions(in *ItemListOptions, options *query.ItemsListOptions) er
 		options.TypeID = []schema.ItemTableItemTypeID{itemTypeID}
 	}
 
+	typeIDs := in.GetTypeIds()
+	if len(in.GetTypeIds()) > 0 {
+		ids := make([]schema.ItemTableItemTypeID, 0, len(typeIDs))
+		for _, id := range in.GetTypeIds() {
+			ids = append(ids, reverseConvertItemTypeID(id))
+		}
+
+		options.TypeID = ids
+	}
+
 	if in.GetDescendant() != nil {
 		options.ItemParentCacheDescendant = &query.ItemParentCacheListOptions{}
 

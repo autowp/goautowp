@@ -1231,6 +1231,7 @@ func TestGetPictures(t *testing.T) {
 			Votes:         true,
 			CommentsCount: true,
 			ModerVote:     true,
+			PictureItem:   &PictureItemsRequest{},
 		}, Limit: 100},
 	)
 	require.NoError(t, err)

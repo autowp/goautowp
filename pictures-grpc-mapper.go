@@ -160,3 +160,24 @@ func convertPicturesOrder(order GetPicturesRequest_Order) pictures.OrderBy {
 
 	return pictures.OrderByNone
 }
+
+func convertPictureItemOptions(options *PictureItemOptions) (query.PictureItemListOptions, error) {
+	result := query.PictureItemListOptions{
+		PictureID: options.GetPictureId(),
+		ItemID:    options.GetItemId(),
+		TypeID:    convertPictureItemType(options.GetTypeId()),
+	}
+
+	if options.GetItem() != nil {
+		iOptions := query.ItemsListOptions{}
+
+		err := mapItemListOptions(options.GetItem(), &iOptions)
+		if err != nil {
+			return result, err
+		}
+
+		result.Item = &iOptions
+	}
+
+	return result, nil
+}

@@ -17,6 +17,7 @@ type PictureItemListOptions struct {
 	PerspectiveID           int32
 	ExcludePerspectiveID    []int32
 	ItemParentCacheAncestor *ItemParentCacheListOptions
+	Item                    *ItemsListOptions
 }
 
 func AppendPictureItemAlias(alias string) string {
@@ -62,6 +63,22 @@ func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDatase
 		)
 
 		sqSelect, err = s.Pictures.Apply(pAlias, sqSelect)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if s.Item != nil {
+		iAlias := AppendItemAlias(alias, "i")
+		sqSelect = sqSelect.
+			Join(
+				schema.ItemTable.As(iAlias),
+				goqu.On(aliasTable.Col(schema.PictureItemTableItemIDColName).Eq(
+					goqu.T(iAlias).Col(schema.ItemTableIDColName),
+				)),
+			)
+
+		sqSelect, _, err = s.Item.Apply(iAlias, sqSelect)
 		if err != nil {
 			return nil, err
 		}

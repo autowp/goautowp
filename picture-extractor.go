@@ -13,6 +13,7 @@ import (
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
@@ -25,11 +26,12 @@ type PictureExtractor struct {
 	i18n                 *i18nbundle.I18n
 	commentsRepository   *comments.Repository
 	itemsRepository      *items.Repository
+	enforcer             *casbin.Enforcer
 }
 
 func NewPictureExtractor(
 	repository *pictures.Repository, imageStorage *storage.Storage, i18n *i18nbundle.I18n,
-	commentsRepository *comments.Repository, itemsRepository *items.Repository,
+	commentsRepository *comments.Repository, itemsRepository *items.Repository, enforcer *casbin.Enforcer,
 ) *PictureExtractor {
 	return &PictureExtractor{
 		repository:         repository,
@@ -37,6 +39,7 @@ func NewPictureExtractor(
 		i18n:               i18n,
 		commentsRepository: commentsRepository,
 		itemsRepository:    itemsRepository,
+		enforcer:           enforcer,
 		pictureNameFormatter: pictures.PictureNameFormatter{
 			ItemNameFormatter: items.ItemNameFormatter{},
 		},
@@ -150,26 +153,31 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 		}
 
-		if fields.GetThumb() {
-			if row.ImageID.Valid {
-				image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb")
-				if err != nil {
-					return nil, err
-				}
-
-				resultRow.Thumb = APIImageToGRPC(image)
+		if fields.GetThumb() && row.ImageID.Valid {
+			image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb")
+			if err != nil {
+				return nil, err
 			}
+
+			resultRow.Thumb = APIImageToGRPC(image)
 		}
 
-		if fields.GetThumbMedium() {
-			if row.ImageID.Valid {
-				image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-medium")
-				if err != nil {
-					return nil, err
-				}
-
-				resultRow.ThumbMedium = APIImageToGRPC(image)
+		if fields.GetThumbMedium() && row.ImageID.Valid {
+			image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-medium")
+			if err != nil {
+				return nil, err
 			}
+
+			resultRow.ThumbMedium = APIImageToGRPC(image)
+		}
+
+		if fields.GetImageGalleryFull() && row.ImageID.Valid {
+			image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-gallery-full")
+			if err != nil {
+				return nil, err
+			}
+
+			resultRow.ImageGalleryFull = APIImageToGRPC(image)
 		}
 
 		if fields.GetViews() {
@@ -230,6 +238,32 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 		}
 
+		pictureItem := fields.GetPictureItem()
+		if pictureItem != nil {
+			piOptions, err := convertPictureItemOptions(pictureItem.GetOptions())
+			if err != nil {
+				return nil, err
+			}
+
+			piOptions.PictureID = row.ID
+
+			piRows, err := s.repository.PictureItems(ctx, piOptions)
+			if err != nil {
+				return nil, err
+			}
+
+			extractor := NewPictureItemExtractor(s.enforcer)
+
+			res := make([]*PictureItem, 0, len(piRows))
+			for _, piRow := range piRows {
+				res = append(res, extractor.Extract(piRow))
+			}
+
+			resultRow.PictureItems = &PictureItems{
+				Items: res,
+			}
+		}
+
 		result = append(result, resultRow)
 	}
 
@@ -257,7 +291,7 @@ func (s *PictureExtractor) path(
 
 		if item != nil {
 			result = append(result, &PathTreePictureItem{
-				PerspectiveId: util.NullInt64ToScalar(piRow.PerspectiveID),
+				PerspectiveId: int32(util.NullInt64ToScalar(piRow.PerspectiveID)), //nolint: gosec
 				Item:          item,
 			})
 		}
