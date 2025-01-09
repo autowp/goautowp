@@ -318,12 +318,8 @@ func TitleCase(str string, tag language.Tag) string {
 		return ""
 	}
 
-	base, _ := tag.Base()
-
-	if base.String() == "en" {
-		caser := cases.Title(language.English)
-
-		return caser.String(str)
+	if base, _ := tag.Base(); base.String() == "en" {
+		return cases.Title(tag).String(str)
 	}
 
 	r, n := utf8.DecodeRuneInString(str)
