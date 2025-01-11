@@ -88,11 +88,6 @@ const (
 
 var busVehicleTypes = []int64{19, 39, 28, 32}
 
-var (
-	topPerspectives    = []int64{10, 1, 7, 8, 11, 12, 2, 4, 13, 5}
-	bottomPerspectives = []int64{13, 2, 9, 6, 5}
-)
-
 const (
 	ValuesOrderByNone ValuesOrderBy = iota
 	ValuesOrderByUpdateDate
@@ -2802,12 +2797,12 @@ func (s *Repository) Specifications(
 			name = nameText
 		}
 
-		topPicture, topPictureURL, err := s.specPicture(ctx, car.ID, topPerspectives)
+		topPicture, topPictureURL, err := s.specPicture(ctx, car.ID, pictures.OrderByTopPerspectives)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("specPicture(): %w", err)
 		}
 
-		bottomPicture, bottomPictureURL, err := s.specPicture(ctx, car.ID, bottomPerspectives)
+		bottomPicture, bottomPictureURL, err := s.specPicture(ctx, car.ID, pictures.OrderByBottomPerspectives)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("specPicture(): %w", err)
 		}
@@ -3228,25 +3223,8 @@ func (s *Repository) ItemsActualValues(ctx context.Context, itemIDs []int64) (ma
 }
 
 func (s *Repository) specPicture(
-	ctx context.Context, itemID int64, perspectives []int64,
+	ctx context.Context, itemID int64, orderBy pictures.OrderBy,
 ) (*CarSpecTableItemImage, string, error) {
-	order := make([]exp.OrderedExpression, 0)
-
-	if len(perspectives) > 0 {
-		for _, pid := range perspectives {
-			order = append(
-				order,
-				goqu.L(
-					"?",
-					goqu.T(query.AppendPictureItemAlias(query.PictureAlias)).
-						Col(schema.PictureItemTablePerspectiveIDColName).Eq(pid),
-				).Desc(),
-			)
-		} // 'group'  => ['picture_item.perspective_id'],
-	} else {
-		order = append(order, goqu.T(query.PictureAlias).Col(schema.PictureTableIDColName).Desc())
-	}
-
 	row, err := s.picturesRepository.Picture(ctx, query.PictureListOptions{
 		Status: schema.PictureStatusAccepted,
 		PictureItem: &query.PictureItemListOptions{
@@ -3254,8 +3232,7 @@ func (s *Repository) specPicture(
 				ParentID: itemID,
 			},
 		},
-		OrderExpr: order,
-	}, pictures.PictureFields{}, pictures.OrderByNone)
+	}, pictures.PictureFields{}, orderBy)
 	if err != nil {
 		return nil, "", err
 	}

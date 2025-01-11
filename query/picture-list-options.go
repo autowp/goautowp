@@ -26,7 +26,6 @@ type PictureListOptions struct {
 	PictureItem    *PictureItemListOptions
 	ID             int64
 	HasCopyrights  bool
-	OrderExpr      []exp.OrderedExpression
 	Limit          uint32
 	Page           uint32
 	AcceptedInDays int32
@@ -48,9 +47,17 @@ func (s *PictureListOptions) CountSelect(db *goqu.Database) (*goqu.SelectDataset
 		return nil, err
 	}
 
+	if s.IsIDUnique() {
+		return sqSelect.Select(goqu.COUNT(goqu.Star())), nil
+	}
+
 	return sqSelect.Select(
 		goqu.COUNT(goqu.DISTINCT(goqu.T(PictureAlias).Col(schema.PictureTableIDColName))),
 	), nil
+}
+
+func (s *PictureListOptions) IsIDUnique() bool {
+	return s.PictureItem == nil || s.PictureItem.IsPictureIDUnique()
 }
 
 func (s *PictureListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
@@ -119,10 +126,6 @@ func (s *PictureListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	if len(s.OrderExpr) > 0 {
-		sqSelect = sqSelect.Order(s.OrderExpr...)
 	}
 
 	return sqSelect, nil

@@ -16,6 +16,7 @@ import (
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/paulmach/orb"
 )
 
@@ -27,6 +28,11 @@ var (
 )
 
 var prefixedPerspectives = []int64{5, 6, schema.PerspectiveIDUnderTheHood, 20, 21, 22, 23, 24, 28}
+
+var (
+	topPerspectives    = []int64{10, 1, 7, 8, 11, 12, 2, 4, 13, 5}
+	bottomPerspectives = []int64{13, 2, 9, 6, 5}
+)
 
 type VoteSummary struct {
 	Value    int32
@@ -67,6 +73,8 @@ const (
 	OrderByDislikes
 	OrderByAcceptDatetimeDesc
 	OrderByPerspectives
+	OrderByTopPerspectives
+	OrderByBottomPerspectives
 )
 
 func NewRepository(
@@ -449,7 +457,7 @@ func (s *Repository) PictureSelect(
 		return nil, err
 	}
 
-	groupBy := false
+	groupBy := !options.IsIDUnique()
 
 	switch order {
 	case OrderByAddDateDesc:
@@ -525,6 +533,26 @@ func (s *Repository) PictureSelect(
 				aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
 				aliasTable.Col(schema.PictureTableIDColName).Desc(),
 			)
+	case OrderByTopPerspectives, OrderByBottomPerspectives:
+		perspectives := topPerspectives
+		if order == OrderByBottomPerspectives {
+			perspectives = bottomPerspectives
+		}
+
+		orderExprs := make([]exp.OrderedExpression, 0, len(perspectives))
+
+		for _, pid := range perspectives {
+			var expr exp.Comparable = goqu.T(query.AppendPictureItemAlias(query.PictureAlias)).
+				Col(schema.PictureItemTablePerspectiveIDColName)
+
+			if groupBy {
+				expr = goqu.MAX(expr)
+			}
+
+			orderExprs = append(orderExprs, goqu.L("?", expr.Eq(pid)).Desc())
+		}
+
+		sqSelect = sqSelect.Order(orderExprs...)
 
 	case OrderByNone:
 	}

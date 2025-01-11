@@ -1246,13 +1246,8 @@ func TestInheritedValueOverridden(t *testing.T) {
 
 	itemsClient := NewItemsClient(conn)
 
-	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, adminToken)
-
 	_, err = itemsClient.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
 		&ItemParent{
 			ItemId: childItemID, ParentId: itemID, Catname: "vehicle1",
 		},

@@ -24,6 +24,14 @@ func AppendPictureItemAlias(alias string) string {
 	return alias + "_" + PictureItemAlias
 }
 
+func (s *PictureItemListOptions) IsPictureIDUnique() bool {
+	return s.ItemID != 0
+}
+
+func (s *PictureItemListOptions) IsItemIDUnique() bool {
+	return s.PictureID != 0
+}
+
 func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
 	var (
 		err        error
