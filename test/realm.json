@@ -36,7 +36,7 @@
     "duplicateEmailsAllowed": false,
     "resetPasswordAllowed": true,
     "editUsernameAllowed": false,
-    "bruteForceProtected": true,
+    "bruteForceProtected": false,
     "permanentLockout": false,
     "maxFailureWaitSeconds": 900,
     "minimumQuickLoginWaitSeconds": 60,
@@ -112,6 +112,8 @@
             "id": "02be87b1-7ca3-4f0d-ad75-3df52831e769",
             "createdTimestamp": 1628199088724,
             "username": "admin",
+            "firstName": "Admin",
+            "lastName": "Admin",
             "email": "admin@example.com",
             "enabled": true,
             "totp": false,
@@ -128,12 +130,17 @@
             ],
             "clientRoles": {
                 "autowp": [ "admin" ]
-            }
+            },
+            "realmRoles": [
+                "default-roles-autowp"
+            ]
         },
         {
             "id": "02be87b1-7ca3-4f0d-ad75-3df52831e770",
             "createdTimestamp": 1628199088724,
             "username": "tester",
+            "firstName": "Tester",
+            "lastName": "Tester",
             "email": "tester@example.com",
             "enabled": true,
             "totp": false,
@@ -147,6 +154,9 @@
                     "type": "password",
                     "value": "123123"
                 }
+            ],
+            "realmRoles": [
+                "default-roles-autowp"
             ]
         }
     ],
@@ -202,7 +212,7 @@
             "bearerOnly": false,
             "consentRequired": false,
             "standardFlowEnabled": true,
-            "implicitFlowEnabled": false,
+            "implicitFlowEnabled": true,
             "directAccessGrantsEnabled": true,
             "serviceAccountsEnabled": false,
             "publicClient": true,
