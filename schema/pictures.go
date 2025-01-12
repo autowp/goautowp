@@ -35,6 +35,7 @@ const (
 	PictureTableAcceptDatetimeColName     = "accept_datetime"
 	PictureTableRemovingDateColName       = "removing_date"
 	PictureTableAddDateColName            = "add_date"
+	PictureTableFilesize                  = "filesize"
 
 	PicturesTableIdentityLength = 6
 )

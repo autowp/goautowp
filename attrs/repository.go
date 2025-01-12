@@ -527,10 +527,11 @@ func (s *Repository) TopUserBrands(
 	return rows, err
 }
 
-func (s *Repository) ValuesSelect(options query.AttrsValuesListOptions, orderBy ValuesOrderBy) *goqu.SelectDataset {
-	aliasTable := goqu.T(query.AttrsValuesAlias)
+func (s *Repository) ValuesSelect(options query.AttrsValueListOptions, orderBy ValuesOrderBy) *goqu.SelectDataset {
+	alias := query.AttrsValuesAlias
+	aliasTable := goqu.T(alias)
 
-	sqSelect := options.Select(s.db).Select(
+	sqSelect := options.Select(s.db, alias).Select(
 		aliasTable.Col(schema.AttrsValuesTableAttributeIDColName),
 		aliasTable.Col(schema.AttrsValuesTableItemIDColName),
 	)
@@ -543,7 +544,7 @@ func (s *Repository) ValuesSelect(options query.AttrsValuesListOptions, orderBy 
 }
 
 func (s *Repository) ValuesPaginated(
-	ctx context.Context, options query.AttrsValuesListOptions, orderBy ValuesOrderBy, page int32, limit int32,
+	ctx context.Context, options query.AttrsValueListOptions, orderBy ValuesOrderBy, page int32, limit int32,
 ) ([]schema.AttrsValueRow, *util.Pages, error) {
 	sqSelect := s.ValuesSelect(options, orderBy)
 
@@ -565,7 +566,7 @@ func (s *Repository) ValuesPaginated(
 }
 
 func (s *Repository) Values(
-	ctx context.Context, options query.AttrsValuesListOptions, orderBy ValuesOrderBy,
+	ctx context.Context, options query.AttrsValueListOptions, orderBy ValuesOrderBy,
 ) ([]schema.AttrsValueRow, error) {
 	sqSelect := s.ValuesSelect(options, orderBy)
 	res := make([]schema.AttrsValueRow, 0)
@@ -575,11 +576,11 @@ func (s *Repository) Values(
 }
 
 func (s *Repository) UserValueRows(
-	ctx context.Context, options query.AttrsUserValuesListOptions,
+	ctx context.Context, options query.AttrsUserValueListOptions,
 ) ([]schema.AttrsUserValueRow, error) {
 	res := make([]schema.AttrsUserValueRow, 0)
 
-	err := options.Select(s.db).Select(
+	err := options.Select(s.db, query.AttrsUserValuesAlias).Select(
 		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableAttributeIDColName),
 		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableItemIDColName),
 		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableUserIDColName),
@@ -591,11 +592,11 @@ func (s *Repository) UserValueRows(
 }
 
 func (s *Repository) UserValueRow(
-	ctx context.Context, options query.AttrsUserValuesListOptions,
+	ctx context.Context, options query.AttrsUserValueListOptions,
 ) (schema.AttrsUserValueRow, bool, error) {
 	var row schema.AttrsUserValueRow
 
-	success, err := options.Select(s.db).Select(
+	success, err := options.Select(s.db, query.AttrsUserValuesAlias).Select(
 		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableAttributeIDColName),
 		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableItemIDColName),
 		goqu.T(query.AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableUserIDColName),
@@ -1274,7 +1275,7 @@ func (s *Repository) topValue(ctx context.Context, data []valueItem) (Value, err
 func (s *Repository) calcAvgUserValue(
 	ctx context.Context, attribute *schema.AttrsAttributeRow, itemID int64,
 ) (Value, error) {
-	userValueRows, err := s.UserValueRows(ctx, query.AttrsUserValuesListOptions{
+	userValueRows, err := s.UserValueRows(ctx, query.AttrsUserValueListOptions{
 		AttributeID: attribute.ID,
 		ItemID:      itemID,
 	})
@@ -1369,7 +1370,7 @@ func (s *Repository) calcEngineValue(ctx context.Context, attributeID int64, ite
 }
 
 func (s *Repository) calcInheritedValue(ctx context.Context, attributeID int64, itemID int64) (Value, error) {
-	valueRows, err := s.Values(ctx, query.AttrsValuesListOptions{
+	valueRows, err := s.Values(ctx, query.AttrsValueListOptions{
 		AttributeID: attributeID,
 		ChildItemID: itemID,
 	}, ValuesOrderByNone)
@@ -2237,7 +2238,7 @@ func (s *Repository) refreshConflictFlag(ctx context.Context, attributeID, itemI
 		return fmt.Errorf("%w: `%d`", errAttributeNotFound, attributeID)
 	}
 
-	userValueRows, err := s.UserValueRows(ctx, query.AttrsUserValuesListOptions{
+	userValueRows, err := s.UserValueRows(ctx, query.AttrsUserValueListOptions{
 		AttributeID: attributeID,
 		ItemID:      itemID,
 	})
@@ -2465,7 +2466,7 @@ func (s *Repository) RefreshConflictFlags(ctx context.Context) error {
 }
 
 func (s *Repository) MoveUserValues(ctx context.Context, srcItemID, destItemID int64) error {
-	rows, err := s.UserValueRows(ctx, query.AttrsUserValuesListOptions{
+	rows, err := s.UserValueRows(ctx, query.AttrsUserValueListOptions{
 		ItemID: srcItemID,
 	})
 	if err != nil {
@@ -2617,7 +2618,7 @@ func (s *Repository) ZoneIDByVehicleTypeIDs(itemTypeID schema.ItemTableItemTypeI
 func (s *Repository) ChildSpecifications(
 	ctx context.Context, itemID int64, lang string,
 ) (*CarSpecTable, error) {
-	rows, _, err := s.itemsRepository.ItemParents(ctx, query.ItemParentListOptions{
+	rows, _, err := s.itemsRepository.ItemParents(ctx, &query.ItemParentListOptions{
 		ParentID: itemID,
 	}, items.ItemParentFields{}, items.ItemParentOrderByAuto)
 	if err != nil {
@@ -2683,7 +2684,7 @@ func (s *Repository) actualValuesToText(
 func (s *Repository) Specifications(
 	ctx context.Context, itemIDs []int64, contextItemID int64, lang string,
 ) (*CarSpecTable, error) {
-	cars, _, err := s.itemsRepository.List(ctx, query.ItemsListOptions{
+	cars, _, err := s.itemsRepository.List(ctx, &query.ItemListOptions{
 		ItemIDs: itemIDs,
 	}, items.ListFields{NameText: true}, items.OrderByName, false)
 	if err != nil {
@@ -2726,7 +2727,7 @@ func (s *Repository) Specifications(
 		// append engine name
 		if !ok && car.EngineItemID.Valid {
 			engineRow, err := s.itemsRepository.Item(ctx,
-				query.ItemsListOptions{ItemID: car.EngineItemID.Int64, Language: lang},
+				&query.ItemListOptions{ItemID: car.EngineItemID.Int64, Language: lang},
 				items.ListFields{NameText: true},
 			)
 			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
@@ -3225,7 +3226,7 @@ func (s *Repository) ItemsActualValues(ctx context.Context, itemIDs []int64) (ma
 func (s *Repository) specPicture(
 	ctx context.Context, itemID int64, orderBy pictures.OrderBy,
 ) (*CarSpecTableItemImage, string, error) {
-	row, err := s.picturesRepository.Picture(ctx, query.PictureListOptions{
+	row, err := s.picturesRepository.Picture(ctx, &query.PictureListOptions{
 		Status: schema.PictureStatusAccepted,
 		PictureItem: &query.PictureItemListOptions{
 			ItemParentCacheAncestor: &query.ItemParentCacheListOptions{

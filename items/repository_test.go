@@ -34,13 +34,13 @@ func TestTopBrandsListRuZh(t *testing.T) {
 	langs := []string{"ru", "zh"}
 
 	for _, lang := range langs {
-		options := query.ItemsListOptions{
+		options := query.ItemListOptions{
 			Language:   lang,
 			TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 			Limit:      150,
 			SortByName: true,
 		}
-		res, _, err := repository.List(ctx, options, ListFields{
+		res, _, err := repository.List(ctx, &options, ListFields{
 			NameOnly:                   true,
 			DescendantsCount:           true,
 			NewDescendantsCount:        true,
@@ -72,18 +72,18 @@ func TestListFilters(t *testing.T) {
 
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
-	options := query.ItemsListOptions{
+	options := query.ItemListOptions{
 		Language: "en",
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		ItemParentChild: &query.ItemParentListOptions{
-			ChildItems: &query.ItemsListOptions{
+			ChildItems: &query.ItemListOptions{
 				TypeID:       []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
 				IsConcept:    true,
 				EngineItemID: 1,
 			},
 		},
 		ItemParentParent: &query.ItemParentListOptions{
-			ParentItems: &query.ItemsListOptions{
+			ParentItems: &query.ItemListOptions{
 				TypeID:    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
 				NoParents: true,
 				Catname:   "test",
@@ -91,7 +91,7 @@ func TestListFilters(t *testing.T) {
 		},
 		Limit: 150,
 	}
-	_, _, err = repository.List(ctx, options, ListFields{
+	_, _, err = repository.List(ctx, &options, ListFields{
 		NameOnly:                   true,
 		DescendantsCount:           true,
 		NewDescendantsCount:        true,
@@ -116,12 +116,12 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	ctx := context.Background()
 
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
-	options := query.ItemsListOptions{
+	options := query.ItemListOptions{
 		Language: "en",
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:    10,
 	}
-	_, _, err = repository.List(ctx, options, ListFields{
+	_, _, err = repository.List(ctx, &options, ListFields{
 		NameOnly:         true,
 		DescendantsCount: true,
 		ChildsCount:      true,
@@ -224,7 +224,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
-	options := query.ItemsListOptions{
+	res2, _, err := repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			PictureItemsByItemID: &query.PictureItemListOptions{
@@ -237,8 +237,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:      10,
 		SortByName: true,
-	}
-	res2, _, err := repository.List(ctx, options, ListFields{
+	}, ListFields{
 		NameOnly:                true,
 		DescendantPicturesCount: true,
 		ChildsCount:             true,
@@ -274,13 +273,13 @@ func TestPaginator(t *testing.T) {
 	}
 
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
-	options := query.ItemsListOptions{
+	options := query.ItemListOptions{
 		Language: "en",
 		Limit:    2,
 		Page:     2,
 		Name:     name + "%",
 	}
-	r, pages, err := repository.List(ctx, options, ListFields{}, OrderByNone, true)
+	r, pages, err := repository.List(ctx, &options, ListFields{}, OrderByNone, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, r)
 	require.Len(t, r, 2)
@@ -340,7 +339,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 	}
 
 	// with field DescendantsCount, with pagination
-	list, pages, err := repository.List(ctx, query.ItemsListOptions{
+	list, pages, err := repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -356,7 +355,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 	require.Equal(t, int32(11), list[0].DescendantsCount)
 
 	// without field DescendantsCount, with pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -372,7 +371,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 	require.Equal(t, int32(0), list[0].DescendantsCount)
 
 	// with field DescendantsCount, without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     name + "%",
 	}, ListFields{DescendantsCount: true}, OrderByDescendantsCount, true)
@@ -384,7 +383,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 	require.Equal(t, int32(11), list[0].DescendantsCount)
 
 	// without field DescendantsCount, without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     name + "%",
 	}, ListFields{}, OrderByDescendantsCount, true)
@@ -468,7 +467,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 	}
 
 	// with field DescendantPicturesCount, with pagination
-	list, pages, err := repository.List(ctx, query.ItemsListOptions{
+	list, pages, err := repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -487,7 +486,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 	require.Equal(t, int32(10), list[0].DescendantPicturesCount)
 
 	// without field DescendantPicturesCount, with pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -506,7 +505,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 	require.Equal(t, int32(0), list[0].DescendantPicturesCount)
 
 	// with field DescendantPicturesCount, without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     name + "%",
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
@@ -521,7 +520,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 	require.Equal(t, int32(10), list[0].DescendantPicturesCount)
 
 	// without field DescendantPicturesCount, without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     name + "%",
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
@@ -587,7 +586,7 @@ func TestOrderByAddDatetime(t *testing.T) {
 	}
 
 	// with pagination
-	list, pages, err := repository.List(ctx, query.ItemsListOptions{
+	list, pages, err := repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -603,7 +602,7 @@ func TestOrderByAddDatetime(t *testing.T) {
 	require.Equal(t, int32(0), list[0].DescendantPicturesCount)
 
 	// without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     name + "%",
 	}, ListFields{}, OrderByAddDatetime, true)
@@ -666,7 +665,7 @@ func TestOrderByName(t *testing.T) {
 	}
 
 	// with pagination
-	list, pages, err := repository.List(ctx, query.ItemsListOptions{
+	list, pages, err := repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -682,7 +681,7 @@ func TestOrderByName(t *testing.T) {
 	require.Equal(t, int32(0), list[0].DescendantPicturesCount)
 
 	// with pagination, with fields
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -698,7 +697,7 @@ func TestOrderByName(t *testing.T) {
 	require.Equal(t, int32(0), list[0].DescendantPicturesCount)
 
 	// without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     "%" + name + "%",
 	}, ListFields{}, OrderByName, true)
@@ -710,7 +709,7 @@ func TestOrderByName(t *testing.T) {
 	require.Equal(t, int32(0), list[0].DescendantPicturesCount)
 
 	// without pagination, with fields
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     "%" + name + "%",
 	}, ListFields{NameOnly: true, NameHTML: true, NameText: true, NameDefault: true}, OrderByName, true)
@@ -790,7 +789,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 	}
 
 	// with field DescendantsParentsCount, with pagination
-	list, pages, err := repository.List(ctx, query.ItemsListOptions{
+	list, pages, err := repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -798,7 +797,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			ExcludeSelf: true,
 			ItemParentByItemID: &query.ItemParentListOptions{
-				ParentItems: &query.ItemsListOptions{},
+				ParentItems: &query.ItemListOptions{},
 			},
 		},
 	}, ListFields{DescendantsParentsCount: true}, OrderByDescendantsParentsCount, true)
@@ -812,7 +811,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 	require.Equal(t, int32(12), list[0].DescendantsParentsCount)
 
 	// without field DescendantsParentsCount, with pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Limit:    1,
 		Page:     1,
@@ -832,7 +831,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 	require.Equal(t, int32(0), list[0].DescendantsParentsCount)
 
 	// with field DescendantsParentsCount, without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     name + "%",
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
@@ -848,7 +847,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 	require.Equal(t, int32(12), list[0].DescendantsParentsCount)
 
 	// without field DescendantsParentsCount, without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     name + "%",
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
@@ -916,7 +915,7 @@ func TestOrderByStarCount(t *testing.T) {
 	}
 
 	// with pagination
-	list, pages, err := repository.List(ctx, query.ItemsListOptions{
+	list, pages, err := repository.List(ctx, &query.ItemListOptions{
 		Language:                  "en",
 		Limit:                     1,
 		Page:                      1,
@@ -932,7 +931,7 @@ func TestOrderByStarCount(t *testing.T) {
 	require.Equal(t, itemID, list[0].ID)
 
 	// without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language:                  "en",
 		Name:                      name + "%",
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{},
@@ -1011,7 +1010,7 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 	}
 
 	// with pagination
-	list, pages, err := repository.List(ctx, query.ItemsListOptions{
+	list, pages, err := repository.List(ctx, &query.ItemListOptions{
 		Language:         "en",
 		Limit:            1,
 		Page:             1,
@@ -1026,7 +1025,7 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 	require.Equal(t, int32(1), pages.Current)
 
 	// without pagination
-	list, pages, err = repository.List(ctx, query.ItemsListOptions{
+	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language:         "en",
 		Name:             name + "%",
 		ItemParentParent: &query.ItemParentListOptions{},

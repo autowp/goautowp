@@ -27,7 +27,7 @@ func (s DescendantsCountColumn) SelectExpr(alias string, _ string) (AliaseableEx
 		ExcludeSelf:  true,
 	}
 
-	sqSelect, err := options.CountSelect(s.db)
+	sqSelect, err := options.CountSelect(s.db, query.ItemParentCacheAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ type NewDescendantsCountColumn struct {
 }
 
 func (s NewDescendantsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
-	options := query.ItemsListOptions{
+	options := query.ItemListOptions{
 		Alias: alias + "product2",
 		ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
 			ParentIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
@@ -49,7 +49,7 @@ func (s NewDescendantsCountColumn) SelectExpr(alias string, _ string) (Aliaseabl
 		CreatedInDays: NewDays,
 	}
 
-	sqSelect, err := options.CountDistinctSelect(s.db)
+	sqSelect, err := options.CountDistinctSelect(s.db, query.ItemAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -62,19 +62,19 @@ type DescendantTwinsGroupsCountColumn struct {
 }
 
 func (s DescendantTwinsGroupsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
-	options := query.ItemsListOptions{
+	options := query.ItemListOptions{
 		Alias:  alias + "dtgc",
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			ItemParentCacheAncestorByItemID: &query.ItemParentCacheListOptions{
-				ItemsByParentID: &query.ItemsListOptions{
+				ItemsByParentID: &query.ItemListOptions{
 					ItemIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 				},
 			},
 		},
 	}
 
-	sqSelect, err := options.CountSelect(s.db)
+	sqSelect, err := options.CountSelect(s.db, query.ItemAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (s ChildsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpress
 		ParentIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 	}
 
-	sqSelect, err := options.CountSelect(s.db)
+	sqSelect, err := options.CountSelect(s.db, query.ItemParentAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func (s CommentsAttentionsCountColumn) SelectExpr(alias string, _ string) (Alias
 		},
 	}
 
-	sqSelect, err := opts.CountSelect(s.db)
+	sqSelect, err := opts.CountSelect(s.db, query.CommentMessageAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (s StatusPicturesCountColumn) SelectExpr(alias string, _ string) (Aliaseabl
 		},
 	}
 
-	sqSelect, err := opts.CountSelect(s.db)
+	sqSelect, err := opts.CountSelect(s.db, query.PictureAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -259,12 +259,12 @@ type MostsActiveColumn struct {
 
 func (s MostsActiveColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
 	opts := query.ItemParentCacheListOptions{
-		ItemsByParentID: &query.ItemsListOptions{
+		ItemsByParentID: &query.ItemListOptions{
 			ItemIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 		},
 	}
 
-	sqSelect, err := opts.CountSelect(s.db)
+	sqSelect, err := opts.CountSelect(s.db, query.ItemParentCacheAlias)
 	if err != nil {
 		return nil, err
 	}

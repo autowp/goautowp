@@ -78,6 +78,15 @@ type UserFields struct {
 	Login         bool
 }
 
+type OrderBy int
+
+const (
+	OrderByNone OrderBy = iota
+	OrderByPicturesTotalDesc
+	OrderBySpecsVolumeDesc
+	OrderByDeletedName
+)
+
 // Repository Main Object.
 type Repository struct {
 	autowpDB        *goqu.Database
@@ -116,9 +125,9 @@ func NewRepository(
 }
 
 func (s *Repository) User(
-	ctx context.Context, options query.UserListOptions, fields UserFields,
+	ctx context.Context, options *query.UserListOptions, fields UserFields, orderBy OrderBy,
 ) (*schema.UsersRow, error) {
-	users, _, err := s.Users(ctx, options, fields)
+	users, _, err := s.Users(ctx, options, fields, orderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +157,7 @@ func (s *Repository) UserIDByIdentity(ctx context.Context, identity string) (int
 }
 
 func (s *Repository) Users(
-	ctx context.Context, options query.UserListOptions, fields UserFields,
+	ctx context.Context, options *query.UserListOptions, fields UserFields, orderBy OrderBy,
 ) ([]schema.UsersRow, *util.Pages, error) {
 	var err error
 
@@ -160,58 +169,72 @@ func (s *Repository) Users(
 		&row.SpecsWeight, &row.Img, &row.EMail, &row.PicturesTotal, &row.SpecsVolume, &row.Language,
 	}
 
+	alias := query.UserTableAlias
+	aliasTable := goqu.T(alias)
+
 	columns := []interface{}{
-		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
-		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol, schema.UserTableImgCol,
-		schema.UserTableEmailCol, schema.UserTablePicturesTotalCol, schema.UserTableSpecsVolumeCol,
-		schema.UserTableLanguageCol,
+		aliasTable.Col(schema.UserTableIDColName), aliasTable.Col(schema.UserTableNameColName),
+		aliasTable.Col(schema.UserTableDeletedColName), aliasTable.Col(schema.UserTableIdentityColName),
+		aliasTable.Col(schema.UserTableLastOnlineColName), aliasTable.Col(schema.UserTableRoleColName),
+		aliasTable.Col(schema.UserTableSpecsWeightColName), aliasTable.Col(schema.UserTableImgColName),
+		aliasTable.Col(schema.UserTableEmailColName), aliasTable.Col(schema.UserTablePicturesTotalColName),
+		aliasTable.Col(schema.UserTableSpecsVolumeColName), aliasTable.Col(schema.UserTableLanguageColName),
 	}
 
 	if fields.VotesLeft {
 		valuePtrs = append(valuePtrs, &row.VotesLeft)
-		columns = append(columns, schema.UserTableVotesLeftCol)
+		columns = append(columns, aliasTable.Col(schema.UserTableVotesLeftColName))
 	}
 
 	if fields.VotesPerDay {
 		valuePtrs = append(valuePtrs, &row.VotesPerDay)
-		columns = append(columns, schema.UserTableVotesPerDayCol)
+		columns = append(columns, aliasTable.Col(schema.UserTableVotesPerDayColName))
 	}
 
 	if fields.Language {
 		valuePtrs = append(valuePtrs, &row.Language)
-		columns = append(columns, schema.UserTableLanguageCol)
+		columns = append(columns, aliasTable.Col(schema.UserTableLanguageColName))
 	}
 
 	if fields.Timezone {
 		valuePtrs = append(valuePtrs, &row.Timezone)
-		columns = append(columns, schema.UserTableTimezoneCol)
+		columns = append(columns, aliasTable.Col(schema.UserTableTimezoneColName))
 	}
 
 	if fields.RegDate {
 		valuePtrs = append(valuePtrs, &row.RegDate)
-		columns = append(columns, schema.UserTableRegDateCol)
+		columns = append(columns, aliasTable.Col(schema.UserTableRegDateColName))
 	}
 
 	if fields.PicturesAdded {
 		valuePtrs = append(valuePtrs, &row.PicturesAdded)
-		columns = append(columns, schema.UserTablePicturesAddedCol)
+		columns = append(columns, aliasTable.Col(schema.UserTablePicturesAddedColName))
 	}
 
 	if fields.LastIP {
 		valuePtrs = append(valuePtrs, &row.LastIP)
-		columns = append(columns, goqu.Func("INET6_NTOA", schema.UserTableLastIPCol))
+		columns = append(columns, goqu.Func("INET6_NTOA", aliasTable.Col(schema.UserTableLastIPColName)))
 	}
 
 	if fields.Login {
 		valuePtrs = append(valuePtrs, &row.Login)
-		columns = append(columns, schema.UserTableLoginCol)
+		columns = append(columns, aliasTable.Col(schema.UserTableLoginColName))
 	}
 
-	sqSelect := s.autowpDB.From(schema.UserTable)
+	sqSelect := options.Select(s.autowpDB, alias).Select(columns...)
 
-	sqSelect = options.Apply(sqSelect)
-
-	sqSelect = sqSelect.Select(columns...)
+	switch orderBy {
+	case OrderByNone:
+	case OrderByPicturesTotalDesc:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.UserTablePicturesTotalColName).Desc())
+	case OrderBySpecsVolumeDesc:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.UserTableSpecsVolumeColName).Desc())
+	case OrderByDeletedName:
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.UserTableDeletedColName).Asc(),
+			aliasTable.Col(schema.UserTableNameColName).Asc(),
+		)
+	}
 
 	var pages *util.Pages
 

@@ -273,7 +273,7 @@ func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) 
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
 	}
 
-	rows, err := s.repository.Values(ctx, query.AttrsValuesListOptions{
+	rows, err := s.repository.Values(ctx, query.AttrsValueListOptions{
 		ZoneID: in.GetZoneId(),
 		ItemID: in.GetItemId(),
 	}, attrs.ValuesOrderByNone)
@@ -326,7 +326,7 @@ func (s *AttrsGRPCServer) GetUserValues(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: item_id cannot be nil")
 	}
 
-	rows, err := s.repository.UserValueRows(ctx, query.AttrsUserValuesListOptions{
+	rows, err := s.repository.UserValueRows(ctx, query.AttrsUserValueListOptions{
 		ZoneID:        in.GetZoneId(),
 		ItemID:        in.GetItemId(),
 		UserID:        in.GetUserId(),
@@ -391,9 +391,9 @@ func (s *AttrsGRPCServer) GetConflicts(ctx context.Context, in *AttrConflictsReq
 
 	const conflictsPerPage = 30
 
-	data, pages, err := s.repository.ValuesPaginated(ctx, query.AttrsValuesListOptions{
+	data, pages, err := s.repository.ValuesPaginated(ctx, query.AttrsValueListOptions{
 		Conflict: in.GetFilter() == AttrConflictsRequest_ALL,
-		UserValues: &query.AttrsUserValuesListOptions{
+		UserValues: &query.AttrsUserValueListOptions{
 			WeightLtZero:   in.GetFilter() == AttrConflictsRequest_MINUS_WEIGHT,
 			ConflictLtZero: in.GetFilter() == AttrConflictsRequest_I_DISAGREE,
 			ConflictGtZero: in.GetFilter() == AttrConflictsRequest_DO_NOT_AGREE_WITH_ME,
@@ -406,7 +406,7 @@ func (s *AttrsGRPCServer) GetConflicts(ctx context.Context, in *AttrConflictsReq
 	res := make([]*AttrConflict, 0, len(data))
 
 	for _, row := range data {
-		uvRows, err := s.repository.UserValueRows(ctx, query.AttrsUserValuesListOptions{
+		uvRows, err := s.repository.UserValueRows(ctx, query.AttrsUserValueListOptions{
 			AttributeID: row.AttributeID,
 			ItemID:      row.ItemID,
 		})

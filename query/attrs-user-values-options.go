@@ -3,11 +3,12 @@ package query
 import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 )
 
 const AttrsUserValuesAlias = "auv"
 
-type AttrsUserValuesListOptions struct {
+type AttrsUserValueListOptions struct {
 	ZoneID         int64
 	AttributeID    int64
 	ItemID         int64
@@ -18,14 +19,31 @@ type AttrsUserValuesListOptions struct {
 	ConflictGtZero bool
 }
 
-func (s *AttrsUserValuesListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
-	sqSelect := db.From(schema.AttrsUserValuesTable.As(AttrsUserValuesAlias)).
-		Order(goqu.T(AttrsUserValuesAlias).Col(schema.AttrsUserValuesTableUpdateDateColName).Desc())
-
-	return s.Apply(AttrsUserValuesAlias, sqSelect)
+func (s *AttrsUserValueListOptions) Select(db *goqu.Database, alias string) *goqu.SelectDataset {
+	return s.apply(
+		alias,
+		db.From(schema.AttrsUserValuesTable.As(alias)).
+			Order(goqu.T(alias).Col(schema.AttrsUserValuesTableUpdateDateColName).Desc()),
+	)
 }
 
-func (s *AttrsUserValuesListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *AttrsUserValueListOptions) JoinToAttributeIDItemIDAndApply(
+	srcAttributeCol exp.IdentifierExpression, srcItemCol exp.IdentifierExpression,
+	alias string, sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
+	if s == nil {
+		return sqSelect
+	}
+
+	sqSelect = sqSelect.Join(schema.AttrsUserValuesTable.As(alias), goqu.On(
+		srcAttributeCol.Eq(goqu.T(alias).Col(schema.AttrsUserValuesTableAttributeIDColName)),
+		srcItemCol.Eq(goqu.T(alias).Col(schema.AttrsUserValuesTableItemIDColName)),
+	))
+
+	return s.apply(alias, sqSelect)
+}
+
+func (s *AttrsUserValueListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
 	aliasTable := goqu.T(alias)
 
 	sqSelect = sqSelect.Where(

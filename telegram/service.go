@@ -113,7 +113,7 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 func (s *Service) NotifyPicture(
 	ctx context.Context, picture *schema.PictureRow, itemRepository *items.Repository,
 ) error {
-	itemIDsSelect, err := itemRepository.IDsSelect(query.ItemsListOptions{
+	itemIDsSelect, err := itemRepository.IDsSelect(query.ItemListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			PictureItemsByItemID: &query.PictureItemListOptions{

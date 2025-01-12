@@ -7,44 +7,45 @@ import (
 
 const AttrsValuesAlias = "av"
 
-type AttrsValuesListOptions struct {
+type AttrsValueListOptions struct {
 	ZoneID      int64
 	ItemID      int64
 	ChildItemID int64
 	AttributeID int64
 	Conflict    bool
-	UserValues  *AttrsUserValuesListOptions
+	UserValues  *AttrsUserValueListOptions
 }
 
-func (s *AttrsValuesListOptions) Select(db *goqu.Database) *goqu.SelectDataset {
-	sqSelect := db.From(schema.AttrsValuesTable.As(AttrsValuesAlias)).
-		Order(goqu.T(AttrsValuesAlias).Col(schema.AttrsValuesTableUpdateDateColName).Desc())
-
-	return s.Apply(AttrsValuesAlias, sqSelect)
+func (s *AttrsValueListOptions) Select(db *goqu.Database, alias string) *goqu.SelectDataset {
+	return s.apply(
+		alias,
+		db.From(schema.AttrsValuesTable.As(alias)).
+			Order(goqu.T(alias).Col(schema.AttrsValuesTableUpdateDateColName).Desc()),
+	)
 }
 
-func (s *AttrsValuesListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
-	aliasTable := goqu.T(alias)
+func (s *AttrsValueListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+	var (
+		aliasTable     = goqu.T(alias)
+		attributeIDCol = aliasTable.Col(schema.AttrsValuesTableAttributeIDColName)
+		itemIDCol      = aliasTable.Col(schema.AttrsValuesTableItemIDColName)
+	)
 
 	if s.ItemID != 0 {
-		sqSelect = sqSelect.Where(
-			aliasTable.Col(schema.AttrsValuesTableItemIDColName).Eq(s.ItemID),
-		)
+		sqSelect = sqSelect.Where(itemIDCol.Eq(s.ItemID))
 	}
 
 	if s.ChildItemID > 0 {
 		sqSelect = sqSelect.Join(
 			schema.ItemParentTable,
-			goqu.On(aliasTable.Col(schema.AttrsValuesTableItemIDColName).Eq(schema.ItemParentTableParentIDCol)),
+			goqu.On(itemIDCol.Eq(schema.ItemParentTableParentIDCol)),
 		).Where(
 			schema.ItemParentTableItemIDCol.Eq(s.ChildItemID),
 		)
 	}
 
 	if s.AttributeID != 0 {
-		sqSelect = sqSelect.Where(
-			aliasTable.Col(schema.AttrsValuesTableAttributeIDColName).Eq(s.AttributeID),
-		)
+		sqSelect = sqSelect.Where(attributeIDCol.Eq(s.AttributeID))
 	}
 
 	if s.ZoneID != 0 {
@@ -52,9 +53,7 @@ func (s *AttrsValuesListOptions) Apply(alias string, sqSelect *goqu.SelectDatase
 
 		sqSelect = sqSelect.Join(
 			schema.AttrsZoneAttributesTable.As(azaAlias),
-			goqu.On(aliasTable.Col(schema.AttrsValuesTableAttributeIDColName).Eq(
-				goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableAttributeIDColName),
-			)),
+			goqu.On(attributeIDCol.Eq(goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableAttributeIDColName))),
 		).Where(goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableZoneIDColName).Eq(s.ZoneID))
 	}
 
@@ -64,20 +63,10 @@ func (s *AttrsValuesListOptions) Apply(alias string, sqSelect *goqu.SelectDatase
 		)
 	}
 
-	if s.UserValues != nil {
-		uvAlias := AppendPictureItemAlias(alias)
-
-		sqSelect = sqSelect.Join(schema.AttrsUserValuesTable.As(uvAlias), goqu.On(
-			aliasTable.Col(schema.AttrsValuesTableAttributeIDColName).Eq(
-				goqu.T(uvAlias).Col(schema.AttrsUserValuesTableAttributeIDColName),
-			),
-			aliasTable.Col(schema.AttrsValuesTableItemIDColName).Eq(
-				goqu.T(uvAlias).Col(schema.AttrsUserValuesTableItemIDColName),
-			),
-		))
-
-		sqSelect = s.UserValues.Apply(uvAlias, sqSelect)
-	}
-
-	return sqSelect
+	return s.UserValues.JoinToAttributeIDItemIDAndApply(
+		attributeIDCol,
+		itemIDCol,
+		AppendPictureItemAlias(alias),
+		sqSelect,
+	)
 }

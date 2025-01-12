@@ -21,10 +21,16 @@ import (
 )
 
 var (
-	errIsAllowedForPictureItemContentOnly = errors.New("is allowed only for picture-item-content")
-	errJoinNeededToSortByPerspective      = errors.New("can't sort by perspective: need a join with picture_item")
-	errCombinationNotAllowed              = errors.New("combination not allowed")
-	errImageIDIsNil                       = errors.New("image_id is null")
+	errIsAllowedForPictureItemContentOnly     = errors.New("is allowed only for picture-item-content")
+	errJoinNeededToSortByPerspective          = errors.New("can't sort by perspective: need a join with picture_item")
+	errJoinNeededToSortByDfDistanceSimilarity = errors.New(
+		"can't sort by df-distance-similarity: need a join with df_distance",
+	)
+	errJoinNeededToSortByPictureModerVote = errors.New(
+		"can't sort by df-distance-similarity: need a join with picture_moder_vote",
+	)
+	errCombinationNotAllowed = errors.New("combination not allowed")
+	errImageIDIsNil          = errors.New("image_id is null")
 )
 
 var prefixedPerspectives = []int64{5, 6, schema.PerspectiveIDUnderTheHood, 20, 21, 22, 23, 24, 28}
@@ -69,10 +75,17 @@ const (
 	OrderByAddDateAsc
 	OrderByResolutionDesc
 	OrderByResolutionAsc
+	OrderByFilesizeDesc
+	OrderByFilesizeAsc
+	OrderByComments
+	OrderByViews
+	OrderByModerVotes
+	OrderByRemovingDate
 	OrderByLikes
 	OrderByDislikes
 	OrderByAcceptDatetimeDesc
 	OrderByPerspectives
+	OrderByDfDistanceSimilarity
 	OrderByTopPerspectives
 	OrderByBottomPerspectives
 )
@@ -303,7 +316,7 @@ func (s *Repository) updatePictureSummary(ctx context.Context, id int64) error {
 func (s *Repository) Count(ctx context.Context, options *query.PictureListOptions) (int, error) {
 	var count int
 
-	sqSelect, err := options.CountSelect(s.db)
+	sqSelect, err := options.CountSelect(s.db, query.PictureAlias)
 	if err != nil {
 		return 0, err
 	}
@@ -427,7 +440,7 @@ func (s *Repository) ModerVoteCount(ctx context.Context, pictureID int64) (int32
 }
 
 func (s *Repository) PictureSelect(
-	options query.PictureListOptions, _ PictureFields, order OrderBy,
+	options *query.PictureListOptions, _ PictureFields, order OrderBy,
 ) (*goqu.SelectDataset, error) {
 	var (
 		err        error
@@ -435,7 +448,12 @@ func (s *Repository) PictureSelect(
 		aliasTable = goqu.T(alias)
 	)
 
-	sqSelect := s.db.Select(
+	sqSelect, err := options.Select(s.db, alias)
+	if err != nil {
+		return nil, err
+	}
+
+	sqSelect = sqSelect.Select(
 		aliasTable.Col(schema.PictureTableIDColName),
 		aliasTable.Col(schema.PictureTableOwnerIDColName),
 		aliasTable.Col(schema.PictureTableChangeStatusUserIDColName),
@@ -449,13 +467,7 @@ func (s *Repository) PictureSelect(
 		aliasTable.Col(schema.PictureTableWidthColName),
 		aliasTable.Col(schema.PictureTableHeightColName),
 		aliasTable.Col(schema.PictureTableNameColName),
-	).
-		From(schema.PictureTable.As(alias))
-
-	sqSelect, err = options.Apply(alias, sqSelect)
-	if err != nil {
-		return nil, err
-	}
+	)
 
 	groupBy := !options.IsIDUnique()
 
@@ -481,6 +493,43 @@ func (s *Repository) PictureSelect(
 		sqSelect = sqSelect.Order(
 			aliasTable.Col(schema.PictureTableWidthColName).Asc(),
 			aliasTable.Col(schema.PictureTableHeightColName).Asc(),
+		)
+	case OrderByFilesizeDesc:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableFilesize).Desc())
+	case OrderByFilesizeAsc:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableFilesize).Asc())
+	case OrderByComments:
+		ctoAlias := alias + "cto"
+		sqSelect = sqSelect.
+			LeftJoin(schema.CommentTopicTable.As(ctoAlias), goqu.On(
+				aliasTable.Col(schema.PictureTableIDColName).Eq(
+					goqu.T(ctoAlias).Col(schema.CommentTopicTableItemIDColName),
+				),
+				goqu.T(ctoAlias).Col(schema.CommentTopicTableTypeIDColName).Eq(schema.CommentMessageTypeIDPictures),
+			)).
+			Order(goqu.T(ctoAlias).Col(schema.CommentTopicTableMessagesColName).Desc())
+	case OrderByViews:
+		pvoAlias := alias + "pvo"
+		sqSelect = sqSelect.
+			LeftJoin(schema.PictureViewTable.As(pvoAlias), goqu.On(
+				aliasTable.Col(schema.PictureTableIDColName).Eq(
+					goqu.T(pvoAlias).Col(schema.PictureViewTablePictureIDColName),
+				),
+			)).
+			Order(goqu.T(pvoAlias).Col(schema.PictureViewTableViewsColName).Desc())
+	case OrderByModerVotes:
+		if options.PictureModerVote == nil {
+			return nil, errJoinNeededToSortByPictureModerVote
+		}
+
+		pmvAlias := query.AppendPictureModerVoteAlias(alias)
+		sqSelect = sqSelect.Order(
+			goqu.MAX(goqu.T(pmvAlias).Col(schema.PicturesModerVotesTableDayDateColName)).Asc(),
+		)
+	case OrderByRemovingDate:
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.PictureTableRemovingDateColName).Desc(),
+			aliasTable.Col(schema.PictureTableIDColName).Asc(),
 		)
 	case OrderByLikes:
 		pvsAlias := alias + "pvs"
@@ -513,6 +562,15 @@ func (s *Repository) PictureSelect(
 			aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Desc(),
 			aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
 			aliasTable.Col(schema.PictureTableIDColName).Desc(),
+		)
+	case OrderByDfDistanceSimilarity:
+		if options.DfDistance == nil {
+			return nil, errJoinNeededToSortByDfDistanceSimilarity
+		}
+
+		dfDistanceAlias := query.AppendDfDistanceAlias(alias)
+		sqSelect = sqSelect.Order(
+			goqu.MIN(goqu.T(dfDistanceAlias).Col(schema.DfDistanceTableDistanceColName)).Asc(),
 		)
 	case OrderByPerspectives:
 		if options.PictureItem == nil {
@@ -565,7 +623,7 @@ func (s *Repository) PictureSelect(
 }
 
 func (s *Repository) Pictures(
-	ctx context.Context, options query.PictureListOptions, fields PictureFields, order OrderBy, pagination bool,
+	ctx context.Context, options *query.PictureListOptions, fields PictureFields, order OrderBy, pagination bool,
 ) ([]*schema.PictureRow, *util.Pages, error) {
 	sqSelect, err := s.PictureSelect(options, fields, order)
 	if err != nil {
@@ -606,7 +664,7 @@ func (s *Repository) Pictures(
 }
 
 func (s *Repository) Picture(
-	ctx context.Context, options query.PictureListOptions, fields PictureFields, order OrderBy,
+	ctx context.Context, options *query.PictureListOptions, fields PictureFields, order OrderBy,
 ) (*schema.PictureRow, error) {
 	options.Limit = 1
 
@@ -627,7 +685,7 @@ func (s *Repository) Normalize(ctx context.Context, id int64) error {
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id}, PictureFields{}, OrderByNone)
+	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: id}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -646,7 +704,7 @@ func (s *Repository) Flop(ctx context.Context, id int64) error {
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: id}, PictureFields{}, OrderByNone)
+	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: id}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -945,7 +1003,7 @@ func (s *Repository) SetPictureCrop(ctx context.Context, pictureID int64, area s
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
+	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -1035,7 +1093,7 @@ func (s *Repository) SetPictureCopyrights(
 		return false, 0, sql.ErrNoRows
 	}
 
-	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
+	picture, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return false, 0, err
 	}
@@ -1141,7 +1199,7 @@ func (s *Repository) Accept(ctx context.Context, pictureID int64, userID int64) 
 		return false, false, sql.ErrNoRows
 	}
 
-	picture, err := s.Picture(ctx, query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
+	picture, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
 	if err != nil {
 		return false, false, err
 	}
@@ -1185,33 +1243,29 @@ func (s *Repository) QueueRemove(ctx context.Context, pictureID int64, userID in
 	return affected > 0, err
 }
 
-func (s *Repository) PictureItemSelect(options query.PictureItemListOptions) (*goqu.SelectDataset, error) {
+func (s *Repository) PictureItemSelect(options *query.PictureItemListOptions) (*goqu.SelectDataset, error) {
 	alias := query.PictureItemAlias
 	aliasTable := goqu.T(alias)
 
-	sqSelect, err := options.Apply(
-		alias,
-		s.db.Select(
-			aliasTable.Col(schema.PictureItemTablePictureIDColName),
-			aliasTable.Col(schema.PictureItemTableItemIDColName),
-			aliasTable.Col(schema.PictureItemTableTypeColName),
-			aliasTable.Col(schema.PictureItemTableCropLeftColName),
-			aliasTable.Col(schema.PictureItemTableCropTopColName),
-			aliasTable.Col(schema.PictureItemTableCropWidthColName),
-			aliasTable.Col(schema.PictureItemTableCropHeightColName),
-			aliasTable.Col(schema.PictureItemTablePerspectiveIDColName),
-		).
-			From(schema.PictureItemTable.As(alias)),
-	)
+	sqSelect, err := options.Select(s.db, alias)
 	if err != nil {
 		return nil, err
 	}
 
-	return sqSelect, nil
+	return sqSelect.Select(
+		aliasTable.Col(schema.PictureItemTablePictureIDColName),
+		aliasTable.Col(schema.PictureItemTableItemIDColName),
+		aliasTable.Col(schema.PictureItemTableTypeColName),
+		aliasTable.Col(schema.PictureItemTableCropLeftColName),
+		aliasTable.Col(schema.PictureItemTableCropTopColName),
+		aliasTable.Col(schema.PictureItemTableCropWidthColName),
+		aliasTable.Col(schema.PictureItemTableCropHeightColName),
+		aliasTable.Col(schema.PictureItemTablePerspectiveIDColName),
+	), nil
 }
 
 func (s *Repository) PictureItem(
-	ctx context.Context, options query.PictureItemListOptions,
+	ctx context.Context, options *query.PictureItemListOptions,
 ) (schema.PictureItemRow, error) {
 	var row schema.PictureItemRow
 
@@ -1233,7 +1287,7 @@ func (s *Repository) PictureItem(
 }
 
 func (s *Repository) PictureItems(
-	ctx context.Context, options query.PictureItemListOptions,
+	ctx context.Context, options *query.PictureItemListOptions,
 ) ([]schema.PictureItemRow, error) {
 	var rows []schema.PictureItemRow
 
@@ -1290,7 +1344,7 @@ func (s *Repository) NameData(
 	itemsCache := make(map[int64]items.ItemNameFormatterOptions)
 
 	if len(itemIDs) > 0 {
-		itemRows, _, err := s.itemsRepository.List(ctx, query.ItemsListOptions{
+		itemRows, _, err := s.itemsRepository.List(ctx, &query.ItemListOptions{
 			ItemIDs:  slices.Collect(maps.Keys(itemIDs)),
 			Language: options.Language,
 		}, items.ListFields{
@@ -1335,7 +1389,7 @@ func (s *Repository) NameData(
 			continue
 		}
 
-		pictureItemRows, err := s.PictureItems(ctx, query.PictureItemListOptions{
+		pictureItemRows, err := s.PictureItems(ctx, &query.PictureItemListOptions{
 			PictureID: row.ID,
 			TypeID:    schema.PictureItemContent,
 		})
@@ -1421,4 +1475,35 @@ func (s *Repository) PerspectivesPairs(ctx context.Context, ids []int64) (map[in
 	}
 
 	return result, nil
+}
+
+func (s *Repository) DfDistanceSelect(options *query.DfDistanceListOptions) (*goqu.SelectDataset, error) {
+	alias := query.DfDistanceAlias
+	aliasTable := goqu.T(alias)
+
+	sqSelect, err := options.Select(s.db, alias)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqSelect.Select(
+		aliasTable.Col(schema.DfDistanceTableSrcPictureIDColName),
+		aliasTable.Col(schema.DfDistanceTableDstPictureIDColName),
+		aliasTable.Col(schema.DfDistanceTableDistanceColName),
+	), nil
+}
+
+func (s *Repository) DfDistances(
+	ctx context.Context, options *query.DfDistanceListOptions, limit uint32,
+) ([]*schema.DfDistanceRow, error) {
+	var rows []*schema.DfDistanceRow
+
+	sqSelect, err := s.DfDistanceSelect(options)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sqSelect.Limit(uint(limit)).ScanStructsContext(ctx, &rows)
+
+	return rows, err
 }

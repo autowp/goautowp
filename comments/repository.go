@@ -1431,7 +1431,7 @@ func (s *Repository) TopicStatForUser(
 }
 
 func (s *Repository) Count(ctx context.Context, options query.CommentMessageListOptions) (int32, error) {
-	sqSelect, err := options.CountSelect(s.db)
+	sqSelect, err := options.CountSelect(s.db, query.CommentMessageAlias)
 	if err != nil {
 		return 0, err
 	}

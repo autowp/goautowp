@@ -36,9 +36,10 @@ const (
 	UserTableForumsMessagesColName    = "forums_messages"
 	UserTableForumsTopicsColName      = "forums_topics"
 	UserTablePicturesAddedColName     = "pictures_added"
+	UserTableImgColName               = "img"
 )
 
-var (
+var ( //nolint: dupl
 	UserTable                     = goqu.T(UserTableName)
 	UserTableIDCol                = UserTable.Col(UserTableIDColName)
 	UserTableRoleCol              = UserTable.Col(UserTableRoleColName)
@@ -55,7 +56,7 @@ var (
 	UserTableLastOnlineCol        = UserTable.Col(UserTableLastOnlineColName)
 	UserTableLastIPCol            = UserTable.Col(UserTableLastIPColName)
 	UserTableSpecsWeightCol       = UserTable.Col(UserTableSpecsWeightColName)
-	UserTableImgCol               = UserTable.Col("img")
+	UserTableImgCol               = UserTable.Col(UserTableImgColName)
 	UserTableEmailCol             = UserTable.Col(UserTableEmailColName)
 	UserTableEmailToCheckCol      = UserTable.Col(UserTableEmailToCheckColName)
 	UserTableRegDateCol           = UserTable.Col(UserTableRegDateColName)

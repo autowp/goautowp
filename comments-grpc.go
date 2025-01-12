@@ -40,7 +40,7 @@ type CommentsGRPCServer struct {
 	enforcer           *casbin.Enforcer
 }
 
-func reverseConvertPicturesStatus(status schema.PictureStatus) PictureStatus {
+func extractPicturesStatus(status schema.PictureStatus) PictureStatus {
 	switch status {
 	case schema.PictureStatusAccepted:
 		return PictureStatus_PICTURE_STATUS_ACCEPTED
@@ -55,7 +55,7 @@ func reverseConvertPicturesStatus(status schema.PictureStatus) PictureStatus {
 	return PictureStatus_PICTURE_STATUS_UNKNOWN
 }
 
-func convertType(commentsType CommentsType) (schema.CommentMessageType, error) {
+func convertCommentsType(commentsType CommentsType) (schema.CommentMessageType, error) {
 	switch commentsType {
 	case CommentsType_PICTURES_TYPE_ID:
 		return schema.CommentMessageTypeIDPictures, nil
@@ -74,7 +74,7 @@ func convertType(commentsType CommentsType) (schema.CommentMessageType, error) {
 	return 0, fmt.Errorf("%w: `%v`", errUnknownCommentType, commentsType)
 }
 
-func reverseConvertType(commentsType schema.CommentMessageType) (CommentsType, error) {
+func extractConvertType(commentsType schema.CommentMessageType) (CommentsType, error) {
 	switch commentsType {
 	case schema.CommentMessageTypeIDPictures:
 		return CommentsType_PICTURES_TYPE_ID, nil
@@ -91,7 +91,7 @@ func reverseConvertType(commentsType schema.CommentMessageType) (CommentsType, e
 	return 0, fmt.Errorf("%w: `%v`", errUnknownCommentType, commentsType)
 }
 
-func convertModeratorAttention(value schema.CommentMessageModeratorAttention) (ModeratorAttention, error) {
+func extractModeratorAttention(value schema.CommentMessageModeratorAttention) (ModeratorAttention, error) {
 	switch value {
 	case schema.CommentMessageModeratorAttentionNone:
 		return ModeratorAttention_NONE, nil
@@ -104,7 +104,7 @@ func convertModeratorAttention(value schema.CommentMessageModeratorAttention) (M
 	return 0, fmt.Errorf("%w: `%v`", errUnknownModeratorAttention, value)
 }
 
-func reverseConvertModeratorAttention(value ModeratorAttention) (schema.CommentMessageModeratorAttention, error) {
+func convertModeratorAttention(value ModeratorAttention) (schema.CommentMessageModeratorAttention, error) {
 	switch value {
 	case ModeratorAttention_NONE:
 		return schema.CommentMessageModeratorAttentionNone, nil
@@ -125,7 +125,7 @@ func extractMessage(
 	canRemove := enforcer.Enforce(role, "comment", "remove")
 	isModer := enforcer.Enforce(role, "global", "moderate")
 
-	typeID, err := reverseConvertType(row.TypeID)
+	typeID, err := extractConvertType(row.TypeID)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func extractMessage(
 		parentID = 0
 	}
 
-	ma, err := convertModeratorAttention(row.ModeratorAttention)
+	ma, err := extractModeratorAttention(row.ModeratorAttention)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +239,7 @@ func extractMessage(
 					return nil, err
 				}
 
-				pictureStatus = reverseConvertPicturesStatus(ps)
+				pictureStatus = extractPicturesStatus(ps)
 			}
 		}
 	}
@@ -343,7 +343,7 @@ func (s *CommentsGRPCServer) Subscribe(ctx context.Context, in *CommentsSubscrib
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	commentsType, err := convertType(in.GetTypeId())
+	commentsType, err := convertCommentsType(in.GetTypeId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -362,7 +362,7 @@ func (s *CommentsGRPCServer) UnSubscribe(ctx context.Context, in *CommentsUnSubs
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	commentsType, err := convertType(in.GetTypeId())
+	commentsType, err := convertCommentsType(in.GetTypeId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -381,7 +381,7 @@ func (s *CommentsGRPCServer) View(ctx context.Context, in *CommentsViewRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	commentsType, err := convertType(in.GetTypeId())
+	commentsType, err := convertCommentsType(in.GetTypeId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -444,7 +444,7 @@ func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCo
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	commentsType, err := convertType(in.GetTypeId())
+	commentsType, err := convertCommentsType(in.GetTypeId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
@@ -559,7 +559,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, wrapFieldViolations(InvalidParams)
 	}
 
-	commentsType, err := convertType(in.GetTypeId())
+	commentsType, err := convertCommentsType(in.GetTypeId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -643,7 +643,7 @@ func (s *CommentsGRPCServer) GetMessagePage(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	convertedTypeID, err := reverseConvertType(typeID)
+	convertedTypeID, err := extractConvertType(typeID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -689,7 +689,7 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
 	canViewIP := s.enforcer.Enforce(role, "user", "ip")
 
-	typeID, err := convertType(in.GetTypeId())
+	typeID, err := convertCommentsType(in.GetTypeId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -738,7 +738,7 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 		}
 
 		if in.GetModeratorAttention() != ModeratorAttention_NONE {
-			ma, err := reverseConvertModeratorAttention(in.GetModeratorAttention())
+			ma, err := convertModeratorAttention(in.GetModeratorAttention())
 			if err != nil {
 				return nil, status.Error(codes.InvalidArgument, err.Error())
 			}

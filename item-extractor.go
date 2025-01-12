@@ -65,7 +65,7 @@ func (s *ItemExtractor) Extract(
 		EngineItemId:               util.NullInt64ToScalar(row.EngineItemID),
 		EngineInherit:              row.EngineInherit,
 		DescendantsCount:           row.DescendantsCount,
-		ItemTypeId:                 convertItemTypeID(row.ItemTypeID),
+		ItemTypeId:                 extractItemTypeID(row.ItemTypeID),
 		IsConcept:                  row.IsConcept,
 		IsConceptInherit:           row.IsConceptInherit,
 		SpecId:                     int64(util.NullInt32ToScalar(row.SpecID)),
@@ -280,7 +280,7 @@ func (s *ItemExtractor) ItemPublicRoutes(ctx context.Context, item items.Item) (
 func (s *ItemExtractor) walkUpUntilBrand(ctx context.Context, id int64, path []string) ([]*PublicRoute, error) {
 	routes := make([]*PublicRoute, 0)
 
-	parentRows, _, err := s.itemRepository.ItemParents(ctx, query.ItemParentListOptions{
+	parentRows, _, err := s.itemRepository.ItemParents(ctx, &query.ItemParentListOptions{
 		ItemID: id,
 	}, items.ItemParentFields{}, items.ItemParentOrderByNone)
 	if err != nil {
@@ -288,7 +288,7 @@ func (s *ItemExtractor) walkUpUntilBrand(ctx context.Context, id int64, path []s
 	}
 
 	for _, parentRow := range parentRows {
-		brand, err := s.itemRepository.Item(ctx, query.ItemsListOptions{
+		brand, err := s.itemRepository.Item(ctx, &query.ItemListOptions{
 			TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 			ItemID: parentRow.ParentID,
 		}, items.ListFields{})

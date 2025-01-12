@@ -105,7 +105,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			Height:           uint32(row.Height),
 			CopyrightsTextId: util.NullInt32ToScalar(row.CopyrightsTextID),
 			OwnerId:          util.NullInt64ToScalar(row.OwnerID),
-			Status:           reverseConvertPicturesStatus(row.Status),
+			Status:           extractPicturesStatus(row.Status),
 			Resolution:       fmt.Sprintf("%d×%d", row.Width, row.Height),
 		}
 
@@ -235,11 +235,15 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 		}
 
-		pictureItem := fields.GetPictureItem()
-		if pictureItem != nil {
-			piOptions, err := convertPictureItemOptions(pictureItem.GetOptions())
+		pictureItemRequest := fields.GetPictureItem()
+		if pictureItemRequest != nil {
+			piOptions, err := convertPictureItemOptions(pictureItemRequest.GetOptions())
 			if err != nil {
 				return nil, err
+			}
+
+			if piOptions == nil {
+				piOptions = &query.PictureItemListOptions{}
 			}
 
 			piOptions.PictureID = row.ID
@@ -261,6 +265,36 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 		}
 
+		dfDistanceRequest := fields.GetDfDistance()
+		if dfDistanceRequest != nil {
+			ddOptions, err := convertDfDistanceListOptions(dfDistanceRequest.GetOptions())
+			if err != nil {
+				return nil, err
+			}
+
+			if ddOptions == nil {
+				ddOptions = &query.DfDistanceListOptions{}
+			}
+
+			ddOptions.SrcPictureID = row.ID
+
+			ddRows, err := s.repository.DfDistances(ctx, ddOptions, dfDistanceRequest.GetLimit())
+			if err != nil {
+				return nil, err
+			}
+
+			dfDistanceExtractor := NewDfDistanceExtractor(s.repository, s)
+
+			res, err := dfDistanceExtractor.ExtractRows(ctx, ddRows, dfDistanceRequest.GetFields(), lang, isModer, userID)
+			if err != nil {
+				return nil, err
+			}
+
+			resultRow.DfDistances = &DfDistances{
+				Items: res,
+			}
+		}
+
 		result = append(result, resultRow)
 	}
 
@@ -270,7 +304,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 func (s *PictureExtractor) path(
 	ctx context.Context, pictureID int64, targetItemID int64,
 ) ([]*PathTreePictureItem, error) {
-	piRows, err := s.repository.PictureItems(ctx, query.PictureItemListOptions{
+	piRows, err := s.repository.PictureItems(ctx, &query.PictureItemListOptions{
 		PictureID: pictureID,
 		TypeID:    schema.PictureItemContent,
 	})
@@ -298,7 +332,7 @@ func (s *PictureExtractor) path(
 }
 
 func (s *PictureExtractor) itemRoute(ctx context.Context, itemID int64, targetItemID int64) (*PathTreeItem, error) {
-	row, err := s.itemsRepository.Item(ctx, query.ItemsListOptions{
+	row, err := s.itemsRepository.Item(ctx, &query.ItemListOptions{
 		ItemID: itemID,
 	}, items.ListFields{})
 	if err != nil {
@@ -328,7 +362,7 @@ func (s *PictureExtractor) itemRoute(ctx context.Context, itemID int64, targetIt
 	}
 
 	return &PathTreeItem{
-		ItemTypeId: convertItemTypeID(row.ItemTypeID),
+		ItemTypeId: extractItemTypeID(row.ItemTypeID),
 		Catname:    util.NullStringToString(row.Catname),
 		Parents:    parents,
 	}, nil
@@ -340,7 +374,7 @@ func (s *PictureExtractor) itemParentRoute(
 	result := make([]*PathTreeItemParent, 0)
 
 	if itemID > 0 {
-		rows, _, err := s.itemsRepository.ItemParents(ctx, query.ItemParentListOptions{
+		rows, _, err := s.itemsRepository.ItemParents(ctx, &query.ItemParentListOptions{
 			ItemID: itemID,
 		}, items.ItemParentFields{}, items.ItemParentOrderByNone)
 		if err != nil {

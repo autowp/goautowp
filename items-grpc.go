@@ -326,11 +326,11 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 	ctx context.Context,
 	in *GetTwinsBrandsListRequest,
 ) (*APITwinsBrandsList, error) {
-	twinsData, _, err := s.repository.List(ctx, query.ItemsListOptions{
+	twinsData, _, err := s.repository.List(ctx, &query.ItemListOptions{
 		Language: in.GetLanguage(),
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			ItemParentByItemID: &query.ItemParentListOptions{
-				ParentItems: &query.ItemsListOptions{
+				ParentItems: &query.ItemListOptions{
 					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
 				},
 			},
@@ -368,13 +368,13 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	fields := convertFields(in.GetFields())
+	fields := convertItemFields(in.GetFields())
 
 	if (fields.InboxPicturesCount || fields.CommentsAttentionsCount) && !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	res, err := s.repository.Item(ctx, query.ItemsListOptions{
+	res, err := s.repository.Item(ctx, &query.ItemListOptions{
 		ItemID:   in.GetId(),
 		Language: in.GetLanguage(),
 	}, fields)
@@ -395,7 +395,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	fields := convertFields(in.GetFields())
+	fields := convertItemFields(in.GetFields())
 	if (fields.InboxPicturesCount || fields.CommentsAttentionsCount) && !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -407,16 +407,18 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	options := query.ItemsListOptions{
-		Language: in.GetLanguage(),
-		Limit:    in.GetLimit(),
-		Page:     in.GetPage(),
-	}
-
-	err = mapItemListOptions(inOptions, &options)
+	options, err := convertItemListOptions(inOptions)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+
+	if options == nil {
+		options = &query.ItemListOptions{}
+	}
+
+	options.Language = in.GetLanguage()
+	options.Limit = in.GetLimit()
+	options.Page = in.GetPage()
 
 	order := items.OrderByName
 
@@ -822,7 +824,7 @@ func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItem
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	count, err := s.repository.Count(ctx, query.ItemsListOptions{
+	count, err := s.repository.Count(ctx, query.ItemListOptions{
 		ItemID: in.GetItemId(),
 		TypeID: []schema.ItemTableItemTypeID{
 			schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDTwins,
@@ -939,7 +941,7 @@ func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLangua
 	itemID := in.GetItemId()
 
 	item, err := s.repository.Item(
-		ctx, query.ItemsListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
+		ctx, &query.ItemListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
 		items.ListFields{NameText: true},
 	)
 	if err != nil {
@@ -963,7 +965,7 @@ func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLangua
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		author, err := s.usersRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{})
+		author, err := s.usersRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -972,13 +974,13 @@ func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLangua
 
 		falseRef := false
 
-		subscribers, _, err := s.usersRepository.Users(ctx, query.UserListOptions{
+		subscribers, _, err := s.usersRepository.Users(ctx, &query.UserListOptions{
 			Deleted: &falseRef,
 			ItemSubscribe: &query.UserItemSubscribeListOptions{
 				ItemIDs: []int64{itemID},
 			},
 			ExcludeIDs: []int64{userID},
-		}, users.UserFields{})
+		}, users.UserFields{}, users.OrderByNone)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1086,14 +1088,14 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	totalBrands, err := s.repository.Count(ctx, query.ItemsListOptions{
+	totalBrands, err := s.repository.Count(ctx, query.ItemListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	totalCars, err := s.repository.Count(ctx, query.ItemsListOptions{
+	totalCars, err := s.repository.Count(ctx, query.ItemListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle},
 	})
 	if err != nil {
@@ -1115,14 +1117,14 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	itemsWithBeginYear, err := s.repository.Count(ctx, query.ItemsListOptions{
+	itemsWithBeginYear, err := s.repository.Count(ctx, query.ItemListOptions{
 		HasBeginYear: true,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	itemsWithBeginAndEndYears, err := s.repository.Count(ctx, query.ItemsListOptions{
+	itemsWithBeginAndEndYears, err := s.repository.Count(ctx, query.ItemListOptions{
 		HasBeginYear: true,
 		HasEndYear:   true,
 	})
@@ -1130,7 +1132,7 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	itemsWithBeginAndEndYearsAndMonths, err := s.repository.Count(ctx, query.ItemsListOptions{
+	itemsWithBeginAndEndYearsAndMonths, err := s.repository.Count(ctx, query.ItemListOptions{
 		HasBeginYear:  true,
 		HasEndYear:    true,
 		HasBeginMonth: true,
@@ -1140,7 +1142,7 @@ func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*Stat
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	brandsWithLogo, err := s.repository.Count(ctx, query.ItemsListOptions{
+	brandsWithLogo, err := s.repository.Count(ctx, query.ItemListOptions{
 		HasLogo: true,
 		TypeID:  []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 	})
@@ -1332,7 +1334,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 
 	lang := in.GetLanguage()
 
-	brand, err := s.repository.Item(ctx, query.ItemsListOptions{
+	brand, err := s.repository.Item(ctx, &query.ItemListOptions{
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		ItemID:   in.GetItemId(),
 		Language: lang,
@@ -1350,10 +1352,10 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	carList, _, err := s.repository.List(ctx, query.ItemsListOptions{
+	carList, _, err := s.repository.List(ctx, &query.ItemListOptions{
 		Language: lang,
 		ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
-			ItemsByParentID: &query.ItemsListOptions{
+			ItemsByParentID: &query.ItemListOptions{
 				Language: lang,
 				ItemID:   brand.ID,
 			},
@@ -1392,7 +1394,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 
 	lang := in.GetLanguage()
 
-	category, err := s.repository.Item(ctx, query.ItemsListOptions{
+	category, err := s.repository.Item(ctx, &query.ItemListOptions{
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
 		ItemID:   in.GetItemId(),
 		Language: lang,
@@ -1410,13 +1412,13 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	carList, _, err := s.repository.List(ctx, query.ItemsListOptions{
+	carList, _, err := s.repository.List(ctx, &query.ItemListOptions{
 		Language: lang,
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
 		ItemParentParent: &query.ItemParentListOptions{
 			LinkedInDays: daysLimit,
 			ItemParentCacheAncestorByParentID: &query.ItemParentCacheListOptions{
-				ItemsByParentID: &query.ItemsListOptions{
+				ItemsByParentID: &query.ItemListOptions{
 					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDFactory},
 					ItemID: category.ID,
 				},
@@ -1487,7 +1489,7 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 	}
 
 	item, err := s.repository.Item(
-		ctx, query.ItemsListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
+		ctx, &query.ItemListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
 		items.ListFields{NameText: true},
 	)
 	if err != nil {
@@ -1499,7 +1501,7 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 	}
 
 	parentItem, err := s.repository.Item(
-		ctx, query.ItemsListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
+		ctx, &query.ItemListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
 		items.ListFields{NameText: true},
 	)
 	if err != nil {
@@ -1511,7 +1513,7 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 	}
 
 	_, err = s.repository.CreateItemParent(
-		ctx, item.ID, parentItem.ID, reverseConvertItemParentType(in.GetType()), in.GetCatname(),
+		ctx, item.ID, parentItem.ID, convertItemParentType(in.GetType()), in.GetCatname(),
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1583,7 +1585,7 @@ func (s *ItemsGRPCServer) UpdateItemParent(ctx context.Context, in *ItemParent) 
 	}
 
 	_, err = s.repository.UpdateItemParent(
-		ctx, in.GetItemId(), in.GetParentId(), reverseConvertItemParentType(in.GetType()), in.GetCatname(), false,
+		ctx, in.GetItemId(), in.GetParentId(), convertItemParentType(in.GetType()), in.GetCatname(), false,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1603,7 +1605,7 @@ func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemPa
 	}
 
 	item, err := s.repository.Item(
-		ctx, query.ItemsListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
+		ctx, &query.ItemListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
 		items.ListFields{NameText: true},
 	)
 	if err != nil {
@@ -1615,7 +1617,7 @@ func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemPa
 	}
 
 	parent, err := s.repository.Item(
-		ctx, query.ItemsListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
+		ctx, &query.ItemListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
 		items.ListFields{NameText: true},
 	)
 	if err != nil {
@@ -1682,18 +1684,18 @@ func (s *ItemsGRPCServer) notifyItemParentSubscribers(
 ) error {
 	falseRef := false
 
-	subscribers, _, err := s.usersRepository.Users(ctx, query.UserListOptions{
+	subscribers, _, err := s.usersRepository.Users(ctx, &query.UserListOptions{
 		Deleted: &falseRef,
 		ItemSubscribe: &query.UserItemSubscribeListOptions{
 			ItemIDs: []int64{item.ID, parent.ID},
 		},
 		ExcludeIDs: []int64{userID},
-	}, users.UserFields{})
+	}, users.UserFields{}, users.OrderByNone)
 	if err != nil {
 		return err
 	}
 
-	author, err := s.usersRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{})
+	author, err := s.usersRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -1746,7 +1748,7 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 
 	if success {
 		item, err := s.repository.Item(
-			ctx, query.ItemsListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
+			ctx, &query.ItemListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
 			items.ListFields{NameText: true},
 		)
 		if err != nil {
@@ -1759,7 +1761,7 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 		}
 
 		oldParent, err := s.repository.Item(
-			ctx, query.ItemsListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
+			ctx, &query.ItemListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
 			items.ListFields{NameText: true},
 		)
 		if err != nil {
@@ -1772,7 +1774,7 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 		}
 
 		newParent, err := s.repository.Item(
-			ctx, query.ItemsListOptions{ItemID: in.GetDestParentId(), Language: EventsDefaultLanguage},
+			ctx, &query.ItemListOptions{ItemID: in.GetDestParentId(), Language: EventsDefaultLanguage},
 			items.ListFields{NameText: true},
 		)
 		if err != nil {
@@ -1877,7 +1879,7 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 	itemID := in.GetItemId()
 
 	item, err := s.repository.Item(
-		ctx, query.ItemsListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
+		ctx, &query.ItemListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
 		items.ListFields{NameText: true},
 	)
 	if err != nil {
@@ -1890,7 +1892,7 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 	}
 
 	if changed {
-		user, err := s.usersRepository.User(ctx, query.UserListOptions{ID: userID}, users.UserFields{})
+		user, err := s.usersRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1926,7 +1928,7 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 		case in.GetEngineItemId() == 0:
 			if item.EngineItemID.Valid {
 				oldEngine, err := s.repository.Item(
-					ctx, query.ItemsListOptions{ItemID: item.EngineItemID.Int64, Language: EventsDefaultLanguage},
+					ctx, &query.ItemListOptions{ItemID: item.EngineItemID.Int64, Language: EventsDefaultLanguage},
 					items.ListFields{NameText: true},
 				)
 				if err != nil {
@@ -1957,7 +1959,7 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 				}
 			}
 		default:
-			newEngine, err := s.repository.Item(ctx, query.ItemsListOptions{
+			newEngine, err := s.repository.Item(ctx, &query.ItemListOptions{
 				ItemID: in.GetEngineItemId(),
 				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDEngine},
 			}, items.ListFields{NameText: true})
@@ -2041,7 +2043,7 @@ func (s *ItemsGRPCServer) notifyItemEngineCleared(ctx context.Context, user *sch
 			}
 
 			oldEngine, err := s.repository.Item(
-				ctx, query.ItemsListOptions{ItemID: oldEngineID, Language: language},
+				ctx, &query.ItemListOptions{ItemID: oldEngineID, Language: language},
 				items.ListFields{NameText: true},
 			)
 			if err != nil {
@@ -2080,7 +2082,7 @@ func (s *ItemsGRPCServer) notifyItemEngineUpdated(
 			}
 
 			newEngine, err := s.repository.Item(
-				ctx, query.ItemsListOptions{ItemID: newEngineID, Language: language},
+				ctx, &query.ItemListOptions{ItemID: newEngineID, Language: language},
 				items.ListFields{NameText: true},
 			)
 			if err != nil {
@@ -2108,13 +2110,13 @@ func (s *ItemsGRPCServer) notifyItemSubscribers(
 ) error {
 	falseRef := false
 
-	subscribers, _, err := s.usersRepository.Users(ctx, query.UserListOptions{
+	subscribers, _, err := s.usersRepository.Users(ctx, &query.UserListOptions{
 		Deleted: &falseRef,
 		ItemSubscribe: &query.UserItemSubscribeListOptions{
 			ItemIDs: itemIDs,
 		},
 		ExcludeIDs: []int64{excludeUserID},
-	}, users.UserFields{})
+	}, users.UserFields{}, users.OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -2142,7 +2144,7 @@ func (s *ItemsGRPCServer) notifyItemSubscribers(
 func (s *ItemsGRPCServer) GetBrandSections(
 	ctx context.Context, in *GetBrandSectionsRequest,
 ) (*APIBrandSections, error) {
-	item, err := s.repository.Item(ctx, query.ItemsListOptions{
+	item, err := s.repository.Item(ctx, &query.ItemListOptions{
 		ItemID: in.GetItemId(),
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 	}, items.ListFields{})
@@ -2190,7 +2192,7 @@ func (s *ItemsGRPCServer) otherGroups(
 	var groups []*APIBrandSection
 
 	// concepts
-	hasConcepts, err := s.repository.Exists(ctx, query.ItemsListOptions{
+	hasConcepts, err := s.repository.Exists(ctx, query.ItemListOptions{
 		ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
 			ParentID: brandID,
 		},
@@ -2357,9 +2359,9 @@ func (s *ItemsGRPCServer) carSectionGroups(
 	)
 
 	if section.CarTypeID > 0 {
-		rows, _, err = s.repository.ItemParents(ctx, query.ItemParentListOptions{
+		rows, _, err = s.repository.ItemParents(ctx, &query.ItemParentListOptions{
 			ParentID: brandID,
-			ChildItems: &query.ItemsListOptions{
+			ChildItems: &query.ItemListOptions{
 				TypeID:                section.ItemTypeID,
 				IsNotConcept:          true,
 				VehicleTypeAncestorID: section.CarTypeID,
@@ -2370,9 +2372,9 @@ func (s *ItemsGRPCServer) carSectionGroups(
 			return nil, fmt.Errorf("ItemParents(): %w", err)
 		}
 	} else {
-		rows, _, err = s.repository.ItemParents(ctx, query.ItemParentListOptions{
+		rows, _, err = s.repository.ItemParents(ctx, &query.ItemParentListOptions{
 			ParentID: brandID,
-			ChildItems: &query.ItemsListOptions{
+			ChildItems: &query.ItemListOptions{
 				TypeID:       section.ItemTypeID,
 				IsNotConcept: true,
 				ExcludeVehicleTypeAncestorID: []int64{
@@ -2385,9 +2387,9 @@ func (s *ItemsGRPCServer) carSectionGroups(
 			return nil, fmt.Errorf("ItemParents(): %w", err)
 		}
 
-		rows2, _, err := s.repository.ItemParents(ctx, query.ItemParentListOptions{
+		rows2, _, err := s.repository.ItemParents(ctx, &query.ItemParentListOptions{
 			ParentID: brandID,
-			ChildItems: &query.ItemsListOptions{
+			ChildItems: &query.ItemListOptions{
 				TypeID:            section.ItemTypeID,
 				IsNotConcept:      true,
 				VehicleTypeIsNull: true,
@@ -2416,7 +2418,7 @@ func (s *ItemsGRPCServer) carSectionGroups(
 func (s *ItemsGRPCServer) prefetchItems(
 	ctx context.Context, ids []int64, lang string, fields items.ListFields,
 ) (map[int64]*items.Item, error) {
-	itemRows, _, err := s.repository.List(ctx, query.ItemsListOptions{
+	itemRows, _, err := s.repository.List(ctx, &query.ItemListOptions{
 		ItemIDs:  ids,
 		Language: lang,
 	}, fields, items.OrderByNone, false)
@@ -2442,15 +2444,17 @@ func (s *ItemsGRPCServer) GetItemParents(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	options := query.ItemParentListOptions{
-		Limit: in.GetLimit(),
-		Page:  in.GetPage(),
-	}
-
-	err := mapItemParentListOptions(inOptions, &options)
+	options, err := convertItemParentListOptions(inOptions)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	if options == nil {
+		options = &query.ItemParentListOptions{}
+	}
+
+	options.Limit = in.GetLimit()
+	options.Page = in.GetPage()
 
 	order := items.ItemParentOrderByNone
 
@@ -2478,7 +2482,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 			ids = append(ids, row.ItemID)
 		}
 
-		itemsMap, err = s.prefetchItems(ctx, ids, in.GetLanguage(), convertFields(itemFields))
+		itemsMap, err = s.prefetchItems(ctx, ids, in.GetLanguage(), convertItemFields(itemFields))
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -2493,7 +2497,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 			ids = append(ids, row.ParentID)
 		}
 
-		parentsMap, err = s.prefetchItems(ctx, ids, in.GetLanguage(), convertFields(parentFields))
+		parentsMap, err = s.prefetchItems(ctx, ids, in.GetLanguage(), convertItemFields(parentFields))
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -2505,7 +2509,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 		resRow := &ItemParent{
 			ItemId:   row.ItemID,
 			ParentId: row.ParentID,
-			Type:     convertItemParentType(row.Type),
+			Type:     extractItemParentType(row.Type),
 			Catname:  row.Catname,
 		}
 
@@ -2531,7 +2535,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 
 		duplicateParentFields := in.GetFields().GetDuplicateParent()
 		if duplicateParentFields != nil {
-			duplicateRow, err := s.repository.Item(ctx, query.ItemsListOptions{
+			duplicateRow, err := s.repository.Item(ctx, &query.ItemListOptions{
 				ExcludeID: row.ParentID,
 				ItemParentChild: &query.ItemParentListOptions{
 					ItemID: row.ItemID,
@@ -2541,7 +2545,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 					ParentID:  row.ParentID,
 					StockOnly: true,
 				},
-			}, convertFields(duplicateParentFields))
+			}, convertItemFields(duplicateParentFields))
 			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -2558,7 +2562,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 
 		duplicateChildFields := in.GetFields().GetDuplicateChild()
 		if duplicateChildFields != nil {
-			duplicateRow, err := s.repository.Item(ctx, query.ItemsListOptions{
+			duplicateRow, err := s.repository.Item(ctx, &query.ItemListOptions{
 				ExcludeID: row.ItemID,
 				ItemParentParent: &query.ItemParentListOptions{
 					ParentID: row.ParentID,
@@ -2567,7 +2571,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 				ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 					ItemID: row.ItemID,
 				},
-			}, convertFields(duplicateChildFields))
+			}, convertItemFields(duplicateChildFields))
 			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
 				return nil, status.Error(codes.Internal, err.Error())
 			}

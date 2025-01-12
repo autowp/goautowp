@@ -28,7 +28,7 @@ func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 	}, nil
 }
 
-func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]*VehicleType, error) {
+func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int64) ([]*VehicleType, error) {
 	sqSelect := s.db.Select(schema.CarTypesTableIDCol, schema.CarTypesTableNameCol).
 		From(schema.CarTypesTable).
 		Order(schema.CarTypesTablePositionCol.Asc())
@@ -46,7 +46,7 @@ func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int32) ([]
 		return nil, err
 	}
 
-	result := []*VehicleType{}
+	result := make([]*VehicleType, 0)
 
 	for rows.Next() {
 		var vType VehicleType

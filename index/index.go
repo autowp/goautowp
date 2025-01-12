@@ -83,14 +83,14 @@ func (s *Index) GenerateTopBrandsCache(ctx context.Context, lang string) error {
 
 	var cache TopBrandsCache
 
-	options := query.ItemsListOptions{
+	options := query.ItemListOptions{
 		Language:   lang,
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:      topBrandsCount,
 		SortByName: true,
 	}
 
-	list, _, err := s.repository.List(ctx, options, items.ListFields{
+	list, _, err := s.repository.List(ctx, &options, items.ListFields{
 		NameOnly:            true,
 		DescendantsCount:    true,
 		NewDescendantsCount: true,
@@ -136,11 +136,11 @@ func (s *Index) GenerateTwinsCache(ctx context.Context, lang string) error {
 		twinsData TwinsCache
 	)
 
-	twinsData.Res, _, err = s.repository.List(ctx, query.ItemsListOptions{
+	twinsData.Res, _, err = s.repository.List(ctx, &query.ItemListOptions{
 		Language: lang,
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			ItemParentByItemID: &query.ItemParentListOptions{
-				ParentItems: &query.ItemsListOptions{
+				ParentItems: &query.ItemListOptions{
 					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
 				},
 			},
@@ -156,10 +156,10 @@ func (s *Index) GenerateTwinsCache(ctx context.Context, lang string) error {
 		return err
 	}
 
-	twinsData.Count, err = s.repository.CountDistinct(ctx, query.ItemsListOptions{
+	twinsData.Count, err = s.repository.CountDistinct(ctx, query.ItemListOptions{
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			ItemParentByItemID: &query.ItemParentListOptions{
-				ParentItems: &query.ItemsListOptions{
+				ParentItems: &query.ItemListOptions{
 					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
 				},
 			},
@@ -199,7 +199,7 @@ func (s *Index) GenerateCategoriesCache(ctx context.Context, lang string) error 
 		res []items.Item
 	)
 
-	res, _, err = s.repository.List(ctx, query.ItemsListOptions{
+	res, _, err = s.repository.List(ctx, &query.ItemListOptions{
 		Language:  lang,
 		NoParents: true,
 		TypeID:    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
@@ -241,7 +241,7 @@ func (s *Index) GeneratePersonsCache(
 
 	var res []items.Item
 
-	res, _, err := s.repository.List(ctx, query.ItemsListOptions{
+	res, _, err := s.repository.List(ctx, &query.ItemListOptions{
 		Language: lang,
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDPerson},
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
@@ -291,11 +291,11 @@ func (s *Index) GenerateFactoriesCache(ctx context.Context, lang string) error {
 		err error
 	)
 
-	res, _, err = s.repository.List(ctx, query.ItemsListOptions{
+	res, _, err = s.repository.List(ctx, &query.ItemListOptions{
 		Language: lang,
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDFactory},
 		ItemParentChild: &query.ItemParentListOptions{
-			ChildItems: &query.ItemsListOptions{
+			ChildItems: &query.ItemListOptions{
 				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
 			},
 		},

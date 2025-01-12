@@ -18,7 +18,7 @@ func extractPictureModerVoteTemplate(tpl *schema.PictureModerVoteTemplateRow) *M
 	}
 }
 
-func reverseConvertPictureItemType(pictureItemType schema.PictureItemType) PictureItemType {
+func extractPictureItemType(pictureItemType schema.PictureItemType) PictureItemType {
 	switch pictureItemType {
 	case 0:
 		return PictureItemType_PICTURE_ITEM_UNKNOWN
@@ -65,43 +65,96 @@ func convertPictureStatus(status PictureStatus) schema.PictureStatus {
 	return ""
 }
 
-func mapPictureItemListOptions(in *PictureItemOptions, options *query.PictureItemListOptions) error {
-	options.TypeID = convertPictureItemType(in.GetTypeId())
-	options.PerspectiveID = in.GetPerspectiveId()
-	options.ExcludePerspectiveID = in.GetExcludePerspectiveId()
-	options.ItemID = in.GetItemId()
-
-	if in.GetPictures() != nil {
-		options.Pictures = &query.PictureListOptions{}
-
-		err := mapPictureListOptions(in.GetPictures(), options.Pictures)
-		if err != nil {
-			return err
-		}
+func convertPictureItemOptions(in *PictureItemListOptions) (*query.PictureItemListOptions, error) {
+	if in == nil {
+		return nil, nil //nolint: nilnil
 	}
 
-	if in.GetItemParentCacheAncestor() != nil {
-		options.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
-
-		err := mapItemParentCacheListOptions(in.GetItemParentCacheAncestor(), options.ItemParentCacheAncestor)
-		if err != nil {
-			return err
-		}
+	result := query.PictureItemListOptions{
+		PictureID:               in.GetPictureId(),
+		ItemID:                  in.GetItemId(),
+		TypeID:                  convertPictureItemType(in.GetTypeId()),
+		PerspectiveID:           in.GetPerspectiveId(),
+		ExcludePerspectiveID:    in.GetExcludePerspectiveId(),
+		ExcludeAncestorOrSelfID: in.GetExcludeAncestorOrSelfId(),
+		HasNoPerspectiveID:      in.GetHasNoPerspectiveId(),
+		ItemVehicleType:         convertItemVehicleTypeListOptions(in.GetItemVehicleType()),
 	}
 
-	return nil
+	var err error
+
+	result.Item, err = convertItemListOptions(in.GetItem())
+	if err != nil {
+		return nil, err
+	}
+
+	result.Pictures, err = convertPictureListOptions(in.GetPictures())
+	if err != nil {
+		return nil, err
+	}
+
+	result.ItemParentCacheAncestor, err = convertItemParentCacheListOptions(in.GetItemParentCacheAncestor())
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
-func mapPictureListOptions(in *PicturesOptions, options *query.PictureListOptions) error {
-	options.ID = in.GetId()
-	options.Status = convertPictureStatus(in.GetStatus())
-	options.AcceptedInDays = in.GetAcceptedInDays()
-	options.OwnerID = in.GetOwnerId()
-	options.Identity = in.GetIdentity()
+func convertItemVehicleTypeListOptions(in *ItemVehicleTypeListOptions) *query.ItemVehicleTypeListOptions {
+	if in == nil {
+		return nil
+	}
+
+	result := query.ItemVehicleTypeListOptions{
+		VehicleTypeID: in.GetVehicleTypeId(),
+	}
+
+	return &result
+}
+
+func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOptions, error) {
+	if in == nil {
+		return nil, nil //nolint: nilnil
+	}
+
+	result := query.PictureListOptions{
+		ID:                    in.GetId(),
+		Status:                convertPictureStatus(in.GetStatus()),
+		AcceptedInDays:        in.GetAcceptedInDays(),
+		OwnerID:               in.GetOwnerId(),
+		Identity:              in.GetIdentity(),
+		HasNoComments:         in.GetHasNoComments(),
+		HasPoint:              in.GetHasPoint(),
+		HasNoPoint:            in.GetHasNoPoint(),
+		HasNoPictureItem:      in.GetHasNoPictureItem(),
+		HasNoReplacePicture:   in.GetHasNoReplacePicture(),
+		HasNoPictureModerVote: in.GetHasNoPictureModerVote(),
+		CommentTopic:          convertCommentTopicListOptions(in.GetCommentTopic()),
+		PictureModerVote:      convertPictureModerVote(in.GetPictureModerVote()),
+		HasSpecialName:        in.GetHasSpecialName(),
+	}
+
+	var err error
+
+	result.DfDistance, err = convertDfDistanceListOptions(in.GetDfDistance())
+	if err != nil {
+		return nil, err
+	}
+
+	inStatuses := in.GetStatuses()
+	if len(inStatuses) > 0 {
+		statuses := make([]schema.PictureStatus, 0, len(inStatuses))
+		for _, status := range inStatuses {
+			statuses = append(statuses, convertPictureStatus(status))
+		}
+
+		result.Statuses = statuses
+	}
 
 	addDate := in.GetAddDate()
 	if addDate != nil {
-		options.AddDate = &util.Date{
+		result.AddDate = &util.Date{
 			Year:  int(addDate.GetYear()),
 			Month: time.Month(addDate.GetMonth()),
 			Day:   int(addDate.GetDay()),
@@ -110,24 +163,73 @@ func mapPictureListOptions(in *PicturesOptions, options *query.PictureListOption
 
 	acceptDate := in.GetAcceptDate()
 	if acceptDate != nil {
-		options.AcceptDate = &util.Date{
+		result.AcceptDate = &util.Date{
 			Year:  int(acceptDate.GetYear()),
 			Month: time.Month(acceptDate.GetMonth()),
 			Day:   int(acceptDate.GetDay()),
 		}
 	}
 
-	pictureItem := in.GetPictureItem()
-	if pictureItem != nil {
-		options.PictureItem = &query.PictureItemListOptions{}
-
-		err := mapPictureItemListOptions(pictureItem, options.PictureItem)
-		if err != nil {
-			return err
+	addedFrom := in.GetAddedFrom()
+	if addedFrom != nil {
+		result.AddedFrom = &util.Date{
+			Year:  int(addedFrom.GetYear()),
+			Month: time.Month(addedFrom.GetMonth()),
+			Day:   int(addedFrom.GetDay()),
 		}
 	}
 
-	return nil
+	result.PictureItem, err = convertPictureItemOptions(in.GetPictureItem())
+	if err != nil {
+		return nil, err
+	}
+
+	result.ReplacePicture, err = convertPictureListOptions(in.GetReplacePicture())
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func convertPictureModerVote(in *PictureModerVoteListOptions) *query.PictureModerVoteListOptions {
+	if in == nil {
+		return nil
+	}
+
+	return &query.PictureModerVoteListOptions{
+		VoteGtZero:  in.GetVoteGtZero(),
+		VoteLteZero: in.GetVoteLteZero(),
+	}
+}
+
+func convertDfDistanceListOptions(in *DfDistanceListOptions) (*query.DfDistanceListOptions, error) {
+	if in == nil {
+		return nil, nil //nolint: nilnil
+	}
+
+	var err error
+
+	result := query.DfDistanceListOptions{}
+
+	result.DstPicture, err = convertPictureListOptions(in.GetDstPicture())
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func convertCommentTopicListOptions(in *CommentTopicListOptions) *query.CommentTopicListOptions {
+	if in == nil {
+		return nil
+	}
+
+	result := query.CommentTopicListOptions{
+		MessagesGtZero: in.GetMessagesGtZero(),
+	}
+
+	return &result
 }
 
 func convertPictureFields(fields *PictureFields) pictures.PictureFields {
@@ -136,48 +238,41 @@ func convertPictureFields(fields *PictureFields) pictures.PictureFields {
 	}
 }
 
-func convertPicturesOrder(order GetPicturesRequest_Order) pictures.OrderBy {
+func convertPicturesOrder(order PicturesRequest_Order) pictures.OrderBy {
 	switch order {
-	case GetPicturesRequest_NONE:
+	case PicturesRequest_ORDER_NONE:
 		return pictures.OrderByNone
-	case GetPicturesRequest_ADD_DATE_DESC:
+	case PicturesRequest_ORDER_ADD_DATE_DESC:
 		return pictures.OrderByAddDateDesc
-	case GetPicturesRequest_ADD_DATE_ASC:
+	case PicturesRequest_ORDER_ADD_DATE_ASC:
 		return pictures.OrderByAddDateAsc
-	case GetPicturesRequest_RESOLUTION_DESC:
+	case PicturesRequest_ORDER_RESOLUTION_DESC:
 		return pictures.OrderByResolutionDesc
-	case GetPicturesRequest_RESOLUTION_ASC:
+	case PicturesRequest_ORDER_RESOLUTION_ASC:
 		return pictures.OrderByResolutionAsc
-	case GetPicturesRequest_LIKES:
+	case PicturesRequest_ORDER_FILESIZE_DESC:
+		return pictures.OrderByFilesizeDesc
+	case PicturesRequest_ORDER_FILESIZE_ASC:
+		return pictures.OrderByFilesizeAsc
+	case PicturesRequest_ORDER_COMMENTS:
+		return pictures.OrderByComments
+	case PicturesRequest_ORDER_VIEWS:
+		return pictures.OrderByViews
+	case PicturesRequest_ORDER_MODER_VOTES:
+		return pictures.OrderByModerVotes
+	case PicturesRequest_ORDER_REMOVING_DATE:
+		return pictures.OrderByRemovingDate
+	case PicturesRequest_ORDER_LIKES:
 		return pictures.OrderByLikes
-	case GetPicturesRequest_DISLIKES:
+	case PicturesRequest_ORDER_DISLIKES:
 		return pictures.OrderByDislikes
-	case GetPicturesRequest_ACCEPT_DATETIME_DESC:
+	case PicturesRequest_ORDER_ACCEPT_DATETIME_DESC:
 		return pictures.OrderByAcceptDatetimeDesc
-	case GetPicturesRequest_PERSPECTIVES:
+	case PicturesRequest_ORDER_PERSPECTIVES:
 		return pictures.OrderByPerspectives
+	case PicturesRequest_ORDER_DF_DISTANCE_SIMILARITY:
+		return pictures.OrderByDfDistanceSimilarity
 	}
 
 	return pictures.OrderByNone
-}
-
-func convertPictureItemOptions(options *PictureItemOptions) (query.PictureItemListOptions, error) {
-	result := query.PictureItemListOptions{
-		PictureID: options.GetPictureId(),
-		ItemID:    options.GetItemId(),
-		TypeID:    convertPictureItemType(options.GetTypeId()),
-	}
-
-	if options.GetItem() != nil {
-		iOptions := query.ItemsListOptions{}
-
-		err := mapItemListOptions(options.GetItem(), &iOptions)
-		if err != nil {
-			return result, err
-		}
-
-		result.Item = &iOptions
-	}
-
-	return result, nil
 }

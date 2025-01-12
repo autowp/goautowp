@@ -757,7 +757,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
+	pic, err := client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID}})
 	require.NoError(t, err)
 	require.Nil(t, pic.GetPoint())
 
@@ -773,7 +773,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
+	pic, err = client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID}})
 	require.NoError(t, err)
 	require.NotNil(t, pic.GetPoint())
 	require.InDelta(t, float64(10), pic.GetPoint().GetLatitude(), 0.001)
@@ -791,7 +791,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
+	pic, err = client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID}})
 	require.NoError(t, err)
 	require.NotNil(t, pic.GetPoint())
 	require.InDelta(t, float64(0), pic.GetPoint().GetLatitude(), 0.001)
@@ -809,7 +809,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
+	pic, err = client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID}})
 	require.NoError(t, err)
 	require.NotNil(t, pic.GetPoint())
 	require.InDelta(t, float64(-10), pic.GetPoint().GetLatitude(), 0.001)
@@ -823,7 +823,7 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err = client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
+	pic, err = client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID}})
 	require.NoError(t, err)
 	require.Nil(t, pic.GetPoint())
 }
@@ -943,7 +943,7 @@ func TestSetPictureCopyrights(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID}})
+	pic, err := client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID}})
 	require.NoError(t, err)
 	require.NotZero(t, pic.GetCopyrightsTextId())
 	require.NotEmpty(t, pic.GetCopyrightsTextId())
@@ -974,7 +974,7 @@ func TestSetPictureCopyrights(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Second", text)
 
-	pic2, err := client.GetPicture(ctx, &GetPicturesRequest{Options: &PicturesOptions{Id: pictureID2}})
+	pic2, err := client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID2}})
 	require.NoError(t, err)
 	require.NotZero(t, pic2.GetCopyrightsTextId())
 	require.NotEmpty(t, pic2.GetCopyrightsTextId())
@@ -1206,7 +1206,7 @@ func TestGetPictures(t *testing.T) {
 
 	client := NewPicturesClient(conn)
 
-	_, err := client.GetPictures(ctx, &GetPicturesRequest{Fields: &PictureFields{
+	_, err := client.GetPictures(ctx, &PicturesRequest{Fields: &PictureFields{
 		NameText:    true,
 		Image:       true,
 		ThumbMedium: true,
@@ -1222,16 +1222,20 @@ func TestGetPictures(t *testing.T) {
 
 	_, err = client.GetPictures(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&GetPicturesRequest{Fields: &PictureFields{
-			NameText:      true,
-			NameHtml:      true,
-			Image:         true,
-			ThumbMedium:   true,
-			Views:         true,
-			Votes:         true,
-			CommentsCount: true,
-			ModerVote:     true,
-			PictureItem:   &PictureItemsRequest{},
+		&PicturesRequest{Fields: &PictureFields{
+			NameText:         true,
+			NameHtml:         true,
+			Image:            true,
+			ThumbMedium:      true,
+			Views:            true,
+			Votes:            true,
+			CommentsCount:    true,
+			ModerVote:        true,
+			PictureItem:      &PictureItemsRequest{},
+			DfDistance:       &DfDistanceRequest{},
+			ImageGalleryFull: true,
+			Path:             &PicturePathRequest{},
+			Thumb:            true,
 		}, Limit: 100},
 	)
 	require.NoError(t, err)
@@ -1303,9 +1307,9 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 
 	picture, err := client.GetPicture(
 		ctx,
-		&GetPicturesRequest{
+		&PicturesRequest{
 			Language: "en",
-			Options:  &PicturesOptions{Id: pictureID},
+			Options:  &PictureListOptions{Id: pictureID},
 			Fields:   &PictureFields{NameText: true, NameHtml: true},
 		},
 	)
@@ -1327,9 +1331,9 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 
 	picture, err = client.GetPicture(
 		ctx,
-		&GetPicturesRequest{
+		&PicturesRequest{
 			Language: "ru",
-			Options:  &PicturesOptions{Id: pictureID},
+			Options:  &PictureListOptions{Id: pictureID},
 			Fields:   &PictureFields{NameText: true, NameHtml: true},
 		},
 	)
@@ -1439,8 +1443,8 @@ func TestGetPicturePath(t *testing.T) {
 
 	picture, err := client.GetPicture(
 		ctx,
-		&GetPicturesRequest{
-			Options: &PicturesOptions{Id: pictureID},
+		&PicturesRequest{
+			Options: &PictureListOptions{Id: pictureID},
 			Fields: &PictureFields{Path: &PicturePathRequest{
 				ParentId: brandID,
 			}},
@@ -1450,4 +1454,131 @@ func TestGetPicturePath(t *testing.T) {
 	require.NotEmpty(t, picture.GetPath())
 	require.Equal(t, "child", picture.GetPath()[0].GetItem().GetParents()[0].GetCatname())
 	require.Equal(t, "item", picture.GetPath()[0].GetItem().GetParents()[0].GetItem().GetParents()[0].GetCatname())
+}
+
+func TestGetPicturesOrders(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	client := NewPicturesClient(conn)
+
+	cfg := config.LoadConfig(".")
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	testCases := []PicturesRequest_Order{
+		PicturesRequest_ORDER_NONE,
+		PicturesRequest_ORDER_ADD_DATE_DESC,
+		PicturesRequest_ORDER_ADD_DATE_ASC,
+		PicturesRequest_ORDER_RESOLUTION_DESC,
+		PicturesRequest_ORDER_RESOLUTION_ASC,
+		PicturesRequest_ORDER_FILESIZE_DESC,
+		PicturesRequest_ORDER_FILESIZE_ASC,
+		PicturesRequest_ORDER_COMMENTS,
+		PicturesRequest_ORDER_VIEWS,
+		PicturesRequest_ORDER_MODER_VOTES,
+		PicturesRequest_ORDER_DF_DISTANCE_SIMILARITY,
+		PicturesRequest_ORDER_REMOVING_DATE,
+		PicturesRequest_ORDER_LIKES,
+		PicturesRequest_ORDER_DISLIKES,
+		PicturesRequest_ORDER_ACCEPT_DATETIME_DESC,
+		PicturesRequest_ORDER_PERSPECTIVES,
+	}
+
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("%v", testCase), func(t *testing.T) {
+			t.Parallel()
+
+			request := PicturesRequest{
+				Fields: &PictureFields{
+					NameText:      true,
+					NameHtml:      true,
+					Image:         true,
+					ThumbMedium:   true,
+					Views:         true,
+					Votes:         true,
+					CommentsCount: true,
+					ModerVote:     true,
+					PictureItem:   &PictureItemsRequest{},
+				},
+				Limit: 100,
+				Order: testCase,
+				Options: &PictureListOptions{
+					PictureModerVote: &PictureModerVoteListOptions{},
+					PictureItem:      &PictureItemListOptions{},
+					DfDistance:       &DfDistanceListOptions{},
+				},
+			}
+
+			_, err = client.GetPictures(
+				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+				&request,
+			)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestGetPicturesFilters(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	client := NewPicturesClient(conn)
+
+	cfg := config.LoadConfig(".")
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	request := PicturesRequest{
+		Fields: &PictureFields{
+			NameText:      true,
+			NameHtml:      true,
+			Image:         true,
+			ThumbMedium:   true,
+			Views:         true,
+			Votes:         true,
+			CommentsCount: true,
+			ModerVote:     true,
+			PictureItem:   &PictureItemsRequest{},
+		},
+		Limit: 100,
+		Options: &PictureListOptions{
+			PictureModerVote: &PictureModerVoteListOptions{},
+			PictureItem:      &PictureItemListOptions{},
+			DfDistance:       &DfDistanceListOptions{},
+			Statuses: []PictureStatus{
+				PictureStatus_PICTURE_STATUS_ACCEPTED,
+				PictureStatus_PICTURE_STATUS_INBOX,
+				PictureStatus_PICTURE_STATUS_ACCEPTED,
+			},
+			OwnerId:               123,
+			AcceptedInDays:        3,
+			AddDate:               &date.Date{Year: 2025, Month: 1, Day: 1},
+			AcceptDate:            &date.Date{Year: 2025, Month: 1, Day: 1},
+			AddedFrom:             &date.Date{Year: 2025, Month: 1, Day: 1},
+			CommentTopic:          &CommentTopicListOptions{MessagesGtZero: true},
+			HasNoComments:         true,
+			HasPoint:              true,
+			HasNoPoint:            true,
+			HasNoPictureItem:      true,
+			ReplacePicture:        &PictureListOptions{},
+			HasNoReplacePicture:   true,
+			HasNoPictureModerVote: true,
+			HasSpecialName:        true,
+		},
+	}
+
+	_, err = client.GetPictures(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&request,
+	)
+	require.NoError(t, err)
 }

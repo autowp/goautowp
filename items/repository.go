@@ -599,7 +599,7 @@ func (s *Repository) columnsByFields(fields ListFields) map[string]Column {
 	return columns
 }
 
-func (s *Repository) IDsSelect(options query.ItemsListOptions) (*goqu.SelectDataset, error) {
+func (s *Repository) IDsSelect(options query.ItemListOptions) (*goqu.SelectDataset, error) {
 	var (
 		err   error
 		alias = query.ItemAlias
@@ -609,13 +609,15 @@ func (s *Repository) IDsSelect(options query.ItemsListOptions) (*goqu.SelectData
 		alias = options.Alias
 	}
 
-	sqSelect := s.db.Select(goqu.I(alias).Col(schema.ItemTableIDColName)).From(schema.ItemTable.As(alias))
-	sqSelect, _, err = options.Apply(alias, sqSelect)
+	sqSelect, err := options.Select(s.db, alias)
+	if err != nil {
+		return nil, err
+	}
 
-	return sqSelect, err
+	return sqSelect.Select(goqu.I(alias).Col(schema.ItemTableIDColName)), nil
 }
 
-func (s *Repository) IDs(ctx context.Context, options query.ItemsListOptions) ([]int64, error) {
+func (s *Repository) IDs(ctx context.Context, options query.ItemListOptions) ([]int64, error) {
 	var err error
 
 	sqSelect, err := s.IDsSelect(options)
@@ -633,10 +635,10 @@ func (s *Repository) IDs(ctx context.Context, options query.ItemsListOptions) ([
 	return ids, nil
 }
 
-func (s *Repository) Exists(ctx context.Context, options query.ItemsListOptions) (bool, error) {
+func (s *Repository) Exists(ctx context.Context, options query.ItemListOptions) (bool, error) {
 	var exists bool
 
-	sqSelect, err := options.ExistsSelect(s.db)
+	sqSelect, err := options.ExistsSelect(s.db, query.ItemAlias)
 	if err != nil {
 		return false, err
 	}
@@ -649,10 +651,10 @@ func (s *Repository) Exists(ctx context.Context, options query.ItemsListOptions)
 	return exists && success, nil
 }
 
-func (s *Repository) Count(ctx context.Context, options query.ItemsListOptions) (int, error) {
+func (s *Repository) Count(ctx context.Context, options query.ItemListOptions) (int, error) {
 	var count int
 
-	sqSelect, err := options.CountSelect(s.db)
+	sqSelect, err := options.CountSelect(s.db, query.ItemAlias)
 	if err != nil {
 		return 0, err
 	}
@@ -669,10 +671,10 @@ func (s *Repository) Count(ctx context.Context, options query.ItemsListOptions) 
 	return count, nil
 }
 
-func (s *Repository) CountDistinct(ctx context.Context, options query.ItemsListOptions) (int, error) {
+func (s *Repository) CountDistinct(ctx context.Context, options query.ItemListOptions) (int, error) {
 	var count int
 
-	sqSelect, err := options.CountDistinctSelect(s.db)
+	sqSelect, err := options.CountDistinctSelect(s.db, query.ItemAlias)
 	if err != nil {
 		return 0, err
 	}
@@ -689,7 +691,7 @@ func (s *Repository) CountDistinct(ctx context.Context, options query.ItemsListO
 	return count, nil
 }
 
-func (s *Repository) Item(ctx context.Context, options query.ItemsListOptions, fields ListFields) (Item, error) {
+func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, fields ListFields) (Item, error) {
 	options.Limit = 1
 
 	res, _, err := s.List(ctx, options, fields, OrderByNone, false)
@@ -704,7 +706,7 @@ func (s *Repository) Item(ctx context.Context, options query.ItemsListOptions, f
 	return res[0], nil
 }
 
-func (s *Repository) isFieldsValid(options query.ItemsListOptions, fields ListFields) error {
+func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields ListFields) error {
 	if (fields.ChildItemsCount || fields.NewChildItemsCount) && options.ItemParentChild == nil {
 		return fmt.Errorf("%w: ChildItemsCount, NewChildItemsCount requires ItemParentChild", errFieldRequires)
 	}
@@ -873,12 +875,13 @@ func (s *Repository) wrappedSelectColumns(orderBy OrderBy) map[string]Column {
 }
 
 func (s *Repository) List( //nolint:maintidx
-	ctx context.Context, options query.ItemsListOptions, fields ListFields, orderBy OrderBy,
+	ctx context.Context, options *query.ItemListOptions, fields ListFields, orderBy OrderBy,
 	pagination bool,
 ) ([]Item, *util.Pages, error) {
 	var err error
 
-	aliasTable := goqu.T(query.ItemAlias)
+	alias := query.ItemAlias
+	aliasTable := goqu.T(alias)
 
 	err = s.isFieldsValid(options, fields)
 	if err != nil {
@@ -889,7 +892,7 @@ func (s *Repository) List( //nolint:maintidx
 		return nil, nil, fmt.Errorf("%w: NameOnly for SortByName", errFieldsIsRequired)
 	}
 
-	sqSelect, err := options.Select(s.db)
+	sqSelect, err := options.Select(s.db, alias)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -909,8 +912,8 @@ func (s *Repository) List( //nolint:maintidx
 
 		paginator := util.Paginator{
 			SQLSelect:         sqSelect,
-			ItemCountPerPage:  int32(options.Limit),
-			CurrentPageNumber: int32(options.Page), //nolint: gosec
+			ItemCountPerPage:  int32(options.Limit), //nolint: gosec
+			CurrentPageNumber: int32(options.Page),  //nolint: gosec
 		}
 
 		if pagination {
@@ -963,7 +966,7 @@ func (s *Repository) List( //nolint:maintidx
 
 		wrappedSqSelect := sqSelect
 
-		sqSelect, err = options.Select(s.db)
+		sqSelect, err = options.Select(s.db, options.Alias)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -2321,12 +2324,12 @@ func (s *Repository) CreateItemParent(
 		return false, errSelfParent
 	}
 
-	parentRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: parentID}, ListFields{})
+	parentRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, ListFields{})
 	if err != nil {
 		return false, err
 	}
 
-	itemRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: itemID}, ListFields{})
+	itemRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, ListFields{})
 	if err != nil {
 		return false, err
 	}
@@ -2454,12 +2457,12 @@ func (s *Repository) UpdateItemParent(
 	}
 
 	if len(catname) == 0 || catname == "_" || util.Contains(catnameBlacklist, catname) {
-		parentRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: parentID}, ListFields{NameText: true})
+		parentRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, ListFields{NameText: true})
 		if err != nil {
 			return false, err
 		}
 
-		itemRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: itemID}, ListFields{NameText: true})
+		itemRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, ListFields{NameText: true})
 		if err != nil {
 			return false, err
 		}
@@ -2756,17 +2759,17 @@ func (s *Repository) getChildVehicleTypesByWhitelist(
 }
 
 func (s *Repository) MoveItemParent(ctx context.Context, itemID, parentID, newParentID int64) (bool, error) {
-	oldParentRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: parentID}, ListFields{})
+	oldParentRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, ListFields{})
 	if err != nil {
 		return false, err
 	}
 
-	itemRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: itemID}, ListFields{})
+	itemRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, ListFields{})
 	if err != nil {
 		return false, err
 	}
 
-	newParentRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: newParentID}, ListFields{})
+	newParentRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: newParentID}, ListFields{})
 	if err != nil {
 		return false, err
 	}
@@ -2941,12 +2944,12 @@ func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (b
 		return true, nil
 	}
 
-	brandRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: parentID}, ListFields{NameText: true})
+	brandRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, ListFields{NameText: true})
 	if err != nil {
 		return false, err
 	}
 
-	vehicleRow, err := s.Item(ctx, query.ItemsListOptions{ItemID: itemID}, ListFields{NameText: true})
+	vehicleRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, ListFields{NameText: true})
 	if err != nil {
 		return false, err
 	}
@@ -2974,11 +2977,12 @@ func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (b
 }
 
 func (s *Repository) ItemParentSelect(
-	listOptions query.ItemParentListOptions, fields ItemParentFields, orderBy ItemParentOrderBy,
+	listOptions *query.ItemParentListOptions, fields ItemParentFields, orderBy ItemParentOrderBy,
 ) (*goqu.SelectDataset, error) {
-	aliasTable := goqu.T(query.ItemParentAlias)
+	alias := query.ItemParentAlias
+	aliasTable := goqu.T(alias)
 
-	sqSelect, groupBy, err := listOptions.Select(s.db)
+	sqSelect, groupBy, err := listOptions.Select(s.db, alias)
 	if err != nil {
 		return nil, err
 	}
@@ -3072,7 +3076,7 @@ func (s *Repository) ItemParentSelect(
 }
 
 func (s *Repository) ItemParents(
-	ctx context.Context, listOptions query.ItemParentListOptions, fields ItemParentFields, orderBy ItemParentOrderBy,
+	ctx context.Context, listOptions *query.ItemParentListOptions, fields ItemParentFields, orderBy ItemParentOrderBy,
 ) ([]ItemParent, *util.Pages, error) {
 	sqSelect, err := s.ItemParentSelect(listOptions, fields, orderBy)
 	if err != nil {
@@ -3114,7 +3118,7 @@ func (s *Repository) ItemParent(
 		ParentID: parentID,
 	}
 
-	sqSelect, err := s.ItemParentSelect(listOptions, fields, ItemParentOrderByNone)
+	sqSelect, err := s.ItemParentSelect(&listOptions, fields, ItemParentOrderByNone)
 	if err != nil {
 		return nil, err
 	}
@@ -3237,13 +3241,13 @@ func (s *Repository) ItemLocation(ctx context.Context, itemID int64) (geo.Point,
 }
 
 func (s *Repository) Brands(ctx context.Context, lang string) ([]*BrandsListLine, error) {
-	options := query.ItemsListOptions{
+	options := query.ItemListOptions{
 		Language:   lang,
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		SortByName: true,
 	}
 
-	rows, _, err := s.List(ctx, options, ListFields{
+	rows, _, err := s.List(ctx, &options, ListFields{
 		NameOnly:              true,
 		DescendantsCount:      true,
 		NewDescendantsCount:   true,
@@ -3603,7 +3607,7 @@ func (s *Repository) CataloguePaths(
 		}
 	}
 
-	parentRows, _, err := s.ItemParents(ctx, query.ItemParentListOptions{
+	parentRows, _, err := s.ItemParents(ctx, &query.ItemParentListOptions{
 		ItemID: id,
 	}, ItemParentFields{}, ItemParentOrderByStockFirst)
 	if err != nil {

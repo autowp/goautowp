@@ -8,6 +8,7 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 )
 
 const (
@@ -19,7 +20,7 @@ func AppendItemAlias(alias string, suffix string) string {
 	return alias + "_" + ItemAlias + suffix
 }
 
-type ItemsListOptions struct {
+type ItemListOptions struct {
 	Alias                        string
 	Language                     string
 	ItemID                       int64
@@ -62,24 +63,21 @@ func ItemParentNoParentAlias(alias string) string {
 	return alias + itemParentNoParentAliasSuffix
 }
 
-func (s *ItemsListOptions) Select(db *goqu.Database) (*goqu.SelectDataset, error) {
-	var (
-		err   error
-		alias = ItemAlias
-	)
+func (s *ItemListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+	var err error
 
 	if s.Alias != "" {
 		alias = s.Alias
 	}
 
 	sqSelect := db.Select().From(schema.ItemTable.As(alias))
-	sqSelect, _, err = s.Apply(alias, sqSelect)
+	sqSelect, _, err = s.apply(alias, sqSelect)
 
 	return sqSelect, err
 }
 
-func (s *ItemsListOptions) ExistsSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
-	sqSelect, err := s.Select(db)
+func (s *ItemListOptions) ExistsSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +85,8 @@ func (s *ItemsListOptions) ExistsSelect(db *goqu.Database) (*goqu.SelectDataset,
 	return sqSelect.Select(goqu.V(true)), nil
 }
 
-func (s *ItemsListOptions) CountSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
-	sqSelect, err := s.Select(db)
+func (s *ItemListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
 	}
@@ -96,13 +94,12 @@ func (s *ItemsListOptions) CountSelect(db *goqu.Database) (*goqu.SelectDataset, 
 	return sqSelect.Select(goqu.COUNT(goqu.Star())), nil
 }
 
-func (s *ItemsListOptions) CountDistinctSelect(db *goqu.Database) (*goqu.SelectDataset, error) {
-	alias := ItemAlias
+func (s *ItemListOptions) CountDistinctSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
 	if s.Alias != "" {
 		alias = s.Alias
 	}
 
-	sqSelect, err := s.Select(db)
+	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,23 @@ func (s *ItemsListOptions) CountDistinctSelect(db *goqu.Database) (*goqu.SelectD
 	), nil
 }
 
-func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool, error) {
+func (s *ItemListOptions) JoinToIDAndApply(
+	srcCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, bool, error) {
+	if s == nil {
+		return sqSelect, false, nil
+	}
+
+	return s.apply(
+		alias,
+		sqSelect.Join(
+			schema.ItemTable.As(alias),
+			goqu.On(srcCol.Eq(goqu.T(alias).Col(schema.ItemTableIDColName))),
+		),
+	)
+}
+
+func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool, error) {
 	var (
 		err        error
 		groupBy    = false
@@ -214,7 +227,7 @@ func (s *ItemsListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*g
 	return sqSelect, groupBy, nil
 }
 
-func (s *ItemsListOptions) applyJoins(
+func (s *ItemListOptions) applyJoins(
 	alias string, sqSelect *goqu.SelectDataset,
 ) (*goqu.SelectDataset, bool, error) {
 	var (
@@ -222,7 +235,7 @@ func (s *ItemsListOptions) applyJoins(
 		groupBy    bool
 		subGroupBy bool
 		aliasTable = goqu.T(alias)
-		aliasIDCol = aliasTable.Col(schema.ItemTableIDColName)
+		idCol      = aliasTable.Col(schema.ItemTableIDColName)
 	)
 
 	sqSelect, subGroupBy = s.applyVehicleTypeAncestorID(alias, sqSelect)
@@ -246,13 +259,8 @@ func (s *ItemsListOptions) applyJoins(
 
 	if s.ItemParentChild != nil {
 		groupBy = true
-		ipcAlias := AppendItemParentAlias(alias, "c")
-		sqSelect = sqSelect.Join(
-			schema.ItemParentTable.As(ipcAlias),
-			goqu.On(aliasIDCol.Eq(goqu.T(ipcAlias).Col(schema.ItemParentTableParentIDColName))),
-		)
 
-		sqSelect, _, err = s.ItemParentChild.Apply(ipcAlias, sqSelect)
+		sqSelect, _, err = s.ItemParentChild.JoinToParentIDAndApply(idCol, AppendItemParentAlias(alias, "c"), sqSelect)
 		if err != nil {
 			return nil, false, err
 		}
@@ -269,14 +277,8 @@ func (s *ItemsListOptions) applyJoins(
 
 	if s.PictureItems != nil {
 		groupBy = true
-		piAlias := AppendPictureItemAlias(alias)
 
-		sqSelect = sqSelect.Join(
-			schema.PictureItemTable.As(piAlias),
-			goqu.On(aliasIDCol.Eq(goqu.T(piAlias).Col(schema.PictureItemTableItemIDColName))),
-		)
-
-		sqSelect, err = s.PictureItems.Apply(piAlias, sqSelect)
+		sqSelect, err = s.PictureItems.JoinToItemIDAndApply(idCol, AppendPictureItemAlias(alias), sqSelect)
 		if err != nil {
 			return nil, false, err
 		}
@@ -284,14 +286,12 @@ func (s *ItemsListOptions) applyJoins(
 
 	if s.ItemParentCacheDescendant != nil {
 		groupBy = true
-		ipcdAlias := AppendItemParentCacheAlias(alias, "d")
-		sqSelect = sqSelect.
-			Join(
-				schema.ItemParentCacheTable.As(ipcdAlias),
-				goqu.On(aliasIDCol.Eq(goqu.T(ipcdAlias).Col(schema.ItemParentCacheTableParentIDColName))),
-			)
 
-		sqSelect, err = s.ItemParentCacheDescendant.Apply(ipcdAlias, sqSelect)
+		sqSelect, err = s.ItemParentCacheDescendant.JoinToParentIDAndApply(
+			idCol,
+			AppendItemParentCacheAlias(alias, "d"),
+			sqSelect,
+		)
 		if err != nil {
 			return nil, false, err
 		}
@@ -299,14 +299,12 @@ func (s *ItemsListOptions) applyJoins(
 
 	if s.ItemParentCacheAncestor != nil {
 		groupBy = true
-		ipcaAlias := AppendItemParentCacheAlias(alias, "a")
-		sqSelect = sqSelect.
-			Join(
-				schema.ItemParentCacheTable.As(ipcaAlias),
-				goqu.On(aliasIDCol.Eq(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableItemIDColName))),
-			)
 
-		sqSelect, err = s.ItemParentCacheAncestor.Apply(ipcaAlias, sqSelect)
+		sqSelect, err = s.ItemParentCacheAncestor.JoinToItemIDAndApply(
+			idCol,
+			AppendItemParentCacheAlias(alias, "a"),
+			sqSelect,
+		)
 		if err != nil {
 			return nil, false, err
 		}
@@ -317,7 +315,7 @@ func (s *ItemsListOptions) applyJoins(
 		sqSelect = sqSelect.
 			LeftJoin(
 				schema.ItemParentTable.As(ipnpAlias),
-				goqu.On(aliasIDCol.Eq(goqu.T(ipnpAlias).Col(schema.ItemParentTableItemIDColName))),
+				goqu.On(idCol.Eq(goqu.T(ipnpAlias).Col(schema.ItemParentTableItemIDColName))),
 			).
 			Where(goqu.T(ipnpAlias).Col(schema.ItemParentTableParentIDColName).IsNull())
 	}
@@ -327,7 +325,7 @@ func (s *ItemsListOptions) applyJoins(
 	return sqSelect, groupBy, err
 }
 
-func (s *ItemsListOptions) applyItemParentParent(
+func (s *ItemListOptions) applyItemParentParent(
 	alias string, sqSelect *goqu.SelectDataset,
 ) (*goqu.SelectDataset, bool, error) {
 	var (
@@ -338,15 +336,12 @@ func (s *ItemsListOptions) applyItemParentParent(
 
 	if s.ItemParentParent != nil {
 		groupBy = true
-		ippAlias := AppendItemParentAlias(alias, "p")
-		sqSelect = sqSelect.Join(
-			schema.ItemParentTable.As(ippAlias),
-			goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(
-				goqu.T(ippAlias).Col(schema.ItemParentTableItemIDColName)),
-			),
-		)
 
-		sqSelect, _, err = s.ItemParentParent.Apply(ippAlias, sqSelect)
+		sqSelect, _, err = s.ItemParentParent.JoinToItemIDAndApply(
+			aliasTable.Col(schema.ItemTableIDColName),
+			AppendItemParentAlias(alias, "p"),
+			sqSelect,
+		)
 		if err != nil {
 			return nil, false, err
 		}
@@ -355,7 +350,7 @@ func (s *ItemsListOptions) applyItemParentParent(
 	return sqSelect, groupBy, nil
 }
 
-func (s *ItemsListOptions) applyVehicleTypeAncestorID(
+func (s *ItemListOptions) applyVehicleTypeAncestorID(
 	alias string, sqSelect *goqu.SelectDataset,
 ) (*goqu.SelectDataset, bool) {
 	groupBy := false
@@ -378,7 +373,7 @@ func (s *ItemsListOptions) applyVehicleTypeAncestorID(
 	return sqSelect, groupBy
 }
 
-func (s *ItemsListOptions) applyName(
+func (s *ItemListOptions) applyName(
 	alias string, sqSelect *goqu.SelectDataset,
 ) *goqu.SelectDataset {
 	if len(s.Name) > 0 {
@@ -401,7 +396,7 @@ func (s *ItemsListOptions) applyName(
 	return sqSelect
 }
 
-func (s *ItemsListOptions) applyExcludeSelfAndChilds(
+func (s *ItemListOptions) applyExcludeSelfAndChilds(
 	alias string, sqSelect *goqu.SelectDataset,
 ) *goqu.SelectDataset {
 	if s.ExcludeSelfAndChilds != 0 {
@@ -420,7 +415,7 @@ func (s *ItemsListOptions) applyExcludeSelfAndChilds(
 	return sqSelect
 }
 
-func (s *ItemsListOptions) applySuggestionsTo(
+func (s *ItemListOptions) applySuggestionsTo(
 	alias string, sqSelect *goqu.SelectDataset,
 ) (*goqu.SelectDataset, bool) {
 	groupBy := false
@@ -459,7 +454,7 @@ func (s *ItemsListOptions) applySuggestionsTo(
 	return sqSelect, groupBy
 }
 
-func (s *ItemsListOptions) applyExcludeVehicleTypeAncestorID(
+func (s *ItemListOptions) applyExcludeVehicleTypeAncestorID(
 	alias string, sqSelect *goqu.SelectDataset,
 ) (*goqu.SelectDataset, bool) {
 	if len(s.ExcludeVehicleTypeAncestorID) == 0 {
@@ -485,7 +480,7 @@ func (s *ItemsListOptions) applyExcludeVehicleTypeAncestorID(
 		true
 }
 
-func (s *ItemsListOptions) applyAutocompleteFilter(
+func (s *ItemListOptions) applyAutocompleteFilter(
 	alias string, sqSelect *goqu.SelectDataset,
 ) (*goqu.SelectDataset, bool) {
 	if s.Autocomplete == "" {
@@ -606,7 +601,7 @@ func (s *ItemsListOptions) applyAutocompleteFilter(
 	return sqSelect, groupBy
 }
 
-func (s *ItemsListOptions) applyParentTypesOf(
+func (s *ItemListOptions) applyParentTypesOf(
 	alias string, sqSelect *goqu.SelectDataset,
 ) *goqu.SelectDataset {
 	aliasTable := goqu.T(alias)

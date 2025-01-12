@@ -155,8 +155,8 @@ service Pictures {
   rpc Flop(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc DeleteSimilar(DeleteSimilarRequest) returns (google.protobuf.Empty) {}
   rpc Repair(PictureIDRequest) returns (google.protobuf.Empty) {}
-  rpc GetPicture(GetPicturesRequest) returns (Picture) {}
-  rpc GetPictures(GetPicturesRequest) returns (GetPicturesResponse) {}
+  rpc GetPicture(PicturesRequest) returns (Picture) {}
+  rpc GetPictures(PicturesRequest) returns (GetPicturesResponse) {}
   rpc GetPictureItem(PictureItemsRequest) returns (PictureItem) {}
   rpc GetPictureItems(PictureItemsRequest) returns (PictureItems) {}
   rpc SetPictureItemArea(SetPictureItemAreaRequest) returns (google.protobuf.Empty) {}
@@ -504,7 +504,7 @@ message AclEnforceResult {
 }
 
 message VehicleType {
-  int32 id = 1;
+  int64 id = 1;
   string name = 2;
   repeated VehicleType childs = 4;
 }
@@ -972,15 +972,37 @@ message APITopFactoriesListItem {
   int32 new_count = 4;
 }
 
-message PicturesOptions {
+message PictureListOptions {
   int64 id = 4;
   string identity = 8;
   PictureStatus status = 1;
-  PictureItemOptions picture_item = 2;
+  repeated PictureStatus statuses = 9;
+  PictureItemListOptions picture_item = 2;
   int64 owner_id = 3;
   int32 accepted_in_days = 5;
   google.type.Date add_date = 6;
   google.type.Date accept_date = 7;
+  google.type.Date added_from = 10;
+  CommentTopicListOptions comment_topic = 11;
+  bool has_no_comments = 12;
+  bool has_point = 13;
+  bool has_no_point = 14;
+  bool has_no_picture_item = 15;
+  PictureListOptions replace_picture = 16;
+  bool has_no_replace_picture = 17;
+  PictureModerVoteListOptions picture_moder_vote = 18;
+  bool has_no_picture_moder_vote = 19;
+  DfDistanceListOptions df_distance = 20;
+  bool has_special_name = 21;
+}
+
+message DfDistanceListOptions {
+  PictureListOptions dst_picture = 1;
+}
+
+message PictureModerVoteListOptions {
+  bool vote_gt_zero = 1;
+  bool vote_lte_zero = 2;
 }
 
 message PathTreeItem {
@@ -1012,6 +1034,17 @@ message PictureFields {
   PicturePathRequest path = 10;
   PictureItemsRequest picture_item = 11;
   bool image_gallery_full = 12;
+  DfDistanceRequest df_distance = 13;
+}
+
+message DfDistanceFields {
+  PicturesRequest dst_picture = 1;
+}
+
+message DfDistanceRequest {
+  uint32 limit = 1;
+  DfDistanceListOptions options = 2;
+  DfDistanceFields fields = 3;
 }
 
 message PicturePathRequest {
@@ -1077,15 +1110,22 @@ message ListItemsRequest {
   uint32 page = 11;
 }
 
-message PictureItemOptions {
+message PictureItemListOptions {
   int64 picture_id = 7;
   int64 item_id = 4;
   PictureItemType type_id = 1;
-  PicturesOptions pictures = 2;
+  PictureListOptions pictures = 2;
   int32 perspective_id = 3;
   repeated int32 exclude_perspective_id = 6;
+  int64 exclude_ancestor_or_self_id = 10;
   ItemListOptions item = 8;
   ItemParentCacheListOptions item_parent_cache_ancestor = 5;
+  ItemVehicleTypeListOptions item_vehicle_type = 9;
+  bool has_no_perspective_id = 11;
+}
+
+message CommentTopicListOptions {
+  bool messages_gt_zero = 1;
 }
 
 message ItemParentListOptions {
@@ -1103,13 +1143,13 @@ message ItemParentCacheListOptions {
   int64 item_id = 1;
   int64 parent_id = 2;
   ItemListOptions items_by_item_id = 3;
-  PictureItemOptions picture_items_by_item_id = 4;
+  PictureItemListOptions picture_items_by_item_id = 4;
   ItemParentListOptions item_parent_by_item_id = 5;
 }
 
 message ItemListOptions {
   ItemType type_id = 3;
-  PictureItemOptions preview_pictures = 5;
+  PictureItemListOptions preview_pictures = 5;
   bool no_parent = 7;
   string catname = 8;
   string name = 10;
@@ -1127,6 +1167,10 @@ message ItemListOptions {
   int64 suggestions_to = 23;
   bool is_not_concept = 24;
   repeated ItemType type_ids = 25;
+}
+
+message ItemVehicleTypeListOptions {
+  int64 vehicle_type_id = 1;
 }
 
 message GetTreeRequest {
@@ -1333,20 +1377,27 @@ message PictureIDRequest {
   int64 id = 1;
 }
 
-message GetPicturesRequest {
+message PicturesRequest {
   enum Order {
-    NONE = 0;
-    ADD_DATE_DESC = 1;
-    ADD_DATE_ASC = 2;
-    RESOLUTION_DESC = 3;
-    RESOLUTION_ASC = 4;
-    LIKES = 12;
-    DISLIKES = 13;
-    ACCEPT_DATETIME_DESC = 15;
-    PERSPECTIVES = 16;
+    ORDER_NONE = 0;
+    ORDER_ADD_DATE_DESC = 1;
+    ORDER_ADD_DATE_ASC = 2;
+    ORDER_RESOLUTION_DESC = 3;
+    ORDER_RESOLUTION_ASC = 4;
+    ORDER_FILESIZE_DESC = 5;
+    ORDER_FILESIZE_ASC = 6;
+    ORDER_COMMENTS = 7;
+    ORDER_VIEWS = 8;
+    ORDER_MODER_VOTES = 9;
+    ORDER_DF_DISTANCE_SIMILARITY = 10;
+    ORDER_REMOVING_DATE = 11;
+    ORDER_LIKES = 12;
+    ORDER_DISLIKES = 13;
+    ORDER_ACCEPT_DATETIME_DESC = 15;
+    ORDER_PERSPECTIVES = 16;
   }
 
-  PicturesOptions options = 1;
+  PictureListOptions options = 1;
   uint32 limit = 2;
   uint32 page = 3;
   bool paginator = 4;
@@ -1381,6 +1432,18 @@ message Picture {
   repeated PathTreePictureItem path = 23;
   PictureItems picture_items = 24;
   APIImage image_gallery_full = 25;
+  DfDistances df_distances = 26;
+}
+
+message DfDistances {
+  repeated DfDistance items = 1;
+}
+
+message DfDistance {
+  int64 src_picture_id = 1;
+  int64 dst_picture_id = 2;
+  int32 distance = 3;
+  Picture dst_picture = 4;
 }
 
 message GetPicturesResponse {
@@ -1389,7 +1452,7 @@ message GetPicturesResponse {
 }
 
 message PictureItemsRequest {
-  PictureItemOptions options = 4;
+  PictureItemListOptions options = 4;
 }
 
 message PictureItems {

@@ -4570,8 +4570,8 @@ type PicturesClient interface {
 	Flop(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteSimilar(ctx context.Context, in *DeleteSimilarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Repair(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetPicture(ctx context.Context, in *GetPicturesRequest, opts ...grpc.CallOption) (*Picture, error)
-	GetPictures(ctx context.Context, in *GetPicturesRequest, opts ...grpc.CallOption) (*GetPicturesResponse, error)
+	GetPicture(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*Picture, error)
+	GetPictures(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*GetPicturesResponse, error)
 	GetPictureItem(ctx context.Context, in *PictureItemsRequest, opts ...grpc.CallOption) (*PictureItem, error)
 	GetPictureItems(ctx context.Context, in *PictureItemsRequest, opts ...grpc.CallOption) (*PictureItems, error)
 	SetPictureItemArea(ctx context.Context, in *SetPictureItemAreaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -4716,7 +4716,7 @@ func (c *picturesClient) Repair(ctx context.Context, in *PictureIDRequest, opts 
 	return out, nil
 }
 
-func (c *picturesClient) GetPicture(ctx context.Context, in *GetPicturesRequest, opts ...grpc.CallOption) (*Picture, error) {
+func (c *picturesClient) GetPicture(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*Picture, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Picture)
 	err := c.cc.Invoke(ctx, Pictures_GetPicture_FullMethodName, in, out, cOpts...)
@@ -4726,7 +4726,7 @@ func (c *picturesClient) GetPicture(ctx context.Context, in *GetPicturesRequest,
 	return out, nil
 }
 
-func (c *picturesClient) GetPictures(ctx context.Context, in *GetPicturesRequest, opts ...grpc.CallOption) (*GetPicturesResponse, error) {
+func (c *picturesClient) GetPictures(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*GetPicturesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetPicturesResponse)
 	err := c.cc.Invoke(ctx, Pictures_GetPictures_FullMethodName, in, out, cOpts...)
@@ -4892,8 +4892,8 @@ type PicturesServer interface {
 	Flop(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	DeleteSimilar(context.Context, *DeleteSimilarRequest) (*emptypb.Empty, error)
 	Repair(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
-	GetPicture(context.Context, *GetPicturesRequest) (*Picture, error)
-	GetPictures(context.Context, *GetPicturesRequest) (*GetPicturesResponse, error)
+	GetPicture(context.Context, *PicturesRequest) (*Picture, error)
+	GetPictures(context.Context, *PicturesRequest) (*GetPicturesResponse, error)
 	GetPictureItem(context.Context, *PictureItemsRequest) (*PictureItem, error)
 	GetPictureItems(context.Context, *PictureItemsRequest) (*PictureItems, error)
 	SetPictureItemArea(context.Context, *SetPictureItemAreaRequest) (*emptypb.Empty, error)
@@ -4954,10 +4954,10 @@ func (UnimplementedPicturesServer) DeleteSimilar(context.Context, *DeleteSimilar
 func (UnimplementedPicturesServer) Repair(context.Context, *PictureIDRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Repair not implemented")
 }
-func (UnimplementedPicturesServer) GetPicture(context.Context, *GetPicturesRequest) (*Picture, error) {
+func (UnimplementedPicturesServer) GetPicture(context.Context, *PicturesRequest) (*Picture, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPicture not implemented")
 }
-func (UnimplementedPicturesServer) GetPictures(context.Context, *GetPicturesRequest) (*GetPicturesResponse, error) {
+func (UnimplementedPicturesServer) GetPictures(context.Context, *PicturesRequest) (*GetPicturesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPictures not implemented")
 }
 func (UnimplementedPicturesServer) GetPictureItem(context.Context, *PictureItemsRequest) (*PictureItem, error) {
@@ -5240,7 +5240,7 @@ func _Pictures_Repair_Handler(srv interface{}, ctx context.Context, dec func(int
 }
 
 func _Pictures_GetPicture_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPicturesRequest)
+	in := new(PicturesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -5252,13 +5252,13 @@ func _Pictures_GetPicture_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: Pictures_GetPicture_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PicturesServer).GetPicture(ctx, req.(*GetPicturesRequest))
+		return srv.(PicturesServer).GetPicture(ctx, req.(*PicturesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Pictures_GetPictures_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPicturesRequest)
+	in := new(PicturesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -5270,7 +5270,7 @@ func _Pictures_GetPictures_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: Pictures_GetPictures_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PicturesServer).GetPictures(ctx, req.(*GetPicturesRequest))
+		return srv.(PicturesServer).GetPictures(ctx, req.(*PicturesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

@@ -3,6 +3,7 @@ package query
 import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 )
 
 const (
@@ -16,8 +17,11 @@ type PictureItemListOptions struct {
 	Pictures                *PictureListOptions
 	PerspectiveID           int32
 	ExcludePerspectiveID    []int32
+	HasNoPerspectiveID      bool
+	ExcludeAncestorOrSelfID int64
 	ItemParentCacheAncestor *ItemParentCacheListOptions
-	Item                    *ItemsListOptions
+	Item                    *ItemListOptions
+	ItemVehicleType         *ItemVehicleTypeListOptions
 }
 
 func AppendPictureItemAlias(alias string) string {
@@ -32,10 +36,52 @@ func (s *PictureItemListOptions) IsItemIDUnique() bool {
 	return s.PictureID != 0
 }
 
-func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *PictureItemListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+	return s.apply(
+		alias,
+		db.Select().From(schema.PictureItemTable.As(alias)),
+	)
+}
+
+func (s *PictureItemListOptions) JoinToItemIDAndApply(
+	srcCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
+	if s == nil {
+		return sqSelect, nil
+	}
+
+	return s.apply(
+		alias,
+		sqSelect.Join(
+			schema.PictureItemTable.As(alias),
+			goqu.On(srcCol.Eq(goqu.T(alias).Col(schema.PictureItemTableItemIDColName))),
+		),
+	)
+}
+
+func (s *PictureItemListOptions) JoinToPictureIDAndApply(
+	srcCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
+	if s == nil {
+		return sqSelect, nil
+	}
+
+	return s.apply(
+		alias,
+		sqSelect.Join(
+			schema.PictureItemTable.As(alias),
+			goqu.On(srcCol.Eq(goqu.T(alias).Col(schema.PictureItemTablePictureIDColName))),
+		),
+	)
+}
+
+func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
 	var (
-		err        error
-		aliasTable = goqu.T(alias)
+		err              error
+		aliasTable       = goqu.T(alias)
+		itemIDCol        = aliasTable.Col(schema.PictureItemTableItemIDColName)
+		pictureIDCol     = aliasTable.Col(schema.PictureItemTablePictureIDColName)
+		perspectiveIDCol = aliasTable.Col(schema.PictureItemTablePerspectiveIDColName)
 	)
 
 	if s.TypeID != 0 {
@@ -43,70 +89,64 @@ func (s *PictureItemListOptions) Apply(alias string, sqSelect *goqu.SelectDatase
 	}
 
 	if s.PictureID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTablePictureIDColName).Eq(s.PictureID))
+		sqSelect = sqSelect.Where(pictureIDCol.Eq(s.PictureID))
 	}
 
 	if s.ItemID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTableItemIDColName).Eq(s.ItemID))
+		sqSelect = sqSelect.Where(itemIDCol.Eq(s.ItemID))
 	}
 
 	if s.PerspectiveID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTablePerspectiveIDColName).Eq(s.PerspectiveID))
+		sqSelect = sqSelect.Where(perspectiveIDCol.Eq(s.PerspectiveID))
 	}
 
 	if len(s.ExcludePerspectiveID) > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureItemTablePerspectiveIDColName).NotIn(s.ExcludePerspectiveID))
+		sqSelect = sqSelect.Where(perspectiveIDCol.NotIn(s.ExcludePerspectiveID))
 	}
 
-	if s.Pictures != nil {
-		pAlias := AppendPictureAlias(alias)
-
-		sqSelect = sqSelect.Join(
-			schema.PictureTable.As(pAlias),
-			goqu.On(
-				aliasTable.Col(schema.PictureItemTablePictureIDColName).Eq(
-					goqu.T(pAlias).Col(schema.PictureTableIDColName),
-				),
-			),
-		)
-
-		sqSelect, err = s.Pictures.Apply(pAlias, sqSelect)
-		if err != nil {
-			return nil, err
-		}
+	if s.HasNoPerspectiveID {
+		sqSelect = sqSelect.Where(perspectiveIDCol.IsNull())
 	}
 
-	if s.Item != nil {
-		iAlias := AppendItemAlias(alias, "i")
+	if s.ExcludeAncestorOrSelfID > 0 {
+		eaosAlias := alias + "_eaos"
+		eaosAliasTable := goqu.T(eaosAlias)
 		sqSelect = sqSelect.
-			Join(
-				schema.ItemTable.As(iAlias),
-				goqu.On(aliasTable.Col(schema.PictureItemTableItemIDColName).Eq(
-					goqu.T(iAlias).Col(schema.ItemTableIDColName),
-				)),
-			)
-
-		sqSelect, _, err = s.Item.Apply(iAlias, sqSelect)
-		if err != nil {
-			return nil, err
-		}
+			LeftJoin(goqu.T(schema.ItemParentCacheTableName).As(eaosAlias), goqu.On(
+				itemIDCol.Eq(eaosAliasTable.Col(schema.ItemParentCacheTableItemIDColName)),
+				eaosAliasTable.Col(schema.ItemParentCacheTableParentIDColName).Eq(s.ExcludeAncestorOrSelfID),
+			)).
+			Where(eaosAliasTable.Col(schema.ItemParentCacheTableItemIDColName).IsNull())
 	}
 
-	if s.ItemParentCacheAncestor != nil {
-		ipcaAlias := AppendItemParentCacheAlias(alias, "a")
-		sqSelect = sqSelect.
-			Join(
-				schema.ItemParentCacheTable.As(ipcaAlias),
-				goqu.On(aliasTable.Col(schema.PictureItemTableItemIDColName).Eq(
-					goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableItemIDColName),
-				)),
-			)
-
-		sqSelect, err = s.ItemParentCacheAncestor.Apply(ipcaAlias, sqSelect)
-		if err != nil {
-			return nil, err
-		}
+	sqSelect, err = s.Pictures.JoinToIDAndApply(
+		pictureIDCol,
+		AppendPictureAlias(alias),
+		sqSelect,
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	sqSelect, _, err = s.Item.JoinToIDAndApply(itemIDCol, AppendItemAlias(alias, "i"), sqSelect)
+	if err != nil {
+		return nil, err
+	}
+
+	sqSelect, err = s.ItemParentCacheAncestor.JoinToItemIDAndApply(
+		itemIDCol,
+		AppendItemParentCacheAlias(alias, "a"),
+		sqSelect,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	sqSelect = s.ItemVehicleType.JoinToVehicleIDAndApply(
+		itemIDCol,
+		AppendItemVehicleTypeAlias(alias),
+		sqSelect,
+	)
 
 	return sqSelect, nil
 }

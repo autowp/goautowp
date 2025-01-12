@@ -11,7 +11,7 @@ func convertChildsCounts(childCounts []items.ChildCount) []*ChildsCount {
 
 	for _, childCount := range childCounts {
 		result = append(result, &ChildsCount{
-			Type:  convertItemParentType(childCount.Type),
+			Type:  extractItemParentType(childCount.Type),
 			Count: childCount.Count,
 		})
 	}
@@ -19,7 +19,7 @@ func convertChildsCounts(childCounts []items.ChildCount) []*ChildsCount {
 	return result
 }
 
-func convertItemTypeID(itemTypeID schema.ItemTableItemTypeID) ItemType {
+func extractItemTypeID(itemTypeID schema.ItemTableItemTypeID) ItemType {
 	switch itemTypeID {
 	case schema.ItemTableItemTypeIDVehicle:
 		return ItemType_ITEM_TYPE_VEHICLE
@@ -44,7 +44,7 @@ func convertItemTypeID(itemTypeID schema.ItemTableItemTypeID) ItemType {
 	return ItemType_ITEM_TYPE_UNKNOWN
 }
 
-func reverseConvertItemTypeID(itemTypeID ItemType) schema.ItemTableItemTypeID {
+func convertItemTypeID(itemTypeID ItemType) schema.ItemTableItemTypeID {
 	switch itemTypeID {
 	case ItemType_ITEM_TYPE_UNKNOWN:
 		return 0
@@ -71,7 +71,7 @@ func reverseConvertItemTypeID(itemTypeID ItemType) schema.ItemTableItemTypeID {
 	return 0
 }
 
-func convertItemParentType(itemParentType schema.ItemParentType) ItemParentType {
+func extractItemParentType(itemParentType schema.ItemParentType) ItemParentType {
 	switch itemParentType {
 	case schema.ItemParentTypeDefault:
 		return ItemParentType_ITEM_TYPE_DEFAULT
@@ -86,7 +86,7 @@ func convertItemParentType(itemParentType schema.ItemParentType) ItemParentType 
 	return ItemParentType_ITEM_TYPE_DEFAULT
 }
 
-func reverseConvertItemParentType(itemParentType ItemParentType) schema.ItemParentType {
+func convertItemParentType(itemParentType ItemParentType) schema.ItemParentType {
 	switch itemParentType {
 	case ItemParentType_ITEM_TYPE_DEFAULT:
 		return schema.ItemParentTypeDefault
@@ -101,203 +101,143 @@ func reverseConvertItemParentType(itemParentType ItemParentType) schema.ItemPare
 	return schema.ItemParentTypeDefault
 }
 
-func mapPicturesRequest(request *PicturesOptions, dest *query.PictureListOptions) {
-	dest.OwnerID = request.GetOwnerId()
-
-	switch request.GetStatus() {
-	case PictureStatus_PICTURE_STATUS_UNKNOWN:
-	case PictureStatus_PICTURE_STATUS_ACCEPTED:
-		dest.Status = schema.PictureStatusAccepted
-	case PictureStatus_PICTURE_STATUS_REMOVING:
-		dest.Status = schema.PictureStatusRemoving
-	case PictureStatus_PICTURE_STATUS_INBOX:
-		dest.Status = schema.PictureStatusInbox
-	case PictureStatus_PICTURE_STATUS_REMOVED:
-		dest.Status = schema.PictureStatusRemoved
+func convertItemParentListOptions(in *ItemParentListOptions) (*query.ItemParentListOptions, error) {
+	if in == nil {
+		return nil, nil //nolint: nilnil
 	}
 
-	if request.GetPictureItem() != nil {
-		dest.PictureItem = &query.PictureItemListOptions{}
-		mapPictureItemRequest(request.GetPictureItem(), dest.PictureItem)
+	result := query.ItemParentListOptions{
+		ParentID: in.GetParentId(),
+		ItemID:   in.GetItemId(),
+		Type:     convertItemParentType(in.GetType()),
+		Catname:  in.GetCatname(),
 	}
+
+	var err error
+
+	result.ParentItems, err = convertItemListOptions(in.GetParent())
+	if err != nil {
+		return nil, err
+	}
+
+	result.ItemParentParentByChildID, err = convertItemParentListOptions(in.GetItemParentParentByChild())
+	if err != nil {
+		return nil, err
+	}
+
+	result.ChildItems, err = convertItemListOptions(in.GetItem())
+	if err != nil {
+		return nil, err
+	}
+
+	result.ItemParentCacheAncestorByChildID, err = convertItemParentCacheListOptions(in.GetItemParentCacheItemByChild())
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
-func mapItemParentListOptions(in *ItemParentListOptions, options *query.ItemParentListOptions) error {
-	options.ParentID = in.GetParentId()
-	options.ItemID = in.GetItemId()
-	options.Type = reverseConvertItemParentType(in.GetType())
-	options.Catname = in.GetCatname()
-
-	if in.GetParent() != nil {
-		options.ParentItems = &query.ItemsListOptions{}
-
-		err := mapItemListOptions(in.GetParent(), options.ParentItems)
-		if err != nil {
-			return err
-		}
+func convertItemParentCacheListOptions(in *ItemParentCacheListOptions) (*query.ItemParentCacheListOptions, error) {
+	if in == nil {
+		return nil, nil //nolint: nilnil
 	}
 
-	if in.GetItemParentParentByChild() != nil {
-		options.ItemParentParentByChildID = &query.ItemParentListOptions{}
+	var err error
 
-		err := mapItemParentListOptions(in.GetItemParentParentByChild(), options.ItemParentParentByChildID)
-		if err != nil {
-			return err
-		}
+	result := query.ItemParentCacheListOptions{
+		ItemID:   in.GetItemId(),
+		ParentID: in.GetParentId(),
 	}
 
-	if in.GetItem() != nil {
-		options.ChildItems = &query.ItemsListOptions{}
-
-		err := mapItemListOptions(in.GetItem(), options.ChildItems)
-		if err != nil {
-			return err
-		}
+	result.ItemsByItemID, err = convertItemListOptions(in.GetItemsByItemId())
+	if err != nil {
+		return nil, err
 	}
 
-	if in.GetItemParentCacheItemByChild() != nil {
-		options.ItemParentCacheAncestorByChildID = &query.ItemParentCacheListOptions{}
-
-		err := mapItemParentCacheListOptions(in.GetItemParentCacheItemByChild(), options.ItemParentCacheAncestorByChildID)
-		if err != nil {
-			return err
-		}
+	result.PictureItemsByItemID, err = convertPictureItemOptions(in.GetPictureItemsByItemId())
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	result.ItemParentByItemID, err = convertItemParentListOptions(in.GetItemParentByItemId())
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
-func mapItemParentCacheListOptions(in *ItemParentCacheListOptions, options *query.ItemParentCacheListOptions) error {
-	options.ItemID = in.GetItemId()
-	options.ParentID = in.GetParentId()
-
-	if in.GetItemsByItemId() != nil {
-		options.ItemsByItemID = &query.ItemsListOptions{}
-
-		err := mapItemListOptions(in.GetItemsByItemId(), options.ItemsByItemID)
-		if err != nil {
-			return err
-		}
+func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error) {
+	if in == nil {
+		return nil, nil //nolint: nilnil
 	}
 
-	if in.GetPictureItemsByItemId() != nil {
-		options.PictureItemsByItemID = &query.PictureItemListOptions{}
+	var err error
 
-		mapPictureItemRequest(in.GetPictureItemsByItemId(), options.PictureItemsByItemID)
+	result := query.ItemListOptions{
+		NoParents:            in.GetNoParent(),
+		Catname:              in.GetCatname(),
+		IsConcept:            in.GetIsConcept(),
+		IsNotConcept:         in.GetIsNotConcept(),
+		Name:                 in.GetName(),
+		ItemID:               in.GetId(),
+		EngineItemID:         in.GetEngineId(),
+		IsGroup:              in.GetIsGroup(),
+		Autocomplete:         in.GetAutocomplete(),
+		SuggestionsTo:        in.GetSuggestionsTo(),
+		ExcludeSelfAndChilds: in.GetExcludeSelfAndChilds(),
 	}
 
-	if in.GetItemParentByItemId() != nil {
-		options.ItemParentByItemID = &query.ItemParentListOptions{}
-
-		err := mapItemParentListOptions(in.GetItemParentByItemId(), options.ItemParentByItemID)
-		if err != nil {
-			return err
-		}
+	result.ItemParentCacheAncestor, err = convertItemParentCacheListOptions(in.GetAncestor())
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
-}
-
-func mapItemListOptions(in *ItemListOptions, options *query.ItemsListOptions) error {
-	options.NoParents = in.GetNoParent()
-	options.Catname = in.GetCatname()
-	options.IsConcept = in.GetIsConcept()
-	options.IsNotConcept = in.GetIsNotConcept()
-	options.Name = in.GetName()
-	options.ItemID = in.GetId()
-	options.EngineItemID = in.GetEngineId()
-	options.IsGroup = in.GetIsGroup()
-	options.Autocomplete = in.GetAutocomplete()
-	options.SuggestionsTo = in.GetSuggestionsTo()
-
-	if in.GetAncestor() != nil {
-		options.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
-
-		err := mapItemParentCacheListOptions(in.GetAncestor(), options.ItemParentCacheAncestor)
-		if err != nil {
-			return err
-		}
-	}
-
-	itemTypeID := reverseConvertItemTypeID(in.GetTypeId())
+	itemTypeID := convertItemTypeID(in.GetTypeId())
 	if itemTypeID != 0 {
-		options.TypeID = []schema.ItemTableItemTypeID{itemTypeID}
+		result.TypeID = []schema.ItemTableItemTypeID{itemTypeID}
 	}
 
 	typeIDs := in.GetTypeIds()
 	if len(in.GetTypeIds()) > 0 {
 		ids := make([]schema.ItemTableItemTypeID, 0, len(typeIDs))
 		for _, id := range in.GetTypeIds() {
-			ids = append(ids, reverseConvertItemTypeID(id))
+			ids = append(ids, convertItemTypeID(id))
 		}
 
-		options.TypeID = ids
+		result.TypeID = ids
 	}
 
-	if in.GetDescendant() != nil {
-		options.ItemParentCacheDescendant = &query.ItemParentCacheListOptions{}
-
-		err := mapItemParentCacheListOptions(in.GetDescendant(), options.ItemParentCacheDescendant)
-		if err != nil {
-			return err
-		}
+	result.ItemParentCacheDescendant, err = convertItemParentCacheListOptions(in.GetDescendant())
+	if err != nil {
+		return nil, err
 	}
 
-	if in.GetParent() != nil {
-		options.ItemParentParent = &query.ItemParentListOptions{}
-
-		err := mapItemParentListOptions(in.GetParent(), options.ItemParentParent)
-		if err != nil {
-			return err
-		}
+	result.ItemParentParent, err = convertItemParentListOptions(in.GetParent())
+	if err != nil {
+		return nil, err
 	}
 
-	if in.GetChild() != nil {
-		options.ItemParentChild = &query.ItemParentListOptions{}
-
-		err := mapItemParentListOptions(in.GetChild(), options.ItemParentChild)
-		if err != nil {
-			return err
-		}
+	result.ItemParentChild, err = convertItemParentListOptions(in.GetChild())
+	if err != nil {
+		return nil, err
 	}
 
-	if in.GetPreviewPictures() != nil {
-		options.PreviewPictures = &query.PictureItemListOptions{}
-		mapPictureItemRequest(in.GetPreviewPictures(), options.PreviewPictures)
+	result.PreviewPictures, err = convertPictureItemOptions(in.GetPreviewPictures())
+	if err != nil {
+		return nil, err
 	}
 
-	parentTypesOf := reverseConvertItemTypeID(in.GetParentTypesOf())
+	parentTypesOf := convertItemTypeID(in.GetParentTypesOf())
 	if parentTypesOf != 0 {
-		options.ParentTypesOf = parentTypesOf
+		result.ParentTypesOf = parentTypesOf
 	}
 
-	if in.GetExcludeSelfAndChilds() != 0 {
-		options.ExcludeSelfAndChilds = in.GetExcludeSelfAndChilds()
-	}
-
-	return nil
+	return &result, nil
 }
 
-func mapPictureItemRequest(request *PictureItemOptions, dest *query.PictureItemListOptions) {
-	if request.GetPictures() != nil {
-		dest.Pictures = &query.PictureListOptions{}
-		mapPicturesRequest(request.GetPictures(), dest.Pictures)
-	}
-
-	switch request.GetTypeId() {
-	case PictureItemType_PICTURE_ITEM_UNKNOWN:
-	case PictureItemType_PICTURE_ITEM_CONTENT:
-		dest.TypeID = schema.PictureItemContent
-	case PictureItemType_PICTURE_ITEM_AUTHOR:
-		dest.TypeID = schema.PictureItemAuthor
-	case PictureItemType_PICTURE_ITEM_COPYRIGHTS:
-		dest.TypeID = schema.PictureItemCopyrights
-	}
-
-	dest.PerspectiveID = request.GetPerspectiveId()
-}
-
-func convertFields(fields *ItemFields) items.ListFields {
+func convertItemFields(fields *ItemFields) items.ListFields {
 	if fields == nil {
 		return items.ListFields{}
 	}

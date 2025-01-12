@@ -4,9 +4,7 @@ import (
 	"context"
 
 	"github.com/autowp/goautowp/query"
-	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
-	"github.com/doug-martin/goqu/v9/exp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -50,8 +48,8 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 
 	deleted := false
 
-	user, err := s.userRepository.User(ctx, query.UserListOptions{ID: in.GetUserId(), Deleted: &deleted},
-		users.UserFields{})
+	user, err := s.userRepository.User(ctx, &query.UserListOptions{ID: in.GetUserId(), Deleted: &deleted},
+		users.UserFields{}, users.OrderByNone)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -124,13 +122,9 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	userRows, _, err := s.userRepository.Users(ctx, query.UserListOptions{
+	userRows, _, err := s.userRepository.Users(ctx, &query.UserListOptions{
 		InContacts: userID,
-		Order: []exp.OrderedExpression{
-			schema.UserTableDeletedCol.Asc(),
-			schema.UserTableNameCol.Asc(),
-		},
-	}, users.UserFields{})
+	}, users.UserFields{}, users.OrderByDeletedName)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

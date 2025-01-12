@@ -52,7 +52,7 @@ const (
 	ItemTableProducedColName               = "produced"
 )
 
-var (
+var ( //nolint: dupl
 	ItemTable                          = goqu.T(ItemTableName)
 	ItemTableIDCol                     = ItemTable.Col(ItemTableIDColName)
 	ItemTableBodyCol                   = ItemTable.Col(ItemTableBodyColName)
