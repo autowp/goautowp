@@ -39,11 +39,11 @@ func (s *PictureModerVoteListOptions) JoinToPictureIDAndApply(
 
 func (s *PictureModerVoteListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
 	if s.VoteGtZero {
-		goqu.T(alias).Col(schema.PicturesModerVotesTableVoteColName).Gt(0)
+		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PicturesModerVotesTableVoteColName).Gt(0))
 	}
 
 	if s.VoteLteZero {
-		goqu.T(alias).Col(schema.PicturesModerVotesTableVoteColName).Lte(0)
+		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PicturesModerVotesTableVoteColName).Lte(0))
 	}
 
 	return sqSelect

@@ -71,7 +71,7 @@ func (s *PictureListOptions) CountSelect(db *goqu.Database, alias string) (*goqu
 }
 
 func (s *PictureListOptions) IsIDUnique() bool {
-	return s.PictureItem == nil || s.PictureItem.IsPictureIDUnique()
+	return (s.PictureItem == nil || s.PictureItem.IsPictureIDUnique()) && s.PictureModerVote == nil && s.DfDistance == nil
 }
 
 func (s *PictureListOptions) JoinToIDAndApply(
