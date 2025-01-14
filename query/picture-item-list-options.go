@@ -22,6 +22,7 @@ type PictureItemListOptions struct {
 	ItemParentCacheAncestor *ItemParentCacheListOptions
 	Item                    *ItemListOptions
 	ItemVehicleType         *ItemVehicleTypeListOptions
+	PictureItemByItemID     *PictureItemListOptions
 }
 
 func AppendPictureItemAlias(alias string) string {
@@ -147,6 +148,15 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 		AppendItemVehicleTypeAlias(alias),
 		sqSelect,
 	)
+
+	sqSelect, err = s.PictureItemByItemID.JoinToItemIDAndApply(
+		itemIDCol,
+		AppendPictureItemAlias(alias),
+		sqSelect,
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	return sqSelect, nil
 }

@@ -131,7 +131,7 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 		HasNoReplacePicture:   in.GetHasNoReplacePicture(),
 		HasNoPictureModerVote: in.GetHasNoPictureModerVote(),
 		CommentTopic:          convertCommentTopicListOptions(in.GetCommentTopic()),
-		PictureModerVote:      convertPictureModerVote(in.GetPictureModerVote()),
+		PictureModerVote:      convertPictureModerVoteListOptions(in.GetPictureModerVote()),
 		HasSpecialName:        in.GetHasSpecialName(),
 	}
 
@@ -192,7 +192,7 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 	return &result, nil
 }
 
-func convertPictureModerVote(in *PictureModerVoteListOptions) *query.PictureModerVoteListOptions {
+func convertPictureModerVoteListOptions(in *PictureModerVoteListOptions) *query.PictureModerVoteListOptions {
 	if in == nil {
 		return nil
 	}

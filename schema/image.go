@@ -16,6 +16,7 @@ const (
 	ImageTableCropWidthColName  = "crop_width"
 	ImageTableCropHeightColName = "crop_height"
 	ImageTableS3ColName         = "s3"
+	ImageTableEXIFColName       = "exif"
 )
 
 var (
@@ -30,6 +31,7 @@ var (
 	ImageTableCropTopCol    = ImageTable.Col(ImageTableCropTopColName)
 	ImageTableCropWidthCol  = ImageTable.Col(ImageTableCropWidthColName)
 	ImageTableCropHeightCol = ImageTable.Col(ImageTableCropHeightColName)
+	ImageTableEXIFCol       = ImageTableCropLeftCol.Col(ImageTableEXIFColName)
 )
 
 type ImageRow struct {

@@ -26,6 +26,9 @@ type PictureListOptions struct {
 	OwnerID               int64
 	PictureItem           *PictureItemListOptions
 	ID                    int64
+	IDGt                  int64
+	IDLt                  int64
+	ExcludeID             int64
 	HasCopyrights         bool
 	Limit                 uint32
 	Page                  uint32
@@ -101,6 +104,18 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 
 	if s.ID != 0 {
 		sqSelect = sqSelect.Where(idCol.Eq(s.ID))
+	}
+
+	if s.IDGt != 0 {
+		sqSelect = sqSelect.Where(idCol.Gt(s.IDGt))
+	}
+
+	if s.IDLt != 0 {
+		sqSelect = sqSelect.Where(idCol.Lt(s.IDLt))
+	}
+
+	if s.ExcludeID != 0 {
+		sqSelect = sqSelect.Where(idCol.Neq(s.ExcludeID))
 	}
 
 	if s.Identity != "" {

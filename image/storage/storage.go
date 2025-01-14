@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
@@ -1646,4 +1647,35 @@ func (s *Storage) moveWithPrefix(bucket string, key string, prefix string) error
 	fmt.Printf("was MOVED from `%s` to `%s`\n", copySource, dest) //nolint:forbidigo
 
 	return nil
+}
+
+func (s *Storage) ImageEXIF(ctx context.Context, id int) (map[string]map[string]interface{}, error) {
+	exifStr := ""
+
+	success, err := s.db.Select(schema.ImageTableEXIFCol).
+		From(schema.ImageTable).
+		Where(schema.ImageTableIDCol.Eq(id)).
+		ScanValContext(ctx, &exifStr)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, ErrImageNotFound
+	}
+
+	if exifStr == "" {
+		return nil, nil //nolint: nilnil
+	}
+
+	var exif map[string]map[string]interface{}
+
+	err = json.Unmarshal([]byte(exifStr), &exif)
+	if err != nil {
+		logrus.Warnf("failed to unmarshal exif json of `%d`: %s", id, err.Error())
+
+		return nil, nil //nolint: nilnil
+	}
+
+	return exif, nil
 }

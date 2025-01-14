@@ -155,6 +155,11 @@ func convertItemParentCacheListOptions(in *ItemParentCacheListOptions) (*query.I
 		return nil, err
 	}
 
+	result.ItemsByParentID, err = convertItemListOptions(in.GetItemsByParentId())
+	if err != nil {
+		return nil, err
+	}
+
 	result.PictureItemsByItemID, err = convertPictureItemOptions(in.GetPictureItemsByItemId())
 	if err != nil {
 		return nil, err
@@ -237,9 +242,9 @@ func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error)
 	return &result, nil
 }
 
-func convertItemFields(fields *ItemFields) items.ListFields {
+func convertItemFields(fields *ItemFields) *items.ListFields {
 	if fields == nil {
-		return items.ListFields{}
+		return nil
 	}
 
 	previewPictures := items.ListPreviewPicturesFields{}
@@ -250,7 +255,7 @@ func convertItemFields(fields *ItemFields) items.ListFields {
 		}
 	}
 
-	result := items.ListFields{
+	return &items.ListFields{
 		NameOnly:        fields.GetNameOnly(),
 		NameHTML:        fields.GetNameHtml(),
 		NameText:        fields.GetNameText(),
@@ -273,8 +278,6 @@ func convertItemFields(fields *ItemFields) items.ListFields {
 		HasChildSpecs:              fields.GetHasChildSpecs(),
 		HasSpecs:                   fields.GetHasSpecs() || fields.GetSpecsRoute(),
 	}
-
-	return result
 }
 
 func convertItemParentFields(_ *ItemParentFields) items.ItemParentFields {

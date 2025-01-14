@@ -9,12 +9,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
+	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
@@ -51,6 +53,8 @@ type PicturesGRPCServer struct {
 	imageStorage          *storage.Storage
 	locations             map[string]*time.Location
 	locationsMutex        sync.Mutex
+	itemOfDayRepository   *itemofday.Repository
+	attrsRepository       *attrs.Repository
 }
 
 func NewPicturesGRPCServer(
@@ -58,6 +62,7 @@ func NewPicturesGRPCServer(
 	messagingRepository *messaging.Repository, userRepository *users.Repository, i18n *i18nbundle.I18n,
 	duplicateFinder *DuplicateFinder, textStorageRepository *textstorage.Repository, telegramService *telegram.Service,
 	itemRepository *items.Repository, commentRepository *comments.Repository, imageStorage *storage.Storage,
+	itemOfDayRepository *itemofday.Repository, attrsRepository *attrs.Repository,
 ) *PicturesGRPCServer {
 	return &PicturesGRPCServer{
 		repository:            repository,
@@ -74,6 +79,8 @@ func NewPicturesGRPCServer(
 		itemRepository:        itemRepository,
 		commentRepository:     commentRepository,
 		imageStorage:          imageStorage,
+		itemOfDayRepository:   itemOfDayRepository,
+		attrsRepository:       attrsRepository,
 		locations:             make(map[string]*time.Location),
 		locationsMutex:        sync.Mutex{},
 	}
@@ -1725,9 +1732,17 @@ func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *PictureItem
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractor := NewPictureItemExtractor(s.enforcer)
+	iExtractor := NewItemExtractor(s.enforcer, s.imageStorage, s.commentRepository, s.repository, s.itemRepository,
+		s.itemOfDayRepository, s.attrsRepository, s.i18n)
+	ipcExtractor := NewItemParentCacheExtractor(s.itemRepository, iExtractor)
+	extractor := NewPictureItemExtractor(s.itemRepository, iExtractor, ipcExtractor)
 
-	return extractor.Extract(row), nil
+	result, err := extractor.Extract(ctx, row, in.GetFields(), in.GetLanguage())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return result, nil
 }
 
 func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureItemsRequest) (*PictureItems, error) {
@@ -1760,11 +1775,14 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureIte
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractor := NewPictureItemExtractor(s.enforcer)
+	iExtractor := NewItemExtractor(s.enforcer, s.imageStorage, s.commentRepository, s.repository, s.itemRepository,
+		s.itemOfDayRepository, s.attrsRepository, s.i18n)
+	ipcExtractor := NewItemParentCacheExtractor(s.itemRepository, iExtractor)
+	extractor := NewPictureItemExtractor(s.itemRepository, iExtractor, ipcExtractor)
 
-	res := make([]*PictureItem, 0, len(rows))
-	for _, row := range rows {
-		res = append(res, extractor.Extract(row))
+	res, err := extractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &PictureItems{
@@ -1779,14 +1797,13 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *PicturesRequest
 	}
 
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
-	inOptions := in.GetOptions()
-	order := convertPicturesOrder(in.GetOrder())
 
-	if inOptions.GetStatus() == PictureStatus_PICTURE_STATUS_INBOX && userID == 0 {
-		return nil, status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
+	err = s.isRestricted(in, isModer, userID)
+	if err != nil {
+		return nil, err
 	}
 
-	options, err := convertPictureListOptions(inOptions)
+	options, err := convertPictureListOptions(in.GetOptions())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1800,7 +1817,7 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *PicturesRequest
 
 	fields := convertPictureFields(in.GetFields())
 
-	row, err := s.repository.Picture(ctx, options, fields, order)
+	row, err := s.repository.Picture(ctx, options, fields, convertPicturesOrder(in.GetOrder()))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -1810,10 +1827,11 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *PicturesRequest
 	}
 
 	extractor := NewPictureExtractor(
-		s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository, s.enforcer,
+		s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository, s.enforcer, s.textStorageRepository,
+		s.itemOfDayRepository, s.attrsRepository,
 	)
 
-	return extractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID)
+	return extractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID, role)
 }
 
 func (s *PicturesGRPCServer) LoadLocation(timezone string) (*time.Location, error) {
@@ -1868,31 +1886,24 @@ func (s *PicturesGRPCServer) resolveTimezone(ctx context.Context, userID int64, 
 	return loc, nil
 }
 
-func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesRequest) (*GetPicturesResponse, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	inOptions := in.GetOptions()
-	order := convertPicturesOrder(in.GetOrder())
-
-	if inOptions.GetStatus() == PictureStatus_PICTURE_STATUS_INBOX && userID == 0 {
-		return nil, status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
-	}
-
+func (s *PicturesGRPCServer) isRestricted(in *PicturesRequest, isModer bool, userID int64) error {
 	const acceptedInDaysMax = 3
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
-	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
+	inOptions := in.GetOptions()
+	fields := in.GetFields()
+
+	if inOptions.GetStatus() == PictureStatus_PICTURE_STATUS_INBOX && userID == 0 {
+		return status.Error(codes.PermissionDenied, "inbox not allowed anonymously")
+	}
+
 	restricted := !isModer && inOptions.GetPictureItem().GetItemId() == 0 &&
 		inOptions.GetPictureItem().GetItemParentCacheAncestor().GetItemId() == 0 &&
 		inOptions.GetPictureItem().GetItemParentCacheAncestor().GetParentId() == 0 &&
 		inOptions.GetPictureItem().GetPerspectiveId() == 0 &&
 		inOptions.GetOwnerId() == 0 && inOptions.GetAcceptedInDays() < acceptedInDaysMax &&
-		inOptions.GetAddDate() == nil
+		inOptions.GetAddDate() == nil && inOptions.GetId() == 0 && inOptions.GetIdentity() == ""
 	if restricted {
-		return nil, status.Error(codes.PermissionDenied, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
+		return status.Error(codes.PermissionDenied, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
 	}
 
 	restricted = !isModer && (inOptions.GetHasNoComments() || inOptions.GetCommentTopic() != nil ||
@@ -1902,7 +1913,32 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 		inOptions.GetReplacePicture() != nil || inOptions.GetHasNoPictureItem() || inOptions.GetHasNoPoint() ||
 		inOptions.GetAddedFrom() != nil || inOptions.GetPictureItem().GetExcludeAncestorOrSelfId() != 0)
 	if restricted {
-		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+		return status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	restricted = !isModer && (fields.GetAcceptedCount() || fields.GetExif() || fields.GetIsLast() ||
+		fields.GetPictureModerVotes() != nil || fields.GetSpecialName() || fields.GetSiblings() != nil)
+	if restricted {
+		return status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	return nil
+}
+
+func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesRequest) (*GetPicturesResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	inOptions := in.GetOptions()
+	order := convertPicturesOrder(in.GetOrder())
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
+	err = s.isRestricted(in, isModer, userID)
+	if err != nil {
+		return nil, err
 	}
 
 	options, err := convertPictureListOptions(inOptions)
@@ -1932,10 +1968,11 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 	}
 
 	extractor := NewPictureExtractor(
-		s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository, s.enforcer,
+		s.repository, s.imageStorage, s.i18n, s.commentRepository, s.itemRepository, s.enforcer, s.textStorageRepository,
+		s.itemOfDayRepository, s.attrsRepository,
 	)
 
-	res, err := extractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID)
+	res, err := extractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID, role)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

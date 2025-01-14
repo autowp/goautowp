@@ -19,3 +19,8 @@ var (
 	ItemParentCacheTableDiffCol     = ItemParentCacheTable.Col(ItemParentCacheTableDiffColName)
 	ItemParentCacheTableDesignCol   = ItemParentCacheTable.Col(ItemParentCacheTableDesignColName)
 )
+
+type ItemParentCacheRow struct {
+	ItemID   int64 `db:"item_id"`
+	ParentID int64 `db:"parent_id"`
+}

@@ -2,7 +2,9 @@ package schema
 
 import (
 	"database/sql"
+	"time"
 
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 )
 
@@ -35,7 +37,9 @@ const (
 	PictureTableAcceptDatetimeColName     = "accept_datetime"
 	PictureTableRemovingDateColName       = "removing_date"
 	PictureTableAddDateColName            = "add_date"
-	PictureTableFilesize                  = "filesize"
+	PictureTableFilesizeColName           = "filesize"
+	PictureTableDPIXColName               = "dpi_x"
+	PictureTableDPIYColName               = "dpi_y"
 
 	PicturesTableIdentityLength = 6
 )
@@ -72,6 +76,9 @@ type PictureRow struct {
 	CopyrightsTextID   sql.NullInt32  `db:"copyrights_text_id"`
 	AcceptDatetime     sql.NullTime   `db:"accept_datetime"`
 	ReplacePictureID   sql.NullInt64  `db:"replace_picture_id"`
-	IP                 string         `db:"ip"`
+	IP                 util.IP        `db:"ip"`
 	Name               sql.NullString `db:"name"`
+	AddDate            time.Time      `db:"add_date"`
+	DPIX               sql.NullInt32  `db:"dpi_x"`
+	DPIY               sql.NullInt32  `db:"dpi_y"`
 }

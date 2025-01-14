@@ -22,6 +22,8 @@ var (
 )
 
 type PictureModerVoteRow struct {
-	UserID int64  `db:"user_id"`
-	Reason string `db:"reason"`
+	PictureID int64  `db:"picture_id"`
+	UserID    int64  `db:"user_id"`
+	Reason    string `db:"reason"`
+	Vote      uint8  `db:"vote"`
 }

@@ -15,8 +15,16 @@ func AppendPictureModerVoteAlias(alias string) string {
 }
 
 type PictureModerVoteListOptions struct {
+	PictureID   int64
 	VoteGtZero  bool
 	VoteLteZero bool
+}
+
+func (s *PictureModerVoteListOptions) Select(db *goqu.Database, alias string) *goqu.SelectDataset {
+	return s.apply(
+		alias,
+		db.Select().From(schema.PicturesModerVotesTable.As(alias)),
+	)
 }
 
 func (s *PictureModerVoteListOptions) JoinToPictureIDAndApply(
@@ -38,6 +46,10 @@ func (s *PictureModerVoteListOptions) JoinToPictureIDAndApply(
 }
 
 func (s *PictureModerVoteListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+	if s.PictureID != 0 {
+		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PicturesModerVotesTablePictureIDColName).Eq(s.PictureID))
+	}
+
 	if s.VoteGtZero {
 		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PicturesModerVotesTableVoteColName).Gt(0))
 	}

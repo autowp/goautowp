@@ -337,7 +337,7 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 		},
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		SortByName: true,
-	}, items.ListFields{
+	}, &items.ListFields{
 		NameOnly:                   true,
 		DescendantsParentsCount:    true,
 		NewDescendantsParentsCount: true,
@@ -370,7 +370,8 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 
 	fields := convertItemFields(in.GetFields())
 
-	if (fields.InboxPicturesCount || fields.CommentsAttentionsCount) && !s.enforcer.Enforce(role, "global", "moderate") {
+	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount) &&
+		!s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -389,14 +390,15 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 	return s.extractor.Extract(ctx, res, in.GetFields(), in.GetLanguage())
 }
 
-func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APIItemList, error) {
+func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemList, error) {
 	_, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	fields := convertItemFields(in.GetFields())
-	if (fields.InboxPicturesCount || fields.CommentsAttentionsCount) && !s.enforcer.Enforce(role, "global", "moderate") {
+	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount) &&
+		!s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -423,11 +425,11 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ListItemsRequest) (*APII
 	order := items.OrderByName
 
 	switch in.GetOrder() {
-	case ListItemsRequest_NAME_NAT:
+	case ItemsRequest_NAME_NAT:
 		options.SortByName = true
-	case ListItemsRequest_NAME, ListItemsRequest_DEFAULT:
+	case ItemsRequest_NAME, ItemsRequest_DEFAULT:
 		order = items.OrderByName
-	case ListItemsRequest_CHILDS_COUNT:
+	case ItemsRequest_CHILDS_COUNT:
 		order = items.OrderByChildsCount
 	}
 
@@ -942,7 +944,7 @@ func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLangua
 
 	item, err := s.repository.Item(
 		ctx, &query.ItemListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
-		items.ListFields{NameText: true},
+		&items.ListFields{NameText: true},
 	)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
@@ -1338,7 +1340,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		ItemID:   in.GetItemId(),
 		Language: lang,
-	}, items.ListFields{Logo: true})
+	}, &items.ListFields{Logo: true})
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -1362,7 +1364,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		},
 		CreatedInDays: daysLimit,
 		Limit:         newItemsLimit,
-	}, items.ListFields{
+	}, &items.ListFields{
 		NameHTML: true,
 	}, items.OrderByAddDatetime, false)
 	if err != nil {
@@ -1398,7 +1400,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
 		ItemID:   in.GetItemId(),
 		Language: lang,
-	}, items.ListFields{})
+	}, nil)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -1425,7 +1427,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 			},
 		},
 		Limit: newItemsLimit,
-	}, items.ListFields{
+	}, &items.ListFields{
 		NameHTML: true,
 	}, items.OrderByItemParentParentTimestamp, false)
 	if err != nil {
@@ -1490,7 +1492,7 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 
 	item, err := s.repository.Item(
 		ctx, &query.ItemListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
-		items.ListFields{NameText: true},
+		&items.ListFields{NameText: true},
 	)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
@@ -1502,7 +1504,7 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 
 	parentItem, err := s.repository.Item(
 		ctx, &query.ItemListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
-		items.ListFields{NameText: true},
+		&items.ListFields{NameText: true},
 	)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
@@ -1606,7 +1608,7 @@ func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemPa
 
 	item, err := s.repository.Item(
 		ctx, &query.ItemListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
-		items.ListFields{NameText: true},
+		&items.ListFields{NameText: true},
 	)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
@@ -1618,7 +1620,7 @@ func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemPa
 
 	parent, err := s.repository.Item(
 		ctx, &query.ItemListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
-		items.ListFields{NameText: true},
+		&items.ListFields{NameText: true},
 	)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
@@ -1749,7 +1751,7 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 	if success {
 		item, err := s.repository.Item(
 			ctx, &query.ItemListOptions{ItemID: in.GetItemId(), Language: EventsDefaultLanguage},
-			items.ListFields{NameText: true},
+			&items.ListFields{NameText: true},
 		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -1762,7 +1764,7 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 
 		oldParent, err := s.repository.Item(
 			ctx, &query.ItemListOptions{ItemID: in.GetParentId(), Language: EventsDefaultLanguage},
-			items.ListFields{NameText: true},
+			&items.ListFields{NameText: true},
 		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -1775,7 +1777,7 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 
 		newParent, err := s.repository.Item(
 			ctx, &query.ItemListOptions{ItemID: in.GetDestParentId(), Language: EventsDefaultLanguage},
-			items.ListFields{NameText: true},
+			&items.ListFields{NameText: true},
 		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -1880,7 +1882,7 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 
 	item, err := s.repository.Item(
 		ctx, &query.ItemListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
-		items.ListFields{NameText: true},
+		&items.ListFields{NameText: true},
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1929,7 +1931,7 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 			if item.EngineItemID.Valid {
 				oldEngine, err := s.repository.Item(
 					ctx, &query.ItemListOptions{ItemID: item.EngineItemID.Int64, Language: EventsDefaultLanguage},
-					items.ListFields{NameText: true},
+					&items.ListFields{NameText: true},
 				)
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
@@ -1962,7 +1964,7 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 			newEngine, err := s.repository.Item(ctx, &query.ItemListOptions{
 				ItemID: in.GetEngineItemId(),
 				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDEngine},
-			}, items.ListFields{NameText: true})
+			}, &items.ListFields{NameText: true})
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -2044,7 +2046,7 @@ func (s *ItemsGRPCServer) notifyItemEngineCleared(ctx context.Context, user *sch
 
 			oldEngine, err := s.repository.Item(
 				ctx, &query.ItemListOptions{ItemID: oldEngineID, Language: language},
-				items.ListFields{NameText: true},
+				&items.ListFields{NameText: true},
 			)
 			if err != nil {
 				return nil, err
@@ -2083,7 +2085,7 @@ func (s *ItemsGRPCServer) notifyItemEngineUpdated(
 
 			newEngine, err := s.repository.Item(
 				ctx, &query.ItemListOptions{ItemID: newEngineID, Language: language},
-				items.ListFields{NameText: true},
+				&items.ListFields{NameText: true},
 			)
 			if err != nil {
 				return nil, err
@@ -2147,7 +2149,7 @@ func (s *ItemsGRPCServer) GetBrandSections(
 	item, err := s.repository.Item(ctx, &query.ItemListOptions{
 		ItemID: in.GetItemId(),
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
-	}, items.ListFields{})
+	}, nil)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2416,7 +2418,7 @@ func (s *ItemsGRPCServer) carSectionGroups(
 }
 
 func (s *ItemsGRPCServer) prefetchItems(
-	ctx context.Context, ids []int64, lang string, fields items.ListFields,
+	ctx context.Context, ids []int64, lang string, fields *items.ListFields,
 ) (map[int64]*items.Item, error) {
 	itemRows, _, err := s.repository.List(ctx, &query.ItemListOptions{
 		ItemIDs:  ids,

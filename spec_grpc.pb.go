@@ -2457,7 +2457,7 @@ type ItemsClient interface {
 	GetTwinsBrandsList(ctx context.Context, in *GetTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITwinsBrandsList, error)
 	GetTopTwinsBrandsList(ctx context.Context, in *GetTopTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITopTwinsBrandsList, error)
 	Item(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*APIItem, error)
-	List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
+	List(ctx context.Context, in *ItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*APITreeItem, error)
 	GetContentLanguages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIContentLanguages, error)
 	GetItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*APIItemLink, error)
@@ -2584,7 +2584,7 @@ func (c *itemsClient) Item(ctx context.Context, in *ItemRequest, opts ...grpc.Ca
 	return out, nil
 }
 
-func (c *itemsClient) List(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*APIItemList, error) {
+func (c *itemsClient) List(ctx context.Context, in *ItemsRequest, opts ...grpc.CallOption) (*APIItemList, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(APIItemList)
 	err := c.cc.Invoke(ctx, Items_List_FullMethodName, in, out, cOpts...)
@@ -2867,7 +2867,7 @@ type ItemsServer interface {
 	GetTwinsBrandsList(context.Context, *GetTwinsBrandsListRequest) (*APITwinsBrandsList, error)
 	GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error)
 	Item(context.Context, *ItemRequest) (*APIItem, error)
-	List(context.Context, *ListItemsRequest) (*APIItemList, error)
+	List(context.Context, *ItemsRequest) (*APIItemList, error)
 	GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error)
 	GetContentLanguages(context.Context, *emptypb.Empty) (*APIContentLanguages, error)
 	GetItemLink(context.Context, *APIItemLinkRequest) (*APIItemLink, error)
@@ -2931,7 +2931,7 @@ func (UnimplementedItemsServer) GetTopTwinsBrandsList(context.Context, *GetTopTw
 func (UnimplementedItemsServer) Item(context.Context, *ItemRequest) (*APIItem, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Item not implemented")
 }
-func (UnimplementedItemsServer) List(context.Context, *ListItemsRequest) (*APIItemList, error) {
+func (UnimplementedItemsServer) List(context.Context, *ItemsRequest) (*APIItemList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedItemsServer) GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error) {
@@ -3196,7 +3196,7 @@ func _Items_Item_Handler(srv interface{}, ctx context.Context, dec func(interfac
 }
 
 func _Items_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListItemsRequest)
+	in := new(ItemsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3208,7 +3208,7 @@ func _Items_List_Handler(srv interface{}, ctx context.Context, dec func(interfac
 		FullMethod: Items_List_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemsServer).List(ctx, req.(*ListItemsRequest))
+		return srv.(ItemsServer).List(ctx, req.(*ItemsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

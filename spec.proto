@@ -91,7 +91,7 @@ service Items {
   rpc GetTwinsBrandsList(GetTwinsBrandsListRequest) returns (APITwinsBrandsList) {}
   rpc GetTopTwinsBrandsList(GetTopTwinsBrandsListRequest) returns (APITopTwinsBrandsList) {}
   rpc Item(ItemRequest) returns (APIItem) {}
-  rpc List(ListItemsRequest) returns (APIItemList) {}
+  rpc List(ItemsRequest) returns (APIItemList) {}
   rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
   rpc GetContentLanguages(google.protobuf.Empty) returns (APIContentLanguages) {}
   rpc GetItemLink(APIItemLinkRequest) returns (APIItemLink) {}
@@ -1035,6 +1035,39 @@ message PictureFields {
   PictureItemsRequest picture_item = 11;
   bool image_gallery_full = 12;
   DfDistanceRequest df_distance = 13;
+  bool accepted_count = 14;
+  bool copyrights = 15;
+  bool exif = 16;
+  bool is_last = 17;
+  bool moder_voted = 18;
+  PictureModerVoteRequest picture_moder_votes = 19;
+  PicturesRequest replaceable = 20;
+  bool rights = 21;
+  PicturesRequest siblings = 22;
+  bool special_name = 23;
+  bool taken = 24;
+}
+
+message PictureSiblings {
+  Picture prev = 1;
+  Picture next = 2;
+  Picture prev_new = 3;
+  Picture next_new = 4;
+}
+
+message PictureModerVote {
+  int64 picture_id = 1;
+  int64 user_id = 2;
+  int32 vote = 3;
+  string reason = 4;
+}
+
+message PictureModerVotes {
+  repeated PictureModerVote items = 1;
+}
+
+message PictureModerVoteRequest {
+  PictureModerVoteListOptions options = 1;
 }
 
 message DfDistanceFields {
@@ -1095,7 +1128,7 @@ message ItemRequest {
   ItemFields fields = 3;
 }
 
-message ListItemsRequest {
+message ItemsRequest {
   enum Order {
     DEFAULT = 0;
     NAME_NAT = 1;
@@ -1143,8 +1176,28 @@ message ItemParentCacheListOptions {
   int64 item_id = 1;
   int64 parent_id = 2;
   ItemListOptions items_by_item_id = 3;
+  ItemListOptions items_by_parent_id = 6;
   PictureItemListOptions picture_items_by_item_id = 4;
   ItemParentListOptions item_parent_by_item_id = 5;
+}
+
+message ItemParentCacheRequest {
+  ItemParentCacheFields fields = 1;
+  ItemParentCacheListOptions options = 2;
+}
+
+message ItemParentCacheFields {
+  ItemsRequest parentItem = 1;
+}
+
+message ItemParentCaches {
+  repeated ItemParentCache items = 1;
+}
+
+message ItemParentCache {
+  int64 item_id = 1;
+  int64 parent_id = 2;
+  APIItem parent_item = 3;
 }
 
 message ItemListOptions {
@@ -1433,6 +1486,33 @@ message Picture {
   PictureItems picture_items = 24;
   APIImage image_gallery_full = 25;
   DfDistances df_distances = 26;
+  int32 accepted_count = 27;
+  google.protobuf.Timestamp add_date = 28;
+  string copyrights = 29;
+  string exif = 30;
+  bool is_last = 31;
+  bool moder_voted = 32;
+  PictureModerVotes picture_moder_votes = 33;
+  Picture replaceable = 34;
+  PictureRights rights = 35;
+  PictureSiblings siblings = 36;
+  string special_name = 37;
+  google.type.Date taken_date = 38;
+  int64 change_status_user_id = 39;
+  string ip = 40;
+  int32 dpi_x = 41;
+  int32 dpi_y = 42;
+}
+
+message PictureRights {
+  bool move = 1;
+  bool accept = 2;
+  bool unaccept = 3;
+  bool restore = 4;
+  bool normalize = 5;
+  bool flop = 6;
+  bool crop = 7;
+  bool delete = 8;
 }
 
 message DfDistances {
@@ -1452,7 +1532,14 @@ message GetPicturesResponse {
 }
 
 message PictureItemsRequest {
-  PictureItemListOptions options = 4;
+  PictureItemListOptions options = 1;
+  PictureItemFields fields = 2;
+  string language = 3;
+}
+
+message PictureItemFields {
+  ItemsRequest item = 1;
+  ItemParentCacheRequest item_parent_cache_ancestor = 2;
 }
 
 message PictureItems {
@@ -1468,6 +1555,8 @@ message PictureItem {
   uint32 crop_width = 6;
   uint32 crop_height = 7;
   int32 perspective_id = 8;
+  APIItem item = 9;
+  ItemParentCaches item_parent_cache_ancestors = 10;
 }
 
 message SetPictureItemAreaRequest {

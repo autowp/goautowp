@@ -2686,7 +2686,7 @@ func (s *Repository) Specifications(
 ) (*CarSpecTable, error) {
 	cars, _, err := s.itemsRepository.List(ctx, &query.ItemListOptions{
 		ItemIDs: itemIDs,
-	}, items.ListFields{NameText: true}, items.OrderByName, false)
+	}, &items.ListFields{NameText: true}, items.OrderByName, false)
 	if err != nil {
 		return nil, err
 	}
@@ -2728,7 +2728,7 @@ func (s *Repository) Specifications(
 		if !ok && car.EngineItemID.Valid {
 			engineRow, err := s.itemsRepository.Item(ctx,
 				&query.ItemListOptions{ItemID: car.EngineItemID.Int64, Language: lang},
-				items.ListFields{NameText: true},
+				&items.ListFields{NameText: true},
 			)
 			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
 				return nil, fmt.Errorf("Item(): %w", err)

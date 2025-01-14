@@ -3,14 +3,17 @@ package util
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"html/template"
 	"io"
+	"net"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exec"
 	"github.com/go-sql-driver/mysql"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -211,6 +214,14 @@ func NullInt16ToScalar(value sql.NullInt16) int16 {
 	return 0
 }
 
+func NullByteToScalar(value sql.NullByte) byte {
+	if value.Valid {
+		return value.Byte
+	}
+
+	return 0
+}
+
 func NullStringToString(value sql.NullString) string {
 	if value.Valid {
 		return value.String
@@ -325,4 +336,39 @@ func TitleCase(str string, tag language.Tag) string {
 	r, n := utf8.DecodeRuneInString(str)
 
 	return string(unicode.ToUpper(r)) + str[n:]
+}
+
+var errUnsupportedIPType = errors.New("unsupported type for IP")
+
+type IP net.IP
+
+func (n IP) ToIP() net.IP {
+	return net.IP(n)
+}
+
+// Scan implements the [Scanner] interface.
+func (n *IP) Scan(value interface{}) error {
+	if value == nil {
+		*n = nil
+
+		return nil
+	}
+
+	v, ok := value.([]byte)
+	if !ok {
+		return errUnsupportedIPType
+	}
+
+	*n = v
+
+	return nil
+}
+
+// Value implements the [driver.Valuer] interface.
+func (n IP) Value() (driver.Value, error) {
+	if n == nil {
+		return nil, nil //nolint: nilnil
+	}
+
+	return goqu.Func("INET6_ATON", n.ToIP().String()), nil
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"net"
 	"strconv"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/type/date"
@@ -1581,4 +1583,45 @@ func TestGetPicturesFilters(t *testing.T) {
 		&request,
 	)
 	require.NoError(t, err)
+}
+
+func TestGetPictureIP(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	kc := cnt.Keycloak()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
+
+	res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
+		Identity: identity,
+		Status:   schema.PictureStatusAccepted,
+		IP:       util.IP(net.IPv4allrouter),
+		AddDate:  time.Now(),
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	pictureID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	picture, err := client.GetPicture(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PicturesRequest{
+			Options: &PictureListOptions{Id: pictureID},
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "224.0.0.2", picture.GetIp())
 }

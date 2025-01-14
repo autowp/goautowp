@@ -89,7 +89,7 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 		},
 		Limit:    numOfItemsInDetails,
 		Language: in.GetLanguage(),
-	}, items.ListFields{
+	}, &items.ListFields{
 		NameOnly:                true,
 		DescendantPicturesCount: true,
 	}, items.OrderByDescendantPicturesCount, false)

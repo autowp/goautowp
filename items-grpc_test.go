@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"net"
 	"slices"
 	"strconv"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
+	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -481,7 +483,7 @@ func TestCatalogueMenuList(t *testing.T) {
 
 	client := NewItemsClient(conn)
 
-	res, err := client.List(ctx, &ListItemsRequest{
+	res, err := client.List(ctx, &ItemsRequest{
 		Language: "ru",
 		Fields: &ItemFields{
 			NameText:         true,
@@ -880,6 +882,8 @@ func TestInboxPicturesCount(t *testing.T) {
 		res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
 			Identity: identity,
 			Status:   status,
+			IP:       util.IP(net.IPv4zero),
+			AddDate:  time.Now(),
 		}).Executor().ExecContext(ctx)
 		require.NoError(t, err)
 
@@ -893,7 +897,7 @@ func TestInboxPicturesCount(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	_, err = client.List(ctx, &ListItemsRequest{
+	_, err = client.List(ctx, &ItemsRequest{
 		Fields: &ItemFields{
 			InboxPicturesCount: true,
 		},
@@ -915,7 +919,7 @@ func TestInboxPicturesCount(t *testing.T) {
 
 	list, err := client.List(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&ListItemsRequest{
+		&ItemsRequest{
 			Fields: &ItemFields{
 				InboxPicturesCount: true,
 			},
@@ -1009,7 +1013,7 @@ func TestCreateMoveDeleteItemParent(t *testing.T) {
 	require.NoError(t, err)
 
 	// check child in parent 1
-	res, err := client.List(ctx, &ListItemsRequest{
+	res, err := client.List(ctx, &ItemsRequest{
 		Options: &ItemListOptions{
 			Parent: &ItemParentListOptions{
 				ParentId: parentID1,
@@ -1033,7 +1037,7 @@ func TestCreateMoveDeleteItemParent(t *testing.T) {
 	require.NoError(t, err)
 
 	// check no childs in parent 1
-	res, err = client.List(ctx, &ListItemsRequest{
+	res, err = client.List(ctx, &ItemsRequest{
 		Options: &ItemListOptions{
 			Parent: &ItemParentListOptions{
 				ParentId: parentID1,
@@ -1045,7 +1049,7 @@ func TestCreateMoveDeleteItemParent(t *testing.T) {
 	require.Empty(t, res.GetItems())
 
 	// check child in parent 2
-	res, err = client.List(ctx, &ListItemsRequest{
+	res, err = client.List(ctx, &ItemsRequest{
 		Options: &ItemListOptions{
 			Parent: &ItemParentListOptions{
 				ParentId: parentID2,
@@ -1070,7 +1074,7 @@ func TestCreateMoveDeleteItemParent(t *testing.T) {
 	require.NoError(t, err)
 
 	// check no childs in parent 2
-	res, err = client.List(ctx, &ListItemsRequest{
+	res, err = client.List(ctx, &ItemsRequest{
 		Options: &ItemListOptions{
 			Parent: &ItemParentListOptions{
 				ParentId: parentID2,
@@ -1157,7 +1161,7 @@ func TestDeleteItemParentNotDeletesSecondChild(t *testing.T) {
 	require.NoError(t, err)
 
 	// check childs in parent
-	res, err := client.List(ctx, &ListItemsRequest{
+	res, err := client.List(ctx, &ItemsRequest{
 		Options: &ItemListOptions{
 			Parent: &ItemParentListOptions{
 				ParentId: parentID,
@@ -1179,7 +1183,7 @@ func TestDeleteItemParentNotDeletesSecondChild(t *testing.T) {
 	require.NoError(t, err)
 
 	// check child 2 in parent
-	res, err = client.List(ctx, &ListItemsRequest{
+	res, err = client.List(ctx, &ItemsRequest{
 		Options: &ItemListOptions{
 			Parent: &ItemParentListOptions{
 				ParentId: parentID,
@@ -1288,7 +1292,7 @@ func TestUpdateItemParent(t *testing.T) {
 	require.NoError(t, err)
 
 	// check child in parent
-	res, err := client.List(ctx, &ListItemsRequest{
+	res, err := client.List(ctx, &ItemsRequest{
 		Options: &ItemListOptions{
 			Parent: &ItemParentListOptions{
 				ParentId: parentID,
@@ -2166,7 +2170,7 @@ func TestTwinsGroupBrands(t *testing.T) {
 
 	res, err := client.List(
 		ctx,
-		&ListItemsRequest{
+		&ItemsRequest{
 			Options: &ItemListOptions{
 				TypeId: ItemType_ITEM_TYPE_BRAND,
 				Child: &ItemParentListOptions{
@@ -2214,7 +2218,7 @@ func TestAutocomplete(t *testing.T) {
 
 	_, err = client.List(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
-		&ListItemsRequest{
+		&ItemsRequest{
 			Options: &ItemListOptions{
 				ParentTypesOf:        ItemType_ITEM_TYPE_BRAND,
 				IsGroup:              true,
@@ -2243,8 +2247,8 @@ func TestTooBig(t *testing.T) {
 
 	_, err = client.List(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
-		&ListItemsRequest{
-			Order: ListItemsRequest_CHILDS_COUNT,
+		&ItemsRequest{
+			Order: ItemsRequest_CHILDS_COUNT,
 			Fields: &ItemFields{
 				ChildsCount: true,
 			},
@@ -2271,7 +2275,7 @@ func TestSuggestionsTo(t *testing.T) {
 
 	_, err = client.List(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
-		&ListItemsRequest{
+		&ItemsRequest{
 			Options: &ItemListOptions{
 				SuggestionsTo: 1,
 			},

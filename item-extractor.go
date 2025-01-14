@@ -291,7 +291,7 @@ func (s *ItemExtractor) walkUpUntilBrand(ctx context.Context, id int64, path []s
 		brand, err := s.itemRepository.Item(ctx, &query.ItemListOptions{
 			TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 			ItemID: parentRow.ParentID,
-		}, items.ListFields{})
+		}, nil)
 		if err != nil && !errors.Is(err, items.ErrItemNotFound) {
 			return nil, err
 		}

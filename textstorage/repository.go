@@ -9,7 +9,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 )
 
-var errTextNotFound = errors.New("text not found")
+var ErrTextNotFound = errors.New("text not found")
 
 // Repository Main Object.
 type Repository struct {
@@ -36,7 +36,7 @@ func (s *Repository) Text(ctx context.Context, id int32) (string, error) {
 	}
 
 	if !success {
-		return "", fmt.Errorf("%w: `%v`", errTextNotFound, id)
+		return "", fmt.Errorf("%w: `%v`", ErrTextNotFound, id)
 	}
 
 	return result, nil
@@ -64,7 +64,7 @@ func (s *Repository) FirstText(ctx context.Context, ids []int32) (string, error)
 	}
 
 	if !success {
-		return "", fmt.Errorf("%w: `%v`", errTextNotFound, ids)
+		return "", fmt.Errorf("%w: `%v`", ErrTextNotFound, ids)
 	}
 
 	return result, nil
