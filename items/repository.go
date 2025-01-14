@@ -242,6 +242,8 @@ type Repository struct {
 	specShortNameColumn              *SpecShortNameColumn
 	starCountColumn                  *StarCountColumn
 	itemParentParentTimestampColumn  *ItemParentParentTimestampColumn
+	producedColumn                   *SimpleColumn
+	producedExactlyColumn            *SimpleColumn
 	contentLanguages                 []string
 	textStorageRepository            *textstorage.Repository
 }
@@ -359,6 +361,8 @@ func NewRepository(
 		beginOrderCacheColumn:           &SimpleColumn{col: schema.ItemTableBeginOrderCacheColName},
 		endOrderCacheColumn:             &SimpleColumn{col: schema.ItemTableEndOrderCacheColName},
 		nameColumn:                      &SimpleColumn{col: schema.ItemTableNameColName},
+		producedColumn:                  &SimpleColumn{col: schema.ItemTableProducedColName},
+		producedExactlyColumn:           &SimpleColumn{col: schema.ItemTableProducedExactlyColName},
 		specNameColumn:                  &SpecNameColumn{},
 		specShortNameColumn:             &SpecShortNameColumn{},
 		starCountColumn:                 &StarCountColumn{},
@@ -492,6 +496,8 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		schema.ItemTableIsConceptInheritColName: s.isConceptInheritColumn,
 		schema.ItemTableSpecIDColName:           s.specIDColumn,
 		schema.ItemTableIsGroupColName:          s.isGroupColumn,
+		schema.ItemTableProducedColName:         s.producedColumn,
+		schema.ItemTableProducedExactlyColName:  s.producedExactlyColumn,
 	}
 
 	if fields == nil {
