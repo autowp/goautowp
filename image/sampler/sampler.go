@@ -226,8 +226,8 @@ func (s Sampler) cropImage(mw *imagick.MagickWand, crop Crop, format Format) err
 			}
 
 			addedHeight := targetHeight - cropHeight
-			cropTop -= addedHeight / 2
 
+			cropTop -= addedHeight / 2
 			if cropTop < 0 {
 				cropTop = 0
 			}
@@ -309,7 +309,6 @@ func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 	}
 
 	bottomColor := s.extendBottomColor(mw)
-
 	if bottomColor != nil {
 		defer bottomColor.Destroy()
 	}
@@ -487,10 +486,17 @@ func (s Sampler) extendEdgeColor(iterator *imagick.PixelIterator) *imagick.Pixel
 	greens := make([]float64, 0)
 	blues := make([]float64, 0)
 
-	for _, pixel := range iterator.GetNextIteratorRow() {
-		reds = append(reds, pixel.GetRed())
-		greens = append(greens, pixel.GetGreen())
-		blues = append(blues, pixel.GetBlue())
+	for {
+		row := iterator.GetNextIteratorRow()
+		if row == nil {
+			break
+		}
+
+		for _, pixel := range row {
+			reds = append(reds, pixel.GetRed())
+			greens = append(greens, pixel.GetGreen())
+			blues = append(blues, pixel.GetBlue())
+		}
 	}
 
 	red := s.standardDeviation(reds)
