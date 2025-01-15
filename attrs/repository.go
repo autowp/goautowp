@@ -2942,6 +2942,10 @@ func (s *Repository) intValuesRowsToMap(
 			return nil, fmt.Errorf("%w: `%d`", errAttributeNotFound, row.AttributeID)
 		}
 
+		if !attr.TypeID.Valid {
+			return nil, fmt.Errorf("%w: Valid=false for attribute_id=%d", errAttrTypeUnexpected, attr.ID)
+		}
+
 		value := Value{
 			Valid:   true,
 			Type:    attr.TypeID.AttributeTypeID,
@@ -2955,7 +2959,8 @@ func (s *Repository) intValuesRowsToMap(
 			value.BoolValue = row.Value.Int32 > 0
 		case schema.AttrsAttributeTypeIDUnknown, schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDFloat,
 			schema.AttrsAttributeTypeIDText, schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree:
-			return nil, errAttrTypeUnexpected
+			return nil, fmt.Errorf("%w: type_id=%v for attribute_id=%d",
+				errAttrTypeUnexpected, attr.TypeID.AttributeTypeID, attr.ID)
 		}
 
 		if _, ok := values[row.ItemID]; !ok {
