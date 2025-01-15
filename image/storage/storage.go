@@ -1650,7 +1650,7 @@ func (s *Storage) moveWithPrefix(bucket string, key string, prefix string) error
 }
 
 func (s *Storage) ImageEXIF(ctx context.Context, id int) (map[string]map[string]interface{}, error) {
-	exifStr := ""
+	var exifStr sql.NullString
 
 	success, err := s.db.Select(schema.ImageTableEXIFCol).
 		From(schema.ImageTable).
@@ -1664,13 +1664,13 @@ func (s *Storage) ImageEXIF(ctx context.Context, id int) (map[string]map[string]
 		return nil, ErrImageNotFound
 	}
 
-	if exifStr == "" {
+	if !exifStr.Valid || exifStr.String == "" {
 		return nil, nil //nolint: nilnil
 	}
 
 	var exif map[string]map[string]interface{}
 
-	err = json.Unmarshal([]byte(exifStr), &exif)
+	err = json.Unmarshal([]byte(exifStr.String), &exif)
 	if err != nil {
 		logrus.Warnf("failed to unmarshal exif json of `%d`: %s", id, err.Error())
 
