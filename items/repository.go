@@ -701,16 +701,16 @@ func (s *Repository) CountDistinct(ctx context.Context, options query.ItemListOp
 	return count, nil
 }
 
-func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, fields *ListFields) (Item, error) {
+func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, fields *ListFields) (*Item, error) {
 	options.Limit = 1
 
 	res, _, err := s.List(ctx, options, fields, OrderByNone, false)
 	if err != nil {
-		return Item{}, err
+		return nil, err
 	}
 
 	if len(res) == 0 {
-		return Item{}, ErrItemNotFound
+		return nil, ErrItemNotFound
 	}
 
 	return res[0], nil
@@ -891,7 +891,7 @@ func (s *Repository) wrappedSelectColumns(orderBy OrderBy) map[string]Column {
 func (s *Repository) List( //nolint:maintidx
 	ctx context.Context, options *query.ItemListOptions, fields *ListFields, orderBy OrderBy,
 	pagination bool,
-) ([]Item, *util.Pages, error) {
+) ([]*Item, *util.Pages, error) {
 	var err error
 
 	alias := query.ItemAlias
@@ -1045,7 +1045,7 @@ func (s *Repository) List( //nolint:maintidx
 		return nil, nil, err
 	}
 
-	var result []Item
+	var result []*Item
 
 	for rows.Next() {
 		var row Item
@@ -1180,7 +1180,7 @@ func (s *Repository) List( //nolint:maintidx
 			row.FullName = fullName.String
 		}
 
-		result = append(result, row)
+		result = append(result, &row)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -3091,7 +3091,7 @@ func (s *Repository) ItemParentSelect(
 
 func (s *Repository) ItemParents(
 	ctx context.Context, listOptions *query.ItemParentListOptions, fields ItemParentFields, orderBy ItemParentOrderBy,
-) ([]ItemParent, *util.Pages, error) {
+) ([]*ItemParent, *util.Pages, error) {
 	sqSelect, err := s.ItemParentSelect(listOptions, fields, orderBy)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ItemParentSelect(): %w", err)
@@ -3117,7 +3117,7 @@ func (s *Repository) ItemParents(
 		}
 	}
 
-	var res []ItemParent
+	var res []*ItemParent
 
 	err = sqSelect.ScanStructsContext(ctx, &res)
 

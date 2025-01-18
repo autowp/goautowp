@@ -817,46 +817,28 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 	return s.itemsRepository, nil
 }
 
-func (s *Container) ItemExtractor() (*ItemExtractor, error) {
-	imageStorage, err := s.ImageStorage()
-	if err != nil {
-		return nil, err
-	}
+func (s *Container) ItemExtractor() *ItemExtractor {
+	return NewItemExtractor(s)
+}
 
-	commentsRepository, err := s.CommentsRepository()
-	if err != nil {
-		return nil, err
-	}
+func (s *Container) PictureItemExtractor() *PictureItemExtractor {
+	return NewPictureItemExtractor(s)
+}
 
-	picturesRepository, err := s.PicturesRepository()
-	if err != nil {
-		return nil, err
-	}
+func (s *Container) PictureExtractor() *PictureExtractor {
+	return NewPictureExtractor(s)
+}
 
-	itemOfDayRepository, err := s.ItemOfDayRepository()
-	if err != nil {
-		return nil, err
-	}
+func (s *Container) ItemParentCacheExtractor() *ItemParentCacheExtractor {
+	return NewItemParentCacheExtractor(s)
+}
 
-	itemRepository, err := s.ItemsRepository()
-	if err != nil {
-		return nil, err
-	}
+func (s *Container) DfDistanceExtractor() *DfDistanceExtractor {
+	return NewDfDistanceExtractor(s)
+}
 
-	attrsRepository, err := s.AttrsRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	i18nBundle, err := s.I18n()
-	if err != nil {
-		return nil, err
-	}
-
-	return NewItemExtractor(
-		s.Enforcer(), imageStorage, commentsRepository, picturesRepository, itemRepository, itemOfDayRepository,
-		attrsRepository, i18nBundle,
-	), nil
+func (s *Container) ItemParentExtractor() *ItemParentExtractor {
+	return NewItemParentExtractor(s)
 }
 
 func (s *Container) Auth() (*Auth, error) {
@@ -1092,10 +1074,7 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
-		extractor, err := s.ItemExtractor()
-		if err != nil {
-			return nil, err
-		}
+		extractor := s.ItemExtractor()
 
 		i18n, err := s.I18n()
 		if err != nil {
@@ -1135,6 +1114,7 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 		s.itemsGrpcServer = NewItemsGRPCServer(
 			repo, db, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
 			attrsRepository, picturesRepository, idx, events, usersRepository, messagingRepository, s.HostsManager(),
+			s.ItemParentExtractor(),
 		)
 	}
 
@@ -1290,11 +1270,6 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
-		i18n, err := s.I18n()
-		if err != nil {
-			return nil, err
-		}
-
 		duplicateFinder, err := s.DuplicateFinder()
 		if err != nil {
 			return nil, err
@@ -1320,24 +1295,9 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
-		is, err := s.ImageStorage()
-		if err != nil {
-			return nil, err
-		}
-
-		itemOfDayRepo, err := s.ItemOfDayRepository()
-		if err != nil {
-			return nil, err
-		}
-
-		ar, err := s.AttrsRepository()
-		if err != nil {
-			return nil, err
-		}
-
 		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer(), events, s.HostsManager(),
-			messagingRepository, userRepository, i18n, duplicateFinder, textStorageRepository, tg, itemRepository,
-			commentsRepository, is, itemOfDayRepo, ar,
+			messagingRepository, userRepository, duplicateFinder, textStorageRepository, tg, itemRepository,
+			commentsRepository, s.PictureExtractor(), s.PictureItemExtractor(),
 		)
 	}
 

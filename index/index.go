@@ -33,13 +33,13 @@ type Index struct {
 }
 
 type TopBrandsCache struct {
-	Items []items.Item
+	Items []*items.Item
 	Total int
 }
 
 type TwinsCache struct {
 	Count int
-	Res   []items.Item
+	Res   []*items.Item
 }
 
 func NewIndex(redis *redis.Client, repository *items.Repository) *Index {
@@ -196,7 +196,7 @@ func (s *Index) GenerateCategoriesCache(ctx context.Context, lang string) error 
 
 	var (
 		err error
-		res []items.Item
+		res []*items.Item
 	)
 
 	res, _, err = s.repository.List(ctx, &query.ItemListOptions{
@@ -239,7 +239,7 @@ func (s *Index) GeneratePersonsCache(
 ) error {
 	logrus.Infof("generate index persons cache for `%s`", lang)
 
-	var res []items.Item
+	var res []*items.Item
 
 	res, _, err := s.repository.List(ctx, &query.ItemListOptions{
 		Language: lang,
@@ -287,7 +287,7 @@ func (s *Index) GenerateFactoriesCache(ctx context.Context, lang string) error {
 	logrus.Infof("generate index factories cache for `%s`", lang)
 
 	var (
-		res []items.Item
+		res []*items.Item
 		err error
 	)
 

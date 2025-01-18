@@ -87,6 +87,7 @@ type ItemsGRPCServer struct {
 	usersRepository       *users.Repository
 	messagingRepository   *messaging.Repository
 	hostManager           *hosts.Manager
+	itemParentExtractor   *ItemParentExtractor
 }
 
 func NewItemsGRPCServer(
@@ -105,6 +106,7 @@ func NewItemsGRPCServer(
 	usersRepository *users.Repository,
 	messagingRepository *messaging.Repository,
 	hostManager *hosts.Manager,
+	itemParentExtractor *ItemParentExtractor,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository:            repository,
@@ -122,6 +124,7 @@ func NewItemsGRPCServer(
 		usersRepository:       usersRepository,
 		messagingRepository:   messagingRepository,
 		hostManager:           hostManager,
+		itemParentExtractor:   itemParentExtractor,
 	}
 }
 
@@ -363,10 +366,12 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 }
 
 func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
 
 	fields := convertItemFields(in.GetFields())
 
@@ -387,14 +392,16 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return s.extractor.Extract(ctx, res, in.GetFields(), in.GetLanguage())
+	return s.extractor.Extract(ctx, res, in.GetFields(), in.GetLanguage(), isModer, userID, role)
 }
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemList, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
 
 	fields := convertItemFields(in.GetFields())
 	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount) &&
@@ -440,7 +447,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemL
 
 	is := make([]*APIItem, len(res))
 	for idx, i := range res {
-		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), in.GetLanguage())
+		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), in.GetLanguage(), isModer, userID, role)
 		if err != nil {
 			return nil, err
 		}
@@ -1329,6 +1336,13 @@ func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemPar
 }
 
 func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequest) (*NewItemsResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+
 	const (
 		newItemsLimit = 30
 		daysLimit     = 7
@@ -1349,7 +1363,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, lang)
+	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, lang, isModer, userID, role)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1374,7 +1388,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang)
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang, isModer, userID, role)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1389,6 +1403,13 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 }
 
 func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) (*NewItemsResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+
 	const (
 		newItemsLimit = 20
 		daysLimit     = 7
@@ -1409,7 +1430,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractedBrand, err := s.extractor.Extract(ctx, category, nil, lang)
+	extractedBrand, err := s.extractor.Extract(ctx, category, nil, lang, isModer, userID, role)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1437,7 +1458,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang)
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang, isModer, userID, role)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1451,7 +1472,11 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 	}, nil
 }
 
-func (s *ItemsGRPCServer) formatItemNameText(row items.Item, lang string) (string, error) {
+func (s *ItemsGRPCServer) formatItemNameText(row *items.Item, lang string) (string, error) {
+	if row == nil {
+		return "", nil
+	}
+
 	nameFormatter := items.NewItemNameFormatter(s.i18n)
 
 	return nameFormatter.FormatText(items.ItemNameFormatterOptions{
@@ -1682,7 +1707,7 @@ func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemPa
 }
 
 func (s *ItemsGRPCServer) notifyItemParentSubscribers(
-	ctx context.Context, item, parent items.Item, userID int64, messageID string,
+	ctx context.Context, item, parent *items.Item, userID int64, messageID string,
 ) error {
 	falseRef := false
 
@@ -2007,7 +2032,9 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ItemsGRPCServer) notifyItemEngineInherited(ctx context.Context, user *schema.UsersRow, item items.Item) error {
+func (s *ItemsGRPCServer) notifyItemEngineInherited(
+	ctx context.Context, user *schema.UsersRow, item *items.Item,
+) error {
 	var oldEngineID int64
 	if item.EngineItemID.Valid {
 		oldEngineID = item.EngineItemID.Int64
@@ -2030,7 +2057,7 @@ func (s *ItemsGRPCServer) notifyItemEngineInherited(ctx context.Context, user *s
 	)
 }
 
-func (s *ItemsGRPCServer) notifyItemEngineCleared(ctx context.Context, user *schema.UsersRow, item items.Item) error {
+func (s *ItemsGRPCServer) notifyItemEngineCleared(ctx context.Context, user *schema.UsersRow, item *items.Item) error {
 	var oldEngineID int64
 	if item.EngineItemID.Valid {
 		oldEngineID = item.EngineItemID.Int64
@@ -2068,7 +2095,7 @@ func (s *ItemsGRPCServer) notifyItemEngineCleared(ctx context.Context, user *sch
 }
 
 func (s *ItemsGRPCServer) notifyItemEngineUpdated(
-	ctx context.Context, user *schema.UsersRow, item items.Item, newEngineID int64,
+	ctx context.Context, user *schema.UsersRow, item *items.Item, newEngineID int64,
 ) error {
 	var oldEngineID int64
 	if item.EngineItemID.Valid {
@@ -2357,7 +2384,7 @@ func (s *ItemsGRPCServer) carSectionGroups(
 ) ([]*APIBrandSection, error) {
 	var (
 		err  error
-		rows []items.ItemParent
+		rows []*items.ItemParent
 	)
 
 	if section.CarTypeID > 0 {
@@ -2417,29 +2444,16 @@ func (s *ItemsGRPCServer) carSectionGroups(
 	return groups, nil
 }
 
-func (s *ItemsGRPCServer) prefetchItems(
-	ctx context.Context, ids []int64, lang string, fields *items.ListFields,
-) (map[int64]*items.Item, error) {
-	itemRows, _, err := s.repository.List(ctx, &query.ItemListOptions{
-		ItemIDs:  ids,
-		Language: lang,
-	}, fields, items.OrderByNone, false)
-	if err != nil {
-		return nil, err
-	}
-
-	itemsMap := make(map[int64]*items.Item, len(itemRows))
-
-	for _, itemRow := range itemRows {
-		itemsMap[itemRow.ID] = &itemRow
-	}
-
-	return itemsMap, nil
-}
-
 func (s *ItemsGRPCServer) GetItemParents(
 	ctx context.Context, in *GetItemParentsRequest,
 ) (*GetItemParentsResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+
 	inOptions := in.GetOptions()
 
 	if inOptions.GetItemId() == 0 && inOptions.GetParentId() == 0 {
@@ -2475,120 +2489,9 @@ func (s *ItemsGRPCServer) GetItemParents(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	itemFields := in.GetFields().GetItem()
-	itemsMap := make(map[int64]*items.Item, 0)
-
-	if itemFields != nil && len(rows) > 0 {
-		ids := make([]int64, 0, len(rows))
-		for _, row := range rows {
-			ids = append(ids, row.ItemID)
-		}
-
-		itemsMap, err = s.prefetchItems(ctx, ids, in.GetLanguage(), convertItemFields(itemFields))
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	}
-
-	parentFields := in.GetFields().GetParent()
-	parentsMap := make(map[int64]*items.Item, len(rows))
-
-	if parentFields != nil && len(rows) > 0 {
-		ids := make([]int64, 0, len(rows))
-		for _, row := range rows {
-			ids = append(ids, row.ParentID)
-		}
-
-		parentsMap, err = s.prefetchItems(ctx, ids, in.GetLanguage(), convertItemFields(parentFields))
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	}
-
-	res := make([]*ItemParent, 0, len(rows))
-
-	for _, row := range rows {
-		resRow := &ItemParent{
-			ItemId:   row.ItemID,
-			ParentId: row.ParentID,
-			Type:     extractItemParentType(row.Type),
-			Catname:  row.Catname,
-		}
-
-		if itemFields != nil {
-			itemRow, ok := itemsMap[row.ItemID]
-			if ok && itemRow != nil {
-				resRow.Item, err = s.extractor.Extract(ctx, *itemRow, itemFields, in.GetLanguage())
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-			}
-		}
-
-		if parentFields != nil {
-			itemRow, ok := parentsMap[row.ParentID]
-			if ok && itemRow != nil {
-				resRow.Parent, err = s.extractor.Extract(ctx, *itemRow, parentFields, in.GetLanguage())
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-			}
-		}
-
-		duplicateParentFields := in.GetFields().GetDuplicateParent()
-		if duplicateParentFields != nil {
-			duplicateRow, err := s.repository.Item(ctx, &query.ItemListOptions{
-				ExcludeID: row.ParentID,
-				ItemParentChild: &query.ItemParentListOptions{
-					ItemID: row.ItemID,
-					Type:   schema.ItemParentTypeDefault,
-				},
-				ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
-					ParentID:  row.ParentID,
-					StockOnly: true,
-				},
-			}, convertItemFields(duplicateParentFields))
-			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
-			if err == nil {
-				resRow.DuplicateParent, err = s.extractor.Extract(
-					ctx, duplicateRow, duplicateParentFields, in.GetLanguage(),
-				)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-			}
-		}
-
-		duplicateChildFields := in.GetFields().GetDuplicateChild()
-		if duplicateChildFields != nil {
-			duplicateRow, err := s.repository.Item(ctx, &query.ItemListOptions{
-				ExcludeID: row.ItemID,
-				ItemParentParent: &query.ItemParentListOptions{
-					ParentID: row.ParentID,
-					Type:     row.Type,
-				},
-				ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
-					ItemID: row.ItemID,
-				},
-			}, convertItemFields(duplicateChildFields))
-			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
-			if err == nil {
-				resRow.DuplicateChild, err = s.extractor.Extract(
-					ctx, duplicateRow, duplicateChildFields, in.GetLanguage(),
-				)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-			}
-		}
-
-		res = append(res, resRow)
+	res, err := s.itemParentExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID, role)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var paginator *Pages

@@ -3,23 +3,16 @@ package goautowp
 import (
 	"context"
 
-	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 )
 
 type DfDistanceExtractor struct {
-	picturesRepository *pictures.Repository
-	pictureExtractor   *PictureExtractor
+	container *Container
 }
 
-func NewDfDistanceExtractor(
-	picturesRepository *pictures.Repository, pictureExtractor *PictureExtractor,
-) *DfDistanceExtractor {
-	return &DfDistanceExtractor{
-		picturesRepository: picturesRepository,
-		pictureExtractor:   pictureExtractor,
-	}
+func NewDfDistanceExtractor(container *Container) *DfDistanceExtractor {
+	return &DfDistanceExtractor{container: container}
 }
 
 func (s *DfDistanceExtractor) ExtractRows(
@@ -27,6 +20,13 @@ func (s *DfDistanceExtractor) ExtractRows(
 	role string,
 ) ([]*DfDistance, error) {
 	result := make([]*DfDistance, 0, len(rows))
+
+	picturesRepository, err := s.container.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	pictureExtractor := s.container.PictureExtractor()
 
 	for _, row := range rows {
 		var dstPicture *Picture
@@ -46,7 +46,7 @@ func (s *DfDistanceExtractor) ExtractRows(
 
 			dstPictureOptions.ID = row.DstPictureID
 
-			picRow, err := s.picturesRepository.Picture(
+			picRow, err := picturesRepository.Picture(
 				ctx,
 				dstPictureOptions,
 				convertPictureFields(dstPictureFields),
@@ -56,7 +56,7 @@ func (s *DfDistanceExtractor) ExtractRows(
 				return nil, err
 			}
 
-			dstPicture, err = s.pictureExtractor.Extract(ctx, picRow, dstPictureFields, lang, isModer, userID, role)
+			dstPicture, err = pictureExtractor.Extract(ctx, picRow, dstPictureFields, lang, isModer, userID, role)
 			if err != nil {
 				return nil, err
 			}

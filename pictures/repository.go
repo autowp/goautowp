@@ -33,11 +33,23 @@ var (
 	errImageIDIsNil          = errors.New("image_id is null")
 )
 
-var prefixedPerspectives = []int64{5, 6, schema.PerspectiveIDUnderTheHood, 20, 21, 22, 23, 24, 28}
-
 var (
-	topPerspectives    = []int64{10, 1, 7, 8, 11, 12, 2, 4, 13, 5}
-	bottomPerspectives = []int64{13, 2, 9, 6, 5}
+	prefixedPerspectives = []int64{
+		schema.PerspectiveInterior, schema.PerspectiveFrontPanel, schema.PerspectiveIDUnderTheHood,
+		schema.PerspectiveDashboard, schema.PerspectiveBoot, schema.PerspectiveLogo, schema.PerspectiveMascot,
+		schema.PerspectiveSketch, schema.PerspectiveChassis,
+	}
+	specsTopPerspectives = []int64{
+		schema.PerspectiveFrontStrict, schema.PerspectiveFront, schema.Perspective3Div4Left,
+		schema.Perspective3Div4Right, schema.PerspectiveLeftStrict, schema.PerspectiveRightStrict,
+		schema.PerspectiveBack, schema.PerspectiveRight, schema.PerspectiveLeft, schema.PerspectiveBackStrict,
+		schema.PerspectiveInterior,
+	}
+	specsBottomPerspectives = []int64{
+		schema.PerspectiveBackStrict, schema.PerspectiveBack, schema.PerspectiveCutaway, schema.PerspectiveFrontPanel,
+		schema.PerspectiveInterior,
+	}
+	frontPerspectives = []int64{schema.Perspective3Div4Left, schema.Perspective3Div4Right, schema.PerspectiveFront}
 )
 
 type VoteSummary struct {
@@ -90,6 +102,7 @@ const (
 	OrderByBottomPerspectives
 	OrderByIDDesc
 	OrderByIDAsc
+	OrderByFrontPerspectives
 )
 
 func NewRepository(
@@ -455,7 +468,7 @@ func (s *Repository) HasModerVote(ctx context.Context, pictureID int64, userID i
 	return success && res, err
 }
 
-func (s *Repository) groupBy(
+func (s *Repository) orderBy(
 	sqSelect *goqu.SelectDataset, options *query.PictureListOptions, order OrderBy, groupBy bool,
 ) (*goqu.SelectDataset, bool, error) {
 	var (
@@ -583,10 +596,16 @@ func (s *Repository) groupBy(
 				aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
 				aliasTable.Col(schema.PictureTableIDColName).Desc(),
 			)
-	case OrderByTopPerspectives, OrderByBottomPerspectives:
-		perspectives := topPerspectives
+	case OrderByTopPerspectives, OrderByBottomPerspectives, OrderByFrontPerspectives:
+		if options.PictureItem == nil {
+			return nil, false, errJoinNeededToSortByPerspective
+		}
+
+		perspectives := specsTopPerspectives
 		if order == OrderByBottomPerspectives {
-			perspectives = bottomPerspectives
+			perspectives = specsBottomPerspectives
+		} else if order == OrderByFrontPerspectives {
+			perspectives = frontPerspectives
 		}
 
 		orderExprs := make([]exp.OrderedExpression, 0, len(perspectives))
@@ -655,7 +674,7 @@ func (s *Repository) PictureSelect(
 
 	groupBy := !options.IsIDUnique()
 
-	sqSelect, groupBy, err = s.groupBy(sqSelect, options, order, groupBy)
+	sqSelect, groupBy, err = s.orderBy(sqSelect, options, order, groupBy)
 	if err != nil {
 		return nil, err
 	}
@@ -1344,14 +1363,53 @@ func (s *Repository) PictureItem(
 	return &row, nil
 }
 
+func (s *Repository) PictureItemsBatch(
+	ctx context.Context, options []*query.PictureItemListOptions, limit uint32,
+) ([]*schema.PictureItemRow, error) {
+	var (
+		rows     []*schema.PictureItemRow
+		sqSelect *goqu.SelectDataset
+		err      error
+	)
+
+	for _, cOptions := range options {
+		prev := sqSelect
+
+		sqSelect, err = s.PictureItemSelect(cOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		if limit > 0 {
+			sqSelect = sqSelect.Limit(uint(limit))
+		}
+
+		if prev != nil {
+			sqSelect = prev.UnionAll(sqSelect)
+		}
+	}
+
+	if sqSelect == nil {
+		return rows, nil
+	}
+
+	err = sqSelect.ScanStructsContext(ctx, &rows)
+
+	return rows, err
+}
+
 func (s *Repository) PictureItems(
-	ctx context.Context, options *query.PictureItemListOptions,
+	ctx context.Context, options *query.PictureItemListOptions, limit uint32,
 ) ([]*schema.PictureItemRow, error) {
 	var rows []*schema.PictureItemRow
 
 	sqSelect, err := s.PictureItemSelect(options)
 	if err != nil {
 		return nil, err
+	}
+
+	if limit > 0 {
+		sqSelect = sqSelect.Limit(uint(limit))
 	}
 
 	err = sqSelect.ScanStructsContext(ctx, &rows)
@@ -1450,7 +1508,7 @@ func (s *Repository) NameData(
 		pictureItemRows, err := s.PictureItems(ctx, &query.PictureItemListOptions{
 			PictureID: row.ID,
 			TypeID:    schema.PictureItemContent,
-		})
+		}, 0)
 		if err != nil {
 			return nil, err
 		}

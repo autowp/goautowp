@@ -7,18 +7,13 @@ import (
 	"fmt"
 	"html"
 
-	"github.com/autowp/goautowp/attrs"
-	"github.com/autowp/goautowp/comments"
-	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/storage"
-	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
-	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/genproto/googleapis/type/latlng"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -27,36 +22,11 @@ import (
 var errItemNotFound = errors.New("item not found")
 
 type PictureExtractor struct {
-	imageStorage          *storage.Storage
-	pictureNameFormatter  *pictures.PictureNameFormatter
-	repository            *pictures.Repository
-	i18n                  *i18nbundle.I18n
-	commentsRepository    *comments.Repository
-	itemsRepository       *items.Repository
-	enforcer              *casbin.Enforcer
-	textstorageRepository *textstorage.Repository
-	itemOfDayRepository   *itemofday.Repository
-	attrsRepository       *attrs.Repository
+	container *Container
 }
 
-func NewPictureExtractor(
-	repository *pictures.Repository, imageStorage *storage.Storage, i18n *i18nbundle.I18n,
-	commentsRepository *comments.Repository, itemsRepository *items.Repository, enforcer *casbin.Enforcer,
-	textstorageRepository *textstorage.Repository, itemOfDayRepository *itemofday.Repository,
-	attrsRepository *attrs.Repository,
-) *PictureExtractor {
-	return &PictureExtractor{
-		repository:            repository,
-		imageStorage:          imageStorage,
-		i18n:                  i18n,
-		commentsRepository:    commentsRepository,
-		itemsRepository:       itemsRepository,
-		enforcer:              enforcer,
-		textstorageRepository: textstorageRepository,
-		itemOfDayRepository:   itemOfDayRepository,
-		attrsRepository:       attrsRepository,
-		pictureNameFormatter:  pictures.NewPictureNameFormatter(items.NewItemNameFormatter(i18n), i18n),
-	}
+func NewPictureExtractor(container *Container) *PictureExtractor {
+	return &PictureExtractor{container: container}
 }
 
 func (s *PictureExtractor) Extract(
@@ -79,6 +49,10 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 	ctx context.Context, rows []*schema.PictureRow, fields *PictureFields, lang string, isModer bool, userID int64,
 	role string,
 ) ([]*Picture, error) {
+	if fields == nil {
+		fields = &PictureFields{}
+	}
+
 	var (
 		namesData map[int64]pictures.PictureNameFormatterOptions
 		err       error
@@ -86,8 +60,35 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		images    = make(map[int]*storage.Image)
 	)
 
+	picturesRepository, err := s.container.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	i18nBundle, err := s.container.I18n()
+	if err != nil {
+		return nil, err
+	}
+
+	imageStorage, err := s.container.ImageStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	commentsRepository, err := s.container.CommentsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	textstorageRepository, err := s.container.TextStorageRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	enforcer := s.container.Enforcer()
+
 	if fields.GetNameText() || fields.GetNameHtml() {
-		namesData, err = s.repository.NameData(ctx, rows, pictures.NameDataOptions{
+		namesData, err = picturesRepository.NameData(ctx, rows, pictures.NameDataOptions{
 			Language: lang,
 		})
 		if err != nil {
@@ -104,7 +105,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 		}
 
-		imageRows, err := s.imageStorage.Images(ctx, ids)
+		imageRows, err := imageStorage.Images(ctx, ids)
 		if err != nil {
 			return nil, err
 		}
@@ -154,15 +155,20 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		if fields.GetNameText() || fields.GetNameHtml() {
 			nameData, ok := namesData[row.ID]
 			if ok {
+				pictureNameFormatter := pictures.NewPictureNameFormatter(
+					items.NewItemNameFormatter(i18nBundle),
+					i18nBundle,
+				)
+
 				if fields.GetNameText() {
-					resultRow.NameText, err = s.pictureNameFormatter.FormatText(nameData, lang)
+					resultRow.NameText, err = pictureNameFormatter.FormatText(nameData, lang)
 					if err != nil {
 						return nil, err
 					}
 				}
 
 				if fields.GetNameHtml() {
-					resultRow.NameHtml, err = s.pictureNameFormatter.FormatHTML(nameData, lang)
+					resultRow.NameHtml, err = pictureNameFormatter.FormatHTML(nameData, lang)
 					if err != nil {
 						return nil, err
 					}
@@ -184,7 +190,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetThumb() && row.ImageID.Valid {
-			image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb")
+			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb")
 			if err != nil {
 				return nil, err
 			}
@@ -193,7 +199,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetThumbMedium() && row.ImageID.Valid {
-			image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-medium")
+			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-medium")
 			if err != nil {
 				return nil, err
 			}
@@ -202,7 +208,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetImageGalleryFull() && row.ImageID.Valid {
-			image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-gallery-full")
+			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-gallery-full")
 			if err != nil {
 				return nil, err
 			}
@@ -211,14 +217,14 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetViews() {
-			resultRow.Views, err = s.repository.PictureViews(ctx, row.ID)
+			resultRow.Views, err = picturesRepository.PictureViews(ctx, row.ID)
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		if fields.GetVotes() {
-			vote, err := s.repository.GetVote(ctx, row.ID, userID)
+			vote, err := picturesRepository.GetVote(ctx, row.ID, userID)
 			if err != nil {
 				return nil, err
 			}
@@ -233,14 +239,14 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		if fields.GetCommentsCount() {
 			var count, newCount int32
 			if userID > 0 {
-				count, newCount, err = s.commentsRepository.TopicStatForUser(
+				count, newCount, err = commentsRepository.TopicStatForUser(
 					ctx, schema.CommentMessageTypeIDPictures, row.ID, userID,
 				)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				count, err = s.commentsRepository.TopicStat(ctx, schema.CommentMessageTypeIDPictures, row.ID)
+				count, err = commentsRepository.TopicStat(ctx, schema.CommentMessageTypeIDPictures, row.ID)
 				if err != nil {
 					return nil, err
 				}
@@ -251,7 +257,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetModerVote() {
-			count, sum, err := s.repository.ModerVoteCount(ctx, row.ID)
+			count, sum, err := picturesRepository.ModerVoteCount(ctx, row.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -270,7 +276,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 		pictureItemRequest := fields.GetPictureItem()
 		if pictureItemRequest != nil {
-			piOptions, err := convertPictureItemOptions(pictureItemRequest.GetOptions())
+			piOptions, err := convertPictureItemListOptions(pictureItemRequest.GetOptions())
 			if err != nil {
 				return nil, err
 			}
@@ -281,17 +287,14 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			piOptions.PictureID = row.ID
 
-			piRows, err := s.repository.PictureItems(ctx, piOptions)
+			piRows, err := picturesRepository.PictureItems(ctx, piOptions, 0)
 			if err != nil {
 				return nil, err
 			}
 
-			iExtractor := NewItemExtractor(s.enforcer, s.imageStorage, s.commentsRepository, s.repository,
-				s.itemsRepository, s.itemOfDayRepository, s.attrsRepository, s.i18n)
-			ipcExtractor := NewItemParentCacheExtractor(s.itemsRepository, iExtractor)
-			extractor := NewPictureItemExtractor(s.itemsRepository, iExtractor, ipcExtractor)
+			extractor := s.container.PictureItemExtractor()
 
-			res, err := extractor.ExtractRows(ctx, piRows, pictureItemRequest.GetFields(), lang)
+			res, err := extractor.ExtractRows(ctx, piRows, pictureItemRequest.GetFields(), lang, isModer, userID, role)
 			if err != nil {
 				return nil, err
 			}
@@ -314,12 +317,12 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			ddOptions.SrcPictureID = row.ID
 
-			ddRows, err := s.repository.DfDistances(ctx, ddOptions, dfDistanceRequest.GetLimit())
+			ddRows, err := picturesRepository.DfDistances(ctx, ddOptions, dfDistanceRequest.GetLimit())
 			if err != nil {
 				return nil, err
 			}
 
-			dfDistanceExtractor := NewDfDistanceExtractor(s.repository, s)
+			dfDistanceExtractor := s.container.DfDistanceExtractor()
 
 			res, err := dfDistanceExtractor.ExtractRows(ctx, ddRows, dfDistanceRequest.GetFields(), lang, isModer, userID, role)
 			if err != nil {
@@ -332,7 +335,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetAcceptedCount() {
-			acceptedCount, err := s.repository.Count(ctx, &query.PictureListOptions{
+			acceptedCount, err := picturesRepository.Count(ctx, &query.PictureListOptions{
 				Status: schema.PictureStatusAccepted,
 				PictureItem: &query.PictureItemListOptions{
 					PictureItemByItemID: &query.PictureItemListOptions{
@@ -349,7 +352,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 		if fields.GetCopyrights() {
 			if row.CopyrightsTextID.Valid {
-				copyrights, err := s.textstorageRepository.Text(ctx, row.CopyrightsTextID.Int32)
+				copyrights, err := textstorageRepository.Text(ctx, row.CopyrightsTextID.Int32)
 				if err != nil && !errors.Is(err, textstorage.ErrTextNotFound) {
 					return nil, err
 				}
@@ -361,7 +364,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetExif() && row.ImageID.Valid {
-			exif, err := s.imageStorage.ImageEXIF(ctx, int(row.ImageID.Int64))
+			exif, err := imageStorage.ImageEXIF(ctx, int(row.ImageID.Int64))
 			if err != nil {
 				return nil, err
 			}
@@ -391,7 +394,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			isLastPicture := false
 
 			if row.Status == schema.PictureStatusAccepted {
-				isLastPicture, err = s.repository.Exists(ctx, &query.PictureListOptions{
+				isLastPicture, err = picturesRepository.Exists(ctx, &query.PictureListOptions{
 					ExcludeID: row.ID,
 					Status:    schema.PictureStatusAccepted,
 					PictureItem: &query.PictureItemListOptions{
@@ -409,7 +412,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetModerVoted() && userID != 0 {
-			resultRow.ModerVoted, err = s.repository.HasModerVote(ctx, row.ID, userID)
+			resultRow.ModerVoted, err = picturesRepository.HasModerVote(ctx, row.ID, userID)
 			if err != nil {
 				return nil, err
 			}
@@ -424,7 +427,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			pmvOptions.PictureID = row.ID
 
-			pmvRows, err := s.repository.PictureModerVotes(ctx, pmvOptions)
+			pmvRows, err := picturesRepository.PictureModerVotes(ctx, pmvOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -456,7 +459,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			pFields := convertPictureFields(replaceableRequest.GetFields())
 
-			pRow, err := s.repository.Picture(ctx, pOptions, pFields, pictures.OrderByNone)
+			pRow, err := picturesRepository.Picture(ctx, pOptions, pFields, pictures.OrderByNone)
 			if err != nil {
 				return nil, err
 			}
@@ -470,24 +473,24 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetRights() {
-			canAccept, err := s.repository.CanAccept(ctx, row)
+			canAccept, err := picturesRepository.CanAccept(ctx, row)
 			if err != nil {
 				return nil, err
 			}
 
-			canDelete, err := s.repository.CanDelete(ctx, row)
+			canDelete, err := picturesRepository.CanDelete(ctx, row)
 			if err != nil {
 				return nil, err
 			}
 
 			resultRow.Rights = &PictureRights{
-				Move:      s.enforcer.Enforce(role, "picture", "move"),
-				Unaccept:  (row.Status == schema.PictureStatusAccepted) && s.enforcer.Enforce(role, "picture", "unaccept"),
-				Accept:    canAccept && s.enforcer.Enforce(role, "picture", "accept"),
-				Restore:   (row.Status == schema.PictureStatusRemoving) && s.enforcer.Enforce(role, "picture", "restore"),
-				Normalize: (row.Status == schema.PictureStatusInbox) && s.enforcer.Enforce(role, "picture", "normalize"),
-				Flop:      (row.Status == schema.PictureStatusInbox) && s.enforcer.Enforce(role, "picture", "flop"),
-				Crop:      s.enforcer.Enforce(role, "picture", "crop"),
+				Move:      enforcer.Enforce(role, "picture", "move"),
+				Unaccept:  (row.Status == schema.PictureStatusAccepted) && enforcer.Enforce(role, "picture", "unaccept"),
+				Accept:    canAccept && enforcer.Enforce(role, "picture", "accept"),
+				Restore:   (row.Status == schema.PictureStatusRemoving) && enforcer.Enforce(role, "picture", "restore"),
+				Normalize: (row.Status == schema.PictureStatusInbox) && enforcer.Enforce(role, "picture", "normalize"),
+				Flop:      (row.Status == schema.PictureStatusInbox) && enforcer.Enforce(role, "picture", "flop"),
+				Crop:      enforcer.Enforce(role, "picture", "crop"),
 				Delete:    canDelete,
 			}
 		}
@@ -504,7 +507,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			sFields := siblings.GetFields()
 			scFields := convertPictureFields(sFields)
 
-			prevPicture, err := s.repository.Picture(ctx, &query.PictureListOptions{
+			prevPicture, err := picturesRepository.Picture(ctx, &query.PictureListOptions{
 				IDLt: row.ID,
 			}, scFields, pictures.OrderByIDDesc)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -518,7 +521,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				}
 			}
 
-			nextPicture, err := s.repository.Picture(ctx, &query.PictureListOptions{
+			nextPicture, err := picturesRepository.Picture(ctx, &query.PictureListOptions{
 				IDGt: row.ID,
 			}, scFields, pictures.OrderByIDAsc)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -532,7 +535,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				}
 			}
 
-			prevNewPicture, err := s.repository.Picture(ctx, &query.PictureListOptions{
+			prevNewPicture, err := picturesRepository.Picture(ctx, &query.PictureListOptions{
 				IDLt:   row.ID,
 				Status: schema.PictureStatusInbox,
 			}, scFields, pictures.OrderByIDDesc)
@@ -547,7 +550,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				}
 			}
 
-			nextNewPicture, err := s.repository.Picture(ctx, &query.PictureListOptions{
+			nextNewPicture, err := picturesRepository.Picture(ctx, &query.PictureListOptions{
 				IDGt:   row.ID,
 				Status: schema.PictureStatusInbox,
 			}, scFields, pictures.OrderByIDAsc)
@@ -563,7 +566,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 		}
 
-		if s.enforcer.Enforce(role, "user", "ip") && row.IP != nil {
+		if row.IP != nil && enforcer.Enforce(role, "user", "ip") {
 			resultRow.Ip = row.IP.ToIP().String()
 		}
 
@@ -576,10 +579,15 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 func (s *PictureExtractor) path(
 	ctx context.Context, pictureID int64, targetItemID int64,
 ) ([]*PathTreePictureItem, error) {
-	piRows, err := s.repository.PictureItems(ctx, &query.PictureItemListOptions{
+	picturesRepositury, err := s.container.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	piRows, err := picturesRepositury.PictureItems(ctx, &query.PictureItemListOptions{
 		PictureID: pictureID,
 		TypeID:    schema.PictureItemContent,
-	})
+	}, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -604,7 +612,12 @@ func (s *PictureExtractor) path(
 }
 
 func (s *PictureExtractor) itemRoute(ctx context.Context, itemID int64, targetItemID int64) (*PathTreeItem, error) {
-	row, err := s.itemsRepository.Item(ctx, &query.ItemListOptions{
+	itemsRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	row, err := itemsRepository.Item(ctx, &query.ItemListOptions{
 		ItemID: itemID,
 	}, nil)
 	if err != nil {
@@ -643,10 +656,15 @@ func (s *PictureExtractor) itemRoute(ctx context.Context, itemID int64, targetIt
 func (s *PictureExtractor) itemParentRoute(
 	ctx context.Context, itemID int64, targetItemID int64,
 ) ([]*PathTreeItemParent, error) {
+	itemsRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
 	result := make([]*PathTreeItemParent, 0)
 
 	if itemID > 0 {
-		rows, _, err := s.itemsRepository.ItemParents(ctx, &query.ItemParentListOptions{
+		rows, _, err := itemsRepository.ItemParents(ctx, &query.ItemParentListOptions{
 			ItemID: itemID,
 		}, items.ItemParentFields{}, items.ItemParentOrderByNone)
 		if err != nil {

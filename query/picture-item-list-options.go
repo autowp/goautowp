@@ -14,6 +14,7 @@ type PictureItemListOptions struct {
 	TypeID                  schema.PictureItemType
 	PictureID               int64
 	ItemID                  int64
+	ItemIDs                 []int64
 	Pictures                *PictureListOptions
 	PerspectiveID           int32
 	ExcludePerspectiveID    []int32
@@ -95,6 +96,10 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 
 	if s.ItemID != 0 {
 		sqSelect = sqSelect.Where(itemIDCol.Eq(s.ItemID))
+	}
+
+	if len(s.ItemIDs) > 0 {
+		sqSelect = sqSelect.Where(itemIDCol.In(s.ItemIDs))
 	}
 
 	if s.PerspectiveID != 0 {

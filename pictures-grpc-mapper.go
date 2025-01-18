@@ -65,7 +65,7 @@ func convertPictureStatus(status PictureStatus) schema.PictureStatus {
 	return ""
 }
 
-func convertPictureItemOptions(in *PictureItemListOptions) (*query.PictureItemListOptions, error) {
+func convertPictureItemListOptions(in *PictureItemListOptions) (*query.PictureItemListOptions, error) {
 	if in == nil {
 		return nil, nil //nolint: nilnil
 	}
@@ -179,7 +179,7 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 		}
 	}
 
-	result.PictureItem, err = convertPictureItemOptions(in.GetPictureItem())
+	result.PictureItem, err = convertPictureItemListOptions(in.GetPictureItem())
 	if err != nil {
 		return nil, err
 	}
@@ -272,6 +272,8 @@ func convertPicturesOrder(order PicturesRequest_Order) pictures.OrderBy {
 		return pictures.OrderByPerspectives
 	case PicturesRequest_ORDER_DF_DISTANCE_SIMILARITY:
 		return pictures.OrderByDfDistanceSimilarity
+	case PicturesRequest_ORDER_FRONT_PERSPECTIVES:
+		return pictures.OrderByFrontPerspectives
 	}
 
 	return pictures.OrderByNone

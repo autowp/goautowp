@@ -2633,7 +2633,7 @@ func (s *Repository) ChildSpecifications(
 	return s.Specifications(ctx, ids, itemID, lang)
 }
 
-func (s *Repository) zoneByItemsList(ctx context.Context, list []items.Item) (int64, error) {
+func (s *Repository) zoneByItemsList(ctx context.Context, list []*items.Item) (int64, error) {
 	ids := make(map[int64]bool)
 
 	for _, car := range list {

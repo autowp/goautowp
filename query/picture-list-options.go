@@ -26,6 +26,7 @@ type PictureListOptions struct {
 	OwnerID               int64
 	PictureItem           *PictureItemListOptions
 	ID                    int64
+	IDs                   []int64
 	IDGt                  int64
 	IDLt                  int64
 	ExcludeID             int64
@@ -104,6 +105,10 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 
 	if s.ID != 0 {
 		sqSelect = sqSelect.Where(idCol.Eq(s.ID))
+	}
+
+	if len(s.IDs) > 0 {
+		sqSelect = sqSelect.Where(idCol.In(s.IDs))
 	}
 
 	if s.IDGt != 0 {
