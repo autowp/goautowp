@@ -3337,7 +3337,7 @@ func (s *Repository) Brands(ctx context.Context, lang string) ([]*BrandsListLine
 			ID:                    row.ID,
 			Name:                  row.NameOnly,
 			Catname:               catname,
-			AcceptedPicturesCount: 0,
+			AcceptedPicturesCount: row.AcceptedPicturesCount,
 			NewItemsCount:         row.NewDescendantsCount,
 			ItemsCount:            row.DescendantsCount,
 		})
