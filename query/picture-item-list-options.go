@@ -84,6 +84,7 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 		itemIDCol        = aliasTable.Col(schema.PictureItemTableItemIDColName)
 		pictureIDCol     = aliasTable.Col(schema.PictureItemTablePictureIDColName)
 		perspectiveIDCol = aliasTable.Col(schema.PictureItemTablePerspectiveIDColName)
+		typeCol          = aliasTable.Col(schema.PictureItemTableTypeColName)
 	)
 
 	if s.TypeID != 0 {
@@ -111,7 +112,10 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 	}
 
 	if s.HasNoPerspectiveID {
-		sqSelect = sqSelect.Where(perspectiveIDCol.IsNull())
+		sqSelect = sqSelect.Where(
+			perspectiveIDCol.IsNull(),
+			typeCol.Eq(schema.PictureItemContent),
+		)
 	}
 
 	if s.ExcludeAncestorOrSelfID > 0 {
