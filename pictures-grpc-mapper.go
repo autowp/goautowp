@@ -266,6 +266,8 @@ func convertPicturesOrder(order PicturesRequest_Order) pictures.OrderBy {
 		return pictures.OrderByLikes
 	case PicturesRequest_ORDER_DISLIKES:
 		return pictures.OrderByDislikes
+	case PicturesRequest_ORDER_STATUS:
+		return pictures.OrderByStatus
 	case PicturesRequest_ORDER_ACCEPT_DATETIME_DESC:
 		return pictures.OrderByAcceptDatetimeDesc
 	case PicturesRequest_ORDER_PERSPECTIVES:

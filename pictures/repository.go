@@ -95,6 +95,7 @@ const (
 	OrderByRemovingDate
 	OrderByLikes
 	OrderByDislikes
+	OrderByStatus
 	OrderByAcceptDatetimeDesc
 	OrderByPerspectives
 	OrderByDfDistanceSimilarity
@@ -562,6 +563,8 @@ func (s *Repository) orderBy(
 				aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
 				aliasTable.Col(schema.PictureTableIDColName).Desc(),
 			)
+	case OrderByStatus:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableStatusColName).Asc())
 	case OrderByAcceptDatetimeDesc:
 		sqSelect = sqSelect.Order(
 			aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Desc(),
