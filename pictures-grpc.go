@@ -1740,10 +1740,6 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureIte
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
-		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
-	}
-
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
 	if !isModer {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
