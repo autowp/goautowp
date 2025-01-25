@@ -1741,10 +1741,6 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureIte
 	}
 
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
-	if !isModer {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
-	}
-
 	inOptions := in.GetOptions()
 
 	if inOptions.GetPictureId() == 0 && inOptions.GetItemId() == 0 {
