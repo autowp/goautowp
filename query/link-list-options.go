@@ -17,7 +17,7 @@ type LinkListOptions struct {
 }
 
 func (s *LinkListOptions) IsIDUnique() bool {
-	return s.ItemParentCacheDescendant == nil
+	return s == nil || s.ItemParentCacheDescendant == nil
 }
 
 func (s *LinkListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
