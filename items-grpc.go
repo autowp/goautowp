@@ -499,7 +499,13 @@ func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *ItemLinksRequest)
 }
 
 func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *ItemLinksRequest) (*ItemLinks, error) {
-	options, err := convertLinkListOptions(in.GetOptions())
+	inOptions := in.GetOptions()
+
+	if inOptions.GetItemParentCacheDescendant() == nil && inOptions.GetId() == 0 && inOptions.GetItemId() == 0 {
+		return nil, status.Error(codes.PermissionDenied, "ItemLinkOptions is almost empty")
+	}
+
+	options, err := convertLinkListOptions(inOptions)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
