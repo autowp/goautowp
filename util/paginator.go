@@ -20,6 +20,7 @@ type Paginator struct {
 	CurrentPageNumber   int32
 	itemCount           int32
 	itemCountCalculated bool
+	PageRange           int32
 }
 
 type Pages struct {
@@ -161,6 +162,9 @@ func (s *Paginator) GetPages(ctx context.Context) (*Pages, error) {
 
 	// Pages in range
 	var pageRange int32 = 10
+	if s.PageRange > 0 {
+		pageRange = s.PageRange
+	}
 
 	pageNumber := currentPageNumber
 

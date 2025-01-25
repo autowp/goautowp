@@ -94,8 +94,8 @@ service Items {
   rpc List(ItemsRequest) returns (APIItemList) {}
   rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
   rpc GetContentLanguages(google.protobuf.Empty) returns (APIContentLanguages) {}
-  rpc GetItemLink(APIItemLinkRequest) returns (APIItemLink) {}
-  rpc GetItemLinks(APIGetItemLinksRequest) returns (APIItemLinksResponse) {}
+  rpc GetItemLink(ItemLinksRequest) returns (APIItemLink) {}
+  rpc GetItemLinks(ItemLinksRequest) returns (ItemLinks) {}
   rpc DeleteItemLink(APIItemLinkRequest) returns (google.protobuf.Empty) {}
   rpc CreateItemLink(APIItemLink) returns (APICreateItemLinkResponse) {}
   rpc UpdateItemLink(APIItemLink) returns (google.protobuf.Empty) {}
@@ -1046,6 +1046,9 @@ message PictureFields {
   PicturesRequest siblings = 22;
   bool special_name = 23;
   bool taken = 24;
+  bool preview_large = 25;
+  bool subscribed = 26;
+  PicturesRequest paginator = 27;
 }
 
 message PictureSiblings {
@@ -1121,6 +1124,14 @@ message ItemFields {
   bool childs_counts = 29;
   bool public_routes = 30;
   PictureItemsRequest picture_items = 31;
+  bool alt_names = 32;
+  bool route = 33;
+  ItemLinksRequest links = 34;
+}
+
+message AltName {
+  repeated string languages = 1;
+  string name = 2;
 }
 
 message ItemRequest {
@@ -1179,6 +1190,7 @@ message ItemParentCacheListOptions {
   ItemListOptions items_by_item_id = 3;
   ItemListOptions items_by_parent_id = 6;
   PictureItemListOptions picture_items_by_item_id = 4;
+  PictureItemListOptions picture_items_by_parent_id = 8;
   ItemParentListOptions item_parent_by_item_id = 5;
   ItemParentCacheListOptions item_parent_cache_ancestor_by_item_id = 7;
 }
@@ -1280,6 +1292,10 @@ message APIItem {
   repeated ChildsCount childs_counts = 36;
   repeated PublicRoute public_routes = 37;
   PictureItems picture_items = 39;
+  repeated AltName alt_names = 40;
+  repeated string route = 41;
+  ItemLinks links = 42;
+  bool has_text = 43;
 }
 
 message PublicRoute {
@@ -1508,6 +1524,25 @@ message Picture {
   string ip = 40;
   int32 dpi_x = 41;
   int32 dpi_y = 42;
+  APIImage preview_large = 43;
+  bool subscribed = 44;
+  PicturesPages paginator = 45;
+}
+
+message PicturesPages {
+  int32 pageCount = 1;
+  string first = 2;
+  string current = 3;
+  string next = 5;
+  string previous = 6;
+  repeated PicturesPagesPage pagesInRange = 9;
+  int32 totalItemCount = 10;
+  string last = 11;
+}
+
+message PicturesPagesPage {
+  int32 page = 1;
+  string identity = 2;
 }
 
 message PictureRights {
@@ -1836,11 +1871,18 @@ message APIItemLinkRequest {
   int64 id = 1;
 }
 
-message APIGetItemLinksRequest {
-  int64 item_id = 1;
+message ItemLinkListOptions {
+  int64 id = 1;
+  int64 item_id = 2;
+  string type = 3;
+  ItemParentCacheListOptions item_parent_cache_descendant = 4;
 }
 
-message APIItemLinksResponse {
+message ItemLinksRequest {
+  ItemLinkListOptions options = 1;
+}
+
+message ItemLinks {
   repeated APIItemLink items = 1;
 }
 

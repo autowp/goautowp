@@ -23,6 +23,7 @@ type ItemParentCacheListOptions struct {
 	ItemsByItemID                   *ItemListOptions
 	ItemParentByItemID              *ItemParentListOptions
 	PictureItemsByItemID            *PictureItemListOptions
+	PictureItemsByParentID          *PictureItemListOptions
 	ItemParentCacheAncestorByItemID *ItemParentCacheListOptions
 	ExcludeSelf                     bool
 	StockOnly                       bool
@@ -121,7 +122,16 @@ func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDa
 
 	sqSelect, err = s.PictureItemsByItemID.JoinToItemIDAndApply(
 		itemIDCol,
-		AppendPictureItemAlias(alias),
+		AppendPictureItemAlias(alias, "i"),
+		sqSelect,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	sqSelect, err = s.PictureItemsByParentID.JoinToItemIDAndApply(
+		parentIDCol,
+		AppendPictureItemAlias(alias, "p"),
 		sqSelect,
 	)
 	if err != nil {

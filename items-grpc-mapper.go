@@ -165,6 +165,11 @@ func convertItemParentCacheListOptions(in *ItemParentCacheListOptions) (*query.I
 		return nil, err
 	}
 
+	result.PictureItemsByParentID, err = convertPictureItemListOptions(in.GetPictureItemsByParentId())
+	if err != nil {
+		return nil, err
+	}
+
 	result.ItemParentByItemID, err = convertItemParentListOptions(in.GetItemParentByItemId())
 	if err != nil {
 		return nil, err
@@ -178,6 +183,18 @@ func convertItemParentCacheListOptions(in *ItemParentCacheListOptions) (*query.I
 	}
 
 	return &result, nil
+}
+
+func convertLinkListOptions(in *ItemLinkListOptions) *query.LinkListOptions {
+	if in == nil {
+		return nil
+	}
+
+	return &query.LinkListOptions{
+		ID:     in.GetId(),
+		ItemID: in.GetItemId(),
+		Type:   in.GetType(),
+	}
 }
 
 func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error) {

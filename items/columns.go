@@ -86,7 +86,7 @@ type DescendantPicturesCountColumn struct{}
 
 func (s DescendantPicturesCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
 	piTableAlias := query.AppendPictureItemAlias(
-		query.AppendItemParentCacheAlias(alias, "d"),
+		query.AppendItemParentCacheAlias(alias, "d"), "",
 	)
 
 	return goqu.COUNT(goqu.DISTINCT(goqu.T(piTableAlias).Col(schema.PictureItemTablePictureIDColName))), nil

@@ -3422,18 +3422,30 @@ func (s *Repository) RefreshItemParentLanguage(
 	return nil
 }
 
-func (s *Repository) Names(ctx context.Context, id int64) ([]string, error) {
-	res := make([]string, 0)
+func (s *Repository) Names(ctx context.Context, id int64) (map[string]string, error) {
+	var sts []struct {
+		Language string `db:"language"`
+		Name     string `db:"name"`
+	}
 
-	err := s.db.Select(schema.ItemLanguageTableNameCol).
+	err := s.db.Select(schema.ItemLanguageTableLanguageCol, schema.ItemLanguageTableNameCol).
 		From(schema.ItemLanguageTable).
 		Where(
 			schema.ItemLanguageTableItemIDCol.Eq(id),
 			goqu.Func("length", schema.ItemLanguageTableNameCol).Gt(0),
 		).
-		ScanValsContext(ctx, &res)
+		ScanStructsContext(ctx, &sts)
+	if err != nil {
+		return nil, err
+	}
 
-	return res, err
+	res := make(map[string]string, 0)
+
+	for _, st := range sts {
+		res[st.Language] = st.Name
+	}
+
+	return res, nil
 }
 
 type DesignInfo struct {
@@ -3739,4 +3751,77 @@ func (s *Repository) ItemParentCaches(
 	err = sqSelect.ScanStructsContext(ctx, &rows)
 
 	return rows, err
+}
+
+func (s *Repository) LinksSelect(options *query.LinkListOptions) (*goqu.SelectDataset, error) {
+	aliasTable := goqu.T(query.LinkAlias)
+
+	sqSelect, err := options.Select(s.db, query.LinkAlias)
+	if err != nil {
+		return nil, err
+	}
+
+	sqSelect = sqSelect.Select(
+		aliasTable.Col(schema.LinksTableIDColName), aliasTable.Col(schema.LinksTableNameColName),
+		aliasTable.Col(schema.LinksTableURLColName), aliasTable.Col(schema.LinksTableTypeColName),
+		aliasTable.Col(schema.LinksTableItemIDColName),
+	)
+
+	if !options.IsIDUnique() {
+		sqSelect = sqSelect.GroupBy(aliasTable.Col(schema.LinksTableIDColName))
+	}
+
+	return sqSelect, nil
+}
+
+func (s *Repository) Links(ctx context.Context, options *query.LinkListOptions) ([]*schema.LinkRow, error) {
+	var rows []*schema.LinkRow
+
+	sqSelect, err := s.LinksSelect(options)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sqSelect.Executor().ScanStructsContext(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
+func (s *Repository) Link(ctx context.Context, options *query.LinkListOptions) (*schema.LinkRow, error) {
+	var row schema.LinkRow
+
+	sqSelect, err := s.LinksSelect(options)
+	if err != nil {
+		return nil, err
+	}
+
+	success, err := sqSelect.Limit(1).Executor().ScanStructContext(ctx, &row)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, sql.ErrNoRows
+	}
+
+	return &row, nil
+}
+
+func (s *Repository) HasFullText(ctx context.Context, itemID int64) (bool, error) {
+	var res bool
+
+	success, err := s.db.Select(goqu.V(true)).
+		From(schema.ItemLanguageTable).
+		Join(schema.TextstorageTextTable, goqu.On(
+			schema.ItemLanguageTableFullTextIDCol.Eq(schema.TextstorageTextTableIDCol)),
+		).
+		Where(
+			schema.ItemLanguageTableItemIDCol.Eq(itemID),
+			goqu.L("? > 0", goqu.Func("LENGTH", schema.TextstorageTextTableTextCol)),
+		).ScanValContext(ctx, &res)
+
+	return success && res, err
 }

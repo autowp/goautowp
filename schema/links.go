@@ -19,3 +19,11 @@ var (
 	LinksTableTypeCol   = LinksTable.Col(LinksTableTypeColName)
 	LinksTableItemIDCol = LinksTable.Col(LinksTableItemIDColName)
 )
+
+type LinkRow struct {
+	ID     int64  `db:"id"`
+	Name   string `db:"name"`
+	URL    string `db:"url"`
+	Type   string `db:"type"`
+	ItemID int64  `db:"item_id"`
+}

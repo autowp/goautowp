@@ -1897,7 +1897,7 @@ func (s *PicturesGRPCServer) isRestricted(in *PicturesRequest, isModer bool, use
 	}
 
 	restricted = !isModer && (fields.GetAcceptedCount() || fields.GetExif() || fields.GetIsLast() ||
-		fields.GetPictureModerVotes() != nil || fields.GetSpecialName() || fields.GetSiblings() != nil)
+		fields.GetSpecialName() || fields.GetSiblings() != nil)
 	if restricted {
 		return status.Error(codes.PermissionDenied, "PermissionDenied")
 	}

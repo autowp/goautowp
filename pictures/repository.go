@@ -585,7 +585,7 @@ func (s *Repository) orderBy(
 			return nil, false, errJoinNeededToSortByPerspective
 		}
 
-		piAlias := query.AppendPictureItemAlias(alias)
+		piAlias := query.AppendPictureItemAlias(alias, "")
 
 		groupBy = true
 		sqSelect = sqSelect.
@@ -614,7 +614,7 @@ func (s *Repository) orderBy(
 		orderExprs := make([]exp.OrderedExpression, 0, len(perspectives))
 
 		for _, pid := range perspectives {
-			var expr exp.Comparable = goqu.T(query.AppendPictureItemAlias(query.PictureAlias)).
+			var expr exp.Comparable = goqu.T(query.AppendPictureItemAlias(query.PictureAlias, "")).
 				Col(schema.PictureItemTablePerspectiveIDColName)
 
 			if groupBy {
@@ -702,21 +702,34 @@ func (s *Repository) Exists(ctx context.Context, options *query.PictureListOptio
 	return success && exists, err
 }
 
+func (s *Repository) PicturesPaginator(
+	options *query.PictureListOptions, fields PictureFields, order OrderBy,
+) (*util.Paginator, error) {
+	sqSelect, err := s.PictureSelect(options, fields, order)
+	if err != nil {
+		return nil, fmt.Errorf("PictureSelect(): %w", err)
+	}
+
+	return &util.Paginator{
+		SQLSelect:         sqSelect,
+		ItemCountPerPage:  int32(options.Limit), //nolint: gosec
+		CurrentPageNumber: int32(options.Page),  //nolint: gosec
+	}, nil
+}
+
 func (s *Repository) Pictures(
 	ctx context.Context, options *query.PictureListOptions, fields PictureFields, order OrderBy, pagination bool,
 ) ([]*schema.PictureRow, *util.Pages, error) {
-	sqSelect, err := s.PictureSelect(options, fields, order)
-	if err != nil {
-		return nil, nil, fmt.Errorf("PictureSelect(): %w", err)
-	}
-
-	var pages *util.Pages
+	var (
+		sqSelect *goqu.SelectDataset
+		pages    *util.Pages
+		err      error
+	)
 
 	if pagination {
-		paginator := util.Paginator{
-			SQLSelect:         sqSelect,
-			ItemCountPerPage:  int32(options.Limit),
-			CurrentPageNumber: int32(options.Page), //nolint: gosec
+		paginator, err := s.PicturesPaginator(options, fields, order)
+		if err != nil {
+			return nil, nil, fmt.Errorf("PicturesPaginator(): %w", err)
 		}
 
 		pages, err = paginator.GetPages(ctx)
@@ -728,8 +741,15 @@ func (s *Repository) Pictures(
 		if err != nil {
 			return nil, nil, err
 		}
-	} else if options.Limit > 0 {
-		sqSelect = sqSelect.Limit(uint(options.Limit))
+	} else {
+		sqSelect, err = s.PictureSelect(options, fields, order)
+		if err != nil {
+			return nil, nil, fmt.Errorf("PictureSelect(): %w", err)
+		}
+
+		if options.Limit > 0 {
+			sqSelect = sqSelect.Limit(uint(options.Limit))
+		}
 	}
 
 	var res []*schema.PictureRow

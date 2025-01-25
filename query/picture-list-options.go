@@ -141,7 +141,7 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 
 	sqSelect, err = s.PictureItem.JoinToPictureIDAndApply(
 		idCol,
-		AppendPictureItemAlias(alias),
+		AppendPictureItemAlias(alias, ""),
 		sqSelect,
 	)
 	if err != nil {

@@ -19,6 +19,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const maxPaginatorLength = 500
+
 var errItemNotFound = errors.New("item not found")
 
 type PictureExtractor struct {
@@ -214,6 +216,15 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			resultRow.ImageGalleryFull = APIImageToGRPC(image)
+		}
+
+		if fields.GetPreviewLarge() && row.ImageID.Valid {
+			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-preview-large")
+			if err != nil {
+				return nil, err
+			}
+
+			resultRow.PreviewLarge = APIImageToGRPC(image)
 		}
 
 		if fields.GetViews() {
@@ -568,6 +579,106 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 		if row.IP != nil && enforcer.Enforce(role, "user", "ip") {
 			resultRow.Ip = row.IP.ToIP().String()
+		}
+
+		if fields.GetSubscribed() && userID > 0 {
+			commentsRepo, err := s.container.CommentsRepository()
+			if err != nil {
+				return nil, err
+			}
+
+			resultRow.Subscribed, err = commentsRepo.IsSubscribed(ctx, userID, schema.CommentMessageTypeIDPictures, row.ID)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		paginatorRequest := fields.GetPaginator()
+		if paginatorRequest != nil {
+			filter, err := convertPictureListOptions(paginatorRequest.GetOptions())
+			if err != nil {
+				return nil, err
+			}
+
+			if filter != nil {
+				filter.Status = row.Status
+				filter.Limit = 1
+				orderBy := convertPicturesOrder(paginatorRequest.GetOrder())
+
+				paginator, err := picturesRepository.PicturesPaginator(filter, pictures.PictureFields{}, orderBy)
+				if err != nil {
+					return nil, err
+				}
+
+				total, err := paginator.GetTotalItemCount(ctx)
+				if err != nil {
+					return nil, err
+				}
+
+				if total < maxPaginatorLength {
+					filter.Limit = uint32(total) //nolint: gosec
+
+					paginatorPictures, _, err := picturesRepository.Pictures(ctx, filter, pictures.PictureFields{}, orderBy, false)
+					if err != nil {
+						return nil, err
+					}
+
+					var pageNumber int32
+
+					for n, p := range paginatorPictures {
+						if p.ID == row.ID {
+							pageNumber = int32(n + 1) //nolint: gosec
+
+							break
+						}
+					}
+
+					paginator.PageRange = 15
+					paginator.CurrentPageNumber = pageNumber
+
+					pages, err := paginator.GetPages(ctx)
+					if err != nil {
+						return nil, err
+					}
+
+					picturesPages := PicturesPages{
+						PageCount:      pages.PageCount,
+						TotalItemCount: pages.TotalItemCount,
+					}
+
+					if pages.Previous > 0 {
+						picturesPages.Previous = paginatorPictures[pages.Previous-1].Identity
+					}
+
+					if pages.Next > 0 {
+						picturesPages.Next = paginatorPictures[pages.Next-1].Identity
+					}
+
+					if pages.First > 0 {
+						picturesPages.First = paginatorPictures[pages.First-1].Identity
+					}
+
+					if pages.Last > 0 {
+						picturesPages.Last = paginatorPictures[pages.Last-1].Identity
+					}
+
+					if pages.Current > 0 {
+						picturesPages.Current = paginatorPictures[pages.Current-1].Identity
+					}
+
+					pagesInRange := make([]*PicturesPagesPage, 0)
+					for _, i := range pages.PagesInRange {
+						pagesInRange = append(pagesInRange, &PicturesPagesPage{
+							Page:     i,
+							Identity: paginatorPictures[i-1].Identity,
+						})
+					}
+
+					picturesPages.PagesInRange = pagesInRange
+
+					resultRow.Paginator = &picturesPages
+				}
+			}
 		}
 
 		result = append(result, resultRow)

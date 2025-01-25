@@ -66,7 +66,7 @@ func (s *AttrsValueListOptions) apply(alias string, sqSelect *goqu.SelectDataset
 	return s.UserValues.JoinToAttributeIDItemIDAndApply(
 		attributeIDCol,
 		itemIDCol,
-		AppendPictureItemAlias(alias),
+		AppendPictureItemAlias(alias, ""),
 		sqSelect,
 	)
 }

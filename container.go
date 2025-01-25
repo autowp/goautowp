@@ -841,6 +841,10 @@ func (s *Container) ItemParentExtractor() *ItemParentExtractor {
 	return NewItemParentExtractor(s)
 }
 
+func (s *Container) NewLinkExtractor() *LinkExtractor {
+	return NewLinkExtractor(s)
+}
+
 func (s *Container) Auth() (*Auth, error) {
 	if s.auth == nil {
 		cfg := s.Config()
@@ -1114,7 +1118,7 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 		s.itemsGrpcServer = NewItemsGRPCServer(
 			repo, db, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
 			attrsRepository, picturesRepository, idx, events, usersRepository, messagingRepository, s.HostsManager(),
-			s.ItemParentExtractor(),
+			s.ItemParentExtractor(), s.NewLinkExtractor(),
 		)
 	}
 

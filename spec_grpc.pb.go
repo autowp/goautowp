@@ -2460,8 +2460,8 @@ type ItemsClient interface {
 	List(ctx context.Context, in *ItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*APITreeItem, error)
 	GetContentLanguages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*APIContentLanguages, error)
-	GetItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*APIItemLink, error)
-	GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest, opts ...grpc.CallOption) (*APIItemLinksResponse, error)
+	GetItemLink(ctx context.Context, in *ItemLinksRequest, opts ...grpc.CallOption) (*APIItemLink, error)
+	GetItemLinks(ctx context.Context, in *ItemLinksRequest, opts ...grpc.CallOption) (*ItemLinks, error)
 	DeleteItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateItemLink(ctx context.Context, in *APIItemLink, opts ...grpc.CallOption) (*APICreateItemLinkResponse, error)
 	UpdateItemLink(ctx context.Context, in *APIItemLink, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -2614,7 +2614,7 @@ func (c *itemsClient) GetContentLanguages(ctx context.Context, in *emptypb.Empty
 	return out, nil
 }
 
-func (c *itemsClient) GetItemLink(ctx context.Context, in *APIItemLinkRequest, opts ...grpc.CallOption) (*APIItemLink, error) {
+func (c *itemsClient) GetItemLink(ctx context.Context, in *ItemLinksRequest, opts ...grpc.CallOption) (*APIItemLink, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(APIItemLink)
 	err := c.cc.Invoke(ctx, Items_GetItemLink_FullMethodName, in, out, cOpts...)
@@ -2624,9 +2624,9 @@ func (c *itemsClient) GetItemLink(ctx context.Context, in *APIItemLinkRequest, o
 	return out, nil
 }
 
-func (c *itemsClient) GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest, opts ...grpc.CallOption) (*APIItemLinksResponse, error) {
+func (c *itemsClient) GetItemLinks(ctx context.Context, in *ItemLinksRequest, opts ...grpc.CallOption) (*ItemLinks, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(APIItemLinksResponse)
+	out := new(ItemLinks)
 	err := c.cc.Invoke(ctx, Items_GetItemLinks_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -2870,8 +2870,8 @@ type ItemsServer interface {
 	List(context.Context, *ItemsRequest) (*APIItemList, error)
 	GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error)
 	GetContentLanguages(context.Context, *emptypb.Empty) (*APIContentLanguages, error)
-	GetItemLink(context.Context, *APIItemLinkRequest) (*APIItemLink, error)
-	GetItemLinks(context.Context, *APIGetItemLinksRequest) (*APIItemLinksResponse, error)
+	GetItemLink(context.Context, *ItemLinksRequest) (*APIItemLink, error)
+	GetItemLinks(context.Context, *ItemLinksRequest) (*ItemLinks, error)
 	DeleteItemLink(context.Context, *APIItemLinkRequest) (*emptypb.Empty, error)
 	CreateItemLink(context.Context, *APIItemLink) (*APICreateItemLinkResponse, error)
 	UpdateItemLink(context.Context, *APIItemLink) (*emptypb.Empty, error)
@@ -2940,10 +2940,10 @@ func (UnimplementedItemsServer) GetTree(context.Context, *GetTreeRequest) (*APIT
 func (UnimplementedItemsServer) GetContentLanguages(context.Context, *emptypb.Empty) (*APIContentLanguages, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContentLanguages not implemented")
 }
-func (UnimplementedItemsServer) GetItemLink(context.Context, *APIItemLinkRequest) (*APIItemLink, error) {
+func (UnimplementedItemsServer) GetItemLink(context.Context, *ItemLinksRequest) (*APIItemLink, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItemLink not implemented")
 }
-func (UnimplementedItemsServer) GetItemLinks(context.Context, *APIGetItemLinksRequest) (*APIItemLinksResponse, error) {
+func (UnimplementedItemsServer) GetItemLinks(context.Context, *ItemLinksRequest) (*ItemLinks, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItemLinks not implemented")
 }
 func (UnimplementedItemsServer) DeleteItemLink(context.Context, *APIItemLinkRequest) (*emptypb.Empty, error) {
@@ -3250,7 +3250,7 @@ func _Items_GetContentLanguages_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _Items_GetItemLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIItemLinkRequest)
+	in := new(ItemLinksRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3262,13 +3262,13 @@ func _Items_GetItemLink_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: Items_GetItemLink_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemsServer).GetItemLink(ctx, req.(*APIItemLinkRequest))
+		return srv.(ItemsServer).GetItemLink(ctx, req.(*ItemLinksRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Items_GetItemLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(APIGetItemLinksRequest)
+	in := new(ItemLinksRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3280,7 +3280,7 @@ func _Items_GetItemLinks_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: Items_GetItemLinks_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemsServer).GetItemLinks(ctx, req.(*APIGetItemLinksRequest))
+		return srv.(ItemsServer).GetItemLinks(ctx, req.(*ItemLinksRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

@@ -12,6 +12,17 @@ import (
 	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
+var (
+	itemTypeCanHaveSpecs = []schema.ItemTableItemTypeID{
+		schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDTwins,
+		schema.ItemTableItemTypeIDVehicle,
+	}
+	itemTypeCanHaveRoute = []schema.ItemTableItemTypeID{
+		schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDTwins, schema.ItemTableItemTypeIDBrand,
+		schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDVehicle,
+	}
+)
+
 type ItemExtractor struct {
 	container *Container
 }
@@ -220,12 +231,12 @@ func (s *ItemExtractor) ExtractRows(
 			return nil, err
 		}
 
-		resultRow.Design, err = s.extractDesignInfo(ctx, fields, row, lang)
+		resultRow.AltNames, err = s.extractAltNames(ctx, fields, row, lang)
 		if err != nil {
 			return nil, err
 		}
 
-		resultRow.SpecsRoute, err = s.extractSpecsRoute(ctx, fields, row)
+		resultRow.Design, err = s.extractDesignInfo(ctx, fields, row, lang)
 		if err != nil {
 			return nil, err
 		}
@@ -252,6 +263,18 @@ func (s *ItemExtractor) ExtractRows(
 			}
 		}
 
+		resultRow.Route, resultRow.SpecsRoute, err = s.extractRoutes(ctx, fields, row)
+		if err != nil {
+			return nil, err
+		}
+
+		if fields.GetHasText() {
+			resultRow.HasText, err = itemRepository.HasFullText(ctx, row.ID)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		result = append(result, resultRow)
 	}
 
@@ -271,6 +294,71 @@ func (s *ItemExtractor) Extract(
 	}
 
 	return result[0], nil
+}
+
+func (s *ItemExtractor) extractRoutes(
+	ctx context.Context, fields *ItemFields, row *items.Item,
+) ([]string, []string, error) {
+	extractRoute := fields.GetRoute() && util.Contains(itemTypeCanHaveRoute, row.ItemTypeID)
+	extractSpecsRoute := fields.GetSpecsRoute() && util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) && row.HasSpecs
+
+	var (
+		route      []string
+		specsRoute []string
+	)
+
+	if extractSpecsRoute || extractRoute {
+		itemRepository, err := s.container.ItemsRepository()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cataloguePaths, err := itemRepository.CataloguePath(ctx, row.ID, items.CataloguePathOptions{
+			BreakOnFirst: true,
+			ToBrand:      true,
+			StockFirst:   true,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if extractRoute {
+			switch row.ItemTypeID {
+			case schema.ItemTableItemTypeIDCategory:
+				route = []string{"/category", util.NullStringToString(row.Catname)}
+			case schema.ItemTableItemTypeIDTwins:
+				route = []string{"/twins/group", strconv.FormatInt(row.ID, 10)}
+
+			case schema.ItemTableItemTypeIDBrand:
+				route = []string{"/", util.NullStringToString(row.Catname)}
+
+			case schema.ItemTableItemTypeIDEngine,
+				schema.ItemTableItemTypeIDVehicle:
+				for _, cPath := range cataloguePaths {
+					route = append([]string{"/", cPath.BrandCatname, cPath.CarCatname}, cPath.Path...)
+
+					break
+				}
+			case schema.ItemTableItemTypeIDFactory,
+				schema.ItemTableItemTypeIDMuseum,
+				schema.ItemTableItemTypeIDCopyright,
+				schema.ItemTableItemTypeIDPerson:
+			}
+		}
+
+		if extractSpecsRoute {
+			for _, path := range cataloguePaths {
+				res := append([]string{"/", path.BrandCatname, path.CarCatname}, path.Path...)
+				res = append(res, "specifications")
+
+				specsRoute = res
+
+				break
+			}
+		}
+	}
+
+	return route, specsRoute, nil
 }
 
 func (s *ItemExtractor) extractDesignInfo(
@@ -349,6 +437,67 @@ func (s *ItemExtractor) extractNames(
 	return nameText, nameHTML, nil
 }
 
+func (s *ItemExtractor) extractAltNames(
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string,
+) ([]*AltName, error) {
+	if !fields.GetAltNames() {
+		return nil, nil
+	}
+
+	// alt names
+	altNames := make(map[string][]string)
+	altNames2 := make(map[string][]string)
+
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	langNames, err := itemRepository.Names(ctx, row.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	currentLangName := ""
+
+	for clang, langName := range langNames {
+		if clang == items.DefaultLanguageCode {
+			continue
+		}
+
+		name := langName
+		if _, ok := altNames[name]; !ok {
+			altNames[langName] = make([]string, 0)
+		}
+
+		altNames[name] = append(altNames[name], clang)
+
+		if lang == clang {
+			currentLangName = name
+		}
+	}
+
+	for name, codes := range altNames {
+		if name != currentLangName {
+			altNames2[name] = codes
+		}
+	}
+
+	if len(currentLangName) > 0 {
+		delete(altNames2, currentLangName)
+	}
+
+	res := make([]*AltName, 0, len(altNames2))
+	for name, languages := range altNames2 {
+		res = append(res, &AltName{
+			Languages: languages,
+			Name:      name,
+		})
+	}
+
+	return res, nil
+}
+
 func (s *ItemExtractor) extractOtherNames(
 	ctx context.Context, fields *ItemFields, row *items.Item,
 ) ([]string, error) {
@@ -401,30 +550,6 @@ func (s *ItemExtractor) extractLocation(
 		Latitude:  location.Lat(),
 		Longitude: location.Lng(),
 	}, nil
-}
-
-func (s *ItemExtractor) extractSpecsRoute(ctx context.Context, fields *ItemFields, row *items.Item) ([]string, error) {
-	if fields.GetSpecsRoute() {
-		itemTypeCanHaveSpecs := []schema.ItemTableItemTypeID{
-			schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDTwins,
-			schema.ItemTableItemTypeIDVehicle,
-		}
-		if util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) && row.HasSpecs {
-			itemRepository, err := s.container.ItemsRepository()
-			if err != nil {
-				return nil, err
-			}
-
-			specsRoute, err := itemRepository.SpecsRoute(ctx, row.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			return specsRoute, nil
-		}
-	}
-
-	return nil, nil
 }
 
 func (s *ItemExtractor) itemPublicRoutes(ctx context.Context, item *items.Item) ([]*PublicRoute, error) {

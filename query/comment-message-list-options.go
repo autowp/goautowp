@@ -44,7 +44,7 @@ func (s *CommentMessageListOptions) apply(alias string, sqSelect *goqu.SelectDat
 
 	sqSelect, err = s.PictureItems.JoinToPictureIDAndApply(
 		aliasTable.Col(schema.CommentMessageTableItemIDColName),
-		AppendPictureItemAlias(alias),
+		AppendPictureItemAlias(alias, ""),
 		sqSelect,
 	)
 	if err != nil {

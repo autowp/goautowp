@@ -26,8 +26,8 @@ type PictureItemListOptions struct {
 	PictureItemByItemID     *PictureItemListOptions
 }
 
-func AppendPictureItemAlias(alias string) string {
-	return alias + "_" + PictureItemAlias
+func AppendPictureItemAlias(alias string, suffix string) string {
+	return alias + "_" + PictureItemAlias + suffix
 }
 
 func (s *PictureItemListOptions) IsPictureIDUnique() bool {
@@ -160,7 +160,7 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 
 	sqSelect, err = s.PictureItemByItemID.JoinToItemIDAndApply(
 		itemIDCol,
-		AppendPictureItemAlias(alias),
+		AppendPictureItemAlias(alias, ""),
 		sqSelect,
 	)
 	if err != nil {

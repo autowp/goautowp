@@ -88,6 +88,7 @@ type ItemsGRPCServer struct {
 	messagingRepository   *messaging.Repository
 	hostManager           *hosts.Manager
 	itemParentExtractor   *ItemParentExtractor
+	linkExtractor         *LinkExtractor
 }
 
 func NewItemsGRPCServer(
@@ -107,6 +108,7 @@ func NewItemsGRPCServer(
 	messagingRepository *messaging.Repository,
 	hostManager *hosts.Manager,
 	itemParentExtractor *ItemParentExtractor,
+	linkExtractor *LinkExtractor,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository:            repository,
@@ -125,6 +127,7 @@ func NewItemsGRPCServer(
 		messagingRepository:   messagingRepository,
 		hostManager:           hostManager,
 		itemParentExtractor:   itemParentExtractor,
+		linkExtractor:         linkExtractor,
 	}
 }
 
@@ -481,72 +484,23 @@ func (s *ItemsGRPCServer) GetContentLanguages(_ context.Context, _ *emptypb.Empt
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *APIItemLinkRequest) (*APIItemLink, error) {
-	st := struct {
-		ID     int64  `db:"id"`
-		Name   string `db:"name"`
-		URL    string `db:"url"`
-		Type   string `db:"type"`
-		ItemID int64  `db:"item_id"`
-	}{}
-
-	success, err := s.db.Select(
-		schema.LinksTableIDCol, schema.LinksTableNameCol, schema.LinksTableURLCol, schema.LinksTableTypeCol,
-		schema.LinksTableItemIDCol,
-	).
-		From(schema.LinksTable).
-		Where(schema.LinksTableIDCol.Eq(in.GetId())).
-		Executor().ScanStructContext(ctx, &st)
+func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *ItemLinksRequest) (*APIItemLink, error) {
+	row, err := s.repository.Link(ctx, convertLinkListOptions(in.GetOptions()))
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !success {
-		return nil, status.Error(codes.NotFound, "item not found")
-	}
-
-	return &APIItemLink{
-		Id:     st.ID,
-		Name:   st.Name,
-		Url:    st.URL,
-		Type:   st.Type,
-		ItemId: st.ItemID,
-	}, nil
+	return s.linkExtractor.ExtractRow(row), nil
 }
 
-func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *APIGetItemLinksRequest) (*APIItemLinksResponse, error) {
-	rows, err := s.db.Select(
-		schema.LinksTableIDCol, schema.LinksTableNameCol, schema.LinksTableURLCol, schema.LinksTableTypeCol,
-		schema.LinksTableItemIDCol,
-	).
-		From(schema.LinksTable).
-		Where(schema.LinksTableItemIDCol.Eq(in.GetItemId())).
-		Executor().QueryContext(ctx) //nolint:sqlclosecheck
+func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *ItemLinksRequest) (*ItemLinks, error) {
+	rows, err := s.repository.Links(ctx, convertLinkListOptions(in.GetOptions()))
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	defer util.Close(rows)
-
-	itemLinks := make([]*APIItemLink, 0)
-
-	for rows.Next() {
-		il := APIItemLink{}
-
-		err = rows.Scan(&il.Id, &il.Name, &il.Url, &il.Type, &il.ItemId)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		itemLinks = append(itemLinks, &il)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return &APIItemLinksResponse{
-		Items: itemLinks,
+	return &ItemLinks{
+		Items: s.linkExtractor.ExtractRows(rows),
 	}, nil
 }
 
@@ -2456,7 +2410,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 
 	inOptions := in.GetOptions()
 
-	if inOptions.GetItemId() == 0 && inOptions.GetParentId() == 0 {
+	if inOptions.GetItemId() == 0 && inOptions.GetParentId() == 0 && !isModer {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 

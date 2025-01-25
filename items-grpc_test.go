@@ -265,8 +265,10 @@ func TestItemLinks(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, r1.GetId())
 
-	r2, err := client.GetItemLink(ctx, &APIItemLinkRequest{
-		Id: r1.GetId(),
+	r2, err := client.GetItemLink(ctx, &ItemLinksRequest{
+		Options: &ItemLinkListOptions{
+			Id: r1.GetId(),
+		},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r1.GetId())
@@ -289,8 +291,10 @@ func TestItemLinks(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	r3, err := client.GetItemLink(ctx, &APIItemLinkRequest{
-		Id: r1.GetId(),
+	r3, err := client.GetItemLink(ctx, &ItemLinksRequest{
+		Options: &ItemLinkListOptions{
+			Id: r1.GetId(),
+		},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r1.GetId())
@@ -301,8 +305,10 @@ func TestItemLinks(t *testing.T) {
 	require.Equal(t, "default", r3.GetType())
 	require.Equal(t, int64(2), r3.GetItemId())
 
-	r4, err := client.GetItemLinks(ctx, &APIGetItemLinksRequest{
-		ItemId: r3.GetItemId(),
+	r4, err := client.GetItemLinks(ctx, &ItemLinksRequest{
+		Options: &ItemLinkListOptions{
+			ItemId: r3.GetItemId(),
+		},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, r4.GetItems())
@@ -2381,4 +2387,104 @@ func TestGetItemParents(t *testing.T) {
 	require.Equal(t, int32(1), res.GetPaginator().GetCurrent())
 	require.Equal(t, parentID, res.GetItems()[0].GetParentId())
 	require.Equal(t, child2ID, res.GetItems()[0].GetItemId())
+}
+
+func TestItemFields(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := NewItemsClient(conn)
+	kc := cnt.Keycloak()
+	cfg := config.LoadConfig(".")
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	res, err := client.List(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemsRequest{
+			Language: "ru",
+			Fields: &ItemFields{
+				AltNames:                   true,
+				AcceptedPicturesCount:      true,
+				AttrZoneId:                 true,
+				Brandicon:                  true,
+				ChildsCounts:               true,
+				ChildsCount:                true,
+				CommentsAttentionsCount:    true,
+				HasChildSpecs:              true,
+				HasSpecs:                   true,
+				InboxPicturesCount:         true,
+				IsCompilesItemOfDay:        true,
+				Location:                   true,
+				Links:                      &ItemLinksRequest{},
+				Logo120:                    true,
+				MostsActive:                true,
+				OtherNames:                 true,
+				PictureItems:               &PictureItemsRequest{},
+				PreviewPictures:            &PreviewPicturesFields{},
+				PublicRoutes:               true,
+				Route:                      true,
+				SpecsRoute:                 true,
+				NameHtml:                   true,
+				NameDefault:                true,
+				NameOnly:                   true,
+				NameText:                   true,
+				DescendantsCount:           true,
+				Description:                true,
+				HasText:                    true,
+				TotalPictures:              true,
+				DescendantTwinsGroupsCount: true,
+				Design:                     true,
+			},
+			Limit: 200,
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
+}
+
+func TestItemParentFields(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := NewItemsClient(conn)
+	kc := cnt.Keycloak()
+	cfg := config.LoadConfig(".")
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	res, err := client.GetItemParents(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&GetItemParentsRequest{
+			Language: "ru",
+			Fields: &ItemParentFields{
+				Item: &ItemFields{
+					AcceptedPicturesCount:   true,
+					ChildsCounts:            true,
+					CommentsAttentionsCount: true,
+					Description:             true,
+					Design:                  true,
+					FullText:                true,
+					InboxPicturesCount:      true,
+					NameDefault:             true,
+					NameHtml:                true,
+					NameText:                true,
+					OtherNames:              true,
+					SpecsRoute:              true,
+				},
+				Parent:          &ItemFields{},
+				DuplicateParent: &ItemFields{},
+				DuplicateChild:  &ItemFields{},
+			},
+			Limit: 200,
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
 }

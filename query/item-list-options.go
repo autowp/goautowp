@@ -278,7 +278,7 @@ func (s *ItemListOptions) applyJoins(
 	if s.PictureItems != nil {
 		groupBy = true
 
-		sqSelect, err = s.PictureItems.JoinToItemIDAndApply(idCol, AppendPictureItemAlias(alias), sqSelect)
+		sqSelect, err = s.PictureItems.JoinToItemIDAndApply(idCol, AppendPictureItemAlias(alias, ""), sqSelect)
 		if err != nil {
 			return nil, false, err
 		}
