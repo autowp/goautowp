@@ -161,7 +161,7 @@ func (s *ItemParentListOptions) apply(alias string, sqSelect *goqu.SelectDataset
 	}
 
 	if s.ItemParentCacheAncestorByChildID != nil {
-		sqSelect, err = s.ItemParentCacheAncestorByParentID.JoinToItemIDAndApply(
+		sqSelect, err = s.ItemParentCacheAncestorByChildID.JoinToItemIDAndApply(
 			itemIDCol,
 			AppendItemParentCacheAlias(alias, "ac"),
 			sqSelect,
