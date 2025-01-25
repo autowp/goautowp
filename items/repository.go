@@ -3559,7 +3559,7 @@ func (s *Repository) CataloguePaths(
 	result := make([]CataloguePathResult, 0)
 
 	if toBrandID == 0 || id == toBrandID {
-		var brandCatname string
+		var brandCatname sql.NullString
 
 		success, err := s.db.Select(schema.ItemTableCatnameCol).From(schema.ItemTable).Where(
 			schema.ItemTableIDCol.Eq(id),
@@ -3572,7 +3572,7 @@ func (s *Repository) CataloguePaths(
 		if success {
 			result = append(result, CataloguePathResult{
 				Type:         CataloguePathResultTypeBrand,
-				BrandCatname: brandCatname,
+				BrandCatname: util.NullStringToString(brandCatname),
 				CarCatname:   "",
 				Path:         []string{},
 				Stock:        true,

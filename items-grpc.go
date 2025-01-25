@@ -485,7 +485,12 @@ func (s *ItemsGRPCServer) GetContentLanguages(_ context.Context, _ *emptypb.Empt
 }
 
 func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *ItemLinksRequest) (*APIItemLink, error) {
-	row, err := s.repository.Link(ctx, convertLinkListOptions(in.GetOptions()))
+	options, err := convertLinkListOptions(in.GetOptions())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	row, err := s.repository.Link(ctx, options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -494,7 +499,12 @@ func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *ItemLinksRequest)
 }
 
 func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *ItemLinksRequest) (*ItemLinks, error) {
-	rows, err := s.repository.Links(ctx, convertLinkListOptions(in.GetOptions()))
+	options, err := convertLinkListOptions(in.GetOptions())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	rows, err := s.repository.Links(ctx, options)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

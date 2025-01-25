@@ -185,16 +185,25 @@ func convertItemParentCacheListOptions(in *ItemParentCacheListOptions) (*query.I
 	return &result, nil
 }
 
-func convertLinkListOptions(in *ItemLinkListOptions) *query.LinkListOptions {
+func convertLinkListOptions(in *ItemLinkListOptions) (*query.LinkListOptions, error) {
 	if in == nil {
-		return nil
+		return nil, nil //nolint: nilnil
 	}
 
-	return &query.LinkListOptions{
+	var err error
+
+	result := &query.LinkListOptions{
 		ID:     in.GetId(),
 		ItemID: in.GetItemId(),
 		Type:   in.GetType(),
 	}
+
+	result.ItemParentCacheDescendant, err = convertItemParentCacheListOptions(in.GetItemParentCacheDescendant())
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error) {

@@ -35,7 +35,7 @@ func (s *LinkListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 	var (
 		aliasTable = goqu.T(alias)
 		err        error
-		itemIDCol  = aliasTable.Col(schema.LinksTableIDColName)
+		itemIDCol  = aliasTable.Col(schema.LinksTableItemIDColName)
 	)
 
 	if s.ID != 0 {
