@@ -252,6 +252,33 @@ func IsMysqlDeadlockError(err error) bool {
 	return isMysqlErrorCode(err, mysqlDeadlockErrorCode)
 }
 
+func ScanValContextAndRetryOnDeadlock(ctx context.Context, sd *goqu.SelectDataset, i interface{}) (bool, error) {
+	var (
+		res               bool
+		err               error
+		isDeadlockAvoided bool
+		retriesLeft       = 10
+	)
+
+	for !isDeadlockAvoided && retriesLeft > 0 {
+		res, err = sd.ScanValContext(ctx, i)
+		if err != nil {
+			if !IsMysqlDeadlockError(err) {
+				return res, err
+			}
+
+			logrus.Warn("Deadlock detected. Retrying")
+			time.Sleep(time.Millisecond)
+
+			retriesLeft--
+		} else {
+			isDeadlockAvoided = true
+		}
+	}
+
+	return res, err
+}
+
 func ExecAndRetryOnDeadlock(ctx context.Context, executor exec.QueryExecutor) (sql.Result, error) {
 	var (
 		res               sql.Result

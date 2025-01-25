@@ -624,10 +624,13 @@ func (s *Repository) ActualValue(ctx context.Context, attributeID int64, itemID 
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
 		var value sql.NullString
 
-		success, err := s.db.Select(schema.AttrsValuesStringTableValueCol).From(schema.AttrsValuesStringTable).Where(
-			schema.AttrsValuesStringTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsValuesStringTableItemIDCol.Eq(itemID),
-		).ScanValContext(ctx, &value)
+		success, err := util.ScanValContextAndRetryOnDeadlock(
+			ctx, s.db.Select(schema.AttrsValuesStringTableValueCol).From(schema.AttrsValuesStringTable).Where(
+				schema.AttrsValuesStringTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsValuesStringTableItemIDCol.Eq(itemID),
+			),
+			&value,
+		)
 		if err != nil {
 			return Value{}, err
 		}
@@ -642,10 +645,14 @@ func (s *Repository) ActualValue(ctx context.Context, attributeID int64, itemID 
 	case schema.AttrsAttributeTypeIDInteger:
 		var value sql.NullInt32
 
-		success, err := s.db.Select(schema.AttrsValuesIntTableValueCol).From(schema.AttrsValuesIntTable).Where(
-			schema.AttrsValuesIntTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsValuesIntTableItemIDCol.Eq(itemID),
-		).ScanValContext(ctx, &value)
+		success, err := util.ScanValContextAndRetryOnDeadlock(
+			ctx,
+			s.db.Select(schema.AttrsValuesIntTableValueCol).From(schema.AttrsValuesIntTable).Where(
+				schema.AttrsValuesIntTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsValuesIntTableItemIDCol.Eq(itemID),
+			),
+			&value,
+		)
 		if err != nil {
 			return Value{}, err
 		}
@@ -659,10 +666,14 @@ func (s *Repository) ActualValue(ctx context.Context, attributeID int64, itemID 
 	case schema.AttrsAttributeTypeIDBoolean:
 		var value sql.NullBool
 
-		success, err := s.db.Select(schema.AttrsValuesIntTableValueCol).From(schema.AttrsValuesIntTable).Where(
-			schema.AttrsValuesIntTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsValuesIntTableItemIDCol.Eq(itemID),
-		).ScanValContext(ctx, &value)
+		success, err := util.ScanValContextAndRetryOnDeadlock(
+			ctx,
+			s.db.Select(schema.AttrsValuesIntTableValueCol).From(schema.AttrsValuesIntTable).Where(
+				schema.AttrsValuesIntTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsValuesIntTableItemIDCol.Eq(itemID),
+			),
+			&value,
+		)
 		if err != nil {
 			return Value{}, err
 		}
@@ -677,10 +688,14 @@ func (s *Repository) ActualValue(ctx context.Context, attributeID int64, itemID 
 	case schema.AttrsAttributeTypeIDFloat:
 		var value sql.NullFloat64
 
-		success, err := s.db.Select(schema.AttrsValuesFloatTableValueCol).From(schema.AttrsValuesFloatTable).Where(
-			schema.AttrsValuesFloatTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsValuesFloatTableItemIDCol.Eq(itemID),
-		).ScanValContext(ctx, &value)
+		success, err := util.ScanValContextAndRetryOnDeadlock(
+			ctx,
+			s.db.Select(schema.AttrsValuesFloatTableValueCol).From(schema.AttrsValuesFloatTable).Where(
+				schema.AttrsValuesFloatTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsValuesFloatTableItemIDCol.Eq(itemID),
+			),
+			&value,
+		)
 		if err != nil {
 			return Value{}, err
 		}
@@ -746,11 +761,15 @@ func (s *Repository) UserValue(ctx context.Context, attributeID int64, itemID in
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
 		var value sql.NullString
 
-		success, err := s.db.Select(schema.AttrsUserValuesStringTableValueCol).From(schema.AttrsUserValuesStringTable).Where(
-			schema.AttrsUserValuesStringTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesStringTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesStringTableUserIDCol.Eq(userID),
-		).ScanValContext(ctx, &value)
+		success, err := util.ScanValContextAndRetryOnDeadlock(
+			ctx,
+			s.db.Select(schema.AttrsUserValuesStringTableValueCol).From(schema.AttrsUserValuesStringTable).Where(
+				schema.AttrsUserValuesStringTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesStringTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesStringTableUserIDCol.Eq(userID),
+			),
+			&value,
+		)
 		if err != nil {
 			return Value{}, err
 		}
@@ -765,11 +784,15 @@ func (s *Repository) UserValue(ctx context.Context, attributeID int64, itemID in
 	case schema.AttrsAttributeTypeIDInteger:
 		var value sql.NullInt32
 
-		success, err := s.db.Select(schema.AttrsUserValuesIntTableValueCol).From(schema.AttrsUserValuesIntTable).Where(
-			schema.AttrsUserValuesIntTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesIntTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesIntTableUserIDCol.Eq(userID),
-		).ScanValContext(ctx, &value)
+		success, err := util.ScanValContextAndRetryOnDeadlock(
+			ctx,
+			s.db.Select(schema.AttrsUserValuesIntTableValueCol).From(schema.AttrsUserValuesIntTable).Where(
+				schema.AttrsUserValuesIntTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesIntTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesIntTableUserIDCol.Eq(userID),
+			),
+			&value,
+		)
 		if err != nil {
 			return Value{}, err
 		}
@@ -783,11 +806,15 @@ func (s *Repository) UserValue(ctx context.Context, attributeID int64, itemID in
 	case schema.AttrsAttributeTypeIDBoolean:
 		var value sql.NullBool
 
-		success, err := s.db.Select(schema.AttrsUserValuesIntTableValueCol).From(schema.AttrsUserValuesIntTable).Where(
-			schema.AttrsUserValuesIntTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesIntTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesIntTableUserIDCol.Eq(userID),
-		).ScanValContext(ctx, &value)
+		success, err := util.ScanValContextAndRetryOnDeadlock(
+			ctx,
+			s.db.Select(schema.AttrsUserValuesIntTableValueCol).From(schema.AttrsUserValuesIntTable).Where(
+				schema.AttrsUserValuesIntTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesIntTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesIntTableUserIDCol.Eq(userID),
+			),
+			&value,
+		)
 		if err != nil {
 			return Value{}, err
 		}
@@ -802,11 +829,15 @@ func (s *Repository) UserValue(ctx context.Context, attributeID int64, itemID in
 	case schema.AttrsAttributeTypeIDFloat:
 		var value sql.NullFloat64
 
-		success, err := s.db.Select(schema.AttrsUserValuesFloatTableValueCol).From(schema.AttrsUserValuesFloatTable).Where(
-			schema.AttrsUserValuesFloatTableAttributeIDCol.Eq(attributeID),
-			schema.AttrsUserValuesFloatTableItemIDCol.Eq(itemID),
-			schema.AttrsUserValuesFloatTableUserIDCol.Eq(userID),
-		).ScanValContext(ctx, &value)
+		success, err := util.ScanValContextAndRetryOnDeadlock(
+			ctx,
+			s.db.Select(schema.AttrsUserValuesFloatTableValueCol).From(schema.AttrsUserValuesFloatTable).Where(
+				schema.AttrsUserValuesFloatTableAttributeIDCol.Eq(attributeID),
+				schema.AttrsUserValuesFloatTableItemIDCol.Eq(itemID),
+				schema.AttrsUserValuesFloatTableUserIDCol.Eq(userID),
+			),
+			&value,
+		)
 		if err != nil {
 			return Value{}, err
 		}
@@ -1306,10 +1337,13 @@ func (s *Repository) calcAvgUserValue(
 func (s *Repository) getUserValueWeight(ctx context.Context, userID int64) (float32, error) {
 	var weight float32
 
-	success, err := s.db.Select(schema.UserTableSpecsWeightCol).
-		From(schema.UserTable).
-		Where(schema.UserTableIDCol.Eq(userID)).
-		ScanValContext(ctx, &weight)
+	success, err := util.ScanValContextAndRetryOnDeadlock(
+		ctx,
+		s.db.Select(schema.UserTableSpecsWeightCol).
+			From(schema.UserTable).
+			Where(schema.UserTableIDCol.Eq(userID)),
+		&weight,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -1354,10 +1388,13 @@ func (s *Repository) calcEngineValue(ctx context.Context, attributeID int64, ite
 
 	var engineItemID sql.NullInt64
 
-	success, err := s.db.Select(schema.ItemTableEngineItemIDCol).
-		From(schema.ItemTable).
-		Where(schema.ItemTableIDCol.Eq(itemID)).
-		ScanValContext(ctx, &engineItemID)
+	success, err := util.ScanValContextAndRetryOnDeadlock(
+		ctx,
+		s.db.Select(schema.ItemTableEngineItemIDCol).
+			From(schema.ItemTable).
+			Where(schema.ItemTableIDCol.Eq(itemID)),
+		&engineItemID,
+	)
 	if err != nil {
 		return Value{}, err
 	}
@@ -2183,10 +2220,14 @@ func (s *Repository) propagateInheritance(
 
 func (s *Repository) haveOwnAttributeValue(ctx context.Context, attributeID, itemID int64) (bool, error) {
 	var exists bool
-	success, err := s.db.Select(goqu.V(true)).From(schema.AttrsUserValuesTable).Where(
-		schema.AttrsUserValuesTableAttributeIDCol.Eq(attributeID),
-		schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
-	).ScanValContext(ctx, &exists)
+	success, err := util.ScanValContextAndRetryOnDeadlock(
+		ctx,
+		s.db.Select(goqu.V(true)).From(schema.AttrsUserValuesTable).Where(
+			schema.AttrsUserValuesTableAttributeIDCol.Eq(attributeID),
+			schema.AttrsUserValuesTableItemIDCol.Eq(itemID),
+		),
+		&exists,
+	)
 
 	return success && exists, err
 }
