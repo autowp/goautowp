@@ -71,9 +71,9 @@ func (s *DayPictures) SetCurrentDateToLastIfEmptyDate(ctx context.Context) error
 	listOptions := *s.listOptions
 	listOptions.Timezone = s.timezone
 
-	orderBy := pictures.OrderByAddDateDesc
+	orderBy := pictures.OrderByAddDateStrictDesc
 	if s.column == schema.PictureTableAcceptDatetimeColName {
-		orderBy = pictures.OrderByAcceptDatetimeDesc
+		orderBy = pictures.OrderByAcceptDatetimeStrictDesc
 	}
 
 	lastDate, err := s.calcDate(ctx, &listOptions, orderBy)
@@ -150,14 +150,14 @@ func (s *DayPictures) calcPrevDate(ctx context.Context) error {
 
 	listOptions := *s.listOptions
 	listOptions.Timezone = s.timezone
-	orderBy := pictures.OrderByAddDateDesc
+	orderBy := pictures.OrderByAddDateStrictDesc
 
 	startOfDay := s.currentDate.In(s.timezone)
 	minDate := s.startOfDay(s.minDate)
 
 	if s.column == schema.PictureTableAcceptDatetimeColName {
 		listOptions.AcceptDateLt = &startOfDay
-		orderBy = pictures.OrderByAcceptDatetimeDesc
+		orderBy = pictures.OrderByAcceptDatetimeStrictDesc
 
 		if !s.minDate.IsZero() {
 			listOptions.AcceptDateGte = &minDate
@@ -189,11 +189,11 @@ func (s *DayPictures) calcNextDate(ctx context.Context) error {
 	listOptions := *s.listOptions
 	listOptions.Timezone = s.timezone
 	startOfNextDay := s.currentDate.AddDays(1).In(s.timezone)
-	orderBy := pictures.OrderByAddDateAsc
+	orderBy := pictures.OrderByAddDateStrictAsc
 
 	if s.column == schema.PictureTableAcceptDatetimeColName {
 		listOptions.AcceptDateGte = &startOfNextDay
-		orderBy = pictures.OrderByAcceptDatetimeAsc
+		orderBy = pictures.OrderByAcceptDatetimeStrictAsc
 	} else {
 		listOptions.AddDateGte = &startOfNextDay
 	}

@@ -85,6 +85,8 @@ const (
 	OrderByNone OrderBy = iota
 	OrderByAddDateDesc
 	OrderByAddDateAsc
+	OrderByAddDateStrictDesc
+	OrderByAddDateStrictAsc
 	OrderByResolutionDesc
 	OrderByResolutionAsc
 	OrderByFilesizeDesc
@@ -98,6 +100,8 @@ const (
 	OrderByStatus
 	OrderByAcceptDatetimeDesc
 	OrderByAcceptDatetimeAsc
+	OrderByAcceptDatetimeStrictDesc
+	OrderByAcceptDatetimeStrictAsc
 	OrderByPerspectives
 	OrderByDfDistanceSimilarity
 	OrderByTopPerspectives
@@ -470,7 +474,7 @@ func (s *Repository) HasModerVote(ctx context.Context, pictureID int64, userID i
 	return success && res, err
 }
 
-func (s *Repository) orderBy(
+func (s *Repository) orderBy( //nolint: maintidx
 	sqSelect *goqu.SelectDataset, options *query.PictureListOptions, order OrderBy, groupBy bool,
 ) (*goqu.SelectDataset, bool, error) {
 	var (
@@ -479,6 +483,10 @@ func (s *Repository) orderBy(
 	)
 
 	switch order {
+	case OrderByAddDateStrictDesc:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableAddDateColName).Desc())
+	case OrderByAddDateStrictAsc:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableAddDateColName).Asc())
 	case OrderByAddDateDesc:
 		sqSelect = sqSelect.Order(
 			aliasTable.Col(schema.PictureTableAddDateColName).Desc(),
@@ -566,6 +574,10 @@ func (s *Repository) orderBy(
 			)
 	case OrderByStatus:
 		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableStatusColName).Asc())
+	case OrderByAcceptDatetimeStrictAsc:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Asc())
+	case OrderByAcceptDatetimeStrictDesc:
+		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Desc())
 	case OrderByAcceptDatetimeAsc:
 		sqSelect = sqSelect.Order(
 			aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Asc(),
