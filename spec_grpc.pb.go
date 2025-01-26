@@ -4553,6 +4553,7 @@ const (
 	Pictures_SetPictureCopyrights_FullMethodName      = "/goautowp.Pictures/SetPictureCopyrights"
 	Pictures_SetPictureStatus_FullMethodName          = "/goautowp.Pictures/SetPictureStatus"
 	Pictures_GetInbox_FullMethodName                  = "/goautowp.Pictures/GetInbox"
+	Pictures_GetNewbox_FullMethodName                 = "/goautowp.Pictures/GetNewbox"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -4588,6 +4589,7 @@ type PicturesClient interface {
 	SetPictureCopyrights(ctx context.Context, in *SetPictureCopyrightsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetPictureStatus(ctx context.Context, in *SetPictureStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetInbox(ctx context.Context, in *InboxRequest, opts ...grpc.CallOption) (*Inbox, error)
+	GetNewbox(ctx context.Context, in *NewboxRequest, opts ...grpc.CallOption) (*Newbox, error)
 }
 
 type picturesClient struct {
@@ -4888,6 +4890,16 @@ func (c *picturesClient) GetInbox(ctx context.Context, in *InboxRequest, opts ..
 	return out, nil
 }
 
+func (c *picturesClient) GetNewbox(ctx context.Context, in *NewboxRequest, opts ...grpc.CallOption) (*Newbox, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Newbox)
+	err := c.cc.Invoke(ctx, Pictures_GetNewbox_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility.
@@ -4921,6 +4933,7 @@ type PicturesServer interface {
 	SetPictureCopyrights(context.Context, *SetPictureCopyrightsRequest) (*emptypb.Empty, error)
 	SetPictureStatus(context.Context, *SetPictureStatusRequest) (*emptypb.Empty, error)
 	GetInbox(context.Context, *InboxRequest) (*Inbox, error)
+	GetNewbox(context.Context, *NewboxRequest) (*Newbox, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -5017,6 +5030,9 @@ func (UnimplementedPicturesServer) SetPictureStatus(context.Context, *SetPicture
 }
 func (UnimplementedPicturesServer) GetInbox(context.Context, *InboxRequest) (*Inbox, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInbox not implemented")
+}
+func (UnimplementedPicturesServer) GetNewbox(context.Context, *NewboxRequest) (*Newbox, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNewbox not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 func (UnimplementedPicturesServer) testEmbeddedByValue()                  {}
@@ -5561,6 +5577,24 @@ func _Pictures_GetInbox_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_GetNewbox_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewboxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).GetNewbox(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_GetNewbox_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).GetNewbox(ctx, req.(*NewboxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -5683,6 +5717,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInbox",
 			Handler:    _Pictures_GetInbox_Handler,
+		},
+		{
+			MethodName: "GetNewbox",
+			Handler:    _Pictures_GetNewbox_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

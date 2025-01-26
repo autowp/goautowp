@@ -3,27 +3,27 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
+	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 )
 
-const externalDateFormat = time.DateOnly
-
 type DayPictures struct {
-	currentDate        time.Time
+	currentDate        civil.Date
 	listOptions        *query.PictureListOptions
 	timezone           *time.Location
 	minDate            time.Time
 	dbTimezone         *time.Location
 	dbDateTimeFormat   string
-	prevDate           time.Time
-	nextDate           time.Time
+	prevDate           civil.Date
+	nextDate           civil.Date
 	picturesRepository *pictures.Repository
+	column             string
 }
 
 func (s *DayPictures) HaveCurrentDate() bool {
@@ -31,8 +31,8 @@ func (s *DayPictures) HaveCurrentDate() bool {
 }
 
 func NewDayPictures(
-	picturesRepository *pictures.Repository, timezone *time.Location, listOptions *query.PictureListOptions,
-	currentDate time.Time,
+	picturesRepository *pictures.Repository, column string, timezone *time.Location, listOptions *query.PictureListOptions,
+	currentDate civil.Date,
 ) (*DayPictures, error) {
 	return &DayPictures{
 		timezone:           timezone,
@@ -41,10 +41,11 @@ func NewDayPictures(
 		dbDateTimeFormat:   time.DateTime,
 		currentDate:        currentDate,
 		picturesRepository: picturesRepository,
+		column:             column,
 	}, nil
 }
 
-func (s *DayPictures) HaveCurrentDayPictures(ctx context.Context) (bool, error) {
+func (s *DayPictures) haveCurrentDayPictures(ctx context.Context) (bool, error) {
 	if s.currentDate.IsZero() {
 		return false, nil
 	}
@@ -57,32 +58,30 @@ func (s *DayPictures) HaveCurrentDayPictures(ctx context.Context) (bool, error) 
 	return total > 0, nil
 }
 
-func (s *DayPictures) LastDateStr(ctx context.Context) (string, error) {
+func (s *DayPictures) SetCurrentDateToLastIfEmptyDate(ctx context.Context) error {
+	haveCurrentDayPictures, err := s.haveCurrentDayPictures(ctx)
+	if err != nil {
+		return err
+	}
+
+	if haveCurrentDayPictures {
+		return nil
+	}
+
 	listOptions := *s.listOptions
 	listOptions.Timezone = s.timezone
 
-	lastDate, err := s.calcDate(ctx, &listOptions, pictures.OrderByAddDateDesc)
+	orderBy := pictures.OrderByAddDateDesc
+	if s.column == schema.PictureTableAcceptDatetimeColName {
+		orderBy = pictures.OrderByAcceptDatetimeDesc
+	}
+
+	lastDate, err := s.calcDate(ctx, &listOptions, orderBy)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("calcDate(): %w", err)
 	}
 
-	return lastDate.In(s.timezone).Format(externalDateFormat), nil
-}
-
-func (s *DayPictures) SetCurrentDate(date string) error {
-	var (
-		dateObj = time.Time{}
-		err     error
-	)
-
-	if date != "" {
-		dateObj, err = time.ParseInLocation(externalDateFormat, date, s.timezone)
-		if err != nil {
-			return err
-		}
-	}
-
-	s.currentDate = dateObj
+	s.currentDate = lastDate
 
 	s.reset()
 
@@ -90,52 +89,54 @@ func (s *DayPictures) SetCurrentDate(date string) error {
 }
 
 func (s *DayPictures) reset() {
-	s.nextDate = time.Time{}
-	s.prevDate = time.Time{}
-}
-
-func (s *DayPictures) endOfDay(date time.Time) time.Time {
-	return time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 999, date.Location())
+	s.nextDate = civil.Date{}
+	s.prevDate = civil.Date{}
 }
 
 func (s *DayPictures) startOfDay(date time.Time) time.Time {
 	return time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 }
 
-func (s *DayPictures) PrevDate(ctx context.Context) (time.Time, error) {
+func (s *DayPictures) PrevDate(ctx context.Context) (civil.Date, error) {
 	err := s.calcPrevDate(ctx)
+	if err != nil {
+		return s.prevDate, fmt.Errorf("calcPrevDate(): %w", err)
+	}
 
 	return s.prevDate, err
 }
 
-func (s *DayPictures) NextDate(ctx context.Context) (time.Time, error) {
+func (s *DayPictures) NextDate(ctx context.Context) (civil.Date, error) {
 	err := s.calcNextDate(ctx)
+	if err != nil {
+		return s.nextDate, fmt.Errorf("calcNextDate(): %w", err)
+	}
 
-	return s.nextDate, err
+	return s.nextDate, nil
 }
 
 func (s *DayPictures) calcDate(
 	ctx context.Context, listOptions *query.PictureListOptions, orderBy pictures.OrderBy,
-) (time.Time, error) {
-	sqSelect, err := s.picturesRepository.PictureSelect(listOptions, pictures.PictureFields{}, orderBy)
+) (civil.Date, error) {
+	sqSelect, err := s.picturesRepository.PictureSelect(listOptions, nil, orderBy)
 	if err != nil {
-		return time.Time{}, err
+		return civil.Date{}, err
 	}
 
 	var date sql.NullTime
 
-	success, err := sqSelect.Select(goqu.T(query.PictureAlias).Col(schema.PictureTableAddDateColName)).
+	success, err := sqSelect.Select(goqu.T(query.PictureAlias).Col(s.column)).
 		Limit(1).
 		ScanValContext(ctx, &date)
 	if err != nil {
-		return time.Time{}, err
+		return civil.Date{}, err
 	}
 
 	if success && date.Valid {
-		return date.Time.In(s.timezone), nil
+		return civil.DateOf(date.Time.In(s.timezone)), nil
 	}
 
-	return time.Time{}, nil
+	return civil.Date{}, nil
 }
 
 func (s *DayPictures) calcPrevDate(ctx context.Context) error {
@@ -149,15 +150,29 @@ func (s *DayPictures) calcPrevDate(ctx context.Context) error {
 
 	listOptions := *s.listOptions
 	listOptions.Timezone = s.timezone
-	listOptions.AddDateLt = util.TimePtr(s.startOfDay(s.currentDate))
+	orderBy := pictures.OrderByAddDateDesc
 
-	if !s.minDate.IsZero() {
-		listOptions.AddDateGte = util.TimePtr(s.startOfDay(s.minDate))
+	startOfDay := s.currentDate.In(s.timezone)
+	minDate := s.startOfDay(s.minDate)
+
+	if s.column == schema.PictureTableAcceptDatetimeColName {
+		listOptions.AcceptDateLt = &startOfDay
+		orderBy = pictures.OrderByAcceptDatetimeDesc
+
+		if !s.minDate.IsZero() {
+			listOptions.AcceptDateGte = &minDate
+		}
+	} else {
+		listOptions.AddDateLt = &startOfDay
+
+		if !s.minDate.IsZero() {
+			listOptions.AddDateGte = &minDate
+		}
 	}
 
 	var err error
 
-	s.prevDate, err = s.calcDate(ctx, &listOptions, pictures.OrderByAddDateDesc)
+	s.prevDate, err = s.calcDate(ctx, &listOptions, orderBy)
 
 	return err
 }
@@ -173,59 +188,77 @@ func (s *DayPictures) calcNextDate(ctx context.Context) error {
 
 	listOptions := *s.listOptions
 	listOptions.Timezone = s.timezone
-	listOptions.AddDateGt = util.TimePtr(s.endOfDay(s.currentDate))
+	startOfNextDay := s.currentDate.AddDays(1).In(s.timezone)
+	orderBy := pictures.OrderByAddDateAsc
+
+	if s.column == schema.PictureTableAcceptDatetimeColName {
+		listOptions.AcceptDateGte = &startOfNextDay
+		orderBy = pictures.OrderByAcceptDatetimeAsc
+	} else {
+		listOptions.AddDateGte = &startOfNextDay
+	}
 
 	var err error
 
-	s.nextDate, err = s.calcDate(ctx, &listOptions, pictures.OrderByAddDateAsc)
+	s.nextDate, err = s.calcDate(ctx, &listOptions, orderBy)
 
 	return err
 }
 
-func (s *DayPictures) CurrentDate() time.Time {
+func (s *DayPictures) CurrentDate() civil.Date {
 	return s.currentDate
 }
 
 func (s *DayPictures) PrevDateCount(ctx context.Context) (int32, error) {
 	err := s.calcPrevDate(ctx)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("calcPrevDate(): %w", err)
 	}
 
-	if s.prevDate.IsZero() {
-		return 0, nil
+	count, err := s.dateCount(ctx, s.prevDate)
+	if err != nil {
+		return 0, fmt.Errorf("dateCount(%s): %w", s.prevDate.String(), err)
 	}
 
-	return s.dateCount(ctx, s.prevDate)
+	return count, nil
 }
 
 func (s *DayPictures) CurrentDateCount(ctx context.Context) (int32, error) {
-	if s.currentDate.IsZero() {
-		return 0, nil
+	count, err := s.dateCount(ctx, s.currentDate)
+	if err != nil {
+		return 0, fmt.Errorf("dateCount(%s): %w", s.currentDate.String(), err)
 	}
 
-	return s.dateCount(ctx, s.currentDate)
+	return count, nil
 }
 
 func (s *DayPictures) NextDateCount(ctx context.Context) (int32, error) {
 	err := s.calcNextDate(ctx)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("calcNextDate(): %w", err)
 	}
 
-	if s.nextDate.IsZero() {
+	count, err := s.dateCount(ctx, s.nextDate)
+	if err != nil {
+		return 0, fmt.Errorf("dateCount(%s): %w", s.nextDate.String(), err)
+	}
+
+	return count, nil
+}
+
+func (s *DayPictures) dateCount(ctx context.Context, date civil.Date) (int32, error) {
+	if date.IsZero() {
 		return 0, nil
 	}
 
-	return s.dateCount(ctx, s.nextDate)
-}
-
-func (s *DayPictures) dateCount(ctx context.Context, date time.Time) (int32, error) {
-	d := util.TimeToDate(date)
-
 	listOptions := *s.listOptions
-	listOptions.AddDate = &d
 	listOptions.Timezone = s.timezone
+
+	if s.column == schema.PictureTableAcceptDatetimeColName {
+		listOptions.AcceptDate = &date
+	} else {
+		listOptions.AddDate = &date
+	}
 
 	res, err := s.picturesRepository.Count(ctx, &listOptions)
 

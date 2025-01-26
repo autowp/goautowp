@@ -1690,3 +1690,44 @@ func TestInbox(t *testing.T) {
 	)
 	require.ErrorContains(t, err, "Unauthenticated")
 }
+
+func TestNewbox(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	kc := cnt.Keycloak()
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
+
+	_, err = goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
+		Identity: identity,
+		Status:   schema.PictureStatusAccepted,
+		IP:       util.IP(net.IPv4allrouter),
+		AddDate:  time.Now(),
+		AcceptDatetime: sql.NullTime{
+			Valid: true,
+			Time:  time.Now().AddDate(-1, 0, 0),
+		},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	_, err = client.GetNewbox(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&NewboxRequest{
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+}

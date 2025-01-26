@@ -13,6 +13,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"cloud.google.com/go/civil"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exec"
 	"github.com/go-sql-driver/mysql"
@@ -29,37 +30,27 @@ const (
 	mysqlDeadlockErrorCode     = 1213
 )
 
-type Date struct {
-	Year  int
-	Month time.Month
-	Day   int
-}
-
-func GrpcDateToTime(value *date.Date, loc *time.Location) time.Time {
+func GrpcDateToDate(value *date.Date) *civil.Date {
 	if value == nil {
-		return time.Time{}
+		return nil
 	}
 
-	return time.Date(int(value.GetYear()), time.Month(value.GetMonth()), int(value.GetDay()), 0, 0, 0, 0, loc)
-}
-
-func TimeToDate(value time.Time) Date {
-	return Date{
-		Year:  value.Year(),
-		Month: value.Month(),
-		Day:   value.Day(),
+	return &civil.Date{
+		Year:  int(value.GetYear()),
+		Month: time.Month(value.GetMonth()),
+		Day:   int(value.GetDay()),
 	}
 }
 
-func TimeToGrpcDate(value time.Time) *date.Date {
+func DateToGrpcDate(value civil.Date) *date.Date {
 	if value.IsZero() {
 		return nil
 	}
 
 	return &date.Date{
-		Year:  int32(value.Year()),  //nolint: gosec
-		Month: int32(value.Month()), //nolint: gosec
-		Day:   int32(value.Day()),   //nolint: gosec
+		Year:  int32(value.Year),  //nolint: gosec
+		Month: int32(value.Month), //nolint: gosec
+		Day:   int32(value.Day),   //nolint: gosec
 	}
 }
 

@@ -605,7 +605,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				filter.Limit = 1
 				orderBy := convertPicturesOrder(paginatorRequest.GetOrder())
 
-				paginator, err := picturesRepository.PicturesPaginator(filter, pictures.PictureFields{}, orderBy)
+				paginator, err := picturesRepository.PicturesPaginator(filter, nil, orderBy)
 				if err != nil {
 					return nil, err
 				}
@@ -618,7 +618,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				if total < maxPaginatorLength {
 					filter.Limit = uint32(total) //nolint: gosec
 
-					paginatorPictures, _, err := picturesRepository.Pictures(ctx, filter, pictures.PictureFields{}, orderBy, false)
+					paginatorPictures, _, err := picturesRepository.Pictures(ctx, filter, nil, orderBy, false)
 					if err != nil {
 						return nil, err
 					}

@@ -130,11 +130,6 @@ func (s *ItemExtractor) ExtractRows(
 		return nil, err
 	}
 
-	imageStorage, err := s.container.ImageStorage()
-	if err != nil {
-		return nil, err
-	}
-
 	itemRepository, err := s.container.ItemsRepository()
 	if err != nil {
 		return nil, err
@@ -185,22 +180,9 @@ func (s *ItemExtractor) ExtractRows(
 			return nil, err
 		}
 
-		if fields.GetLogo120() && row.LogoID.Valid {
-			logo120, err := imageStorage.FormattedImage(ctx, int(row.LogoID.Int64), "logo")
-			if err != nil {
-				return nil, err
-			}
-
-			resultRow.Logo120 = APIImageToGRPC(logo120)
-		}
-
-		if fields.GetBrandicon() && row.LogoID.Valid {
-			brandicon2, err := imageStorage.FormattedImage(ctx, int(row.LogoID.Int64), "brandicon2")
-			if err != nil {
-				return nil, err
-			}
-
-			resultRow.Brandicon = APIImageToGRPC(brandicon2)
+		resultRow.Logo120, resultRow.Brandicon, err = s.extractLogos(ctx, fields, row)
+		if err != nil {
+			return nil, err
 		}
 
 		if fields.GetIsCompilesItemOfDay() {
@@ -275,6 +257,21 @@ func (s *ItemExtractor) ExtractRows(
 			}
 		}
 
+		resultRow.Categories, err = s.extractCategories(ctx, fields, row, lang, isModer, userID, role)
+		if err != nil {
+			return nil, err
+		}
+
+		resultRow.Twins, err = s.extractTwins(ctx, fields, row, lang, isModer, userID, role)
+		if err != nil {
+			return nil, err
+		}
+
+		if fields.GetCanEditSpecs() {
+			resultRow.CanEditSpecs = util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) &&
+				s.container.Enforcer().Enforce(role, "specifications", "edit")
+		}
+
 		result = append(result, resultRow)
 	}
 
@@ -294,6 +291,104 @@ func (s *ItemExtractor) Extract(
 	}
 
 	return result[0], nil
+}
+
+func (s *ItemExtractor) extractLogos(
+	ctx context.Context, fields *ItemFields, row *items.Item,
+) (*APIImage, *APIImage, error) {
+	if !row.LogoID.Valid {
+		return nil, nil, nil
+	}
+
+	var (
+		logo120   *APIImage
+		brandicon *APIImage
+	)
+
+	imageStorage, err := s.container.ImageStorage()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if fields.GetLogo120() {
+		img, err := imageStorage.FormattedImage(ctx, int(row.LogoID.Int64), "logo")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		logo120 = APIImageToGRPC(img)
+	}
+
+	if fields.GetBrandicon() {
+		img, err := imageStorage.FormattedImage(ctx, int(row.LogoID.Int64), "brandicon2")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		brandicon = APIImageToGRPC(img)
+	}
+
+	return logo120, brandicon, nil
+}
+
+func (s *ItemExtractor) extractConnectedItems(
+	ctx context.Context, request *ItemsRequest, opts *query.ItemListOptions, lang string, isModer bool, userID int64,
+	role string,
+) ([]*APIItem, error) {
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	var order items.OrderBy
+
+	order, opts.SortByName = convertItemOrder(request.GetOrder())
+
+	opts.Language = lang
+
+	rows, _, err := itemRepository.List(ctx, opts, convertItemFields(request.GetFields()), order, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID, role)
+}
+
+func (s *ItemExtractor) extractTwins(
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
+) ([]*APIItem, error) {
+	twinsRequest := fields.GetTwins()
+	if twinsRequest == nil {
+		return nil, nil
+	}
+
+	opts := &query.ItemListOptions{
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{ItemID: row.ID},
+		TypeID:                    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
+	}
+
+	return s.extractConnectedItems(ctx, twinsRequest, opts, lang, isModer, userID, role)
+}
+
+func (s *ItemExtractor) extractCategories(
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
+) ([]*APIItem, error) {
+	categoriesRequest := fields.GetCategories()
+	if categoriesRequest == nil {
+		return nil, nil
+	}
+
+	opts := &query.ItemListOptions{
+		ItemParentChild: &query.ItemParentListOptions{
+			ChildItems: &query.ItemListOptions{
+				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
+			},
+			ItemParentCacheAncestorByChildID: &query.ItemParentCacheListOptions{ItemID: row.ID},
+		},
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
+	}
+
+	return s.extractConnectedItems(ctx, categoriesRequest, opts, lang, isModer, userID, role)
 }
 
 func (s *ItemExtractor) extractRoutes(

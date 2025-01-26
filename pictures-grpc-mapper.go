@@ -3,10 +3,10 @@ package goautowp
 import (
 	"time"
 
+	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 )
 
 func extractPictureModerVoteTemplate(tpl *schema.PictureModerVoteTemplateRow) *ModerVoteTemplate {
@@ -154,7 +154,7 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 
 	addDate := in.GetAddDate()
 	if addDate != nil {
-		result.AddDate = &util.Date{
+		result.AddDate = &civil.Date{
 			Year:  int(addDate.GetYear()),
 			Month: time.Month(addDate.GetMonth()),
 			Day:   int(addDate.GetDay()),
@@ -163,7 +163,7 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 
 	acceptDate := in.GetAcceptDate()
 	if acceptDate != nil {
-		result.AcceptDate = &util.Date{
+		result.AcceptDate = &civil.Date{
 			Year:  int(acceptDate.GetYear()),
 			Month: time.Month(acceptDate.GetMonth()),
 			Day:   int(acceptDate.GetDay()),
@@ -172,7 +172,7 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 
 	addedFrom := in.GetAddedFrom()
 	if addedFrom != nil {
-		result.AddedFrom = &util.Date{
+		result.AddedFrom = &civil.Date{
 			Year:  int(addedFrom.GetYear()),
 			Month: time.Month(addedFrom.GetMonth()),
 			Day:   int(addedFrom.GetDay()),
@@ -232,8 +232,12 @@ func convertCommentTopicListOptions(in *CommentTopicListOptions) *query.CommentT
 	return &result
 }
 
-func convertPictureFields(fields *PictureFields) pictures.PictureFields {
-	return pictures.PictureFields{
+func convertPictureFields(fields *PictureFields) *pictures.PictureFields {
+	if fields == nil {
+		return nil
+	}
+
+	return &pictures.PictureFields{
 		NameText: fields.GetNameText(),
 	}
 }

@@ -172,6 +172,7 @@ service Pictures {
   rpc SetPictureCopyrights(SetPictureCopyrightsRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureStatus(SetPictureStatusRequest) returns (google.protobuf.Empty) {}
   rpc GetInbox(InboxRequest) returns (Inbox) {}
+  rpc GetNewbox(NewboxRequest) returns (Newbox) {}
 }
 
 service Messaging {
@@ -1128,6 +1129,9 @@ message ItemFields {
   bool alt_names = 32;
   bool route = 33;
   ItemLinksRequest links = 34;
+  ItemsRequest categories = 35;
+  ItemsRequest twins = 36;
+  bool can_edit_specs = 37;
 }
 
 message AltName {
@@ -1297,6 +1301,9 @@ message APIItem {
   repeated string route = 41;
   ItemLinks links = 42;
   bool has_text = 43;
+  repeated APIItem categories = 44;
+  repeated APIItem twins = 45;
+  bool can_edit_specs = 46;
 }
 
 message PublicRoute {
@@ -1668,6 +1675,30 @@ message SetPictureCopyrightsRequest {
 message SetPictureStatusRequest {
   int64 id = 1;
   PictureStatus status = 2;
+}
+
+message NewboxRequest {
+  google.type.Date date = 1;
+  string language = 2;
+  uint32 page = 3;
+}
+
+message NewboxGroup {
+  APIItem item = 1;
+  repeated Picture pictures = 2;
+  int32 total_pictures = 3;
+  string type = 4;
+}
+
+message Newbox {
+  repeated NewboxGroup groups = 1;
+  google.type.Date prev_date = 2;
+  int32 prev_count = 3;
+  google.type.Date current_date = 4;
+  int32 current_count = 5;
+  google.type.Date next_date = 6;
+  int32 next_count = 7;
+  Pages paginator = 8;
 }
 
 message InboxRequest {

@@ -432,16 +432,9 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemL
 	options.Limit = in.GetLimit()
 	options.Page = in.GetPage()
 
-	order := items.OrderByName
+	var order items.OrderBy
 
-	switch in.GetOrder() {
-	case ItemsRequest_NAME_NAT:
-		options.SortByName = true
-	case ItemsRequest_NAME, ItemsRequest_DEFAULT:
-		order = items.OrderByName
-	case ItemsRequest_CHILDS_COUNT:
-		order = items.OrderByChildsCount
-	}
+	order, options.SortByName = convertItemOrder(in.GetOrder())
 
 	res, pages, err := s.repository.List(ctx, options, fields, order, true)
 	if err != nil {

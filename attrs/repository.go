@@ -3279,7 +3279,7 @@ func (s *Repository) specPicture(
 				ParentID: itemID,
 			},
 		},
-	}, pictures.PictureFields{}, orderBy)
+	}, nil, orderBy)
 	if err != nil {
 		return nil, "", err
 	}

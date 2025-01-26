@@ -1301,7 +1301,7 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 
 		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer(), events, s.HostsManager(),
 			messagingRepository, userRepository, duplicateFinder, textStorageRepository, tg, itemRepository,
-			commentsRepository, s.PictureExtractor(), s.PictureItemExtractor(),
+			commentsRepository, s.PictureExtractor(), s.PictureItemExtractor(), s.ItemExtractor(),
 		)
 	}
 

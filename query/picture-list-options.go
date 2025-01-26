@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 )
@@ -34,12 +34,13 @@ type PictureListOptions struct {
 	Limit                 uint32
 	Page                  uint32
 	AcceptedInDays        int32
-	AddDate               *util.Date
+	AddDate               *civil.Date
 	AddDateLt             *time.Time
-	AddDateGt             *time.Time
 	AddDateGte            *time.Time
-	AcceptDate            *util.Date
-	AddedFrom             *util.Date
+	AcceptDate            *civil.Date
+	AcceptDateLt          *time.Time
+	AcceptDateGte         *time.Time
+	AddedFrom             *civil.Date
 	Timezone              *time.Location
 	Identity              string
 	CommentTopic          *CommentTopicListOptions
@@ -156,72 +157,14 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableCopyrightsTextIDColName).IsNotNull())
 	}
 
-	if s.AcceptedInDays > 0 {
-		sqSelect = sqSelect.Where(
-			aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Gt(
-				goqu.Func("DATE_SUB", goqu.Func("CURDATE"), goqu.L("INTERVAL ? DAY", s.AcceptedInDays)),
-			),
-		)
+	sqSelect, err = s.applyAddDate(alias, sqSelect)
+	if err != nil {
+		return nil, err
 	}
 
-	if s.AddDate != nil {
-		sqSelect, err = s.setDateFilter(
-			sqSelect, aliasTable.Col(schema.PictureTableAddDateColName), *s.AddDate, s.Timezone,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if s.AddDateLt != nil {
-		if s.Timezone == nil {
-			return nil, errNoTimezone
-		}
-
-		sqSelect = sqSelect.Where(
-			aliasTable.Col(schema.PictureTableAddDateColName).Lt(s.AddDateLt.In(time.UTC).Format(time.DateTime)),
-		)
-	}
-
-	if s.AddDateGt != nil {
-		if s.Timezone == nil {
-			return nil, errNoTimezone
-		}
-
-		sqSelect = sqSelect.Where(
-			aliasTable.Col(schema.PictureTableAddDateColName).Gt(s.AddDateGt.In(time.UTC).Format(time.DateTime)),
-		)
-	}
-
-	if s.AddDateGte != nil {
-		if s.Timezone == nil {
-			return nil, errNoTimezone
-		}
-
-		sqSelect = sqSelect.Where(
-			aliasTable.Col(schema.PictureTableAddDateColName).Gte(s.AddDateGte.In(time.UTC).Format(time.DateTime)),
-		)
-	}
-
-	if s.AcceptDate != nil {
-		sqSelect, err = s.setDateFilter(
-			sqSelect, aliasTable.Col(schema.PictureTableAcceptDatetimeColName), *s.AcceptDate, s.Timezone,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if s.AddedFrom != nil {
-		if s.Timezone == nil {
-			return nil, errNoTimezone
-		}
-
-		start := time.Date(s.AddedFrom.Year, s.AddedFrom.Month, s.AddedFrom.Day, 0, 0, 0, 0, s.Timezone).In(time.UTC)
-
-		sqSelect = sqSelect.Where(
-			aliasTable.Col(schema.PictureTableAddDateColName).Gte(start.Format(time.DateTime)),
-		)
+	sqSelect, err = s.applyAcceptDate(alias, sqSelect)
+	if err != nil {
+		return nil, err
 	}
 
 	if s.CommentTopic != nil {
@@ -292,6 +235,88 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 	return sqSelect, nil
 }
 
+func (s *PictureListOptions) applyAddDate(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+	var (
+		err        error
+		aliasTable = goqu.T(alias)
+		addDateCol = aliasTable.Col(schema.PictureTableAddDateColName)
+	)
+
+	if s.AddedFrom != nil {
+		if s.Timezone == nil {
+			return nil, errNoTimezone
+		}
+
+		sqSelect = sqSelect.Where(addDateCol.Gte(s.AddedFrom.In(s.Timezone).In(time.UTC).Format(time.DateTime)))
+	}
+
+	if s.AddDate != nil {
+		sqSelect, err = s.setDateFilter(sqSelect, addDateCol, *s.AddDate, s.Timezone)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if s.AddDateLt != nil {
+		if s.Timezone == nil {
+			return nil, errNoTimezone
+		}
+
+		sqSelect = sqSelect.Where(addDateCol.Lt(s.AddDateLt.In(time.UTC).Format(time.DateTime)))
+	}
+
+	if s.AddDateGte != nil {
+		if s.Timezone == nil {
+			return nil, errNoTimezone
+		}
+
+		sqSelect = sqSelect.Where(addDateCol.Gte(s.AddDateGte.In(time.UTC).Format(time.DateTime)))
+	}
+
+	return sqSelect, nil
+}
+
+func (s *PictureListOptions) applyAcceptDate(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+	var (
+		err           error
+		aliasTable    = goqu.T(alias)
+		acceptDateCol = aliasTable.Col(schema.PictureTableAcceptDatetimeColName)
+	)
+
+	if s.AcceptedInDays > 0 {
+		sqSelect = sqSelect.Where(
+			acceptDateCol.Gt(
+				goqu.Func("DATE_SUB", goqu.Func("CURDATE"), goqu.L("INTERVAL ? DAY", s.AcceptedInDays)),
+			),
+		)
+	}
+
+	if s.AcceptDate != nil {
+		sqSelect, err = s.setDateFilter(sqSelect, acceptDateCol, *s.AcceptDate, s.Timezone)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if s.AcceptDateLt != nil {
+		if s.Timezone == nil {
+			return nil, errNoTimezone
+		}
+
+		sqSelect = sqSelect.Where(acceptDateCol.Lt(s.AcceptDateLt.In(time.UTC).Format(time.DateTime)))
+	}
+
+	if s.AcceptDateGte != nil {
+		if s.Timezone == nil {
+			return nil, errNoTimezone
+		}
+
+		sqSelect = sqSelect.Where(acceptDateCol.Gte(s.AcceptDateGte.In(time.UTC).Format(time.DateTime)))
+	}
+
+	return sqSelect, nil
+}
+
 func (s *PictureListOptions) applyHasNoReplacePicture(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
 	if !s.HasNoReplacePicture {
 		return sqSelect
@@ -347,16 +372,14 @@ func (s *PictureListOptions) applyHasNoComments(alias string, sqSelect *goqu.Sel
 }
 
 func (s *PictureListOptions) setDateFilter(
-	sqSelect *goqu.SelectDataset, column exp.IdentifierExpression, date util.Date, timezone *time.Location,
+	sqSelect *goqu.SelectDataset, column exp.IdentifierExpression, date civil.Date, timezone *time.Location,
 ) (*goqu.SelectDataset, error) {
 	if s.Timezone == nil {
 		return nil, errNoTimezone
 	}
 
-	start := time.Date(date.Year, date.Month, date.Day, 0, 0, 0, 0, timezone).In(time.UTC)
-	end := time.Date(date.Year, date.Month, date.Day, 23, 59, 59, 999, timezone).In(time.UTC)
-
 	return sqSelect.Where(
-		column.Between(goqu.Range(start.Format(time.DateTime), end.Format(time.DateTime))),
+		column.Gte(date.In(timezone).In(time.UTC).Format(time.DateTime)),
+		column.Lt(date.In(timezone).AddDate(0, 0, 1).In(time.UTC).Format(time.DateTime)),
 	), nil
 }

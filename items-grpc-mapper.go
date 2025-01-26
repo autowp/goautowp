@@ -321,3 +321,16 @@ func convertItemFields(fields *ItemFields) *items.ListFields {
 func convertItemParentFields(_ *ItemParentFields) items.ItemParentFields {
 	return items.ItemParentFields{}
 }
+
+func convertItemOrder(value ItemsRequest_Order) (items.OrderBy, bool) {
+	switch value {
+	case ItemsRequest_NAME_NAT:
+		return items.OrderByNone, true
+	case ItemsRequest_NAME, ItemsRequest_DEFAULT:
+		return items.OrderByName, false
+	case ItemsRequest_CHILDS_COUNT:
+		return items.OrderByChildsCount, false
+	}
+
+	return items.OrderByNone, false
+}

@@ -97,6 +97,7 @@ const (
 	OrderByDislikes
 	OrderByStatus
 	OrderByAcceptDatetimeDesc
+	OrderByAcceptDatetimeAsc
 	OrderByPerspectives
 	OrderByDfDistanceSimilarity
 	OrderByTopPerspectives
@@ -565,6 +566,12 @@ func (s *Repository) orderBy(
 			)
 	case OrderByStatus:
 		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableStatusColName).Asc())
+	case OrderByAcceptDatetimeAsc:
+		sqSelect = sqSelect.Order(
+			aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Asc(),
+			aliasTable.Col(schema.PictureTableAddDateColName).Asc(),
+			aliasTable.Col(schema.PictureTableIDColName).Asc(),
+		)
 	case OrderByAcceptDatetimeDesc:
 		sqSelect = sqSelect.Order(
 			aliasTable.Col(schema.PictureTableAcceptDatetimeColName).Desc(),
@@ -639,7 +646,7 @@ func (s *Repository) orderBy(
 }
 
 func (s *Repository) PictureSelect(
-	options *query.PictureListOptions, _ PictureFields, order OrderBy,
+	options *query.PictureListOptions, _ *PictureFields, order OrderBy,
 ) (*goqu.SelectDataset, error) {
 	var (
 		err        error
@@ -690,7 +697,7 @@ func (s *Repository) PictureSelect(
 }
 
 func (s *Repository) Exists(ctx context.Context, options *query.PictureListOptions) (bool, error) {
-	sqSelect, err := s.PictureSelect(options, PictureFields{}, OrderByNone)
+	sqSelect, err := s.PictureSelect(options, nil, OrderByNone)
 	if err != nil {
 		return false, fmt.Errorf("PictureSelect(): %w", err)
 	}
@@ -703,7 +710,7 @@ func (s *Repository) Exists(ctx context.Context, options *query.PictureListOptio
 }
 
 func (s *Repository) PicturesPaginator(
-	options *query.PictureListOptions, fields PictureFields, order OrderBy,
+	options *query.PictureListOptions, fields *PictureFields, order OrderBy,
 ) (*util.Paginator, error) {
 	sqSelect, err := s.PictureSelect(options, fields, order)
 	if err != nil {
@@ -718,7 +725,7 @@ func (s *Repository) PicturesPaginator(
 }
 
 func (s *Repository) Pictures(
-	ctx context.Context, options *query.PictureListOptions, fields PictureFields, order OrderBy, pagination bool,
+	ctx context.Context, options *query.PictureListOptions, fields *PictureFields, order OrderBy, pagination bool,
 ) ([]*schema.PictureRow, *util.Pages, error) {
 	var (
 		sqSelect *goqu.SelectDataset
@@ -764,7 +771,7 @@ func (s *Repository) Pictures(
 }
 
 func (s *Repository) Picture(
-	ctx context.Context, options *query.PictureListOptions, fields PictureFields, order OrderBy,
+	ctx context.Context, options *query.PictureListOptions, fields *PictureFields, order OrderBy,
 ) (*schema.PictureRow, error) {
 	options.Limit = 1
 
@@ -785,7 +792,7 @@ func (s *Repository) Normalize(ctx context.Context, id int64) error {
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: id}, PictureFields{}, OrderByNone)
+	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: id}, nil, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -804,7 +811,7 @@ func (s *Repository) Flop(ctx context.Context, id int64) error {
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: id}, PictureFields{}, OrderByNone)
+	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: id}, nil, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -1103,7 +1110,7 @@ func (s *Repository) SetPictureCrop(ctx context.Context, pictureID int64, area s
 		return sql.ErrNoRows
 	}
 
-	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
+	pic, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, nil, OrderByNone)
 	if err != nil {
 		return err
 	}
@@ -1193,7 +1200,7 @@ func (s *Repository) SetPictureCopyrights(
 		return false, 0, sql.ErrNoRows
 	}
 
-	picture, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
+	picture, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, nil, OrderByNone)
 	if err != nil {
 		return false, 0, err
 	}
@@ -1299,7 +1306,7 @@ func (s *Repository) Accept(ctx context.Context, pictureID int64, userID int64) 
 		return false, false, sql.ErrNoRows
 	}
 
-	picture, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, PictureFields{}, OrderByNone)
+	picture, err := s.Picture(ctx, &query.PictureListOptions{ID: pictureID}, nil, OrderByNone)
 	if err != nil {
 		return false, false, err
 	}

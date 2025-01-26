@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
@@ -31,6 +32,14 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+const (
+	newboxPicturesPerPage   = 30
+	newboxPicturesPerLine   = 6
+	newboxGroupTypeItem     = "item"
+	newboxGroupTypePicture  = "picture"
+	newboxGroupTypePictures = "pictures"
+)
+
 type PicturesGRPCServer struct {
 	UnimplementedPicturesServer
 	repository            *pictures.Repository
@@ -49,15 +58,15 @@ type PicturesGRPCServer struct {
 	locationsMutex        sync.Mutex
 	pictureExtractor      *PictureExtractor
 	pictureItemExtractor  *PictureItemExtractor
+	itemExtractor         *ItemExtractor
 }
 
 func NewPicturesGRPCServer(
 	repository *pictures.Repository, auth *Auth, enforcer *casbin.Enforcer, events *Events, hostManager *hosts.Manager,
 	messagingRepository *messaging.Repository, userRepository *users.Repository,
 	duplicateFinder *DuplicateFinder, textStorageRepository *textstorage.Repository, telegramService *telegram.Service,
-	itemRepository *items.Repository, commentRepository *comments.Repository,
-	pictureExtractor *PictureExtractor,
-	pictureItemExtractor *PictureItemExtractor,
+	itemRepository *items.Repository, commentRepository *comments.Repository, pictureExtractor *PictureExtractor,
+	pictureItemExtractor *PictureItemExtractor, itemExtractor *ItemExtractor,
 ) *PicturesGRPCServer {
 	return &PicturesGRPCServer{
 		repository:            repository,
@@ -76,6 +85,7 @@ func NewPicturesGRPCServer(
 		locationsMutex:        sync.Mutex{},
 		pictureExtractor:      pictureExtractor,
 		pictureItemExtractor:  pictureItemExtractor,
+		itemExtractor:         itemExtractor,
 	}
 }
 
@@ -429,7 +439,7 @@ func (s *PicturesGRPCServer) restoreFromRemoving(ctx context.Context, pictureID 
 	}
 
 	pic, err := s.repository.Picture(
-		ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 	)
 	if err != nil {
 		return err
@@ -465,7 +475,7 @@ func (s *PicturesGRPCServer) unaccept(ctx context.Context, pictureID int64, user
 	}
 
 	picture, err := s.repository.Picture(
-		ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 	)
 	if err != nil {
 		return err
@@ -503,7 +513,7 @@ func (s *PicturesGRPCServer) notifyVote(
 	}
 
 	picture, err := s.repository.Picture(
-		ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 	)
 	if err != nil {
 		return err
@@ -597,7 +607,7 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(
 	}
 
 	pic, err := s.repository.Picture(
-		ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 	)
 	if err != nil {
 		return 0, status.Error(codes.Internal, err.Error())
@@ -779,7 +789,7 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 		}
 
 		pic, err := s.repository.Picture(
-			ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+			ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -953,7 +963,7 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 		}
 
 		pic, err := s.repository.Picture(
-			ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+			ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 		)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -1045,7 +1055,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 	}
 
 	pic, err := s.repository.Picture(
-		ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1056,7 +1066,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 	}
 
 	replacePicture, err := s.repository.Picture(
-		ctx, &query.PictureListOptions{ID: pic.ReplacePictureID.Int64}, pictures.PictureFields{}, pictures.OrderByNone,
+		ctx, &query.PictureListOptions{ID: pic.ReplacePictureID.Int64}, nil, pictures.OrderByNone,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1304,7 +1314,7 @@ func (s *PicturesGRPCServer) notifyCopyrightsEdited(
 	}
 
 	picture, err := s.repository.Picture(
-		ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 	)
 	if err != nil {
 		return err
@@ -1379,7 +1389,7 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 	}
 
 	pic, err := s.repository.Picture(
-		ctx, &query.PictureListOptions{ID: pictureID}, pictures.PictureFields{}, pictures.OrderByNone,
+		ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1993,30 +2003,21 @@ func (s *PicturesGRPCServer) GetInbox(ctx context.Context, in *InboxRequest) (*I
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	service, err := NewDayPictures(s.repository, timezone, &listOptions, util.GrpcDateToTime(in.GetDate(), timezone))
+	inCurrentDate := util.GrpcDateToDate(in.GetDate())
+	if inCurrentDate == nil {
+		inCurrentDate = &civil.Date{}
+	}
+
+	service, err := NewDayPictures(
+		s.repository, schema.PictureTableAddDateColName, timezone, &listOptions, *inCurrentDate,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	haveCurrentDayPictures, err := service.HaveCurrentDayPictures(ctx)
+	err = service.SetCurrentDateToLastIfEmptyDate(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if !service.HaveCurrentDate() || !haveCurrentDayPictures {
-		lastDate, err := service.LastDateStr(ctx)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		if lastDate == "" {
-			return nil, status.Error(codes.NotFound, "NotFound")
-		}
-
-		err = service.SetCurrentDate(lastDate)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
 	}
 
 	prevDate, err := service.PrevDate(ctx)
@@ -2053,11 +2054,11 @@ func (s *PicturesGRPCServer) GetInbox(ctx context.Context, in *InboxRequest) (*I
 
 	return &Inbox{
 		Brands:       brands,
-		PrevDate:     util.TimeToGrpcDate(prevDate),
+		PrevDate:     util.DateToGrpcDate(prevDate),
 		PrevCount:    prevCount,
-		CurrentDate:  util.TimeToGrpcDate(currentDate),
+		CurrentDate:  util.DateToGrpcDate(currentDate),
 		CurrentCount: currentCount,
-		NextDate:     util.TimeToGrpcDate(nextDate),
+		NextDate:     util.DateToGrpcDate(nextDate),
 		NextCount:    nextCount,
 	}, nil
 }
@@ -2088,4 +2089,326 @@ func (s *PicturesGRPCServer) inboxBrands(ctx context.Context, lang string) ([]*I
 	}
 
 	return res, nil
+}
+
+func (s *PicturesGRPCServer) GetNewbox(ctx context.Context, in *NewboxRequest) (*Newbox, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	listOptions := query.PictureListOptions{
+		Status: schema.PictureStatusAccepted,
+	}
+
+	timezone, err := s.resolveTimezone(ctx, userID, in.GetLanguage())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	inCurrentDate := util.GrpcDateToDate(in.GetDate())
+	if inCurrentDate == nil {
+		inCurrentDate = &civil.Date{}
+	}
+
+	service, err := NewDayPictures(
+		s.repository, schema.PictureTableAcceptDatetimeColName, timezone, &listOptions, *inCurrentDate,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = service.SetCurrentDateToLastIfEmptyDate(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	prevDate, err := service.PrevDate(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	currentDate := service.CurrentDate()
+
+	nextDate, err := service.NextDate(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	prevCount, err := service.PrevDateCount(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	currentCount, err := service.CurrentDateCount(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	nextCount, err := service.NextDateCount(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+
+	groups, pages, err := s.newboxGroups(
+		ctx, service.CurrentDate(), in.GetPage(), timezone, in.GetLanguage(), isModer, userID, role,
+	)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &Newbox{
+		Groups:       groups,
+		PrevDate:     util.DateToGrpcDate(prevDate),
+		PrevCount:    prevCount,
+		CurrentDate:  util.DateToGrpcDate(currentDate),
+		CurrentCount: currentCount,
+		NextDate:     util.DateToGrpcDate(nextDate),
+		NextCount:    nextCount,
+		Paginator: &Pages{
+			PageCount:        pages.PageCount,
+			First:            pages.First,
+			Last:             pages.Last,
+			Current:          pages.Current,
+			FirstPageInRange: pages.FirstPageInRange,
+			LastPageInRange:  pages.LastPageInRange,
+			PagesInRange:     pages.PagesInRange,
+			TotalItemCount:   pages.TotalItemCount,
+			Next:             pages.Next,
+			Previous:         pages.Previous,
+		},
+	}, nil
+}
+
+func (s *PicturesGRPCServer) newboxGroups(
+	ctx context.Context, acceptDate civil.Date, page uint32, timezone *time.Location, lang string, isModer bool,
+	userID int64, role string,
+) ([]*NewboxGroup, *util.Pages, error) {
+	pictureFields := PictureFields{
+		ThumbMedium:   true,
+		NameText:      true,
+		NameHtml:      true,
+		Votes:         true,
+		Views:         true,
+		CommentsCount: true,
+	}
+	repoPictureFields := convertPictureFields(&pictureFields)
+
+	itemPictureFields := PictureFields{
+		ThumbMedium: true,
+		NameText:    true,
+		NameHtml:    true,
+	}
+	repoItemPictureFields := convertPictureFields(&itemPictureFields)
+
+	itemFields := ItemFields{
+		NameHtml:    true,
+		NameDefault: true,
+		Description: true,
+		Design:      true,
+		SpecsRoute:  true,
+		Categories: &ItemsRequest{
+			Fields: &ItemFields{NameHtml: true},
+		},
+		Twins: &ItemsRequest{},
+	}
+	repoItemFields := convertItemFields(&itemFields)
+
+	rows, pages, err := s.repository.Pictures(ctx, &query.PictureListOptions{
+		Status:     schema.PictureStatusAccepted,
+		Limit:      newboxPicturesPerPage,
+		Page:       page,
+		AcceptDate: &acceptDate,
+		Timezone:   timezone,
+	}, repoPictureFields, pictures.OrderByAcceptDatetimeDesc, true)
+	if err != nil {
+		return nil, nil, fmt.Errorf("repository.Pictures(): %w", err)
+	}
+
+	groupsData, err := s.splitPictures(ctx, rows)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	groups := make([]*NewboxGroup, 0)
+
+	for _, groupData := range groupsData {
+		group := &NewboxGroup{
+			Type: groupData.Type,
+		}
+
+		if groupData.Type == newboxGroupTypeItem {
+			itemRow, err := s.itemRepository.Item(ctx, &query.ItemListOptions{ItemID: groupData.ItemID}, repoItemFields)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			group.Item, err = s.itemExtractor.Extract(ctx, itemRow, &itemFields, lang, isModer, userID, role)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			ids := make([]int64, 0)
+			for _, picture := range groupData.Pictures {
+				ids = append(ids, picture.ID)
+			}
+
+			pictureRows, _, err := s.repository.Pictures(ctx, &query.PictureListOptions{
+				IDs:    ids,
+				Status: schema.PictureStatusAccepted,
+				PictureItem: &query.PictureItemListOptions{
+					ItemID: groupData.ItemID,
+				},
+				Limit: newboxPicturesPerLine,
+			}, repoItemPictureFields, pictures.OrderByAcceptDatetimeDesc, false)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			group.Pictures, err = s.pictureExtractor.ExtractRows(
+				ctx, pictureRows, &itemPictureFields, lang, isModer, userID, role,
+			)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			totalPictures, err := s.repository.Count(ctx, &query.PictureListOptions{
+				Status: schema.PictureStatusAccepted,
+				PictureItem: &query.PictureItemListOptions{
+					ItemID: groupData.ItemID,
+					TypeID: schema.PictureItemContent,
+				},
+				AcceptDate: &acceptDate,
+				Timezone:   timezone,
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+
+			group.TotalPictures = int32(totalPictures) //nolint: gosec
+		} else {
+			group.Pictures, err = s.pictureExtractor.ExtractRows(
+				ctx, groupData.Pictures, &pictureFields, lang, isModer, userID, role,
+			)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups, pages, nil
+}
+
+type NewboxGroupDraft struct {
+	Type     string
+	Picture  *schema.PictureRow
+	ItemID   int64
+	Pictures []*schema.PictureRow
+}
+
+func (s *PicturesGRPCServer) splitPictures(
+	ctx context.Context, pictures []*schema.PictureRow,
+) ([]*NewboxGroupDraft, error) {
+	res := make([]*NewboxGroupDraft, 0)
+
+	for _, pictureRow := range pictures {
+		pictureItems, err := s.repository.PictureItems(ctx, &query.PictureItemListOptions{
+			PictureID: pictureRow.ID,
+			TypeID:    schema.PictureItemContent,
+		}, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(pictureItems) != 1 {
+			res = append(res, &NewboxGroupDraft{
+				Type:    newboxGroupTypePicture,
+				Picture: pictureRow,
+			})
+		} else {
+			itemID := pictureItems[0].ItemID
+
+			found := false
+
+			for idx := range res {
+				if res[idx].Type == newboxGroupTypeItem && res[idx].ItemID == itemID {
+					res[idx].Pictures = append(res[idx].Pictures, pictureRow)
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				res = append(res, &NewboxGroupDraft{
+					ItemID:   itemID,
+					Type:     newboxGroupTypeItem,
+					Pictures: []*schema.PictureRow{pictureRow},
+				})
+			}
+		}
+	}
+
+	// convert single picture items to picture record
+	// merge sibling single items
+	return s.mergeSiblings(s.expandSmallItems(res)), nil
+}
+
+func (s *PicturesGRPCServer) mergeSiblings(groups []*NewboxGroupDraft) []*NewboxGroupDraft {
+	result := make([]*NewboxGroupDraft, 0)
+	picturesBuffer := make([]*schema.PictureRow, 0)
+
+	for _, item := range groups {
+		if item.Type == newboxGroupTypeItem {
+			if len(picturesBuffer) > 0 {
+				result = append(result, &NewboxGroupDraft{
+					Type:     newboxGroupTypePictures,
+					Pictures: picturesBuffer,
+				})
+				picturesBuffer = make([]*schema.PictureRow, 0)
+			}
+
+			result = append(result, item)
+		} else {
+			picturesBuffer = append(picturesBuffer, item.Picture)
+		}
+	}
+
+	if len(picturesBuffer) > 0 {
+		result = append(result, &NewboxGroupDraft{
+			Type:     newboxGroupTypePictures,
+			Pictures: picturesBuffer,
+		})
+	}
+
+	return result
+}
+
+func (s *PicturesGRPCServer) expandSmallItems(items []*NewboxGroupDraft) []*NewboxGroupDraft {
+	result := make([]*NewboxGroupDraft, 0)
+
+	for _, item := range items {
+		if item.Type != newboxGroupTypeItem {
+			result = append(result, item)
+
+			continue
+		}
+
+		if len(item.Pictures) <= 2 {
+			for _, picture := range item.Pictures {
+				result = append(result, &NewboxGroupDraft{
+					Type:    newboxGroupTypePicture,
+					Picture: picture,
+				})
+			}
+		} else {
+			result = append(result, item)
+		}
+	}
+
+	return result
 }
