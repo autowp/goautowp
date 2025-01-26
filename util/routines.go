@@ -21,6 +21,7 @@ import (
 	"golang.org/x/exp/constraints"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"google.golang.org/genproto/googleapis/type/date"
 )
 
 const (
@@ -32,6 +33,34 @@ type Date struct {
 	Year  int
 	Month time.Month
 	Day   int
+}
+
+func GrpcDateToTime(value *date.Date, loc *time.Location) time.Time {
+	if value == nil {
+		return time.Time{}
+	}
+
+	return time.Date(int(value.GetYear()), time.Month(value.GetMonth()), int(value.GetDay()), 0, 0, 0, 0, loc)
+}
+
+func TimeToDate(value time.Time) Date {
+	return Date{
+		Year:  value.Year(),
+		Month: value.Month(),
+		Day:   value.Day(),
+	}
+}
+
+func TimeToGrpcDate(value time.Time) *date.Date {
+	if value.IsZero() {
+		return nil
+	}
+
+	return &date.Date{
+		Year:  int32(value.Year()),  //nolint: gosec
+		Month: int32(value.Month()), //nolint: gosec
+		Day:   int32(value.Day()),   //nolint: gosec
+	}
 }
 
 // Close resource and prints error.
@@ -137,6 +166,12 @@ func BoolPtr(b bool) *bool {
 	boolVar := b
 
 	return &boolVar
+}
+
+func TimePtr(v time.Time) *time.Time {
+	tVar := v
+
+	return &tVar
 }
 
 func Min[T constraints.Ordered](a, b T) T { //nolint: ireturn

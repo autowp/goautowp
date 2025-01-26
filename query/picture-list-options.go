@@ -35,6 +35,9 @@ type PictureListOptions struct {
 	Page                  uint32
 	AcceptedInDays        int32
 	AddDate               *util.Date
+	AddDateLt             *time.Time
+	AddDateGt             *time.Time
+	AddDateGte            *time.Time
 	AcceptDate            *util.Date
 	AddedFrom             *util.Date
 	Timezone              *time.Location
@@ -170,6 +173,36 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		}
 	}
 
+	if s.AddDateLt != nil {
+		if s.Timezone == nil {
+			return nil, errNoTimezone
+		}
+
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.PictureTableAddDateColName).Lt(s.AddDateLt.In(time.UTC).Format(time.DateTime)),
+		)
+	}
+
+	if s.AddDateGt != nil {
+		if s.Timezone == nil {
+			return nil, errNoTimezone
+		}
+
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.PictureTableAddDateColName).Gt(s.AddDateGt.In(time.UTC).Format(time.DateTime)),
+		)
+	}
+
+	if s.AddDateGte != nil {
+		if s.Timezone == nil {
+			return nil, errNoTimezone
+		}
+
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.PictureTableAddDateColName).Gte(s.AddDateGte.In(time.UTC).Format(time.DateTime)),
+		)
+	}
+
 	if s.AcceptDate != nil {
 		sqSelect, err = s.setDateFilter(
 			sqSelect, aliasTable.Col(schema.PictureTableAcceptDatetimeColName), *s.AcceptDate, s.Timezone,
@@ -201,23 +234,7 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		)
 	}
 
-	if s.HasNoComments {
-		ctAlias := alias + "no_cm"
-		ctAliasTable := goqu.T(ctAlias)
-
-		sqSelect = sqSelect.LeftJoin(
-			schema.CommentTopicTable.As(ctAlias),
-			goqu.On(
-				idCol.Eq(ctAliasTable.Col(schema.CommentTopicTableItemIDColName)),
-				ctAliasTable.Col(schema.CommentTopicTableTypeIDColName).Eq(schema.CommentMessageTypeIDPictures),
-			),
-		).Where(
-			goqu.Or(
-				ctAliasTable.Col(schema.CommentTopicTableItemIDColName).IsNull(),
-				ctAliasTable.Col(schema.CommentTopicTableMessagesColName).Eq(0),
-			),
-		)
-	}
+	sqSelect = s.applyHasNoComments(alias, sqSelect)
 
 	if s.HasPoint {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTablePointColName).IsNotNull())
@@ -227,15 +244,7 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTablePointColName).IsNull())
 	}
 
-	if s.HasNoPictureItem {
-		piAlias := alias + "no_pi"
-		piAliasTable := goqu.T(piAlias)
-
-		sqSelect = sqSelect.LeftJoin(
-			schema.PictureItemTable.As(piAlias),
-			goqu.On(idCol.Eq(piAliasTable.Col(schema.PictureItemTableItemIDColName))),
-		).Where(piAliasTable.Col(schema.PictureItemTableItemIDColName).IsNull())
-	}
+	sqSelect = s.applyHasNoPictureItem(alias, sqSelect)
 
 	sqSelect, err = s.ReplacePicture.JoinToIDAndApply(
 		aliasTable.Col(schema.PictureTableReplacePictureIDColName),
@@ -246,17 +255,7 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		return nil, err
 	}
 
-	if s.HasNoReplacePicture {
-		pAlias := alias + "no_p"
-		pAliasTable := goqu.T(pAlias)
-
-		sqSelect = sqSelect.LeftJoin(
-			schema.PictureTable.As(pAlias),
-			goqu.On(aliasTable.Col(schema.PictureTableReplacePictureIDColName).Eq(
-				pAliasTable.Col(schema.PictureTableIDColName),
-			)),
-		).Where(pAliasTable.Col(schema.PictureTableIDColName).IsNull())
-	}
+	sqSelect = s.applyHasNoReplacePicture(alias, sqSelect)
 
 	sqSelect = s.PictureModerVote.JoinToPictureIDAndApply(
 		idCol,
@@ -291,6 +290,60 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 	}
 
 	return sqSelect, nil
+}
+
+func (s *PictureListOptions) applyHasNoReplacePicture(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+	if !s.HasNoReplacePicture {
+		return sqSelect
+	}
+
+	pAlias := alias + "no_p"
+	pAliasTable := goqu.T(pAlias)
+
+	return sqSelect.LeftJoin(
+		schema.PictureTable.As(pAlias),
+		goqu.On(goqu.T(alias).Col(schema.PictureTableReplacePictureIDColName).Eq(
+			pAliasTable.Col(schema.PictureTableIDColName),
+		)),
+	).Where(pAliasTable.Col(schema.PictureTableIDColName).IsNull())
+}
+
+func (s *PictureListOptions) applyHasNoPictureItem(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+	if !s.HasNoPictureItem {
+		return sqSelect
+	}
+
+	idCol := goqu.T(alias).Col(schema.PictureTableIDColName)
+	piAlias := alias + "no_pi"
+	piAliasTable := goqu.T(piAlias)
+
+	return sqSelect.LeftJoin(
+		schema.PictureItemTable.As(piAlias),
+		goqu.On(idCol.Eq(piAliasTable.Col(schema.PictureItemTableItemIDColName))),
+	).Where(piAliasTable.Col(schema.PictureItemTableItemIDColName).IsNull())
+}
+
+func (s *PictureListOptions) applyHasNoComments(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+	if !s.HasNoComments {
+		return sqSelect
+	}
+
+	idCol := goqu.T(alias).Col(schema.PictureTableIDColName)
+	ctAlias := alias + "no_cm"
+	ctAliasTable := goqu.T(ctAlias)
+
+	return sqSelect.LeftJoin(
+		schema.CommentTopicTable.As(ctAlias),
+		goqu.On(
+			idCol.Eq(ctAliasTable.Col(schema.CommentTopicTableItemIDColName)),
+			ctAliasTable.Col(schema.CommentTopicTableTypeIDColName).Eq(schema.CommentMessageTypeIDPictures),
+		),
+	).Where(
+		goqu.Or(
+			ctAliasTable.Col(schema.CommentTopicTableItemIDColName).IsNull(),
+			ctAliasTable.Col(schema.CommentTopicTableMessagesColName).Eq(0),
+		),
+	)
 }
 
 func (s *PictureListOptions) setDateFilter(

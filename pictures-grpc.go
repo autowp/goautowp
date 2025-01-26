@@ -1965,3 +1965,127 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 		Paginator: paginator,
 	}, nil
 }
+
+func (s *PicturesGRPCServer) GetInbox(ctx context.Context, in *InboxRequest) (*Inbox, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if userID == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
+	}
+
+	listOptions := query.PictureListOptions{
+		Status: schema.PictureStatusInbox,
+	}
+
+	if in.GetBrandId() > 0 {
+		listOptions.PictureItem = &query.PictureItemListOptions{
+			ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+				ParentID: in.GetBrandId(),
+			},
+		}
+	}
+
+	timezone, err := s.resolveTimezone(ctx, userID, in.GetLanguage())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	service, err := NewDayPictures(s.repository, timezone, &listOptions, util.GrpcDateToTime(in.GetDate(), timezone))
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	haveCurrentDayPictures, err := service.HaveCurrentDayPictures(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !service.HaveCurrentDate() || !haveCurrentDayPictures {
+		lastDate, err := service.LastDateStr(ctx)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		if lastDate == "" {
+			return nil, status.Error(codes.NotFound, "NotFound")
+		}
+
+		err = service.SetCurrentDate(lastDate)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	prevDate, err := service.PrevDate(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	currentDate := service.CurrentDate()
+
+	nextDate, err := service.NextDate(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	prevCount, err := service.PrevDateCount(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	currentCount, err := service.CurrentDateCount(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	nextCount, err := service.NextDateCount(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	brands, err := s.inboxBrands(ctx, in.GetLanguage())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &Inbox{
+		Brands:       brands,
+		PrevDate:     util.TimeToGrpcDate(prevDate),
+		PrevCount:    prevCount,
+		CurrentDate:  util.TimeToGrpcDate(currentDate),
+		CurrentCount: currentCount,
+		NextDate:     util.TimeToGrpcDate(nextDate),
+		NextCount:    nextCount,
+	}, nil
+}
+
+func (s *PicturesGRPCServer) inboxBrands(ctx context.Context, lang string) ([]*InboxBrand, error) {
+	rows, _, err := s.itemRepository.List(ctx, &query.ItemListOptions{
+		Language:   lang,
+		SortByName: true,
+		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			PictureItemsByItemID: &query.PictureItemListOptions{
+				Pictures: &query.PictureListOptions{
+					Status: schema.PictureStatusInbox,
+				},
+			},
+		},
+	}, &items.ListFields{NameOnly: true}, items.OrderByName, false)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*InboxBrand, 0, len(rows))
+	for _, row := range rows {
+		res = append(res, &InboxBrand{
+			Id:   row.ID,
+			Name: row.NameOnly,
+		})
+	}
+
+	return res, nil
+}

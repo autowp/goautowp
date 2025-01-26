@@ -171,6 +171,7 @@ service Pictures {
   rpc UpdatePicture(UpdatePictureRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureCopyrights(SetPictureCopyrightsRequest) returns (google.protobuf.Empty) {}
   rpc SetPictureStatus(SetPictureStatusRequest) returns (google.protobuf.Empty) {}
+  rpc GetInbox(InboxRequest) returns (Inbox) {}
 }
 
 service Messaging {
@@ -1667,6 +1668,27 @@ message SetPictureCopyrightsRequest {
 message SetPictureStatusRequest {
   int64 id = 1;
   PictureStatus status = 2;
+}
+
+message InboxRequest {
+  int64 brand_id = 1;
+  google.type.Date date = 2;
+  string language = 3;
+}
+
+message InboxBrand {
+  int64 id = 1;
+  string name = 2;
+}
+
+message Inbox {
+  repeated InboxBrand brands = 1;
+  google.type.Date prev_date = 2;
+  int32 prev_count = 3;
+  google.type.Date current_date = 4;
+  int32 current_count = 5;
+  google.type.Date next_date = 6;
+  int32 next_count = 7;
 }
 
 message DeleteSimilarRequest {
