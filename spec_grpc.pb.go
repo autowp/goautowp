@@ -2476,7 +2476,7 @@ type ItemsClient interface {
 	GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error)
 	GetBrandNewItems(ctx context.Context, in *NewItemsRequest, opts ...grpc.CallOption) (*NewItemsResponse, error)
 	GetNewItems(ctx context.Context, in *NewItemsRequest, opts ...grpc.CallOption) (*NewItemsResponse, error)
-	GetItemParents(ctx context.Context, in *GetItemParentsRequest, opts ...grpc.CallOption) (*GetItemParentsResponse, error)
+	GetItemParents(ctx context.Context, in *ItemParentsRequest, opts ...grpc.CallOption) (*ItemParents, error)
 	CreateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdateItemParent(ctx context.Context, in *ItemParent, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -2774,9 +2774,9 @@ func (c *itemsClient) GetNewItems(ctx context.Context, in *NewItemsRequest, opts
 	return out, nil
 }
 
-func (c *itemsClient) GetItemParents(ctx context.Context, in *GetItemParentsRequest, opts ...grpc.CallOption) (*GetItemParentsResponse, error) {
+func (c *itemsClient) GetItemParents(ctx context.Context, in *ItemParentsRequest, opts ...grpc.CallOption) (*ItemParents, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetItemParentsResponse)
+	out := new(ItemParents)
 	err := c.cc.Invoke(ctx, Items_GetItemParents_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -2886,7 +2886,7 @@ type ItemsServer interface {
 	GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error)
 	GetBrandNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error)
 	GetNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error)
-	GetItemParents(context.Context, *GetItemParentsRequest) (*GetItemParentsResponse, error)
+	GetItemParents(context.Context, *ItemParentsRequest) (*ItemParents, error)
 	CreateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error)
 	UpdateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error)
 	DeleteItemParent(context.Context, *DeleteItemParentRequest) (*emptypb.Empty, error)
@@ -2988,7 +2988,7 @@ func (UnimplementedItemsServer) GetBrandNewItems(context.Context, *NewItemsReque
 func (UnimplementedItemsServer) GetNewItems(context.Context, *NewItemsRequest) (*NewItemsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNewItems not implemented")
 }
-func (UnimplementedItemsServer) GetItemParents(context.Context, *GetItemParentsRequest) (*GetItemParentsResponse, error) {
+func (UnimplementedItemsServer) GetItemParents(context.Context, *ItemParentsRequest) (*ItemParents, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItemParents not implemented")
 }
 func (UnimplementedItemsServer) CreateItemParent(context.Context, *ItemParent) (*emptypb.Empty, error) {
@@ -3538,7 +3538,7 @@ func _Items_GetNewItems_Handler(srv interface{}, ctx context.Context, dec func(i
 }
 
 func _Items_GetItemParents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetItemParentsRequest)
+	in := new(ItemParentsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3550,7 +3550,7 @@ func _Items_GetItemParents_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: Items_GetItemParents_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemsServer).GetItemParents(ctx, req.(*GetItemParentsRequest))
+		return srv.(ItemsServer).GetItemParents(ctx, req.(*ItemParentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4573,7 +4573,7 @@ type PicturesClient interface {
 	DeleteSimilar(ctx context.Context, in *DeleteSimilarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Repair(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPicture(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*Picture, error)
-	GetPictures(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*GetPicturesResponse, error)
+	GetPictures(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*PicturesList, error)
 	GetPictureItem(ctx context.Context, in *PictureItemsRequest, opts ...grpc.CallOption) (*PictureItem, error)
 	GetPictureItems(ctx context.Context, in *PictureItemsRequest, opts ...grpc.CallOption) (*PictureItems, error)
 	SetPictureItemArea(ctx context.Context, in *SetPictureItemAreaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -4730,9 +4730,9 @@ func (c *picturesClient) GetPicture(ctx context.Context, in *PicturesRequest, op
 	return out, nil
 }
 
-func (c *picturesClient) GetPictures(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*GetPicturesResponse, error) {
+func (c *picturesClient) GetPictures(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*PicturesList, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetPicturesResponse)
+	out := new(PicturesList)
 	err := c.cc.Invoke(ctx, Pictures_GetPictures_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -4917,7 +4917,7 @@ type PicturesServer interface {
 	DeleteSimilar(context.Context, *DeleteSimilarRequest) (*emptypb.Empty, error)
 	Repair(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	GetPicture(context.Context, *PicturesRequest) (*Picture, error)
-	GetPictures(context.Context, *PicturesRequest) (*GetPicturesResponse, error)
+	GetPictures(context.Context, *PicturesRequest) (*PicturesList, error)
 	GetPictureItem(context.Context, *PictureItemsRequest) (*PictureItem, error)
 	GetPictureItems(context.Context, *PictureItemsRequest) (*PictureItems, error)
 	SetPictureItemArea(context.Context, *SetPictureItemAreaRequest) (*emptypb.Empty, error)
@@ -4983,7 +4983,7 @@ func (UnimplementedPicturesServer) Repair(context.Context, *PictureIDRequest) (*
 func (UnimplementedPicturesServer) GetPicture(context.Context, *PicturesRequest) (*Picture, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPicture not implemented")
 }
-func (UnimplementedPicturesServer) GetPictures(context.Context, *PicturesRequest) (*GetPicturesResponse, error) {
+func (UnimplementedPicturesServer) GetPictures(context.Context, *PicturesRequest) (*PicturesList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPictures not implemented")
 }
 func (UnimplementedPicturesServer) GetPictureItem(context.Context, *PictureItemsRequest) (*PictureItem, error) {

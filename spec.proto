@@ -110,7 +110,7 @@ service Items {
   rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
   rpc GetBrandNewItems(NewItemsRequest) returns (NewItemsResponse) {}
   rpc GetNewItems(NewItemsRequest) returns (NewItemsResponse) {}
-  rpc GetItemParents(GetItemParentsRequest) returns (GetItemParentsResponse) {}
+  rpc GetItemParents(ItemParentsRequest) returns (ItemParents) {}
   rpc CreateItemParent(ItemParent) returns (google.protobuf.Empty) {}
   rpc UpdateItemParent(ItemParent) returns (google.protobuf.Empty) {}
   rpc DeleteItemParent(DeleteItemParentRequest) returns (google.protobuf.Empty) {}
@@ -156,7 +156,7 @@ service Pictures {
   rpc DeleteSimilar(DeleteSimilarRequest) returns (google.protobuf.Empty) {}
   rpc Repair(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc GetPicture(PicturesRequest) returns (Picture) {}
-  rpc GetPictures(PicturesRequest) returns (GetPicturesResponse) {}
+  rpc GetPictures(PicturesRequest) returns (PicturesList) {}
   rpc GetPictureItem(PictureItemsRequest) returns (PictureItem) {}
   rpc GetPictureItems(PictureItemsRequest) returns (PictureItems) {}
   rpc SetPictureItemArea(SetPictureItemAreaRequest) returns (google.protobuf.Empty) {}
@@ -1132,6 +1132,8 @@ message ItemFields {
   ItemsRequest categories = 35;
   ItemsRequest twins = 36;
   bool can_edit_specs = 37;
+  ItemParentsRequest item_parent_childs = 38;
+  bool comments_count = 39;
 }
 
 message AltName {
@@ -1304,6 +1306,8 @@ message APIItem {
   repeated APIItem categories = 44;
   repeated APIItem twins = 45;
   bool can_edit_specs = 46;
+  ItemParents item_parent_childs = 47;
+  int32 comments_count = 48;
 }
 
 message PublicRoute {
@@ -1575,16 +1579,22 @@ message DfDistance {
   Picture dst_picture = 4;
 }
 
-message GetPicturesResponse {
+message PicturesList {
   repeated Picture items = 1;
   Pages paginator = 2;
 }
 
 message PictureItemsRequest {
+  enum Order {
+    NONE = 0;
+    FRONT_PERSPECTIVES_FIRST = 1;
+  }
+
   PictureItemListOptions options = 1;
   PictureItemFields fields = 2;
   string language = 3;
   uint32 limit = 4;
+  Order order = 5;
 }
 
 message PictureItemFields {
@@ -2029,9 +2039,10 @@ message ItemParentFields {
   ItemFields parent = 2;
   ItemFields duplicate_parent = 3;
   ItemFields duplicate_child = 4;
+  PicturesRequest child_descendant_pictures = 5;
 }
 
-message GetItemParentsRequest {
+message ItemParentsRequest {
   enum Order {
     NONE = 0;
     AUTO = 1;
@@ -2046,7 +2057,7 @@ message GetItemParentsRequest {
   string language = 6;
 }
 
-message GetItemParentsResponse {
+message ItemParents {
   repeated ItemParent items = 1;
   Pages paginator = 2;
 }
@@ -2060,6 +2071,7 @@ message ItemParent {
   APIItem parent = 8;
   APIItem duplicate_parent = 6;
   APIItem duplicate_child = 7;
+  PicturesList child_descendant_pictures = 9;
 }
 
 message DeleteItemParentRequest {

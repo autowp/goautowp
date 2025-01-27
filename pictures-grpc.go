@@ -1762,7 +1762,9 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureIte
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	rows, err := s.repository.PictureItems(ctx, options, 0)
+	order := convertPictureItemsOrder(in.GetOrder())
+
+	rows, err := s.repository.PictureItems(ctx, options, order, 0)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1907,7 +1909,7 @@ func (s *PicturesGRPCServer) isRestricted(in *PicturesRequest, isModer bool, use
 	return nil
 }
 
-func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesRequest) (*GetPicturesResponse, error) {
+func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesRequest) (*PicturesList, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1970,7 +1972,7 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 		}
 	}
 
-	return &GetPicturesResponse{
+	return &PicturesList{
 		Items:     res,
 		Paginator: paginator,
 	}, nil
@@ -2311,15 +2313,15 @@ type NewboxGroupDraft struct {
 }
 
 func (s *PicturesGRPCServer) splitPictures(
-	ctx context.Context, pictures []*schema.PictureRow,
+	ctx context.Context, pictureRows []*schema.PictureRow,
 ) ([]*NewboxGroupDraft, error) {
 	res := make([]*NewboxGroupDraft, 0)
 
-	for _, pictureRow := range pictures {
+	for _, pictureRow := range pictureRows {
 		pictureItems, err := s.repository.PictureItems(ctx, &query.PictureItemListOptions{
 			PictureID: pictureRow.ID,
 			TypeID:    schema.PictureItemContent,
-		}, 0)
+		}, pictures.PictureItemOrderByNone, 0)
 		if err != nil {
 			return nil, err
 		}

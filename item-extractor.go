@@ -21,6 +21,8 @@ var (
 		schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDTwins, schema.ItemTableItemTypeIDBrand,
 		schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDVehicle,
 	}
+
+	errPreloadNotImplemented = errors.New("preload item_parent with limit not implemented")
 )
 
 type ItemExtractor struct {
@@ -31,6 +33,69 @@ func NewItemExtractor(
 	container *Container,
 ) *ItemExtractor {
 	return &ItemExtractor{container: container}
+}
+
+func (s *ItemExtractor) preloadItemParentChilds(
+	ctx context.Context, request *ItemParentsRequest, ids []int64, lang string, isModer bool, userID int64, role string,
+) (map[int64][]*ItemParent, error) {
+	if request == nil {
+		return nil, nil //nolint: nilnil
+	}
+
+	result := make(map[int64][]*ItemParent, len(ids))
+
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	options, err := convertItemParentListOptions(request.GetOptions())
+	if err != nil {
+		return nil, err
+	}
+
+	if options == nil {
+		options = &query.ItemParentListOptions{}
+	}
+
+	itemsRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	fields := convertItemParentFields(request.GetFields())
+	orderBy := convertItemParentOrder(request.GetOrder())
+
+	var rows []*items.ItemParent
+
+	limit := request.GetLimit()
+	if limit > 0 {
+		return nil, errPreloadNotImplemented
+	}
+
+	options.ParentIDs = ids
+
+	rows, _, err = itemsRepository.ItemParents(ctx, options, fields, orderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	itemParentExtractor := s.container.ItemParentExtractor()
+
+	extractedRows, err := itemParentExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID, role)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range extractedRows {
+		parentID := row.GetParentId()
+		if _, ok := result[parentID]; !ok {
+			result[parentID] = make([]*ItemParent, 0)
+		}
+
+		result[parentID] = append(result[parentID], row)
+	}
+
+	return result, nil
 }
 
 func (s *ItemExtractor) preloadPictureItems(
@@ -54,6 +119,8 @@ func (s *ItemExtractor) preloadPictureItems(
 	if options == nil {
 		options = &query.PictureItemListOptions{}
 	}
+
+	order := convertPictureItemsOrder(request.GetOrder())
 
 	picturesRepository, err := s.container.PicturesRepository()
 	if err != nil {
@@ -80,7 +147,7 @@ func (s *ItemExtractor) preloadPictureItems(
 	} else {
 		options.ItemIDs = ids
 
-		rows, err = picturesRepository.PictureItems(ctx, options, 0)
+		rows, err = picturesRepository.PictureItems(ctx, options, order, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -130,12 +197,14 @@ func (s *ItemExtractor) ExtractRows(
 		return nil, err
 	}
 
-	itemRepository, err := s.container.ItemsRepository()
+	itemParentChildsRequest := fields.GetItemParentChilds()
+
+	itemParentChildRows, err := s.preloadItemParentChilds(ctx, itemParentChildsRequest, ids, lang, isModer, userID, role)
 	if err != nil {
 		return nil, err
 	}
 
-	itemOfDayRepository, err := s.container.ItemOfDayRepository()
+	itemRepository, err := s.container.ItemsRepository()
 	if err != nil {
 		return nil, err
 	}
@@ -185,13 +254,9 @@ func (s *ItemExtractor) ExtractRows(
 			return nil, err
 		}
 
-		if fields.GetIsCompilesItemOfDay() {
-			IsCompiles, err := itemOfDayRepository.IsComplies(ctx, row.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			resultRow.IsCompilesItemOfDay = IsCompiles
+		resultRow.IsCompilesItemOfDay, err = s.extractIsCompilesItemOfDay(ctx, fields, row)
+		if err != nil {
+			return nil, err
 		}
 
 		if fields.GetAttrZoneId() {
@@ -272,6 +337,17 @@ func (s *ItemExtractor) ExtractRows(
 				s.container.Enforcer().Enforce(role, "specifications", "edit")
 		}
 
+		if itemParentChildsRequest != nil {
+			resultRow.ItemParentChilds = &ItemParents{
+				Items: itemParentChildRows[row.ID],
+			}
+		}
+
+		resultRow.CommentsCount, err = s.extractCommentsCount(ctx, fields, row)
+		if err != nil {
+			return nil, err
+		}
+
 		result = append(result, resultRow)
 	}
 
@@ -291,6 +367,34 @@ func (s *ItemExtractor) Extract(
 	}
 
 	return result[0], nil
+}
+
+func (s *ItemExtractor) extractIsCompilesItemOfDay(
+	ctx context.Context, fields *ItemFields, row *items.Item,
+) (bool, error) {
+	if !fields.GetIsCompilesItemOfDay() {
+		return false, nil
+	}
+
+	itemOfDayRepository, err := s.container.ItemOfDayRepository()
+	if err != nil {
+		return false, err
+	}
+
+	return itemOfDayRepository.IsComplies(ctx, row.ID)
+}
+
+func (s *ItemExtractor) extractCommentsCount(ctx context.Context, fields *ItemFields, row *items.Item) (int32, error) {
+	if !fields.GetCommentsCount() {
+		return 0, nil
+	}
+
+	commentsRepo, err := s.container.CommentsRepository()
+	if err != nil {
+		return 0, err
+	}
+
+	return commentsRepo.TopicStat(ctx, schema.CommentMessageTypeIDItems, row.ID)
 }
 
 func (s *ItemExtractor) extractLogos(

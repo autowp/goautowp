@@ -284,3 +284,14 @@ func convertPicturesOrder(order PicturesRequest_Order) pictures.OrderBy {
 
 	return pictures.OrderByNone
 }
+
+func convertPictureItemsOrder(order PictureItemsRequest_Order) pictures.PictureItemOrderBy {
+	switch order {
+	case PictureItemsRequest_NONE:
+		return pictures.PictureItemOrderByNone
+	case PictureItemsRequest_FRONT_PERSPECTIVES_FIRST:
+		return pictures.PictureItemOrderByFrontPerspectivesFirst
+	}
+
+	return pictures.PictureItemOrderByNone
+}

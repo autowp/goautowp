@@ -111,6 +111,13 @@ const (
 	OrderByFrontPerspectives
 )
 
+type PictureItemOrderBy = int
+
+const (
+	PictureItemOrderByNone PictureItemOrderBy = iota
+	PictureItemOrderByFrontPerspectivesFirst
+)
+
 func NewRepository(
 	db *goqu.Database, imageStorage *storage.Storage, textStorageRepository *textstorage.Repository,
 	itemsRepository *items.Repository,
@@ -743,6 +750,7 @@ func (s *Repository) Pictures(
 		sqSelect *goqu.SelectDataset
 		pages    *util.Pages
 		err      error
+		res      []*schema.PictureRow
 	)
 
 	if pagination {
@@ -771,13 +779,7 @@ func (s *Repository) Pictures(
 		}
 	}
 
-	var res []*schema.PictureRow
-
-	if options.Limit > 0 {
-		err = sqSelect.ScanStructsContext(ctx, &res)
-	} else {
-		err = nil
-	}
+	err = sqSelect.ScanStructsContext(ctx, &res)
 
 	return res, pages, err
 }
@@ -1441,13 +1443,28 @@ func (s *Repository) PictureItemsBatch(
 }
 
 func (s *Repository) PictureItems(
-	ctx context.Context, options *query.PictureItemListOptions, limit uint32,
+	ctx context.Context, options *query.PictureItemListOptions, order PictureItemOrderBy, limit uint32,
 ) ([]*schema.PictureItemRow, error) {
 	var rows []*schema.PictureItemRow
 
 	sqSelect, err := s.PictureItemSelect(options)
 	if err != nil {
 		return nil, err
+	}
+
+	switch order {
+	case PictureItemOrderByNone:
+	case PictureItemOrderByFrontPerspectivesFirst:
+		perspectives := frontPerspectives
+
+		orderExprs := make([]exp.OrderedExpression, 0, len(perspectives))
+
+		for _, pid := range perspectives {
+			orderExprs = append(orderExprs, goqu.L("?",
+				goqu.T(query.PictureItemAlias).Col(schema.PictureItemTablePerspectiveIDColName).Eq(pid)).Desc())
+		}
+
+		sqSelect = sqSelect.Order(orderExprs...)
 	}
 
 	if limit > 0 {
@@ -1550,7 +1567,7 @@ func (s *Repository) NameData(
 		pictureItemRows, err := s.PictureItems(ctx, &query.PictureItemListOptions{
 			PictureID: row.ID,
 			TypeID:    schema.PictureItemContent,
-		}, 0)
+		}, PictureItemOrderByNone, 0)
 		if err != nil {
 			return nil, err
 		}

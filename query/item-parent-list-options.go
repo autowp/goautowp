@@ -17,6 +17,7 @@ func AppendItemParentAlias(alias string, suffix string) string {
 type ItemParentListOptions struct {
 	ItemID                            int64
 	ParentID                          int64
+	ParentIDs                         []int64
 	Type                              schema.ItemParentType
 	ParentIDExpr                      exp.Expression
 	LinkedInDays                      int
@@ -101,6 +102,10 @@ func (s *ItemParentListOptions) apply(alias string, sqSelect *goqu.SelectDataset
 
 	if s.ParentID != 0 {
 		sqSelect = sqSelect.Where(parentIDCol.Eq(s.ParentID))
+	}
+
+	if len(s.ParentIDs) > 0 {
+		sqSelect = sqSelect.Where(parentIDCol.In(s.ParentIDs))
 	}
 
 	if s.ParentIDExpr != nil {

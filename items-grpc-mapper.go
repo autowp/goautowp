@@ -334,3 +334,16 @@ func convertItemOrder(value ItemsRequest_Order) (items.OrderBy, bool) {
 
 	return items.OrderByNone, false
 }
+
+func convertItemParentOrder(order ItemParentsRequest_Order) items.ItemParentOrderBy {
+	switch order {
+	case ItemParentsRequest_NONE:
+		return items.ItemParentOrderByNone
+	case ItemParentsRequest_CATEGORIES_FIRST:
+		return items.ItemParentOrderByCategoriesFirst
+	case ItemParentsRequest_AUTO:
+		return items.ItemParentOrderByAuto
+	}
+
+	return items.ItemParentOrderByNone
+}

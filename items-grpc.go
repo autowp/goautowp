@@ -2408,8 +2408,8 @@ func (s *ItemsGRPCServer) carSectionGroups(
 }
 
 func (s *ItemsGRPCServer) GetItemParents(
-	ctx context.Context, in *GetItemParentsRequest,
-) (*GetItemParentsResponse, error) {
+	ctx context.Context, in *ItemParentsRequest,
+) (*ItemParents, error) {
 	userID, role, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -2438,10 +2438,10 @@ func (s *ItemsGRPCServer) GetItemParents(
 	order := items.ItemParentOrderByNone
 
 	switch in.GetOrder() {
-	case GetItemParentsRequest_NONE:
-	case GetItemParentsRequest_CATEGORIES_FIRST:
+	case ItemParentsRequest_NONE:
+	case ItemParentsRequest_CATEGORIES_FIRST:
 		order = items.ItemParentOrderByCategoriesFirst
-	case GetItemParentsRequest_AUTO:
+	case ItemParentsRequest_AUTO:
 		order = items.ItemParentOrderByAuto
 	}
 
@@ -2473,7 +2473,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 		}
 	}
 
-	return &GetItemParentsResponse{
+	return &ItemParents{
 		Items:     res,
 		Paginator: paginator,
 	}, nil

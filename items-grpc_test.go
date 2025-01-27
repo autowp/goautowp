@@ -2359,11 +2359,11 @@ func TestGetItemParents(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	res, err := client.GetItemParents(context.Background(), &GetItemParentsRequest{
+	res, err := client.GetItemParents(context.Background(), &ItemParentsRequest{
 		Options: &ItemParentListOptions{
 			ParentId: parentID,
 		},
-		Order: GetItemParentsRequest_AUTO,
+		Order: ItemParentsRequest_AUTO,
 	})
 	require.NoError(t, err)
 	require.Len(t, res.GetItems(), 2)
@@ -2373,11 +2373,11 @@ func TestGetItemParents(t *testing.T) {
 		require.Contains(t, []int64{child1ID, child2ID}, row.GetItemId())
 	}
 
-	res, err = client.GetItemParents(context.Background(), &GetItemParentsRequest{
+	res, err = client.GetItemParents(context.Background(), &ItemParentsRequest{
 		Options: &ItemParentListOptions{
 			ParentId: parentID,
 		},
-		Order: GetItemParentsRequest_CATEGORIES_FIRST,
+		Order: ItemParentsRequest_CATEGORIES_FIRST,
 		Limit: 1,
 	})
 	require.NoError(t, err)
@@ -2461,7 +2461,7 @@ func TestItemParentFields(t *testing.T) {
 
 	res, err := client.GetItemParents(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&GetItemParentsRequest{
+		&ItemParentsRequest{
 			Language: "ru",
 			Fields: &ItemParentFields{
 				Item: &ItemFields{
@@ -2487,4 +2487,94 @@ func TestItemParentFields(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, res)
+}
+
+func TestTwinsGroupPictures(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	client := NewItemsClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	groupName := fmt.Sprintf("Twins-Group-%d", randomInt)
+	r1, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       groupName,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDTwins,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("twins-group-%d", randomInt)},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	groupID, err := r1.LastInsertId()
+	require.NoError(t, err)
+
+	vehicleName := fmt.Sprintf("Vehicle-%d", randomInt)
+	r3, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:       vehicleName,
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", randomInt)},
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	vehicleID, err := r3.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&ItemParent{
+			ItemId: vehicleID, ParentId: groupID,
+		},
+	)
+	require.NoError(t, err)
+
+	identity := "t" + strconv.Itoa(randomInt%100000)
+
+	res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
+		Identity: identity,
+		Status:   schema.PictureStatusAccepted,
+		IP:       util.IP(net.IPv4zero),
+		AddDate:  time.Now(),
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	pictureID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = goquDB.Insert(schema.PictureItemTable).Rows(schema.PictureItemRow{
+		PictureID: pictureID,
+		ItemID:    vehicleID,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	res2, err := client.GetItemParents(ctx, &ItemParentsRequest{
+		Options: &ItemParentListOptions{
+			ParentId: groupID,
+			ItemId:   vehicleID,
+		},
+		Fields: &ItemParentFields{
+			ChildDescendantPictures: &PicturesRequest{
+				Limit: 1,
+				Options: &PictureListOptions{
+					Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
+				},
+				Order: PicturesRequest_ORDER_FRONT_PERSPECTIVES,
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, res2.GetItems())
+	require.NotEmpty(t, res2.GetItems()[0].GetChildDescendantPictures())
+	require.NotEmpty(t, res2.GetItems()[0].GetChildDescendantPictures().GetItems()[0])
+	require.EqualValues(t, pictureID, res2.GetItems()[0].GetChildDescendantPictures().GetItems()[0].GetId())
 }

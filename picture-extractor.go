@@ -298,7 +298,9 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			piOptions.PictureID = row.ID
 
-			piRows, err := picturesRepository.PictureItems(ctx, piOptions, 0)
+			order := convertPictureItemsOrder(pictureItemRequest.GetOrder())
+
+			piRows, err := picturesRepository.PictureItems(ctx, piOptions, order, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -698,7 +700,7 @@ func (s *PictureExtractor) path(
 	piRows, err := picturesRepositury.PictureItems(ctx, &query.PictureItemListOptions{
 		PictureID: pictureID,
 		TypeID:    schema.PictureItemContent,
-	}, 0)
+	}, pictures.PictureItemOrderByNone, 0)
 	if err != nil {
 		return nil, err
 	}
