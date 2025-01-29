@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	_ "time/tzdata"
 
 	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/comments"

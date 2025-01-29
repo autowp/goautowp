@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	_ "time/tzdata"
 
 	"github.com/autowp/goautowp"
 	"github.com/autowp/goautowp/config"
