@@ -108,7 +108,12 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 	}
 
 	if len(s.ExcludePerspectiveID) > 0 {
-		sqSelect = sqSelect.Where(perspectiveIDCol.NotIn(s.ExcludePerspectiveID))
+		sqSelect = sqSelect.Where(
+			goqu.Or(
+				perspectiveIDCol.NotIn(s.ExcludePerspectiveID),
+				perspectiveIDCol.IsNull(),
+			),
+		)
 	}
 
 	if s.HasNoPerspectiveID {
