@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	_ "time/tzdata"
 
 	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/comments"
@@ -1141,8 +1142,8 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 
 				return map[string]interface{}{
 					"ModeratorURL":          frontend.UserURL(uri, userID, user.Identity),
-					"PictureURL":            frontend.PictureURL(uri, pic.Identity),
-					"ReplacementPictureURL": frontend.PictureURL(uri, replacePicture.Identity),
+					"PictureURL":            frontend.PictureURL(uri, replacePicture.Identity),
+					"ReplacementPictureURL": frontend.PictureURL(uri, pic.Identity),
 				}, nil
 			})
 		if err != nil {
