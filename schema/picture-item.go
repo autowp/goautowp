@@ -9,9 +9,9 @@ import (
 type PictureItemType int
 
 const (
-	PictureItemContent    PictureItemType = 1
-	PictureItemAuthor     PictureItemType = 2
-	PictureItemCopyrights PictureItemType = 3
+	PictureItemTypeContent    PictureItemType = 1
+	PictureItemTypeAuthor     PictureItemType = 2
+	PictureItemTypeCopyrights PictureItemType = 3
 
 	PictureItemTableName                 = "picture_item"
 	PictureItemTablePictureIDColName     = "picture_id"

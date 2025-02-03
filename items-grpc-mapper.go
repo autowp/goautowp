@@ -285,24 +285,14 @@ func convertItemFields(fields *ItemFields) *items.ListFields {
 		return nil
 	}
 
-	previewPictures := items.ListPreviewPicturesFields{}
-	if fields.GetPreviewPictures() != nil {
-		previewPictures.Route = fields.GetPreviewPictures().GetRoute()
-		previewPictures.Picture = items.ListPreviewPicturesPictureFields{
-			NameText: fields.GetPreviewPictures().GetPicture().GetNameText(),
-		}
-	}
-
 	return &items.ListFields{
-		NameOnly:        fields.GetNameOnly(),
-		NameHTML:        fields.GetNameHtml(),
-		NameText:        fields.GetNameText(),
-		NameDefault:     fields.GetNameDefault(),
-		Description:     fields.GetDescription(),
-		FullText:        fields.GetFullText(),
-		HasText:         fields.GetHasText(),
-		PreviewPictures: previewPictures,
-		// TotalPictures:              fields.GetTotalPictures(),
+		NameOnly:                   fields.GetNameOnly(),
+		NameHTML:                   fields.GetNameHtml(),
+		NameText:                   fields.GetNameText(),
+		NameDefault:                fields.GetNameDefault(),
+		Description:                fields.GetDescription(),
+		FullText:                   fields.GetFullText(),
+		HasText:                    fields.GetHasText(),
 		DescendantsCount:           fields.GetDescendantsCount(),
 		DescendantPicturesCount:    fields.GetDescendantPicturesCount(),
 		ChildsCount:                fields.GetChildsCount(),

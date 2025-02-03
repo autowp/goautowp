@@ -1028,6 +1028,7 @@ message PictureFields {
   bool name_html = 4;
   bool image = 2;
   bool thumb_medium = 3;
+  bool thumb_large = 28;
   bool views = 5;
   bool votes = 6;
   bool comments_count = 7;
@@ -1089,9 +1090,12 @@ message PicturePathRequest {
   int64 parent_id = 1;
 }
 
-message PreviewPicturesFields {
-  bool route = 1;
+message PreviewPicturesRequest {
   PictureFields picture = 2;
+  PictureItemType type_id = 3;
+  int32 perspective_page_id = 4;
+  int32 perspective_id = 5;
+  int32 contains_perspective_id = 6;
 }
 
 message ItemFields {
@@ -1101,8 +1105,7 @@ message ItemFields {
   bool name_text = 4;
   bool description = 5;
   bool has_text = 6;
-  PreviewPicturesFields preview_pictures = 7;
-  bool total_pictures = 8;
+  PreviewPicturesRequest preview_pictures = 7;
   bool descendants_count = 9;
   bool descendant_pictures_count = 10;
   bool childs_count = 11;
@@ -1308,6 +1311,13 @@ message APIItem {
   bool can_edit_specs = 46;
   ItemParents item_parent_childs = 47;
   int32 comments_count = 48;
+  PreviewPictures preview_pictures = 49;
+}
+
+message PreviewPictures {
+  bool large_format = 1;
+  repeated Picture pictures = 2;
+  int32 total_pictures = 3;
 }
 
 message PublicRoute {
@@ -1502,6 +1512,7 @@ message Picture {
   google.type.LatLng point = 5;
   int32 copyrights_text_id = 6;
   APIImage thumb_medium = 7;
+  APIImage thumb_large = 46;
   string name_text = 9;
   string name_html = 10;
   int64 owner_id = 11;

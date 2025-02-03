@@ -77,6 +77,10 @@ func (s *ItemParentCacheListOptions) JoinToItemIDAndApply(
 	)
 }
 
+func (s *ItemParentCacheListOptions) ItemsByItemIDAlias(alias string) string {
+	return AppendItemAlias(alias, "d")
+}
+
 func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
 	var (
 		err         error
@@ -101,7 +105,7 @@ func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDa
 		sqSelect = sqSelect.Where(parentIDCol.Eq(s.ParentIDExpr))
 	}
 
-	sqSelect, _, err = s.ItemsByItemID.JoinToIDAndApply(itemIDCol, AppendItemAlias(alias, "d"), sqSelect)
+	sqSelect, _, err = s.ItemsByItemID.JoinToIDAndApply(itemIDCol, s.ItemsByItemIDAlias(alias), sqSelect)
 	if err != nil {
 		return nil, err
 	}

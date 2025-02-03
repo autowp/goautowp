@@ -58,6 +58,7 @@ var (
 	PictureTablePointCol              = PictureTable.Col(PictureTablePointColName)
 	PictureTableCopyrightsTextIDCol   = PictureTable.Col(PictureTableCopyrightsTextIDColName)
 	PictureTableAcceptDatetimeCol     = PictureTable.Col(PictureTableAcceptDatetimeColName)
+	PictureTableContentCountCol       = PictureTable.Col(PictureTableContentCountColName)
 )
 
 type PictureRow struct {

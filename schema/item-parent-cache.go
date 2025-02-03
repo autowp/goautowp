@@ -18,6 +18,8 @@ var (
 	ItemParentCacheTableParentIDCol = ItemParentCacheTable.Col(ItemParentCacheTableParentIDColName)
 	ItemParentCacheTableDiffCol     = ItemParentCacheTable.Col(ItemParentCacheTableDiffColName)
 	ItemParentCacheTableDesignCol   = ItemParentCacheTable.Col(ItemParentCacheTableDesignColName)
+	ItemParentCacheTableSportCol    = ItemParentCacheTable.Col(ItemParentCacheTableSportColName)
+	ItemParentCacheTableTuningCol   = ItemParentCacheTable.Col(ItemParentCacheTableTuningColName)
 )
 
 type ItemParentCacheRow struct {

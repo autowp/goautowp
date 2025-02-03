@@ -57,6 +57,7 @@ type ItemListOptions struct {
 	ExcludeSelfAndChilds         int64
 	Autocomplete                 string
 	SuggestionsTo                int64
+	EngineItem                   *ItemListOptions
 }
 
 func ItemParentNoParentAlias(alias string) string {
@@ -318,6 +319,19 @@ func (s *ItemListOptions) applyJoins(
 				goqu.On(idCol.Eq(goqu.T(ipnpAlias).Col(schema.ItemParentTableItemIDColName))),
 			).
 			Where(goqu.T(ipnpAlias).Col(schema.ItemParentTableParentIDColName).IsNull())
+	}
+
+	if s.EngineItem != nil {
+		sqSelect, subGroupBy, err = s.EngineItem.JoinToIDAndApply(
+			aliasTable.Col(schema.ItemTableEngineItemIDColName), AppendItemAlias(alias, ""), sqSelect,
+		)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if subGroupBy {
+			groupBy = true
+		}
 	}
 
 	sqSelect = s.applyExcludeSelfAndChilds(alias, sqSelect)

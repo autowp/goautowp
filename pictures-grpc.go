@@ -1993,11 +1993,11 @@ func (s *PicturesGRPCServer) GetInbox(ctx context.Context, in *InboxRequest) (*I
 	}
 
 	if in.GetBrandId() > 0 {
-		listOptions.PictureItem = &query.PictureItemListOptions{
+		listOptions.PictureItem = []*query.PictureItemListOptions{{
 			ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
 				ParentID: in.GetBrandId(),
 			},
-		}
+		}}
 	}
 
 	timezone, err := s.resolveTimezone(ctx, userID, in.GetLanguage())
@@ -2260,9 +2260,9 @@ func (s *PicturesGRPCServer) newboxGroups(
 			pictureRows, _, err := s.repository.Pictures(ctx, &query.PictureListOptions{
 				IDs:    ids,
 				Status: schema.PictureStatusAccepted,
-				PictureItem: &query.PictureItemListOptions{
+				PictureItem: []*query.PictureItemListOptions{{
 					ItemID: groupData.ItemID,
-				},
+				}},
 				Limit: newboxPicturesPerLine,
 			}, repoItemPictureFields, pictures.OrderByAcceptDatetimeDesc, false)
 			if err != nil {
@@ -2278,10 +2278,10 @@ func (s *PicturesGRPCServer) newboxGroups(
 
 			totalPictures, err := s.repository.Count(ctx, &query.PictureListOptions{
 				Status: schema.PictureStatusAccepted,
-				PictureItem: &query.PictureItemListOptions{
+				PictureItem: []*query.PictureItemListOptions{{
 					ItemID: groupData.ItemID,
-					TypeID: schema.PictureItemContent,
-				},
+					TypeID: schema.PictureItemTypeContent,
+				}},
 				AcceptDate: &acceptDate,
 				Timezone:   timezone,
 			})
@@ -2320,7 +2320,7 @@ func (s *PicturesGRPCServer) splitPictures(
 	for _, pictureRow := range pictureRows {
 		pictureItems, err := s.repository.PictureItems(ctx, &query.PictureItemListOptions{
 			PictureID: pictureRow.ID,
-			TypeID:    schema.PictureItemContent,
+			TypeID:    schema.PictureItemTypeContent,
 		}, pictures.PictureItemOrderByNone, 0)
 		if err != nil {
 			return nil, err

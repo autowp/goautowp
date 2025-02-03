@@ -11,19 +11,20 @@ const (
 )
 
 type PictureItemListOptions struct {
-	TypeID                  schema.PictureItemType
-	PictureID               int64
-	ItemID                  int64
-	ItemIDs                 []int64
-	Pictures                *PictureListOptions
-	PerspectiveID           int32
-	ExcludePerspectiveID    []int32
-	HasNoPerspectiveID      bool
-	ExcludeAncestorOrSelfID int64
-	ItemParentCacheAncestor *ItemParentCacheListOptions
-	Item                    *ItemListOptions
-	ItemVehicleType         *ItemVehicleTypeListOptions
-	PictureItemByItemID     *PictureItemListOptions
+	TypeID                      schema.PictureItemType
+	PictureID                   int64
+	ItemID                      int64
+	ItemIDs                     []int64
+	Pictures                    *PictureListOptions
+	PerspectiveID               int32
+	ExcludePerspectiveID        []int32
+	HasNoPerspectiveID          bool
+	ExcludeAncestorOrSelfID     int64
+	ItemParentCacheAncestor     *ItemParentCacheListOptions
+	Item                        *ItemListOptions
+	ItemVehicleType             *ItemVehicleTypeListOptions
+	PictureItemByItemID         *PictureItemListOptions
+	PerspectiveGroupPerspective *PerspectiveGroupPerspectiveListOptions
 }
 
 func AppendPictureItemAlias(alias string, suffix string) string {
@@ -31,11 +32,11 @@ func AppendPictureItemAlias(alias string, suffix string) string {
 }
 
 func (s *PictureItemListOptions) IsPictureIDUnique() bool {
-	return s.ItemID != 0
+	return s.ItemID != 0 && s.TypeID != 0
 }
 
 func (s *PictureItemListOptions) IsItemIDUnique() bool {
-	return s.PictureID != 0
+	return s.PictureID != 0 && s.TypeID != 0
 }
 
 func (s *PictureItemListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
@@ -75,6 +76,10 @@ func (s *PictureItemListOptions) JoinToPictureIDAndApply(
 			goqu.On(srcCol.Eq(goqu.T(alias).Col(schema.PictureItemTablePictureIDColName))),
 		),
 	)
+}
+
+func (s *PictureItemListOptions) ItemParentCacheAncestorAlias(alias string) string {
+	return AppendItemParentCacheAlias(alias, "a")
 }
 
 func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
@@ -119,7 +124,7 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 	if s.HasNoPerspectiveID {
 		sqSelect = sqSelect.Where(
 			perspectiveIDCol.IsNull(),
-			typeCol.Eq(schema.PictureItemContent),
+			typeCol.Eq(schema.PictureItemTypeContent),
 		)
 	}
 
@@ -150,7 +155,7 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 
 	sqSelect, err = s.ItemParentCacheAncestor.JoinToItemIDAndApply(
 		itemIDCol,
-		AppendItemParentCacheAlias(alias, "a"),
+		s.ItemParentCacheAncestorAlias(alias),
 		sqSelect,
 	)
 	if err != nil {
@@ -171,6 +176,12 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 	if err != nil {
 		return nil, err
 	}
+
+	sqSelect = s.PerspectiveGroupPerspective.JoinToPerspectiveIDAndApply(
+		aliasTable.Col(schema.PictureItemTablePerspectiveIDColName),
+		AppendPerspectiveGroupPerspectiveAlias(alias),
+		sqSelect,
+	)
 
 	return sqSelect, nil
 }

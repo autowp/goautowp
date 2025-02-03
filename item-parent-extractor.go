@@ -168,53 +168,70 @@ func (s *ItemParentExtractor) ExtractRows(
 			}
 		}
 
-		if request := fields.GetChildDescendantPictures(); request != nil {
-			picturesRepo, err := s.container.PicturesRepository()
-			if err != nil {
-				return nil, err
-			}
-
-			pictureFields := convertPictureFields(request.GetFields())
-			pictureOrder := convertPicturesOrder(request.GetOrder())
-
-			pictureListOptions, err := convertPictureListOptions(request.GetOptions())
-			if err != nil {
-				return nil, err
-			}
-
-			if pictureListOptions == nil {
-				pictureListOptions = &query.PictureListOptions{}
-			}
-
-			if pictureListOptions.PictureItem == nil {
-				pictureListOptions.PictureItem = &query.PictureItemListOptions{}
-			}
-
-			if pictureListOptions.PictureItem.ItemParentCacheAncestor == nil {
-				pictureListOptions.PictureItem.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
-			}
-
-			pictureListOptions.PictureItem.ItemParentCacheAncestor.ParentID = row.ItemID
-
-			pictureRows, _, err := picturesRepo.Pictures(ctx, pictureListOptions, pictureFields, pictureOrder, false)
-			if err != nil {
-				return nil, err
-			}
-
-			extracted, err := s.container.PictureExtractor().ExtractRows(
-				ctx, pictureRows, request.GetFields(), lang, isModer, userID, role,
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			resRow.ChildDescendantPictures = &PicturesList{
-				Items: extracted,
-			}
+		resRow.ChildDescendantPictures, err = s.extractChildDescendantPictures(ctx, row, fields, lang, isModer, userID, role)
+		if err != nil {
+			return nil, err
 		}
 
 		res = append(res, resRow)
 	}
 
 	return res, nil
+}
+
+func (s *ItemParentExtractor) extractChildDescendantPictures(
+	ctx context.Context, row *items.ItemParent, fields *ItemParentFields, lang string, isModer bool,
+	userID int64, role string,
+) (*PicturesList, error) {
+	request := fields.GetChildDescendantPictures()
+	if request == nil {
+		return nil, nil //nolint: nilnil
+	}
+
+	picturesRepo, err := s.container.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	pictureFields := convertPictureFields(request.GetFields())
+	pictureOrder := convertPicturesOrder(request.GetOrder())
+
+	pictureListOptions, err := convertPictureListOptions(request.GetOptions())
+	if err != nil {
+		return nil, err
+	}
+
+	if pictureListOptions == nil {
+		pictureListOptions = &query.PictureListOptions{}
+	}
+
+	if pictureListOptions.PictureItem == nil {
+		pictureListOptions.PictureItem = make([]*query.PictureItemListOptions, 1)
+	}
+
+	if pictureListOptions.PictureItem[0] == nil {
+		pictureListOptions.PictureItem[0] = &query.PictureItemListOptions{}
+	}
+
+	if pictureListOptions.PictureItem[0].ItemParentCacheAncestor == nil {
+		pictureListOptions.PictureItem[0].ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
+	}
+
+	pictureListOptions.PictureItem[0].ItemParentCacheAncestor.ParentID = row.ItemID
+
+	pictureRows, _, err := picturesRepo.Pictures(ctx, pictureListOptions, pictureFields, pictureOrder, false)
+	if err != nil {
+		return nil, err
+	}
+
+	extracted, err := s.container.PictureExtractor().ExtractRows(
+		ctx, pictureRows, request.GetFields(), lang, isModer, userID, role,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PicturesList{
+		Items: extracted,
+	}, nil
 }

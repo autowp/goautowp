@@ -209,6 +209,15 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			resultRow.ThumbMedium = APIImageToGRPC(image)
 		}
 
+		if fields.GetThumbLarge() && row.ImageID.Valid {
+			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-large")
+			if err != nil {
+				return nil, err
+			}
+
+			resultRow.ThumbLarge = APIImageToGRPC(image)
+		}
+
 		if fields.GetImageGalleryFull() && row.ImageID.Valid {
 			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-gallery-full")
 			if err != nil {
@@ -350,11 +359,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		if fields.GetAcceptedCount() {
 			acceptedCount, err := picturesRepository.Count(ctx, &query.PictureListOptions{
 				Status: schema.PictureStatusAccepted,
-				PictureItem: &query.PictureItemListOptions{
+				PictureItem: []*query.PictureItemListOptions{{
 					PictureItemByItemID: &query.PictureItemListOptions{
 						PictureID: row.ID,
 					},
-				},
+				}},
 			})
 			if err != nil {
 				return nil, err
@@ -410,11 +419,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				isLastPicture, err = picturesRepository.Exists(ctx, &query.PictureListOptions{
 					ExcludeID: row.ID,
 					Status:    schema.PictureStatusAccepted,
-					PictureItem: &query.PictureItemListOptions{
+					PictureItem: []*query.PictureItemListOptions{{
 						PictureItemByItemID: &query.PictureItemListOptions{
 							PictureID: row.ID,
 						},
-					},
+					}},
 				})
 				if err != nil {
 					return nil, err
@@ -699,7 +708,7 @@ func (s *PictureExtractor) path(
 
 	piRows, err := picturesRepositury.PictureItems(ctx, &query.PictureItemListOptions{
 		PictureID: pictureID,
-		TypeID:    schema.PictureItemContent,
+		TypeID:    schema.PictureItemTypeContent,
 	}, pictures.PictureItemOrderByNone, 0)
 	if err != nil {
 		return nil, err

@@ -237,11 +237,11 @@ type StatusPicturesCountColumn struct {
 func (s StatusPicturesCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
 	opts := query.PictureListOptions{
 		Status: s.status,
-		PictureItem: &query.PictureItemListOptions{
+		PictureItem: []*query.PictureItemListOptions{{
 			ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
 				ParentIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 			},
-		},
+		}},
 	}
 
 	sqSelect, err := opts.CountSelect(s.db, query.PictureAlias)

@@ -109,6 +109,7 @@ const (
 	OrderByIDDesc
 	OrderByIDAsc
 	OrderByFrontPerspectives
+	OrderByPerspectivesGroupPerspectives
 )
 
 type PictureItemOrderBy = int
@@ -606,12 +607,45 @@ func (s *Repository) orderBy( //nolint: maintidx
 		sqSelect = sqSelect.Order(
 			goqu.MIN(goqu.T(dfDistanceAlias).Col(schema.DfDistanceTableDistanceColName)).Asc(),
 		)
-	case OrderByPerspectives:
-		if options.PictureItem == nil {
+	case OrderByPerspectivesGroupPerspectives:
+		if len(options.PictureItem) == 0 || options.PictureItem[0] == nil {
 			return nil, false, errJoinNeededToSortByPerspective
 		}
 
-		piAlias := query.AppendPictureItemAlias(alias, "")
+		var exps []exp.OrderedExpression
+
+		piAlias := options.PictureItemAlias(alias, 0)
+
+		if options.PictureItem[0].ItemID == 0 && options.PictureItem[0].ItemParentCacheAncestor != nil {
+			if options.PictureItem[0].ItemParentCacheAncestor.ItemsByItemID == nil {
+				return nil, false, errJoinNeededToSortByPerspective
+			}
+
+			ipcaAlias := options.PictureItem[0].ItemParentCacheAncestorAlias(piAlias)
+			iAlias := options.PictureItem[0].ItemParentCacheAncestor.ItemsByItemIDAlias(ipcaAlias)
+			exps = append(exps, goqu.MAX(goqu.T(iAlias).Col(schema.ItemTableIsConceptColName)).Asc())
+			exps = append(exps, goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableSportColName)).Asc())
+			exps = append(exps, goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableTuningColName)).Asc())
+		}
+
+		if options.PictureItem[0].PerspectiveGroupPerspective != nil {
+			pgpAlias := query.AppendPerspectiveGroupPerspectiveAlias(piAlias)
+			exps = append(exps, goqu.MAX(goqu.T(pgpAlias).Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)).Asc())
+		}
+
+		exps = append([]exp.OrderedExpression{aliasTable.Col(schema.PictureTableContentCountColName).Asc()}, exps...)
+		exps = append(exps,
+			aliasTable.Col(schema.PictureTableWidthColName).Desc(),
+			aliasTable.Col(schema.PictureTableHeightColName).Desc(),
+		)
+
+		sqSelect = sqSelect.Order(exps...)
+	case OrderByPerspectives:
+		if len(options.PictureItem) == 0 || options.PictureItem[0] == nil {
+			return nil, false, errJoinNeededToSortByPerspective
+		}
+
+		piAlias := options.PictureItemAlias(alias, 0)
 
 		groupBy = true
 		sqSelect = sqSelect.
@@ -626,7 +660,7 @@ func (s *Repository) orderBy( //nolint: maintidx
 				aliasTable.Col(schema.PictureTableIDColName).Desc(),
 			)
 	case OrderByTopPerspectives, OrderByBottomPerspectives, OrderByFrontPerspectives:
-		if options.PictureItem == nil {
+		if len(options.PictureItem) == 0 || options.PictureItem[0] == nil {
 			return nil, false, errJoinNeededToSortByPerspective
 		}
 
@@ -638,10 +672,10 @@ func (s *Repository) orderBy( //nolint: maintidx
 		}
 
 		orderExprs := make([]exp.OrderedExpression, 0, len(perspectives))
+		piAlias := options.PictureItemAlias(alias, 0)
 
 		for _, pid := range perspectives {
-			var expr exp.Comparable = goqu.T(query.AppendPictureItemAlias(query.PictureAlias, "")).
-				Col(schema.PictureItemTablePerspectiveIDColName)
+			var expr exp.Comparable = goqu.T(piAlias).Col(schema.PictureItemTablePerspectiveIDColName)
 
 			if groupBy {
 				expr = goqu.MAX(expr)
@@ -846,7 +880,7 @@ func (s *Repository) Repair(ctx context.Context, id int64) error {
 func (s *Repository) SetPictureItemArea(
 	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, area PictureItemArea,
 ) error {
-	if pictureItemType != schema.PictureItemContent {
+	if pictureItemType != schema.PictureItemTypeContent {
 		return errIsAllowedForPictureItemContentOnly
 	}
 
@@ -932,7 +966,7 @@ func (s *Repository) SetPictureItemArea(
 func (s *Repository) SetPictureItemPerspective(
 	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, perspective int32,
 ) error {
-	if pictureItemType != schema.PictureItemContent {
+	if pictureItemType != schema.PictureItemTypeContent {
 		return errIsAllowedForPictureItemContentOnly
 	}
 
@@ -1015,17 +1049,17 @@ func (s *Repository) isAllowedTypeByItemID(
 
 func (s *Repository) isAllowedType(itemTypeID schema.ItemTableItemTypeID, pictureItemType schema.PictureItemType) bool {
 	allowed := map[schema.ItemTableItemTypeID][]schema.PictureItemType{
-		schema.ItemTableItemTypeIDBrand:    {schema.PictureItemContent, schema.PictureItemCopyrights},
-		schema.ItemTableItemTypeIDCategory: {schema.PictureItemContent},
-		schema.ItemTableItemTypeIDEngine:   {schema.PictureItemContent},
-		schema.ItemTableItemTypeIDFactory:  {schema.PictureItemContent},
-		schema.ItemTableItemTypeIDVehicle:  {schema.PictureItemContent},
-		schema.ItemTableItemTypeIDTwins:    {schema.PictureItemContent},
-		schema.ItemTableItemTypeIDMuseum:   {schema.PictureItemContent},
+		schema.ItemTableItemTypeIDBrand:    {schema.PictureItemTypeContent, schema.PictureItemTypeCopyrights},
+		schema.ItemTableItemTypeIDCategory: {schema.PictureItemTypeContent},
+		schema.ItemTableItemTypeIDEngine:   {schema.PictureItemTypeContent},
+		schema.ItemTableItemTypeIDFactory:  {schema.PictureItemTypeContent},
+		schema.ItemTableItemTypeIDVehicle:  {schema.PictureItemTypeContent},
+		schema.ItemTableItemTypeIDTwins:    {schema.PictureItemTypeContent},
+		schema.ItemTableItemTypeIDMuseum:   {schema.PictureItemTypeContent},
 		schema.ItemTableItemTypeIDPerson: {
-			schema.PictureItemContent, schema.PictureItemAuthor, schema.PictureItemCopyrights,
+			schema.PictureItemTypeContent, schema.PictureItemTypeAuthor, schema.PictureItemTypeCopyrights,
 		},
-		schema.ItemTableItemTypeIDCopyright: {schema.PictureItemCopyrights},
+		schema.ItemTableItemTypeIDCopyright: {schema.PictureItemTypeCopyrights},
 	}
 
 	pictureItemTypes, ok := allowed[itemTypeID]
@@ -1110,7 +1144,7 @@ func (s *Repository) updateContentCount(ctx context.Context, pictureID int64) er
 				From(schema.PictureItemTable).
 				Where(
 					schema.PictureItemTablePictureIDCol.Eq(pictureID),
-					schema.PictureItemTableTypeCol.Eq(schema.PictureItemContent),
+					schema.PictureItemTableTypeCol.Eq(schema.PictureItemTypeContent),
 				),
 		}).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).
@@ -1500,7 +1534,7 @@ func (s *Repository) NameData(
 			From(schema.PictureItemTable).
 			Where(
 				schema.PictureItemTablePictureIDCol.Eq(row.ID),
-				schema.PictureItemTableTypeCol.Eq(schema.PictureItemContent),
+				schema.PictureItemTableTypeCol.Eq(schema.PictureItemTypeContent),
 			).
 			ScanStructsContext(ctx, &pictureItemRows)
 		if err != nil {
@@ -1566,7 +1600,7 @@ func (s *Repository) NameData(
 
 		pictureItemRows, err := s.PictureItems(ctx, &query.PictureItemListOptions{
 			PictureID: row.ID,
-			TypeID:    schema.PictureItemContent,
+			TypeID:    schema.PictureItemTypeContent,
 		}, PictureItemOrderByNone, 0)
 		if err != nil {
 			return nil, err
@@ -1703,4 +1737,18 @@ func (s *Repository) PictureModerVotes(
 	err := s.PictureModerVoteSelect(options).ScanStructsContext(ctx, &rows)
 
 	return rows, err
+}
+
+func (s *Repository) PerspectivePageGroupIDs(
+	ctx context.Context, pageID int32,
+) ([]int32, error) {
+	var ids []int32
+
+	err := s.db.Select(schema.PerspectivesGroupsTableIDCol).
+		From(schema.PerspectivesGroupsTable).
+		Where(schema.PerspectivesGroupsTablePageIDCol.Eq(pageID)).
+		Order(schema.PerspectivesGroupsTablePositionCol.Asc()).
+		ScanValsContext(ctx, &ids)
+
+	return ids, err
 }

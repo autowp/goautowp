@@ -560,12 +560,12 @@ func (s *Application) GenerateIndexCache(ctx context.Context) error {
 			return err
 		}
 
-		err = idx.GeneratePersonsCache(ctx, schema.PictureItemContent, lang)
+		err = idx.GeneratePersonsCache(ctx, schema.PictureItemTypeContent, lang)
 		if err != nil {
 			return err
 		}
 
-		err = idx.GeneratePersonsCache(ctx, schema.PictureItemAuthor, lang)
+		err = idx.GeneratePersonsCache(ctx, schema.PictureItemTypeAuthor, lang)
 		if err != nil {
 			return err
 		}

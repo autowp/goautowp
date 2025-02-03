@@ -348,6 +348,11 @@ func (s *ItemExtractor) ExtractRows(
 			return nil, err
 		}
 
+		resultRow.PreviewPictures, err = s.extractPreviewPictures(ctx, fields, row, lang, isModer, userID, role)
+		if err != nil {
+			return nil, err
+		}
+
 		result = append(result, resultRow)
 	}
 
@@ -367,6 +372,71 @@ func (s *ItemExtractor) Extract(
 	}
 
 	return result[0], nil
+}
+
+func (s *ItemExtractor) extractPreviewPictures(
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
+) (*PreviewPictures, error) {
+	pps := fields.GetPreviewPictures()
+	if pps == nil {
+		return nil, nil //nolint: nilnil
+	}
+
+	pictureRepository, err := s.container.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	cFetcher := NewPerspectivePictureFetcher(pictureRepository)
+
+	result, err := cFetcher.Fetch(ctx, row.ItemRow, PerspectivePictureFetcherOptions{
+		OnlyExactlyPictures:   false,
+		PerspectivePageID:     pps.GetPerspectivePageId(),
+		PictureItemTypeID:     convertPictureItemType(pps.GetTypeId()),
+		PerspectiveID:         pps.GetPerspectiveId(),
+		ContainsPerspectiveID: pps.GetContainsPerspectiveId(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// if pps.GetRoute() {
+	//	for idx, picture := range result.Pictures {
+	//		if picture != nil {
+	//			pictures.Pictures[idx].Route = []string{"/picture", picture.Row.Identity}
+	//		}
+	//	}
+	// }
+
+	pictureExtractor := s.container.PictureExtractor()
+
+	pictureFields := pps.GetPicture()
+	if pictureFields == nil {
+		pictureFields = &PictureFields{}
+	}
+
+	extractedPics := make([]*Picture, 0, len(result.Pictures))
+
+	for _, pic := range result.Pictures {
+		pictureFields.ThumbMedium = !result.LargeFormat
+		pictureFields.ThumbLarge = result.LargeFormat
+
+		var extractedPic *Picture
+		if pic != nil && pic.Row != nil {
+			extractedPic, err = pictureExtractor.Extract(ctx, pic.Row, pictureFields, lang, isModer, userID, role)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		extractedPics = append(extractedPics, extractedPic)
+	}
+
+	return &PreviewPictures{
+		LargeFormat:   result.LargeFormat,
+		Pictures:      extractedPics,
+		TotalPictures: result.TotalPictures,
+	}, nil
 }
 
 func (s *ItemExtractor) extractIsCompilesItemOfDay(

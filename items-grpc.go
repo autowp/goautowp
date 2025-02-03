@@ -228,9 +228,9 @@ func (s *ItemsGRPCServer) GetTopPersonsList(
 
 	switch in.GetPictureItemType() { //nolint:exhaustive
 	case PictureItemType_PICTURE_ITEM_CONTENT:
-		pictureItemType = schema.PictureItemContent
+		pictureItemType = schema.PictureItemTypeContent
 	case PictureItemType_PICTURE_ITEM_AUTHOR:
-		pictureItemType = schema.PictureItemAuthor
+		pictureItemType = schema.PictureItemTypeAuthor
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Unexpected picture_item_type")
 	}
@@ -2238,11 +2238,11 @@ func (s *ItemsGRPCServer) otherGroups(
 	for _, groupType := range groupTypes {
 		picturesCount, err := s.picturesRepository.Count(ctx, &query.PictureListOptions{
 			Status: schema.PictureStatusAccepted,
-			PictureItem: &query.PictureItemListOptions{
+			PictureItem: []*query.PictureItemListOptions{{
 				ItemID:               brandID,
 				PerspectiveID:        groupType.PerspectiveID,
 				ExcludePerspectiveID: groupType.ExcludePerspectiveID,
-			},
+			}},
 		})
 		if err != nil {
 			return nil, err

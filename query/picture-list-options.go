@@ -2,6 +2,7 @@ package query
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	"cloud.google.com/go/civil"
@@ -24,12 +25,13 @@ type PictureListOptions struct {
 	Status                schema.PictureStatus
 	Statuses              []schema.PictureStatus
 	OwnerID               int64
-	PictureItem           *PictureItemListOptions
+	PictureItem           []*PictureItemListOptions
 	ID                    int64
 	IDs                   []int64
 	IDGt                  int64
 	IDLt                  int64
 	ExcludeID             int64
+	ExcludeIDs            []int64
 	HasCopyrights         bool
 	Limit                 uint32
 	Page                  uint32
@@ -79,8 +81,16 @@ func (s *PictureListOptions) CountSelect(db *goqu.Database, alias string) (*goqu
 }
 
 func (s *PictureListOptions) IsIDUnique() bool {
-	return s == nil ||
-		(s.PictureItem == nil || s.PictureItem.IsPictureIDUnique()) && s.PictureModerVote == nil && s.DfDistance == nil
+	if s == nil {
+		return true
+	}
+
+	isUnique := true
+	for _, i := range s.PictureItem {
+		isUnique = isUnique && i.IsPictureIDUnique()
+	}
+
+	return (s.PictureItem == nil || isUnique) && s.PictureModerVote == nil && s.DfDistance == nil
 }
 
 func (s *PictureListOptions) JoinToIDAndApply(
@@ -99,6 +109,10 @@ func (s *PictureListOptions) JoinToIDAndApply(
 			),
 		),
 	)
+}
+
+func (s *PictureListOptions) PictureItemAlias(alias string, idx int) string {
+	return AppendPictureItemAlias(alias, strconv.Itoa(idx))
 }
 
 func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
@@ -128,6 +142,10 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		sqSelect = sqSelect.Where(idCol.Neq(s.ExcludeID))
 	}
 
+	if len(s.ExcludeIDs) > 0 {
+		sqSelect = sqSelect.Where(idCol.NotIn(s.ExcludeIDs))
+	}
+
 	if s.Identity != "" {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableIdentityColName).Eq(s.Identity))
 	}
@@ -144,13 +162,15 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableOwnerIDColName).Eq(s.OwnerID))
 	}
 
-	sqSelect, err = s.PictureItem.JoinToPictureIDAndApply(
-		idCol,
-		AppendPictureItemAlias(alias, ""),
-		sqSelect,
-	)
-	if err != nil {
-		return nil, err
+	for idx, i := range s.PictureItem {
+		sqSelect, err = i.JoinToPictureIDAndApply(
+			idCol,
+			s.PictureItemAlias(alias, idx),
+			sqSelect,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.HasCopyrights {

@@ -22,11 +22,11 @@ func extractPictureItemType(pictureItemType schema.PictureItemType) PictureItemT
 	switch pictureItemType {
 	case 0:
 		return PictureItemType_PICTURE_ITEM_UNKNOWN
-	case schema.PictureItemContent:
+	case schema.PictureItemTypeContent:
 		return PictureItemType_PICTURE_ITEM_CONTENT
-	case schema.PictureItemAuthor:
+	case schema.PictureItemTypeAuthor:
 		return PictureItemType_PICTURE_ITEM_AUTHOR
-	case schema.PictureItemCopyrights:
+	case schema.PictureItemTypeCopyrights:
 		return PictureItemType_PICTURE_ITEM_COPYRIGHTS
 	}
 
@@ -38,11 +38,11 @@ func convertPictureItemType(pictureItemType PictureItemType) schema.PictureItemT
 	case PictureItemType_PICTURE_ITEM_UNKNOWN:
 		return 0
 	case PictureItemType_PICTURE_ITEM_CONTENT:
-		return schema.PictureItemContent
+		return schema.PictureItemTypeContent
 	case PictureItemType_PICTURE_ITEM_AUTHOR:
-		return schema.PictureItemAuthor
+		return schema.PictureItemTypeAuthor
 	case PictureItemType_PICTURE_ITEM_COPYRIGHTS:
-		return schema.PictureItemCopyrights
+		return schema.PictureItemTypeCopyrights
 	}
 
 	return 0
@@ -179,9 +179,13 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 		}
 	}
 
-	result.PictureItem, err = convertPictureItemListOptions(in.GetPictureItem())
+	pictureItem, err := convertPictureItemListOptions(in.GetPictureItem())
 	if err != nil {
 		return nil, err
+	}
+
+	if pictureItem != nil {
+		result.PictureItem = []*query.PictureItemListOptions{pictureItem}
 	}
 
 	result.ReplacePicture, err = convertPictureListOptions(in.GetReplacePicture())

@@ -372,15 +372,6 @@ func NewRepository(
 	}
 }
 
-type ListPreviewPicturesPictureFields struct {
-	NameText bool
-}
-
-type ListPreviewPicturesFields struct {
-	Route   bool
-	Picture ListPreviewPicturesPictureFields
-}
-
 type ItemParentFields struct {
 	Name bool
 }
@@ -392,7 +383,6 @@ type ListFields struct {
 	Description                bool
 	FullText                   bool
 	HasText                    bool
-	PreviewPictures            ListPreviewPicturesFields
 	AcceptedPicturesCount      bool
 	ChildItemsCount            bool
 	NewChildItemsCount         bool
