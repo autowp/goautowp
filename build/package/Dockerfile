@@ -1,8 +1,8 @@
 FROM docker.io/library/ubuntu:noble AS builder
 
 ENV DEBIAN_FRONTEND=non-interactive \
-    HOME=/root \
-    PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
+    HOME=/root
+ENV PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
     GOPATH=$HOME/go
 
 RUN apt-get update -qqy && \
