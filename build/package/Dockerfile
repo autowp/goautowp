@@ -51,6 +51,7 @@ WORKDIR /
 
 RUN apt-get update -qqy && \
     apt-get install -qqy --no-install-recommends \
+        adduser \
         ca-certificates \
         imagemagick \
         tzdata \
