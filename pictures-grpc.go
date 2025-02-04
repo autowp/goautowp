@@ -1985,8 +1985,8 @@ func (s *PicturesGRPCServer) GetPicturesPaginator(ctx context.Context, in *Pictu
 	}
 
 	inOptions := in.GetOptions()
-
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
+
 	err = s.isRestricted(in, isModer, userID)
 	if err != nil {
 		return nil, err

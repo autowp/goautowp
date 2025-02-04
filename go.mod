@@ -5,7 +5,7 @@ go 1.23
 replace github.com/doug-martin/goqu/v9 v9.19.0 => github.com/autowp/goqu/v9 v9.20.0
 
 require (
-	cloud.google.com/go v0.118.0
+	cloud.google.com/go v0.118.1
 	github.com/Nerzal/gocloak/v13 v13.9.0
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/casbin/casbin v1.9.1
@@ -26,7 +26,7 @@ require (
 	github.com/jackc/pgtype v1.14.4
 	github.com/lib/pq v1.10.9
 	github.com/mozillazg/go-unidecode v0.2.0
-	github.com/nicksnyder/go-i18n/v2 v2.5.0
+	github.com/nicksnyder/go-i18n/v2 v2.5.1
 	github.com/paulmach/go.geo v0.0.0-20180829195134-22b514266d33
 	github.com/paulmach/orb v0.11.1
 	github.com/prometheus/client_golang v1.20.5
