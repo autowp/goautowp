@@ -157,6 +157,7 @@ service Pictures {
   rpc Repair(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc GetPicture(PicturesRequest) returns (Picture) {}
   rpc GetPictures(PicturesRequest) returns (PicturesList) {}
+  rpc GetPicturesPaginator(PicturesRequest) returns (Pages) {}
   rpc GetPictureItem(PictureItemsRequest) returns (PictureItem) {}
   rpc GetPictureItems(PictureItemsRequest) returns (PictureItems) {}
   rpc SetPictureItemArea(SetPictureItemAreaRequest) returns (google.protobuf.Empty) {}
@@ -1156,6 +1157,7 @@ message ItemsRequest {
     NAME_NAT = 1;
     NAME = 2;
     CHILDS_COUNT = 3;
+    AGE = 4;
   }
   string language = 1;
   ItemFields fields = 2;
@@ -1245,6 +1247,7 @@ message ItemListOptions {
   bool is_not_concept = 24;
   repeated ItemType type_ids = 25;
   PictureItemListOptions picture_items = 26;
+  bool dateless = 27;
 }
 
 message ItemVehicleTypeListOptions {

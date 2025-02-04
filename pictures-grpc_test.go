@@ -1731,3 +1731,30 @@ func TestNewbox(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestInboxCount(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	ctx := context.Background()
+	kc := cnt.Keycloak()
+
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+
+	res, err := client.GetPicturesPaginator(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PicturesRequest{
+			Options: &PictureListOptions{
+				Status: PictureStatus_PICTURE_STATUS_INBOX,
+			},
+			Paginator: true,
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
+}

@@ -4538,6 +4538,7 @@ const (
 	Pictures_Repair_FullMethodName                    = "/goautowp.Pictures/Repair"
 	Pictures_GetPicture_FullMethodName                = "/goautowp.Pictures/GetPicture"
 	Pictures_GetPictures_FullMethodName               = "/goautowp.Pictures/GetPictures"
+	Pictures_GetPicturesPaginator_FullMethodName      = "/goautowp.Pictures/GetPicturesPaginator"
 	Pictures_GetPictureItem_FullMethodName            = "/goautowp.Pictures/GetPictureItem"
 	Pictures_GetPictureItems_FullMethodName           = "/goautowp.Pictures/GetPictureItems"
 	Pictures_SetPictureItemArea_FullMethodName        = "/goautowp.Pictures/SetPictureItemArea"
@@ -4574,6 +4575,7 @@ type PicturesClient interface {
 	Repair(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPicture(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*Picture, error)
 	GetPictures(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*PicturesList, error)
+	GetPicturesPaginator(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*Pages, error)
 	GetPictureItem(ctx context.Context, in *PictureItemsRequest, opts ...grpc.CallOption) (*PictureItem, error)
 	GetPictureItems(ctx context.Context, in *PictureItemsRequest, opts ...grpc.CallOption) (*PictureItems, error)
 	SetPictureItemArea(ctx context.Context, in *SetPictureItemAreaRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -4734,6 +4736,16 @@ func (c *picturesClient) GetPictures(ctx context.Context, in *PicturesRequest, o
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PicturesList)
 	err := c.cc.Invoke(ctx, Pictures_GetPictures_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *picturesClient) GetPicturesPaginator(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*Pages, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Pages)
+	err := c.cc.Invoke(ctx, Pictures_GetPicturesPaginator_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4918,6 +4930,7 @@ type PicturesServer interface {
 	Repair(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	GetPicture(context.Context, *PicturesRequest) (*Picture, error)
 	GetPictures(context.Context, *PicturesRequest) (*PicturesList, error)
+	GetPicturesPaginator(context.Context, *PicturesRequest) (*Pages, error)
 	GetPictureItem(context.Context, *PictureItemsRequest) (*PictureItem, error)
 	GetPictureItems(context.Context, *PictureItemsRequest) (*PictureItems, error)
 	SetPictureItemArea(context.Context, *SetPictureItemAreaRequest) (*emptypb.Empty, error)
@@ -4985,6 +4998,9 @@ func (UnimplementedPicturesServer) GetPicture(context.Context, *PicturesRequest)
 }
 func (UnimplementedPicturesServer) GetPictures(context.Context, *PicturesRequest) (*PicturesList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPictures not implemented")
+}
+func (UnimplementedPicturesServer) GetPicturesPaginator(context.Context, *PicturesRequest) (*Pages, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPicturesPaginator not implemented")
 }
 func (UnimplementedPicturesServer) GetPictureItem(context.Context, *PictureItemsRequest) (*PictureItem, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPictureItem not implemented")
@@ -5303,6 +5319,24 @@ func _Pictures_GetPictures_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PicturesServer).GetPictures(ctx, req.(*PicturesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Pictures_GetPicturesPaginator_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PicturesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).GetPicturesPaginator(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_GetPicturesPaginator_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).GetPicturesPaginator(ctx, req.(*PicturesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5657,6 +5691,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPictures",
 			Handler:    _Pictures_GetPictures_Handler,
+		},
+		{
+			MethodName: "GetPicturesPaginator",
+			Handler:    _Pictures_GetPicturesPaginator_Handler,
 		},
 		{
 			MethodName: "GetPictureItem",

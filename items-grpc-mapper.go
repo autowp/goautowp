@@ -225,6 +225,7 @@ func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error)
 		Autocomplete:         in.GetAutocomplete(),
 		SuggestionsTo:        in.GetSuggestionsTo(),
 		ExcludeSelfAndChilds: in.GetExcludeSelfAndChilds(),
+		Dateless:             in.GetDateless(),
 	}
 
 	result.ItemParentCacheAncestor, err = convertItemParentCacheListOptions(in.GetAncestor())
@@ -320,6 +321,8 @@ func convertItemOrder(value ItemsRequest_Order) (items.OrderBy, bool) {
 		return items.OrderByName, false
 	case ItemsRequest_CHILDS_COUNT:
 		return items.OrderByChildsCount, false
+	case ItemsRequest_AGE:
+		return items.OrderByAge, false
 	}
 
 	return items.OrderByNone, false

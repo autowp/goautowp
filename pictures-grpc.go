@@ -1978,6 +1978,63 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 	}, nil
 }
 
+func (s *PicturesGRPCServer) GetPicturesPaginator(ctx context.Context, in *PicturesRequest) (*Pages, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	inOptions := in.GetOptions()
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	err = s.isRestricted(in, isModer, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	options, err := convertPictureListOptions(inOptions)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if options == nil {
+		options = &query.PictureListOptions{}
+	}
+
+	options.Limit = in.GetLimit()
+	options.Page = in.GetPage()
+
+	if options.AddDate != nil || options.AcceptDate != nil || options.AddedFrom != nil {
+		options.Timezone, err = s.resolveTimezone(ctx, userID, in.GetLanguage())
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	paginator, err := s.repository.PicturesPaginator(options, nil, pictures.OrderByNone)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	pages, err := paginator.GetPages(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &Pages{
+		PageCount:        pages.PageCount,
+		First:            pages.First,
+		Last:             pages.Last,
+		Current:          pages.Current,
+		FirstPageInRange: pages.FirstPageInRange,
+		LastPageInRange:  pages.LastPageInRange,
+		PagesInRange:     pages.PagesInRange,
+		TotalItemCount:   pages.TotalItemCount,
+		Next:             pages.Next,
+		Previous:         pages.Previous,
+	}, nil
+}
+
 func (s *PicturesGRPCServer) GetInbox(ctx context.Context, in *InboxRequest) (*Inbox, error) {
 	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {

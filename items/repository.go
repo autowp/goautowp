@@ -130,6 +130,7 @@ const (
 	OrderByStarCount
 	OrderByItemParentParentTimestamp
 	OrderByChildsCount
+	OrderByAge
 )
 
 type ItemParentOrderBy int
@@ -765,6 +766,14 @@ func (s *Repository) orderBy(alias string, orderBy OrderBy, language string) ([]
 		columns = []columnOrder{{col: s.starCountColumn, asc: false}}
 	case OrderByItemParentParentTimestamp:
 		columns = []columnOrder{{col: s.itemParentParentTimestampColumn, asc: false}}
+	case OrderByAge:
+		columns = []columnOrder{
+			{col: s.beginOrderCacheColumn, asc: true},
+			{col: s.endOrderCacheColumn, asc: true},
+			{col: s.nameColumn, asc: true},
+			{col: s.bodyColumn, asc: true},
+			{col: s.specIDColumn, asc: true},
+		}
 	case OrderByNone:
 	}
 
@@ -814,6 +823,14 @@ func (s *Repository) wrapperOrderBy(wrapperAlias string, wrappedAlias string, or
 		return []exp.OrderedExpression{wrappedAliasTable.Col(colStarCount).Desc()}
 	case OrderByItemParentParentTimestamp:
 		return []exp.OrderedExpression{wrappedAliasTable.Col(colItemParentParentTimestamp).Desc()}
+	case OrderByAge:
+		return []exp.OrderedExpression{
+			wrapperAliasTable.Col(schema.ItemTableBeginOrderCacheColName).Asc(),
+			wrapperAliasTable.Col(schema.ItemTableEndOrderCacheColName).Asc(),
+			wrapperAliasTable.Col(schema.ItemTableNameColName).Asc(),
+			wrapperAliasTable.Col(schema.ItemTableBodyColName).Asc(),
+			wrapperAliasTable.Col(schema.ItemTableSpecIDColName).Asc(),
+		}
 	case OrderByNone:
 	}
 
@@ -848,6 +865,14 @@ func (s *Repository) wrappedOrderBy(alias string, orderBy OrderBy) []exp.Ordered
 		orderByExp = []exp.OrderedExpression{goqu.C(colStarCount).Desc()}
 	case OrderByItemParentParentTimestamp:
 		orderByExp = []exp.OrderedExpression{goqu.C(colItemParentParentTimestamp).Desc()}
+	case OrderByAge:
+		orderByExp = []exp.OrderedExpression{
+			aliasTable.Col(schema.ItemTableBeginOrderCacheColName).Asc(),
+			aliasTable.Col(schema.ItemTableEndOrderCacheColName).Asc(),
+			aliasTable.Col(schema.ItemTableNameColName).Asc(),
+			aliasTable.Col(schema.ItemTableBodyColName).Asc(),
+			aliasTable.Col(schema.ItemTableSpecIDColName).Asc(),
+		}
 	case OrderByNone:
 	}
 
@@ -872,7 +897,7 @@ func (s *Repository) wrappedSelectColumns(orderBy OrderBy) map[string]Column {
 		columns[colStarCount] = s.starCountColumn
 	case OrderByItemParentParentTimestamp:
 		columns[colItemParentParentTimestamp] = s.itemParentParentTimestampColumn
-	case OrderByName, OrderByAddDatetime, OrderByNone:
+	case OrderByName, OrderByAddDatetime, OrderByAge, OrderByNone:
 	}
 
 	return columns

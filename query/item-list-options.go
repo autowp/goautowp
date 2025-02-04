@@ -58,6 +58,7 @@ type ItemListOptions struct {
 	Autocomplete                 string
 	SuggestionsTo                int64
 	EngineItem                   *ItemListOptions
+	Dateless                     bool
 }
 
 func ItemParentNoParentAlias(alias string) string {
@@ -179,6 +180,13 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 	}
 
 	sqSelect = s.applyName(alias, sqSelect)
+
+	if s.Dateless {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemTableBeginYearColName).IsNull(),
+			aliasTable.Col(schema.ItemTableBeginModelYearColName).IsNull(),
+		)
+	}
 
 	if s.HasBeginYear {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableBeginYearColName))
