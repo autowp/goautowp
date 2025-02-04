@@ -20,6 +20,7 @@ test:
     - export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
     - export GOPATH=$HOME/go
   script:
+    - hadolint ./build/package/Dockerfile
     - go mod verify
     - go mod download
     - golangci-lint run ./... -v --timeout 2m

@@ -5,8 +5,7 @@ ENV DEBIAN_FRONTEND=non-interactive \
     GOPATH=$HOME/go
 
 RUN apt-get update -qqy && \
-    apt-get dist-upgrade -qqy && \
-    apt-get install -qqy \
+    apt-get install -qqy --no-install-recommends \
         ca-certificates \
         gcc \
         git \
@@ -17,6 +16,7 @@ RUN apt-get update -qqy && \
         wget \
     && \
     apt-get clean && \
+    rm -rf /var/lib/apt/lists && \
     update-ca-certificates && \
     wget -q https://go.dev/dl/go1.23.4.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz && \
@@ -36,7 +36,7 @@ RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app cmd/goautowp/goaut
 ############################
 FROM docker.io/library/ubuntu:noble
 
-LABEL app_name="autowp.goautowp" \
+LABEL app-name="autowp.goautowp" \
       maintainer="dmitry@pereslegin.ru"
 
 ENV DEBIAN_FRONTEND=non-interactive \
@@ -50,13 +50,13 @@ ENTRYPOINT ["/app"]
 WORKDIR /
 
 RUN apt-get update -qqy && \
-    apt-get dist-upgrade -qqy && \
-    apt-get install -qqy \
+    apt-get install -qqy --no-install-recommends \
         ca-certificates \
         imagemagick \
         tzdata \
     && \
     apt-get clean && \
+    rm -rf /var/lib/apt/lists && \
     update-ca-certificates && \
     # See https://stackoverflow.com/a/55757473/12429735RUN
     adduser \
