@@ -1,3 +1,2 @@
-override:
-  info:
+ignored:
   - DL3008
