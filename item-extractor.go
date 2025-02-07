@@ -484,7 +484,7 @@ func (s *ItemExtractor) extractPreviewPictures(
 
 	for idx, pic := range result.Pictures {
 		pictureFields.ThumbLarge = result.LargeFormat && idx == 0
-		pictureFields.ThumbMedium = !pictureFields.ThumbLarge
+		pictureFields.ThumbMedium = !pictureFields.GetThumbLarge()
 
 		var extractedPic *Picture
 		if pic != nil && pic.Row != nil {
