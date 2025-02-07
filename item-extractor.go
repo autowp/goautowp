@@ -482,9 +482,9 @@ func (s *ItemExtractor) extractPreviewPictures(
 
 	extractedPics := make([]*Picture, 0, len(result.Pictures))
 
-	for _, pic := range result.Pictures {
-		pictureFields.ThumbMedium = !result.LargeFormat
-		pictureFields.ThumbLarge = result.LargeFormat
+	for idx, pic := range result.Pictures {
+		pictureFields.ThumbLarge = result.LargeFormat && idx == 0
+		pictureFields.ThumbMedium = !pictureFields.ThumbLarge
 
 		var extractedPic *Picture
 		if pic != nil && pic.Row != nil {
