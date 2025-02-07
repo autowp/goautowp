@@ -1,6 +1,7 @@
 build
 .github
 .idea
+.hadolint.yaml
 README.md
 sonar-project.properties
 LICENSE

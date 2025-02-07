@@ -288,13 +288,9 @@ func (s *ItemExtractor) ExtractRows(
 			return nil, err
 		}
 
-		if fields.GetChildsCounts() {
-			childCounts, err := itemRepository.ChildsCounts(ctx, row.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			resultRow.ChildsCounts = convertChildsCounts(childCounts)
+		resultRow.ChildsCounts, err = s.extractChildsCount(ctx, fields, row)
+		if err != nil {
+			return nil, err
 		}
 
 		if fields.GetPublicRoutes() {
@@ -353,6 +349,11 @@ func (s *ItemExtractor) ExtractRows(
 			return nil, err
 		}
 
+		resultRow.EngineVehicles, err = s.extractEngineVehicles(ctx, fields, row, lang, isModer, userID, role)
+		if err != nil {
+			return nil, err
+		}
+
 		result = append(result, resultRow)
 	}
 
@@ -372,6 +373,62 @@ func (s *ItemExtractor) Extract(
 	}
 
 	return result[0], nil
+}
+
+func (s *ItemExtractor) extractChildsCount(
+	ctx context.Context, fields *ItemFields, row *items.Item,
+) ([]*ChildsCount, error) {
+	if !fields.GetChildsCounts() {
+		return nil, nil
+	}
+
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	childCounts, err := itemRepository.ChildsCounts(ctx, row.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertChildsCounts(childCounts), nil
+}
+
+func (s *ItemExtractor) extractEngineVehicles(
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
+) ([]*APIItem, error) {
+	evs := fields.GetEngineVehicles()
+	if evs == nil {
+		return nil, nil
+	}
+
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	itemExtractor := s.container.ItemExtractor()
+
+	itemFields := evs.GetFields()
+	if itemFields == nil {
+		itemFields = &ItemFields{}
+	}
+
+	listOptions := evs.GetOptions()
+	listOptions.EngineId = row.ID
+
+	repoListOptions, err := convertItemListOptions(listOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, _, err := itemRepository.List(ctx, repoListOptions, convertItemFields(itemFields), items.OrderByNone, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return itemExtractor.ExtractRows(ctx, rows, itemFields, lang, isModer, userID, role)
 }
 
 func (s *ItemExtractor) extractPreviewPictures(

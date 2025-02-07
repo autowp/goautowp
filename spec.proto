@@ -1138,6 +1138,7 @@ message ItemFields {
   bool can_edit_specs = 37;
   ItemParentsRequest item_parent_childs = 38;
   bool comments_count = 39;
+  ItemsRequest engine_vehicles = 40;
 }
 
 message AltName {
@@ -1315,6 +1316,7 @@ message APIItem {
   ItemParents item_parent_childs = 47;
   int32 comments_count = 48;
   PreviewPictures preview_pictures = 49;
+  repeated APIItem engine_vehicles = 50;
 }
 
 message PreviewPictures {
