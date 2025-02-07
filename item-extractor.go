@@ -403,6 +403,10 @@ func (s *ItemExtractor) extractEngineVehicles(
 		return nil, nil
 	}
 
+	if row.ItemTypeID != schema.ItemTableItemTypeIDEngine {
+		return nil, nil
+	}
+
 	itemRepository, err := s.container.ItemsRepository()
 	if err != nil {
 		return nil, err
@@ -416,6 +420,10 @@ func (s *ItemExtractor) extractEngineVehicles(
 	}
 
 	listOptions := evs.GetOptions()
+	if listOptions == nil {
+		listOptions = &ItemListOptions{}
+	}
+
 	listOptions.EngineId = row.ID
 
 	repoListOptions, err := convertItemListOptions(listOptions)

@@ -2481,6 +2481,7 @@ func TestItemParentFields(t *testing.T) {
 					NameText:                true,
 					OtherNames:              true,
 					SpecsRoute:              true,
+					EngineVehicles:          &ItemsRequest{},
 				},
 				Parent:          &ItemFields{},
 				DuplicateParent: &ItemFields{},
