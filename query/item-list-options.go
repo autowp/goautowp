@@ -43,6 +43,7 @@ type ItemListOptions struct {
 	NameExclude                  string
 	IsConcept                    bool
 	IsNotConcept                 bool
+	IsNotConceptInherited        bool
 	EngineItemID                 int64
 	HasBeginYear                 bool
 	HasEndYear                   bool
@@ -199,6 +200,10 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 
 	if s.IsNotConcept {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableIsConceptColName).IsFalse())
+	}
+
+	if s.IsNotConceptInherited {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableIsConceptInheritColName).IsFalse())
 	}
 
 	if s.EngineItemID > 0 {

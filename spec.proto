@@ -1239,6 +1239,8 @@ message ItemListOptions {
   string name = 10;
   int64 id = 12;
   bool is_concept = 14;
+  bool is_not_concept = 24;
+  bool is_not_concept_inherited = 37;
   ItemParentCacheListOptions descendant = 15;
   ItemParentCacheListOptions ancestor = 13;
   ItemParentListOptions parent = 16;
@@ -1249,7 +1251,6 @@ message ItemListOptions {
   int64 exclude_self_and_childs = 21;
   string autocomplete = 22;
   int64 suggestions_to = 23;
-  bool is_not_concept = 24;
   repeated ItemType type_ids = 25;
   PictureItemListOptions picture_items = 26;
   bool dateless = 27;
