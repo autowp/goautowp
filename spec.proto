@@ -1141,6 +1141,7 @@ message ItemFields {
   ItemsRequest engine_vehicles = 40;
   int64 route_brand_id = 41;
   bool related_group_pictures = 42;
+  bool item_of_day_pictures = 43;
 }
 
 message AltName {
@@ -1197,6 +1198,7 @@ message ItemParentListOptions {
   ItemParentListOptions item_parent_parent_by_child = 3;
   int64 item_id = 4;
   ItemParentType type = 5;
+  bool strict_type = 9;
   ItemListOptions item = 6;
   ItemParentCacheListOptions item_parent_cache_item_by_child = 7;
   string catname = 8;
@@ -1334,6 +1336,13 @@ message APIItem {
   PreviewPictures preview_pictures = 49;
   repeated APIItem engine_vehicles = 50;
   repeated RelatedGroupPicture related_group_pictures = 51;
+  repeated ItemOfDayPicture item_of_day_pictures = 52;
+}
+
+message ItemOfDayPicture {
+  string name = 1;
+  APIImage thumb = 2;
+  repeated string route = 3;
 }
 
 message RelatedGroupPicture {

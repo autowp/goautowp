@@ -107,10 +107,11 @@ func convertItemParentListOptions(in *ItemParentListOptions) (*query.ItemParentL
 	}
 
 	result := query.ItemParentListOptions{
-		ParentID: in.GetParentId(),
-		ItemID:   in.GetItemId(),
-		Type:     convertItemParentType(in.GetType()),
-		Catname:  in.GetCatname(),
+		ParentID:   in.GetParentId(),
+		ItemID:     in.GetItemId(),
+		Type:       convertItemParentType(in.GetType()),
+		StrictType: in.GetStrictType(),
+		Catname:    in.GetCatname(),
 	}
 
 	var err error
