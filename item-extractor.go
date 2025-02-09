@@ -2,10 +2,14 @@ package goautowp
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"maps"
+	"slices"
 	"strconv"
 
 	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -204,16 +208,6 @@ func (s *ItemExtractor) ExtractRows(
 		return nil, err
 	}
 
-	itemRepository, err := s.container.ItemsRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	attrsRepository, err := s.container.AttrsRepository()
-	if err != nil {
-		return nil, err
-	}
-
 	for _, row := range rows {
 		resultRow := &APIItem{
 			Id:                         row.ID,
@@ -244,93 +238,10 @@ func (s *ItemExtractor) ExtractRows(
 			NameDefault:                row.NameDefault,
 		}
 
-		resultRow.NameText, resultRow.NameHtml, err = s.extractNames(fields, row, lang)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.Logo120, resultRow.Brandicon, err = s.extractLogos(ctx, fields, row)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.IsCompilesItemOfDay, err = s.extractIsCompilesItemOfDay(ctx, fields, row)
-		if err != nil {
-			return nil, err
-		}
-
-		if fields.GetAttrZoneId() {
-			vehicleTypes, err := itemRepository.VehicleTypes(ctx, row.ID, false)
-			if err != nil {
-				return nil, err
-			}
-
-			resultRow.AttrZoneId = attrsRepository.ZoneIDByVehicleTypeIDs(row.ItemTypeID, vehicleTypes)
-		}
-
-		resultRow.Location, err = s.extractLocation(ctx, fields, row)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.OtherNames, err = s.extractOtherNames(ctx, fields, row)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.AltNames, err = s.extractAltNames(ctx, fields, row, lang)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.Design, err = s.extractDesignInfo(ctx, fields, row, lang)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.ChildsCounts, err = s.extractChildsCount(ctx, fields, row)
-		if err != nil {
-			return nil, err
-		}
-
-		if fields.GetPublicRoutes() {
-			resultRow.PublicRoutes, err = s.itemPublicRoutes(ctx, row)
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		if pictureItemRequest != nil {
 			resultRow.PictureItems = &PictureItems{
 				Items: pictureItemRows[row.ID],
 			}
-		}
-
-		resultRow.Route, resultRow.SpecsRoute, err = s.extractRoutes(ctx, fields, row)
-		if err != nil {
-			return nil, err
-		}
-
-		if fields.GetHasText() {
-			resultRow.HasText, err = itemRepository.HasFullText(ctx, row.ID)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		resultRow.Categories, err = s.extractCategories(ctx, fields, row, lang, isModer, userID, role)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.Twins, err = s.extractTwins(ctx, fields, row, lang, isModer, userID, role)
-		if err != nil {
-			return nil, err
-		}
-
-		if fields.GetCanEditSpecs() {
-			resultRow.CanEditSpecs = util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) &&
-				s.container.Enforcer().Enforce(role, "specifications", "edit")
 		}
 
 		if itemParentChildsRequest != nil {
@@ -339,17 +250,7 @@ func (s *ItemExtractor) ExtractRows(
 			}
 		}
 
-		resultRow.CommentsCount, err = s.extractCommentsCount(ctx, fields, row)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.PreviewPictures, err = s.extractPreviewPictures(ctx, fields, row, lang, isModer, userID, role)
-		if err != nil {
-			return nil, err
-		}
-
-		resultRow.EngineVehicles, err = s.extractEngineVehicles(ctx, fields, row, lang, isModer, userID, role)
+		err = s.extractPlain(ctx, fields, row, resultRow, lang, isModer, userID, role)
 		if err != nil {
 			return nil, err
 		}
@@ -373,6 +274,260 @@ func (s *ItemExtractor) Extract(
 	}
 
 	return result[0], nil
+}
+
+func (s *ItemExtractor) extractPlain(
+	ctx context.Context, fields *ItemFields, row *items.Item, resultRow *APIItem, lang string, isModer bool,
+	userID int64, role string,
+) error {
+	var err error
+
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return err
+	}
+
+	attrsRepository, err := s.container.AttrsRepository()
+	if err != nil {
+		return err
+	}
+
+	resultRow.NameText, resultRow.NameHtml, err = s.extractNames(fields, row, lang)
+	if err != nil {
+		return err
+	}
+
+	resultRow.Logo120, resultRow.Brandicon, err = s.extractLogos(ctx, fields, row)
+	if err != nil {
+		return err
+	}
+
+	resultRow.IsCompilesItemOfDay, err = s.extractIsCompilesItemOfDay(ctx, fields, row)
+	if err != nil {
+		return err
+	}
+
+	if fields.GetAttrZoneId() {
+		vehicleTypes, err := itemRepository.VehicleTypes(ctx, row.ID, false)
+		if err != nil {
+			return err
+		}
+
+		resultRow.AttrZoneId = attrsRepository.ZoneIDByVehicleTypeIDs(row.ItemTypeID, vehicleTypes)
+	}
+
+	resultRow.Location, err = s.extractLocation(ctx, fields, row)
+	if err != nil {
+		return err
+	}
+
+	resultRow.OtherNames, err = s.extractOtherNames(ctx, fields, row)
+	if err != nil {
+		return err
+	}
+
+	resultRow.AltNames, err = s.extractAltNames(ctx, fields, row, lang)
+	if err != nil {
+		return err
+	}
+
+	resultRow.Design, err = s.extractDesignInfo(ctx, fields, row, lang)
+	if err != nil {
+		return err
+	}
+
+	resultRow.ChildsCounts, err = s.extractChildsCount(ctx, fields, row)
+	if err != nil {
+		return err
+	}
+
+	if fields.GetPublicRoutes() {
+		resultRow.PublicRoutes, err = s.itemPublicRoutes(ctx, row)
+		if err != nil {
+			return err
+		}
+	}
+
+	resultRow.Route, resultRow.SpecsRoute, err = s.extractRoutes(ctx, fields, row)
+	if err != nil {
+		return err
+	}
+
+	if fields.GetHasText() {
+		resultRow.HasText, err = itemRepository.HasFullText(ctx, row.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	resultRow.Categories, err = s.extractCategories(ctx, fields, row, lang, isModer, userID, role)
+	if err != nil {
+		return err
+	}
+
+	resultRow.Twins, err = s.extractTwins(ctx, fields, row, lang, isModer, userID, role)
+	if err != nil {
+		return err
+	}
+
+	if fields.GetCanEditSpecs() {
+		resultRow.CanEditSpecs = util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) &&
+			s.container.Enforcer().Enforce(role, "specifications", "edit")
+	}
+
+	resultRow.CommentsCount, err = s.extractCommentsCount(ctx, fields, row)
+	if err != nil {
+		return err
+	}
+
+	resultRow.PreviewPictures, err = s.extractPreviewPictures(ctx, fields, row, lang, isModer, userID, role)
+	if err != nil {
+		return err
+	}
+
+	resultRow.EngineVehicles, err = s.extractEngineVehicles(ctx, fields, row, lang, isModer, userID, role)
+	if err != nil {
+		return err
+	}
+
+	resultRow.RelatedGroupPictures, err = s.extractRelatedGroupsPictures(ctx, fields, row, lang)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *ItemExtractor) extractRelatedGroupsPictures(
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string,
+) ([]*RelatedGroupPicture, error) {
+	if !fields.GetRelatedGroupPictures() {
+		return nil, nil
+	}
+
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	carPictures := make([]*RelatedGroupPicture, 0)
+
+	groups, err := itemRepository.RelatedCarGroups(ctx, row.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(groups) > 0 {
+		cars, _, err := itemRepository.List(ctx, &query.ItemListOptions{
+			ItemIDs:  slices.Collect(maps.Keys(groups)),
+			Language: lang,
+		}, &items.ListFields{
+			NameText: true,
+		}, items.OrderByAge, false)
+		if err != nil {
+			return nil, err
+		}
+
+		pictureRepository, err := s.container.PicturesRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		imageStorage, err := s.container.ImageStorage()
+		if err != nil {
+			return nil, err
+		}
+
+		i18nBundle, err := s.container.I18n()
+		if err != nil {
+			return nil, err
+		}
+
+		itemNameFormatter := items.NewItemNameFormatter(i18nBundle)
+
+		for _, car := range cars {
+			ancestor := []int64{car.ID}
+
+			if len(groups[car.ID]) > 1 {
+				ancestor = groups[car.ID]
+			}
+
+			pictureRow, err := pictureRepository.Picture(ctx, &query.PictureListOptions{
+				Status: schema.PictureStatusAccepted,
+				PictureItem: &query.PictureItemListOptions{
+					ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+						ParentIDs:       ancestor,
+						ItemsByParentID: &query.ItemListOptions{}, // for ordering by is_concept
+					},
+				},
+			}, nil, pictures.OrderByAncestorStockFrontFirst)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return nil, err
+			}
+
+			src := ""
+
+			if pictureRow != nil && pictureRow.ImageID.Valid {
+				imagesInfo, err := imageStorage.FormattedImage(
+					ctx,
+					int(pictureRow.ImageID.Int64),
+					"picture-thumb-large",
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				src = imagesInfo.Src()
+			}
+
+			cataloguePaths, err := itemRepository.CataloguePaths(ctx, car.ID, items.CataloguePathOptions{
+				BreakOnFirst: true,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			var route []string
+			for _, cataloguePath := range cataloguePaths {
+				route = append([]string{
+					"/",
+					cataloguePath.BrandCatname,
+					cataloguePath.CarCatname,
+				}, cataloguePath.Path...)
+
+				break
+			}
+
+			formatterOptions := items.ItemNameFormatterOptions{
+				BeginModelYear:         util.NullInt32ToScalar(car.BeginModelYear),
+				EndModelYear:           util.NullInt32ToScalar(car.EndModelYear),
+				BeginModelYearFraction: util.NullStringToString(car.BeginModelYearFraction),
+				EndModelYearFraction:   util.NullStringToString(car.EndModelYearFraction),
+				Spec:                   car.SpecShortName,
+				SpecFull:               car.SpecName,
+				Body:                   car.Body,
+				Name:                   car.NameOnly,
+				BeginYear:              util.NullInt32ToScalar(car.BeginYear),
+				EndYear:                util.NullInt32ToScalar(car.EndYear),
+				Today:                  util.NullBoolToBoolPtr(car.Today),
+				BeginMonth:             util.NullInt16ToScalar(car.BeginMonth),
+				EndMonth:               util.NullInt16ToScalar(car.EndMonth),
+			}
+
+			formattedName, err := itemNameFormatter.FormatHTML(formatterOptions, lang)
+			if err != nil {
+				return nil, err
+			}
+
+			carPictures = append(carPictures, &RelatedGroupPicture{
+				NameHtml: formattedName,
+				Src:      src,
+				Route:    route,
+			})
+		}
+	}
+
+	return carPictures, nil
 }
 
 func (s *ItemExtractor) extractChildsCount(

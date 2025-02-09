@@ -110,6 +110,7 @@ const (
 	OrderByIDAsc
 	OrderByFrontPerspectives
 	OrderByPerspectivesGroupPerspectives
+	OrderByAncestorStockFrontFirst
 )
 
 type PictureItemOrderBy = int
@@ -700,6 +701,26 @@ func (s *Repository) orderBy( //nolint: maintidx
 	case OrderByIDAsc:
 		sqSelect = sqSelect.Order(aliasTable.Col(schema.PictureTableIDColName).Asc())
 
+	case OrderByAncestorStockFrontFirst:
+		if options.PictureItem == nil || options.PictureItem.ItemParentCacheAncestor == nil ||
+			options.PictureItem.ItemParentCacheAncestor.ItemsByParentID == nil {
+			return nil, false, errJoinNeededToSortByPerspective
+		}
+
+		piAlias := options.PictureItemAlias(alias, 0)
+		ipcaAlias := options.PictureItem.ItemParentCacheAncestorAlias(piAlias)
+		iAlias := options.PictureItem.ItemParentCacheAncestor.ItemsByParentIDAlias(ipcaAlias)
+		perspectiveIDCol := goqu.MAX(goqu.T(piAlias).Col(schema.PictureItemTablePerspectiveIDColName))
+
+		sqSelect = sqSelect.Order(
+			goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableTuningColName)).Asc(),
+			goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableSportColName)).Asc(),
+			goqu.T(iAlias).Col(schema.ItemTableIsConceptColName).Asc(),
+			goqu.L("?", perspectiveIDCol.Eq(schema.PerspectiveFrontStrict)).Desc(),
+			goqu.L("?", perspectiveIDCol.Eq(schema.PerspectiveFront)).Desc(),
+			goqu.L("?", perspectiveIDCol.Eq(schema.Perspective3Div4Left)).Desc(),
+			goqu.L("?", perspectiveIDCol.Eq(schema.Perspective3Div4Right)).Desc(),
+		)
 	case OrderByNone:
 	}
 

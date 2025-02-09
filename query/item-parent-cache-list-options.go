@@ -19,6 +19,7 @@ type ItemParentCacheListOptions struct {
 	ItemID                          int64
 	ItemIDs                         []int64
 	ParentID                        int64
+	ParentIDs                       []int64
 	ParentIDExpr                    exp.Expression
 	ItemsByItemID                   *ItemListOptions
 	ItemParentByItemID              *ItemParentListOptions
@@ -99,6 +100,10 @@ func (s *ItemParentCacheListOptions) ItemsByItemIDAlias(alias string) string {
 	return AppendItemAlias(alias, "d")
 }
 
+func (s *ItemParentCacheListOptions) ItemsByParentIDAlias(alias string) string {
+	return AppendItemAlias(alias, "a")
+}
+
 func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
 	var (
 		err         error
@@ -119,6 +124,10 @@ func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDa
 		sqSelect = sqSelect.Where(itemIDCol.In(s.ItemIDs))
 	}
 
+	if len(s.ParentIDs) > 0 {
+		sqSelect = sqSelect.Where(parentIDCol.In(s.ParentIDs))
+	}
+
 	if s.ParentIDExpr != nil {
 		sqSelect = sqSelect.Where(parentIDCol.Eq(s.ParentIDExpr))
 	}
@@ -128,7 +137,7 @@ func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDa
 		return nil, err
 	}
 
-	sqSelect, _, err = s.ItemsByParentID.JoinToIDAndApply(parentIDCol, AppendItemAlias(alias, "a"), sqSelect)
+	sqSelect, _, err = s.ItemsByParentID.JoinToIDAndApply(parentIDCol, s.ItemsByParentIDAlias(alias), sqSelect)
 	if err != nil {
 		return nil, err
 	}

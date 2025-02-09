@@ -1140,6 +1140,7 @@ message ItemFields {
   bool comments_count = 39;
   ItemsRequest engine_vehicles = 40;
   int64 route_brand_id = 41;
+  bool related_group_pictures = 42;
 }
 
 message AltName {
@@ -1332,6 +1333,13 @@ message APIItem {
   int32 comments_count = 48;
   PreviewPictures preview_pictures = 49;
   repeated APIItem engine_vehicles = 50;
+  repeated RelatedGroupPicture related_group_pictures = 51;
+}
+
+message RelatedGroupPicture {
+  string name_html = 1;
+  string src = 2;
+  repeated string route = 3;
 }
 
 message NullPicture {
