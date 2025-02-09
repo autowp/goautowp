@@ -111,6 +111,7 @@ service Items {
   rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
   rpc GetBrandNewItems(NewItemsRequest) returns (NewItemsResponse) {}
   rpc GetNewItems(NewItemsRequest) returns (NewItemsResponse) {}
+  rpc GetItemParent(ItemParentsRequest) returns (ItemParent) {}
   rpc GetItemParents(ItemParentsRequest) returns (ItemParents) {}
   rpc CreateItemParent(ItemParent) returns (google.protobuf.Empty) {}
   rpc UpdateItemParent(ItemParent) returns (google.protobuf.Empty) {}
@@ -1104,6 +1105,7 @@ message ItemFields {
   bool name_html = 3;
   bool name_text = 4;
   bool description = 5;
+  bool full_text = 25;
   bool has_text = 6;
   PreviewPicturesRequest preview_pictures = 7;
   bool descendants_count = 9;
@@ -1122,7 +1124,6 @@ message ItemFields {
   bool accepted_pictures_count = 22;
   bool has_child_specs = 23;
   bool has_specs = 24;
-  bool full_text = 25;
   bool other_names = 26;
   bool design = 27;
   bool specs_route = 28;

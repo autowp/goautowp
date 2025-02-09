@@ -2421,6 +2421,43 @@ func (s *ItemsGRPCServer) carSectionGroups(
 	return groups, nil
 }
 
+func (s *ItemsGRPCServer) GetItemParent(ctx context.Context, in *ItemParentsRequest) (*ItemParent, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	if !isModer {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	inOptions := in.GetOptions()
+
+	options, err := convertItemParentListOptions(inOptions)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if options == nil {
+		options = &query.ItemParentListOptions{}
+	}
+
+	fields := convertItemParentFields(in.GetFields())
+
+	row, err := s.repository.ItemParent(ctx, options.ItemID, options.ParentID, fields)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	res, err := s.itemParentExtractor.ExtractRow(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID, role)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return res, nil
+}
+
 func (s *ItemsGRPCServer) GetItemParents(
 	ctx context.Context, in *ItemParentsRequest,
 ) (*ItemParents, error) {

@@ -42,6 +42,15 @@ func (s *ItemParentExtractor) prefetchItems(
 	return itemsMap, nil
 }
 
+func (s *ItemParentExtractor) ExtractRow(
+	ctx context.Context, row *items.ItemParent, fields *ItemParentFields, lang string, isModer bool,
+	userID int64, role string,
+) (*ItemParent, error) {
+	res, err := s.ExtractRows(ctx, []*items.ItemParent{row}, fields, lang, isModer, userID, role)
+
+	return res[0], err
+}
+
 func (s *ItemParentExtractor) ExtractRows(
 	ctx context.Context, rows []*items.ItemParent, fields *ItemParentFields, lang string, isModer bool,
 	userID int64, role string,
