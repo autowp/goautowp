@@ -29,6 +29,23 @@ type ItemParentCacheListOptions struct {
 	StockOnly                       bool
 }
 
+func (s *ItemParentCacheListOptions) Clone() *ItemParentCacheListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	clone.ItemsByParentID = s.ItemsByParentID.Clone()
+	clone.ItemsByItemID = s.ItemsByItemID.Clone()
+	clone.ItemParentByItemID = s.ItemParentByItemID.Clone()
+	clone.PictureItemsByItemID = s.PictureItemsByItemID.Clone()
+	clone.PictureItemsByParentID = s.PictureItemsByParentID.Clone()
+	clone.ItemParentCacheAncestorByItemID = s.ItemParentCacheAncestorByItemID.Clone()
+
+	return &clone
+}
+
 func (s *ItemParentCacheListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
 	return s.apply(
 		alias,

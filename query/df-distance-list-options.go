@@ -19,6 +19,18 @@ type DfDistanceListOptions struct {
 	DstPicture   *PictureListOptions
 }
 
+func (s *DfDistanceListOptions) Clone() *DfDistanceListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	clone.DstPicture = s.DstPicture.Clone()
+
+	return &clone
+}
+
 func (s *DfDistanceListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
 	return s.apply(
 		alias,

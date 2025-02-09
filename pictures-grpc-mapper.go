@@ -98,6 +98,11 @@ func convertPictureItemListOptions(in *PictureItemListOptions) (*query.PictureIt
 		return nil, err
 	}
 
+	result.PictureItemByPictureID, err = convertPictureItemListOptions(in.GetPictureItemByPictureId())
+	if err != nil {
+		return nil, err
+	}
+
 	return &result, nil
 }
 
@@ -179,13 +184,9 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 		}
 	}
 
-	pictureItem, err := convertPictureItemListOptions(in.GetPictureItem())
+	result.PictureItem, err = convertPictureItemListOptions(in.GetPictureItem())
 	if err != nil {
 		return nil, err
-	}
-
-	if pictureItem != nil {
-		result.PictureItem = []*query.PictureItemListOptions{pictureItem}
 	}
 
 	result.ReplacePicture, err = convertPictureListOptions(in.GetReplacePicture())

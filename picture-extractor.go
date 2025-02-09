@@ -359,11 +359,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		if fields.GetAcceptedCount() {
 			acceptedCount, err := picturesRepository.Count(ctx, &query.PictureListOptions{
 				Status: schema.PictureStatusAccepted,
-				PictureItem: []*query.PictureItemListOptions{{
+				PictureItem: &query.PictureItemListOptions{
 					PictureItemByItemID: &query.PictureItemListOptions{
 						PictureID: row.ID,
 					},
-				}},
+				},
 			})
 			if err != nil {
 				return nil, err
@@ -419,11 +419,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				isLastPicture, err = picturesRepository.Exists(ctx, &query.PictureListOptions{
 					ExcludeID: row.ID,
 					Status:    schema.PictureStatusAccepted,
-					PictureItem: []*query.PictureItemListOptions{{
+					PictureItem: &query.PictureItemListOptions{
 						PictureItemByItemID: &query.PictureItemListOptions{
 							PictureID: row.ID,
 						},
-					}},
+					},
 				})
 				if err != nil {
 					return nil, err

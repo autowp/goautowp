@@ -24,11 +24,30 @@ type PictureItemListOptions struct {
 	Item                        *ItemListOptions
 	ItemVehicleType             *ItemVehicleTypeListOptions
 	PictureItemByItemID         *PictureItemListOptions
+	PictureItemByPictureID      *PictureItemListOptions
 	PerspectiveGroupPerspective *PerspectiveGroupPerspectiveListOptions
 }
 
 func AppendPictureItemAlias(alias string, suffix string) string {
 	return alias + "_" + PictureItemAlias + suffix
+}
+
+func (s *PictureItemListOptions) Clone() *PictureItemListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	clone.Pictures = s.Pictures.Clone()
+	clone.ItemParentCacheAncestor = s.ItemParentCacheAncestor.Clone()
+	clone.Item = s.Item.Clone()
+	clone.ItemVehicleType = s.ItemVehicleType.Clone()
+	clone.PictureItemByItemID = s.PictureItemByItemID.Clone()
+	clone.PictureItemByPictureID = s.PictureItemByPictureID.Clone()
+	clone.PerspectiveGroupPerspective = s.PerspectiveGroupPerspective.Clone()
+
+	return &clone
 }
 
 func (s *PictureItemListOptions) IsPictureIDUnique() bool {
@@ -170,6 +189,15 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 
 	sqSelect, err = s.PictureItemByItemID.JoinToItemIDAndApply(
 		itemIDCol,
+		AppendPictureItemAlias(alias, ""),
+		sqSelect,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	sqSelect, err = s.PictureItemByPictureID.JoinToPictureIDAndApply(
+		pictureIDCol,
 		AppendPictureItemAlias(alias, ""),
 		sqSelect,
 	)

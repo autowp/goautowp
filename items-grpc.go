@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"slices"
 	"strings"
@@ -431,6 +432,19 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemL
 	options.Language = in.GetLanguage()
 	options.Limit = in.GetLimit()
 	options.Page = in.GetPage()
+
+	relatedGroupsOf := inOptions.GetRelatedGroupsOf()
+	if relatedGroupsOf != 0 {
+		groups, err := s.repository.RelatedCarGroups(ctx, relatedGroupsOf)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		options.ItemIDs = slices.Collect(maps.Keys(groups))
+		if len(options.ItemIDs) == 0 {
+			options.ItemIDs = []int64{0}
+		}
+	}
 
 	var order items.OrderBy
 
@@ -2238,11 +2252,11 @@ func (s *ItemsGRPCServer) otherGroups(
 	for _, groupType := range groupTypes {
 		picturesCount, err := s.picturesRepository.Count(ctx, &query.PictureListOptions{
 			Status: schema.PictureStatusAccepted,
-			PictureItem: []*query.PictureItemListOptions{{
+			PictureItem: &query.PictureItemListOptions{
 				ItemID:               brandID,
 				PerspectiveID:        groupType.PerspectiveID,
 				ExcludePerspectiveID: groupType.ExcludePerspectiveID,
-			}},
+			},
 		})
 		if err != nil {
 			return nil, err

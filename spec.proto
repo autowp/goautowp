@@ -3,6 +3,7 @@ package goautowp;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
 import "google/type/latlng.proto";
 import "google/type/date.proto";
 import "google/rpc/error_details.proto";
@@ -1092,11 +1093,9 @@ message PicturePathRequest {
 }
 
 message PreviewPicturesRequest {
-  PictureFields picture = 2;
-  PictureItemType type_id = 3;
   int32 perspective_page_id = 4;
-  int32 perspective_id = 5;
-  int32 contains_perspective_id = 6;
+  PicturesRequest pictures = 7;
+  bool only_exactly_pictures = 8;
 }
 
 message ItemFields {
@@ -1180,6 +1179,7 @@ message PictureItemListOptions {
   ItemParentCacheListOptions item_parent_cache_ancestor = 5;
   ItemVehicleTypeListOptions item_vehicle_type = 9;
   bool has_no_perspective_id = 11;
+  PictureItemListOptions picture_item_by_picture_id = 12;
 }
 
 message CommentTopicListOptions {
@@ -1249,6 +1249,7 @@ message ItemListOptions {
   repeated ItemType type_ids = 25;
   PictureItemListOptions picture_items = 26;
   bool dateless = 27;
+  int64 related_groups_of = 28;
 }
 
 message ItemVehicleTypeListOptions {
@@ -1319,9 +1320,16 @@ message APIItem {
   repeated APIItem engine_vehicles = 50;
 }
 
+message NullPicture {
+  oneof kind {
+    google.protobuf.NullValue null = 1;
+    Picture picture = 2;
+  }
+}
+
 message PreviewPictures {
   bool large_format = 1;
-  repeated Picture pictures = 2;
+  repeated NullPicture pictures = 2;
   int32 total_pictures = 3;
 }
 

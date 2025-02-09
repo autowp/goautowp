@@ -2646,8 +2646,13 @@ func TestPersonPreviewPictures(t *testing.T) {
 			NameDefault: true,
 			NameHtml:    true,
 			PreviewPictures: &PreviewPicturesRequest{
-				Picture: &PictureFields{NameText: true},
-				TypeId:  PictureItemType_PICTURE_ITEM_CONTENT,
+				Pictures: &PicturesRequest{
+					Options: &PictureListOptions{
+						PictureItem: &PictureItemListOptions{
+							TypeId: PictureItemType_PICTURE_ITEM_CONTENT,
+						},
+					},
+				},
 			},
 		},
 		Language: "en",
@@ -2669,5 +2674,115 @@ func TestPersonPreviewPictures(t *testing.T) {
 	require.NotEmpty(t, res2.GetItems())
 	require.NotEmpty(t, res2.GetItems()[0].GetPreviewPictures())
 	require.EqualValues(t, 1, res2.GetItems()[0].GetPreviewPictures().GetTotalPictures())
-	require.EqualValues(t, pictureID, res2.GetItems()[0].GetPreviewPictures().GetPictures()[0].GetId())
+	require.EqualValues(t, pictureID, res2.GetItems()[0].GetPreviewPictures().GetPictures()[0].GetPicture().GetId())
+}
+
+func TestCutawayAuthorsWithPreviewPictures(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	client := NewItemsClient(conn)
+	picturesClient := NewPicturesClient(conn)
+
+	// admin
+	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	personName := fmt.Sprintf("Person-%d", randomInt)
+	personID := createItem(t, goquDB, schema.ItemRow{
+		Name:       personName,
+		IsGroup:    false,
+		ItemTypeID: schema.ItemTableItemTypeIDPerson,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("person-%d", randomInt)},
+	})
+
+	vehicleName := fmt.Sprintf("Vehicle-%d", randomInt)
+	vehicleID := createItem(t, goquDB, schema.ItemRow{
+		Name:       vehicleName,
+		IsGroup:    false,
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", randomInt)},
+	})
+
+	identity := "t" + strconv.Itoa(randomInt%100000)
+
+	res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
+		Identity: identity,
+		Status:   schema.PictureStatusAccepted,
+		IP:       util.IP(net.IPv4zero),
+		AddDate:  time.Now(),
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	pictureID, err := res.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = picturesClient.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CreatePictureItemRequest{
+			PictureId:     pictureID,
+			ItemId:        vehicleID,
+			Type:          PictureItemType_PICTURE_ITEM_CONTENT,
+			PerspectiveId: schema.PerspectiveCutaway,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = picturesClient.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+		&CreatePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    personID,
+			Type:      PictureItemType_PICTURE_ITEM_AUTHOR,
+		},
+	)
+	require.NoError(t, err)
+
+	res2, err := client.List(ctx, &ItemsRequest{
+		Fields: &ItemFields{
+			Description: true,
+			HasText:     true,
+			NameDefault: true,
+			NameHtml:    true,
+			PreviewPictures: &PreviewPicturesRequest{
+				OnlyExactlyPictures: true,
+				Pictures: &PicturesRequest{
+					Options: &PictureListOptions{
+						PictureItem: &PictureItemListOptions{
+							PictureItemByPictureId: &PictureItemListOptions{PerspectiveId: schema.PerspectiveCutaway},
+							TypeId:                 PictureItemType_PICTURE_ITEM_AUTHOR,
+						},
+						Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
+					},
+				},
+			},
+		},
+		Language: "en",
+		Limit:    12,
+		Options: &ItemListOptions{
+			Id: personID,
+			PictureItems: &PictureItemListOptions{
+				Pictures: &PictureListOptions{
+					PictureItem: &PictureItemListOptions{PerspectiveId: schema.PerspectiveCutaway},
+					Status:      PictureStatus_PICTURE_STATUS_ACCEPTED,
+				},
+				TypeId: PictureItemType_PICTURE_ITEM_AUTHOR,
+			},
+			TypeId: ItemType_ITEM_TYPE_PERSON,
+		},
+		Order: ItemsRequest_AGE,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, res2.GetItems())
+	require.NotEmpty(t, res2.GetItems()[0].GetPreviewPictures())
+	require.EqualValues(t, 1, res2.GetItems()[0].GetPreviewPictures().GetTotalPictures())
+	require.EqualValues(t, pictureID, res2.GetItems()[0].GetPreviewPictures().GetPictures()[0].GetPicture().GetId())
 }

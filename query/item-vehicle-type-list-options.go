@@ -18,6 +18,16 @@ type ItemVehicleTypeListOptions struct {
 	VehicleTypeID int64
 }
 
+func (s *ItemVehicleTypeListOptions) Clone() *ItemVehicleTypeListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	return &clone
+}
+
 func (s *ItemVehicleTypeListOptions) JoinToVehicleIDAndApply(
 	srcCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
 ) *goqu.SelectDataset {

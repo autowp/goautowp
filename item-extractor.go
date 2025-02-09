@@ -454,12 +454,25 @@ func (s *ItemExtractor) extractPreviewPictures(
 
 	cFetcher := NewPerspectivePictureFetcher(pictureRepository)
 
+	picturesRequest := pps.GetPictures()
+	if picturesRequest == nil {
+		picturesRequest = &PicturesRequest{}
+	}
+
+	picturesOptions := picturesRequest.GetOptions()
+	if picturesOptions == nil {
+		picturesOptions = &PictureListOptions{}
+	}
+
+	listOptions, err := convertPictureListOptions(picturesOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := cFetcher.Fetch(ctx, row.ItemRow, PerspectivePictureFetcherOptions{
-		OnlyExactlyPictures:   false,
-		PerspectivePageID:     pps.GetPerspectivePageId(),
-		PictureItemTypeID:     convertPictureItemType(pps.GetTypeId()),
-		PerspectiveID:         pps.GetPerspectiveId(),
-		ContainsPerspectiveID: pps.GetContainsPerspectiveId(),
+		ListOptions:         listOptions,
+		OnlyExactlyPictures: pps.GetOnlyExactlyPictures(),
+		PerspectivePageID:   pps.GetPerspectivePageId(),
 	})
 	if err != nil {
 		return nil, err
@@ -475,26 +488,33 @@ func (s *ItemExtractor) extractPreviewPictures(
 
 	pictureExtractor := s.container.PictureExtractor()
 
-	pictureFields := pps.GetPicture()
+	pictureFields := picturesRequest.GetFields()
 	if pictureFields == nil {
 		pictureFields = &PictureFields{}
 	}
 
-	extractedPics := make([]*Picture, 0, len(result.Pictures))
+	pictureFields.NameText = true
+
+	extractedPics := make([]*NullPicture, 0, len(result.Pictures))
 
 	for idx, pic := range result.Pictures {
 		pictureFields.ThumbLarge = result.LargeFormat && idx == 0
 		pictureFields.ThumbMedium = !pictureFields.GetThumbLarge()
 
-		var extractedPic *Picture
+		oneOf := &NullPicture{
+			Kind: &NullPicture_Null{},
+		}
+
 		if pic != nil && pic.Row != nil {
-			extractedPic, err = pictureExtractor.Extract(ctx, pic.Row, pictureFields, lang, isModer, userID, role)
+			extractedPic, err := pictureExtractor.Extract(ctx, pic.Row, pictureFields, lang, isModer, userID, role)
 			if err != nil {
 				return nil, err
 			}
+
+			oneOf.Kind = &NullPicture_Picture{Picture: extractedPic}
 		}
 
-		extractedPics = append(extractedPics, extractedPic)
+		extractedPics = append(extractedPics, oneOf)
 	}
 
 	return &PreviewPictures{

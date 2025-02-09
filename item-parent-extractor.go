@@ -206,18 +206,14 @@ func (s *ItemParentExtractor) extractChildDescendantPictures(
 	}
 
 	if pictureListOptions.PictureItem == nil {
-		pictureListOptions.PictureItem = make([]*query.PictureItemListOptions, 1)
+		pictureListOptions.PictureItem = &query.PictureItemListOptions{}
 	}
 
-	if pictureListOptions.PictureItem[0] == nil {
-		pictureListOptions.PictureItem[0] = &query.PictureItemListOptions{}
+	if pictureListOptions.PictureItem.ItemParentCacheAncestor == nil {
+		pictureListOptions.PictureItem.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
 	}
 
-	if pictureListOptions.PictureItem[0].ItemParentCacheAncestor == nil {
-		pictureListOptions.PictureItem[0].ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
-	}
-
-	pictureListOptions.PictureItem[0].ItemParentCacheAncestor.ParentID = row.ItemID
+	pictureListOptions.PictureItem.ItemParentCacheAncestor.ParentID = row.ItemID
 
 	pictureRows, _, err := picturesRepo.Pictures(ctx, pictureListOptions, pictureFields, pictureOrder, false)
 	if err != nil {

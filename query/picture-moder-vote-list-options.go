@@ -20,6 +20,16 @@ type PictureModerVoteListOptions struct {
 	VoteLteZero bool
 }
 
+func (s *PictureModerVoteListOptions) Clone() *PictureModerVoteListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	return &clone
+}
+
 func (s *PictureModerVoteListOptions) Select(db *goqu.Database, alias string) *goqu.SelectDataset {
 	return s.apply(
 		alias,

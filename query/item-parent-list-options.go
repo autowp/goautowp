@@ -32,6 +32,22 @@ type ItemParentListOptions struct {
 	Catname                           string
 }
 
+func (s *ItemParentListOptions) Clone() *ItemParentListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	clone.ParentItems = s.ParentItems.Clone()
+	clone.ChildItems = s.ChildItems.Clone()
+	clone.ItemParentParentByChildID = s.ItemParentParentByChildID.Clone()
+	clone.ItemParentCacheAncestorByParentID = s.ItemParentCacheAncestorByParentID.Clone()
+	clone.ItemParentCacheAncestorByChildID = s.ItemParentCacheAncestorByChildID.Clone()
+
+	return &clone
+}
+
 func (s *ItemParentListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, bool, error) {
 	return s.apply(
 		alias,

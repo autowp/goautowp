@@ -65,6 +65,24 @@ func ItemParentNoParentAlias(alias string) string {
 	return alias + itemParentNoParentAliasSuffix
 }
 
+func (s *ItemListOptions) Clone() *ItemListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	clone.PictureItems = s.PictureItems.Clone()
+	clone.PreviewPictures = s.PreviewPictures.Clone()
+	clone.ItemParentChild = s.ItemParentChild.Clone()
+	clone.ItemParentParent = s.ItemParentParent.Clone()
+	clone.ItemParentCacheDescendant = s.ItemParentCacheDescendant.Clone()
+	clone.ItemParentCacheAncestor = s.ItemParentCacheAncestor.Clone()
+	clone.EngineItem = s.EngineItem.Clone()
+
+	return &clone
+}
+
 func (s *ItemListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
 	var err error
 

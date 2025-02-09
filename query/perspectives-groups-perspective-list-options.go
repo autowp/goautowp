@@ -16,6 +16,16 @@ type PerspectiveGroupPerspectiveListOptions struct {
 	GroupID int32
 }
 
+func (s *PerspectiveGroupPerspectiveListOptions) Clone() *PerspectiveGroupPerspectiveListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	return &clone
+}
+
 func (s *PerspectiveGroupPerspectiveListOptions) JoinToPerspectiveIDAndApply(
 	srcCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
 ) *goqu.SelectDataset {

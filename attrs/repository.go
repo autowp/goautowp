@@ -3274,11 +3274,11 @@ func (s *Repository) specPicture(
 ) (*CarSpecTableItemImage, string, error) {
 	row, err := s.picturesRepository.Picture(ctx, &query.PictureListOptions{
 		Status: schema.PictureStatusAccepted,
-		PictureItem: []*query.PictureItemListOptions{{
+		PictureItem: &query.PictureItemListOptions{
 			ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
 				ParentID: itemID,
 			},
-		}},
+		},
 	}, nil, orderBy)
 	if err != nil {
 		return nil, "", err

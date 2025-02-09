@@ -25,7 +25,7 @@ type PictureListOptions struct {
 	Status                schema.PictureStatus
 	Statuses              []schema.PictureStatus
 	OwnerID               int64
-	PictureItem           []*PictureItemListOptions
+	PictureItem           *PictureItemListOptions
 	ID                    int64
 	IDs                   []int64
 	IDGt                  int64
@@ -58,6 +58,30 @@ type PictureListOptions struct {
 	HasSpecialName        bool
 }
 
+func (s *PictureListOptions) Clone() *PictureListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	clone.PictureItem = s.PictureItem.Clone()
+	clone.AddDate = s.AddDate
+	clone.AddDateLt = s.AddDateLt
+	clone.AddDateGte = s.AddDateGte
+	clone.AcceptDate = s.AcceptDate
+	clone.AcceptDateLt = s.AcceptDateLt
+	clone.AcceptDateGte = s.AcceptDateGte
+	clone.AddedFrom = s.AddedFrom
+	clone.Timezone = s.Timezone
+	clone.CommentTopic = s.CommentTopic.Clone()
+	clone.ReplacePicture = s.ReplacePicture.Clone()
+	clone.PictureModerVote = s.PictureModerVote.Clone()
+	clone.DfDistance = s.DfDistance.Clone()
+
+	return &clone
+}
+
 func (s *PictureListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
 	return s.apply(
 		alias,
@@ -85,12 +109,7 @@ func (s *PictureListOptions) IsIDUnique() bool {
 		return true
 	}
 
-	isUnique := true
-	for _, i := range s.PictureItem {
-		isUnique = isUnique && i.IsPictureIDUnique()
-	}
-
-	return (s.PictureItem == nil || isUnique) && s.PictureModerVote == nil && s.DfDistance == nil
+	return (s.PictureItem == nil || s.PictureItem.IsPictureIDUnique()) && s.PictureModerVote == nil && s.DfDistance == nil
 }
 
 func (s *PictureListOptions) JoinToIDAndApply(
@@ -162,10 +181,10 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableOwnerIDColName).Eq(s.OwnerID))
 	}
 
-	for idx, i := range s.PictureItem {
-		sqSelect, err = i.JoinToPictureIDAndApply(
+	if s.PictureItem != nil {
+		sqSelect, err = s.PictureItem.JoinToPictureIDAndApply(
 			idCol,
-			s.PictureItemAlias(alias, idx),
+			s.PictureItemAlias(alias, 0),
 			sqSelect,
 		)
 		if err != nil {

@@ -29,11 +29,12 @@ type PerspectivePictureFetcherResultPicture struct {
 }
 
 type PerspectivePictureFetcherOptions struct {
-	PerspectivePageID     int32
-	PerspectiveID         int32
-	PictureItemTypeID     schema.PictureItemType
-	ContainsPerspectiveID int32
-	OnlyExactlyPictures   bool
+	ListOptions       *query.PictureListOptions
+	PerspectivePageID int32
+	// PerspectiveID         int32
+	// PictureItemTypeID     schema.PictureItemType
+	// ContainsPerspectiveID int32
+	OnlyExactlyPictures bool
 }
 
 type selectOptions struct {
@@ -80,7 +81,7 @@ func (s *PerspectivePictureFetcher) Fetch(
 	}
 
 	for _, groupID := range perspectiveGroupIDs {
-		sqSelect := s.pictureSelect(item.ID, options, selectOptions{
+		sqSelect := s.pictureSelect(item.ID, options.ListOptions, options.OnlyExactlyPictures, selectOptions{
 			perspectiveGroup: groupID,
 			exclude:          usedIDs,
 		})
@@ -101,7 +102,7 @@ func (s *PerspectivePictureFetcher) Fetch(
 	needMore := len(perspectiveGroupIDs) - len(usedIDs)
 
 	if needMore > 0 {
-		sqSelect := s.pictureSelect(item.ID, options, selectOptions{
+		sqSelect := s.pictureSelect(item.ID, options.ListOptions, options.OnlyExactlyPictures, selectOptions{
 			exclude: usedIDs,
 		})
 
@@ -144,7 +145,7 @@ func (s *PerspectivePictureFetcher) Fetch(
 	if emptyPictures > 0 && (item.ItemTypeID == schema.ItemTableItemTypeIDEngine) {
 		pictureRows, _, err := s.picturesRepository.Pictures(ctx, &query.PictureListOptions{
 			Status: schema.PictureStatusAccepted,
-			PictureItem: []*query.PictureItemListOptions{{
+			PictureItem: &query.PictureItemListOptions{
 				PerspectiveID: schema.PerspectiveIDUnderTheHood,
 				Item: &query.ItemListOptions{
 					EngineItem: &query.ItemListOptions{
@@ -153,7 +154,7 @@ func (s *PerspectivePictureFetcher) Fetch(
 						},
 					},
 				},
-			}},
+			},
 			Limit: emptyPictures,
 		}, nil, pictures.OrderByNone, false)
 		if err != nil {
@@ -203,22 +204,18 @@ func (s *PerspectivePictureFetcher) perspectiveGroupIDs(ctx context.Context, pag
 }
 
 func (s *PerspectivePictureFetcher) pictureSelect(
-	itemID int64, options PerspectivePictureFetcherOptions, options2 selectOptions,
+	itemID int64, listOptions *query.PictureListOptions, onlyExactlyPictures bool, options2 selectOptions,
 ) *query.PictureListOptions {
-	pictureItemType := schema.PictureItemTypeContent
-	if options.PictureItemTypeID != 0 {
-		pictureItemType = options.PictureItemTypeID
+	sqSelect := query.PictureListOptions{}
+	if listOptions != nil {
+		sqSelect = *listOptions.Clone()
 	}
 
-	pictureItemOptions := query.PictureItemListOptions{
-		TypeID: pictureItemType,
+	if sqSelect.PictureItem == nil {
+		sqSelect.PictureItem = &query.PictureItemListOptions{}
 	}
 
-	sqSelect := query.PictureListOptions{
-		Status:      schema.PictureStatusAccepted,
-		PictureItem: []*query.PictureItemListOptions{&pictureItemOptions},
-		Limit:       1,
-	}
+	sqSelect.Limit = 1
 
 	// sqSelect = sqSelect.columns(x{
 	//	"id",
@@ -237,27 +234,21 @@ func (s *PerspectivePictureFetcher) pictureSelect(
 	//	"change_status_user_id",
 	// })
 
-	if options.OnlyExactlyPictures {
-		pictureItemOptions.ItemID = itemID
+	if onlyExactlyPictures {
+		sqSelect.PictureItem.ItemID = itemID
 	} else {
-		pictureItemOptions.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{
-			ParentID:      itemID,
-			ItemsByItemID: &query.ItemListOptions{}, // to order by is_concept
+		if sqSelect.PictureItem.ItemParentCacheAncestor == nil {
+			sqSelect.PictureItem.ItemParentCacheAncestor = &query.ItemParentCacheListOptions{}
 		}
+
+		sqSelect.PictureItem.ItemParentCacheAncestor.ParentID = itemID
+		sqSelect.PictureItem.ItemParentCacheAncestor.ItemsByItemID = &query.ItemListOptions{} // to order by is_concept
 	}
 
-	if options.PerspectiveID != 0 {
-		pictureItemOptions.PerspectiveID = options.PerspectiveID
-	} else if options2.perspectiveGroup != 0 {
-		pictureItemOptions.PerspectiveGroupPerspective = &query.PerspectiveGroupPerspectiveListOptions{
+	if options2.perspectiveGroup != 0 {
+		sqSelect.PictureItem.PerspectiveGroupPerspective = &query.PerspectiveGroupPerspectiveListOptions{
 			GroupID: options2.perspectiveGroup,
 		}
-	}
-
-	if options.ContainsPerspectiveID != 0 {
-		sqSelect.PictureItem = append(sqSelect.PictureItem, &query.PictureItemListOptions{
-			PerspectiveID: options.ContainsPerspectiveID,
-		})
 	}
 
 	if len(options2.exclude) > 0 {
@@ -274,5 +265,7 @@ func (s *PerspectivePictureFetcher) totalPictures(
 		return 0, nil
 	}
 
-	return s.picturesRepository.Count(ctx, s.pictureSelect(itemID, options, selectOptions{}))
+	return s.picturesRepository.Count(
+		ctx, s.pictureSelect(itemID, options.ListOptions, options.OnlyExactlyPictures, selectOptions{}),
+	)
 }

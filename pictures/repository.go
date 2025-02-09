@@ -608,7 +608,7 @@ func (s *Repository) orderBy( //nolint: maintidx
 			goqu.MIN(goqu.T(dfDistanceAlias).Col(schema.DfDistanceTableDistanceColName)).Asc(),
 		)
 	case OrderByPerspectivesGroupPerspectives:
-		if len(options.PictureItem) == 0 || options.PictureItem[0] == nil {
+		if options.PictureItem == nil {
 			return nil, false, errJoinNeededToSortByPerspective
 		}
 
@@ -616,21 +616,29 @@ func (s *Repository) orderBy( //nolint: maintidx
 
 		piAlias := options.PictureItemAlias(alias, 0)
 
-		if options.PictureItem[0].ItemID == 0 && options.PictureItem[0].ItemParentCacheAncestor != nil {
-			if options.PictureItem[0].ItemParentCacheAncestor.ItemsByItemID == nil {
+		if options.PictureItem.ItemID == 0 && options.PictureItem.ItemParentCacheAncestor != nil {
+			if options.PictureItem.ItemParentCacheAncestor.ItemsByItemID == nil {
 				return nil, false, errJoinNeededToSortByPerspective
 			}
 
-			ipcaAlias := options.PictureItem[0].ItemParentCacheAncestorAlias(piAlias)
-			iAlias := options.PictureItem[0].ItemParentCacheAncestor.ItemsByItemIDAlias(ipcaAlias)
+			ipcaAlias := options.PictureItem.ItemParentCacheAncestorAlias(piAlias)
+			iAlias := options.PictureItem.ItemParentCacheAncestor.ItemsByItemIDAlias(ipcaAlias)
 			exps = append(exps, goqu.MAX(goqu.T(iAlias).Col(schema.ItemTableIsConceptColName)).Asc())
 			exps = append(exps, goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableSportColName)).Asc())
 			exps = append(exps, goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableTuningColName)).Asc())
 		}
 
-		if options.PictureItem[0].PerspectiveGroupPerspective != nil {
-			pgpAlias := query.AppendPerspectiveGroupPerspectiveAlias(piAlias)
-			exps = append(exps, goqu.MAX(goqu.T(pgpAlias).Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)).Asc())
+		if options.PictureItem.PerspectiveGroupPerspective != nil {
+			var (
+				pgpAlias               = query.AppendPerspectiveGroupPerspectiveAlias(piAlias)
+				col      exp.Orderable = goqu.T(pgpAlias).Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
+			)
+
+			if !options.IsIDUnique() {
+				col = goqu.MAX(col)
+			}
+
+			exps = append(exps, col.Asc())
 		}
 
 		exps = append([]exp.OrderedExpression{aliasTable.Col(schema.PictureTableContentCountColName).Asc()}, exps...)
@@ -641,7 +649,7 @@ func (s *Repository) orderBy( //nolint: maintidx
 
 		sqSelect = sqSelect.Order(exps...)
 	case OrderByPerspectives:
-		if len(options.PictureItem) == 0 || options.PictureItem[0] == nil {
+		if options.PictureItem == nil {
 			return nil, false, errJoinNeededToSortByPerspective
 		}
 
@@ -660,7 +668,7 @@ func (s *Repository) orderBy( //nolint: maintidx
 				aliasTable.Col(schema.PictureTableIDColName).Desc(),
 			)
 	case OrderByTopPerspectives, OrderByBottomPerspectives, OrderByFrontPerspectives:
-		if len(options.PictureItem) == 0 || options.PictureItem[0] == nil {
+		if options.PictureItem == nil {
 			return nil, false, errJoinNeededToSortByPerspective
 		}
 

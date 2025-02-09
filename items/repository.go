@@ -3840,3 +3840,116 @@ func (s *Repository) HasFullText(ctx context.Context, itemID int64) (bool, error
 
 	return success && res, err
 }
+
+func (s *Repository) ChildItemsID(ctx context.Context, itemID int64) ([]int64, error) {
+	var res []int64
+
+	err := s.db.Select(schema.ItemParentTableItemIDCol).
+		From(schema.ItemParentTable).
+		Where(schema.ItemParentTableParentIDCol.Eq(itemID)).
+		ScanValsContext(ctx, &res)
+
+	return res, err
+}
+
+func (s *Repository) AncestorsID(
+	ctx context.Context, itemID int64, itemTypes []schema.ItemTableItemTypeID,
+) ([]int64, error) {
+	var res []int64
+
+	err := s.db.Select(schema.ItemParentCacheTableParentIDCol).
+		From(schema.ItemParentCacheTable).
+		Join(schema.ItemTable, goqu.On(schema.ItemParentCacheTableParentIDCol.Eq(schema.ItemTableIDCol))).
+		Where(
+			schema.ItemParentCacheTableItemIDCol.Eq(itemID),
+			schema.ItemParentCacheTableItemIDCol.Neq(schema.ItemParentCacheTableParentIDCol),
+			schema.ItemTableItemTypeIDCol.In(itemTypes),
+		).
+		Order(schema.ItemParentCacheTableDiffCol.Desc()).
+		ScanValsContext(ctx, &res)
+
+	return res, err
+}
+
+func (s *Repository) RelatedCarGroups(ctx context.Context, itemID int64) (map[int64][]int64, error) {
+	type Vector struct {
+		Parents []int64
+		Childs  []int64
+	}
+
+	carIDs, err := s.ChildItemsID(ctx, itemID)
+	if err != nil {
+		return nil, err
+	}
+
+	vectors := make([]Vector, 0, len(carIDs))
+
+	for _, carID := range carIDs {
+		parentIDs, err := s.AncestorsID(ctx, carID, []schema.ItemTableItemTypeID{
+			schema.ItemTableItemTypeIDVehicle,
+			schema.ItemTableItemTypeIDEngine,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// remove parents
+		for _, parentID := range parentIDs {
+			index := slices.Index(carIDs, parentID)
+			if index != -1 {
+				// remove element `index` by replacing it with last element
+				carIDs[index] = carIDs[len(carIDs)-1]
+				carIDs = carIDs[:len(carIDs)-1]
+			}
+		}
+
+		vector := parentIDs
+		vector = append(vector, carID)
+
+		vectors = append(vectors, Vector{
+			Parents: vector,
+			Childs:  []int64{carID},
+		})
+	}
+
+	for {
+		// look for same root
+		matched := false
+		for i := 0; (i < len(vectors)-1) && !matched; i++ {
+			for j := i + 1; j < len(vectors) && !matched; j++ {
+				if vectors[i].Parents[0] == vectors[j].Parents[0] {
+					matched = true
+					// matched root
+					length := min(len(vectors[i].Parents), len(vectors[j].Parents))
+					newVector := make([]int64, 0, length)
+
+					for k := 0; k < length && vectors[i].Parents[k] == vectors[j].Parents[k]; k++ {
+						newVector = append(newVector, vectors[i].Parents[k])
+					}
+
+					vectors[i] = Vector{
+						Parents: newVector,
+						Childs:  append(vectors[i].Childs, vectors[j].Childs...),
+					}
+
+					// remove element j by replacing it with last element
+					vectors[j] = vectors[len(vectors)-1]
+					vectors = vectors[:len(vectors)-1]
+				}
+			}
+		}
+
+		if !matched {
+			break
+		}
+	}
+
+	result := make(map[int64][]int64, len(vectors))
+
+	for _, vector := range vectors {
+		carID := vector.Parents[len(vector.Parents)-1]
+		result[carID] = vector.Childs
+	}
+
+	return result, nil
+}

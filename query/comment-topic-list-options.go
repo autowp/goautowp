@@ -19,6 +19,16 @@ type CommentTopicListOptions struct {
 	MessagesGtZero bool
 }
 
+func (s *CommentTopicListOptions) Clone() *CommentTopicListOptions {
+	if s == nil {
+		return nil
+	}
+
+	clone := *s
+
+	return &clone
+}
+
 func (s *CommentTopicListOptions) JoinToItemIDAndApply(
 	srcCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
 ) *goqu.SelectDataset {
