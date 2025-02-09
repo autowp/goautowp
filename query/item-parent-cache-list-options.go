@@ -27,6 +27,7 @@ type ItemParentCacheListOptions struct {
 	ItemParentCacheAncestorByItemID *ItemParentCacheListOptions
 	ExcludeSelf                     bool
 	StockOnly                       bool
+	ItemVehicleTypeByItemID         *ItemVehicleTypeListOptions
 }
 
 func (s *ItemParentCacheListOptions) Clone() *ItemParentCacheListOptions {
@@ -176,6 +177,14 @@ func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDa
 		sqSelect = sqSelect.Where(
 			aliasTable.Col(schema.ItemParentCacheTableTuningColName).IsFalse(),
 			aliasTable.Col(schema.ItemParentCacheTableSportColName).IsFalse(),
+		)
+	}
+
+	if s.ItemVehicleTypeByItemID != nil {
+		sqSelect = s.ItemVehicleTypeByItemID.JoinToVehicleIDAndApply(
+			itemIDCol,
+			AppendItemVehicleTypeAlias(alias),
+			sqSelect,
 		)
 	}
 

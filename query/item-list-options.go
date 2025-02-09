@@ -40,6 +40,7 @@ type ItemListOptions struct {
 	NoParents                    bool
 	Catname                      string
 	Name                         string
+	NameExclude                  string
 	IsConcept                    bool
 	IsNotConcept                 bool
 	EngineItemID                 int64
@@ -59,6 +60,12 @@ type ItemListOptions struct {
 	SuggestionsTo                int64
 	EngineItem                   *ItemListOptions
 	Dateless                     bool
+	SpecID                       int64
+	BeginYear                    int32
+	EndYear                      int32
+	Text                         string
+	NoVehicleType                bool
+	ItemVehicleType              *ItemVehicleTypeListOptions
 }
 
 func ItemParentNoParentAlias(alias string) string {
@@ -204,6 +211,18 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 			aliasTable.Col(schema.ItemTableBeginYearColName).IsNull(),
 			aliasTable.Col(schema.ItemTableBeginModelYearColName).IsNull(),
 		)
+	}
+
+	if s.SpecID > 0 {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableSpecIDColName).Eq(s.SpecID))
+	}
+
+	if s.BeginYear > 0 {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableBeginYearColName).Eq(s.BeginYear))
+	}
+
+	if s.EndYear > 0 {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableEndYearColName).Eq(s.EndYear))
 	}
 
 	if s.HasBeginYear {
@@ -360,6 +379,49 @@ func (s *ItemListOptions) applyJoins(
 		}
 	}
 
+	if len(s.Text) > 0 {
+		ilsAlias := "ils"
+		ilsAliasTable := goqu.T(ilsAlias)
+		ttsAlias := "tts"
+		ttsAliasTable := goqu.T(ttsAlias)
+
+		sqSelect = sqSelect.
+			Join(schema.ItemLanguageTable.As(ilsAlias), goqu.On(
+				aliasTable.Col(schema.ItemTableIDColName).Eq(ilsAliasTable.Col(schema.ItemLanguageTableItemIDColName)),
+			)).
+			Join(schema.TextstorageTextTable.As(ttsAlias), goqu.On(
+				ilsAliasTable.Col(schema.ItemLanguageTableTextIDColName).Eq(
+					ttsAliasTable.Col(schema.TextstorageTextTableIDColName),
+				),
+			)).
+			Where(ttsAliasTable.Col(schema.TextstorageTextTableTextColName).ILike("%" + s.Text + "%"))
+
+		groupBy = true
+	}
+
+	if s.NoVehicleType {
+		nvvAlias := "nvv"
+		nvvAliasTable := goqu.T(nvvAlias)
+
+		sqSelect = sqSelect.
+			LeftJoin(schema.VehicleVehicleTypeTable.As(nvvAlias), goqu.On(
+				aliasTable.Col(schema.ItemTableIDColName).Eq(
+					nvvAliasTable.Col(schema.VehicleVehicleTypeTableVehicleIDColName),
+				),
+			)).
+			Where(nvvAliasTable.Col(schema.VehicleVehicleTypeTableVehicleIDColName).IsNull())
+	}
+
+	if s.ItemVehicleType != nil {
+		groupBy = true
+
+		sqSelect = s.ItemVehicleType.JoinToVehicleIDAndApply(
+			idCol,
+			AppendItemVehicleTypeAlias(alias),
+			sqSelect,
+		)
+	}
+
 	sqSelect = s.applyExcludeSelfAndChilds(alias, sqSelect)
 
 	return sqSelect, groupBy, err
@@ -419,15 +481,42 @@ func (s *ItemListOptions) applyName(
 	if len(s.Name) > 0 {
 		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
 
+		ilmAlias := "ilm"
+		ilmAliasTable := goqu.T(ilmAlias)
+
 		// WHERE EXISTS(SELECT item_id FROM item_language WHERE item.id = item_id AND name ILIKE ?)
 		sqSelect = sqSelect.Where(
 			goqu.L(
 				"EXISTS ?",
 				subSelect.
-					From(schema.ItemLanguageTable).
+					From(schema.ItemLanguageTable.As(ilmAlias)).
 					Where(
-						goqu.T(alias).Col(schema.ItemTableIDColName).Eq(schema.ItemLanguageTableItemIDCol),
-						schema.ItemLanguageTableNameCol.ILike(s.Name),
+						goqu.T(alias).Col(schema.ItemTableIDColName).Eq(
+							ilmAliasTable.Col(schema.ItemLanguageTableItemIDColName),
+						),
+						ilmAliasTable.Col(schema.ItemLanguageTableNameColName).ILike(s.Name),
+					),
+			),
+		)
+	}
+
+	if len(s.NameExclude) > 0 {
+		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
+
+		ilmAlias := "ilmn"
+		ilmAliasTable := goqu.T(ilmAlias)
+
+		// WHERE NOT EXISTS(SELECT item_id FROM item_language WHERE item.id = item_id AND name ILIKE ?)
+		sqSelect = sqSelect.Where(
+			goqu.L(
+				"NOT EXISTS ?",
+				subSelect.
+					From(schema.ItemLanguageTable.As(ilmAlias)).
+					Where(
+						goqu.T(alias).Col(schema.ItemTableIDColName).Eq(
+							ilmAliasTable.Col(schema.ItemLanguageTableItemIDColName),
+						),
+						ilmAliasTable.Col(schema.ItemLanguageTableNameColName).ILike(s.NameExclude),
 					),
 			),
 		)

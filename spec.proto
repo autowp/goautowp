@@ -1158,6 +1158,8 @@ message ItemsRequest {
     NAME = 2;
     CHILDS_COUNT = 3;
     AGE = 4;
+    ID_DESC = 5;
+    ID_ASC = 6;
   }
   string language = 1;
   ItemFields fields = 2;
@@ -1206,6 +1208,7 @@ message ItemParentCacheListOptions {
   PictureItemListOptions picture_items_by_parent_id = 8;
   ItemParentListOptions item_parent_by_item_id = 5;
   ItemParentCacheListOptions item_parent_cache_ancestor_by_item_id = 7;
+  ItemVehicleTypeListOptions item_vehicle_type_by_item_id = 9;
 }
 
 message ItemParentCacheRequest {
@@ -1250,6 +1253,13 @@ message ItemListOptions {
   PictureItemListOptions picture_items = 26;
   bool dateless = 27;
   int64 related_groups_of = 28;
+  string name_exclude = 29;
+  int64 spec_id = 30;
+  int32 begin_year = 31;
+  int32 end_year = 32;
+  string text = 33;
+  bool no_vehicle_type = 34;
+  ItemVehicleTypeListOptions item_vehicle_type = 35;
 }
 
 message ItemVehicleTypeListOptions {

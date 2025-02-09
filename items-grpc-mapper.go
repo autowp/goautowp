@@ -146,8 +146,9 @@ func convertItemParentCacheListOptions(in *ItemParentCacheListOptions) (*query.I
 	var err error
 
 	result := query.ItemParentCacheListOptions{
-		ItemID:   in.GetItemId(),
-		ParentID: in.GetParentId(),
+		ItemID:                  in.GetItemId(),
+		ParentID:                in.GetParentId(),
+		ItemVehicleTypeByItemID: convertItemVehicleTypeListOptions(in.GetItemVehicleTypeByItemId()),
 	}
 
 	result.ItemsByItemID, err = convertItemListOptions(in.GetItemsByItemId())
@@ -219,6 +220,7 @@ func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error)
 		IsConcept:            in.GetIsConcept(),
 		IsNotConcept:         in.GetIsNotConcept(),
 		Name:                 in.GetName(),
+		NameExclude:          in.GetNameExclude(),
 		ItemID:               in.GetId(),
 		EngineItemID:         in.GetEngineId(),
 		IsGroup:              in.GetIsGroup(),
@@ -226,6 +228,12 @@ func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error)
 		SuggestionsTo:        in.GetSuggestionsTo(),
 		ExcludeSelfAndChilds: in.GetExcludeSelfAndChilds(),
 		Dateless:             in.GetDateless(),
+		SpecID:               in.GetSpecId(),
+		BeginYear:            in.GetBeginYear(),
+		EndYear:              in.GetEndYear(),
+		Text:                 in.GetText(),
+		NoVehicleType:        in.GetNoVehicleType(),
+		ItemVehicleType:      convertItemVehicleTypeListOptions(in.GetItemVehicleType()),
 	}
 
 	result.ItemParentCacheAncestor, err = convertItemParentCacheListOptions(in.GetAncestor())
@@ -323,6 +331,10 @@ func convertItemOrder(value ItemsRequest_Order) (items.OrderBy, bool) {
 		return items.OrderByChildsCount, false
 	case ItemsRequest_AGE:
 		return items.OrderByAge, false
+	case ItemsRequest_ID_DESC:
+		return items.OrderByIDDesc, false
+	case ItemsRequest_ID_ASC:
+		return items.OrderByIDAsc, false
 	}
 
 	return items.OrderByNone, false
