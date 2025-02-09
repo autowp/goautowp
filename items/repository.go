@@ -3583,11 +3583,10 @@ func (s *Repository) CataloguePaths(
 	breakOnFirst := options.BreakOnFirst
 	stockFirst := options.StockFirst
 	toBrand := options.ToBrand
-	toBrandID := options.ToBrandID
 
 	result := make([]CataloguePathResult, 0)
 
-	if toBrandID == 0 || id == toBrandID {
+	if options.ToBrandID == 0 || id == options.ToBrandID {
 		var brandCatname sql.NullString
 
 		success, err := s.db.Select(schema.ItemTableCatnameCol).From(schema.ItemTable).Where(

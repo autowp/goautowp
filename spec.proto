@@ -1138,6 +1138,7 @@ message ItemFields {
   ItemParentsRequest item_parent_childs = 38;
   bool comments_count = 39;
   ItemsRequest engine_vehicles = 40;
+  int64 route_brand_id = 41;
 }
 
 message AltName {
@@ -1252,6 +1253,7 @@ message ItemListOptions {
   repeated ItemType type_ids = 25;
   PictureItemListOptions picture_items = 26;
   bool dateless = 27;
+  bool dateful = 36;
   int64 related_groups_of = 28;
   string name_exclude = 29;
   int64 spec_id = 30;

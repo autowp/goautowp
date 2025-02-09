@@ -60,6 +60,7 @@ type ItemListOptions struct {
 	SuggestionsTo                int64
 	EngineItem                   *ItemListOptions
 	Dateless                     bool
+	Dateful                      bool
 	SpecID                       int64
 	BeginYear                    int32
 	EndYear                      int32
@@ -210,6 +211,15 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 		sqSelect = sqSelect.Where(
 			aliasTable.Col(schema.ItemTableBeginYearColName).IsNull(),
 			aliasTable.Col(schema.ItemTableBeginModelYearColName).IsNull(),
+		)
+	}
+
+	if s.Dateful {
+		sqSelect = sqSelect.Where(
+			goqu.Or(
+				aliasTable.Col(schema.ItemTableBeginYearColName).IsNotNull(),
+				aliasTable.Col(schema.ItemTableBeginModelYearColName).IsNotNull(),
+			),
 		)
 	}
 

@@ -671,6 +671,7 @@ func (s *ItemExtractor) extractRoutes(
 			BreakOnFirst: true,
 			ToBrand:      true,
 			StockFirst:   true,
+			ToBrandID:    fields.GetRouteBrandId(),
 		})
 		if err != nil {
 			return nil, nil, err

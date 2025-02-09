@@ -228,6 +228,7 @@ func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error)
 		SuggestionsTo:        in.GetSuggestionsTo(),
 		ExcludeSelfAndChilds: in.GetExcludeSelfAndChilds(),
 		Dateless:             in.GetDateless(),
+		Dateful:              in.GetDateful(),
 		SpecID:               in.GetSpecId(),
 		BeginYear:            in.GetBeginYear(),
 		EndYear:              in.GetEndYear(),
