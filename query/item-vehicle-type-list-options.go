@@ -49,7 +49,7 @@ func (s *ItemVehicleTypeListOptions) apply(alias string, sqSelect *goqu.SelectDa
 	aliasTable := goqu.T(alias)
 
 	if s.VehicleTypeID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.VehicleVehicleTypeTableVehicleIDColName).Eq(s.VehicleTypeID))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.VehicleVehicleTypeTableVehicleTypeIDColName).Eq(s.VehicleTypeID))
 	}
 
 	return sqSelect
