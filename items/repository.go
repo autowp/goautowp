@@ -180,7 +180,7 @@ type CataloguePathResult struct {
 	CarCatname      string
 	Path            []string
 	Stock           bool
-	CategotyCatname string
+	CategoryCatname string
 	ID              int64
 }
 
@@ -3633,7 +3633,7 @@ func (s *Repository) CataloguePaths(
 			case schema.ItemTableItemTypeIDCategory:
 				result = append(result, CataloguePathResult{
 					Type:            CataloguePathResultTypeCategory,
-					CategotyCatname: util.NullStringToString(category.Catname),
+					CategoryCatname: util.NullStringToString(category.Catname),
 				})
 
 				if breakOnFirst {

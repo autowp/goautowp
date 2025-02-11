@@ -8,13 +8,16 @@ import (
 	"maps"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/index"
+	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/pictures"
@@ -27,15 +30,20 @@ import (
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-const itemLinkNameMaxLength = 255
+const (
+	itemLinkNameMaxLength = 255
 
-const typicalPicturesInList = 4
+	typicalPicturesInList  = 4
+	itemOfDayCacheDuration = time.Hour * 25
+)
 
 func (s *ItemParent) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
 	var (
@@ -90,6 +98,8 @@ type ItemsGRPCServer struct {
 	hostManager           *hosts.Manager
 	itemParentExtractor   *ItemParentExtractor
 	linkExtractor         *LinkExtractor
+	itemOfDayRepository   *itemofday.Repository
+	redis                 *redis.Client
 }
 
 func NewItemsGRPCServer(
@@ -110,6 +120,8 @@ func NewItemsGRPCServer(
 	hostManager *hosts.Manager,
 	itemParentExtractor *ItemParentExtractor,
 	linkExtractor *LinkExtractor,
+	itemOfDayRepository *itemofday.Repository,
+	redis *redis.Client,
 ) *ItemsGRPCServer {
 	return &ItemsGRPCServer{
 		repository:            repository,
@@ -129,6 +141,8 @@ func NewItemsGRPCServer(
 		hostManager:           hostManager,
 		itemParentExtractor:   itemParentExtractor,
 		linkExtractor:         linkExtractor,
+		itemOfDayRepository:   itemOfDayRepository,
+		redis:                 redis,
 	}
 }
 
@@ -2528,4 +2542,94 @@ func (s *ItemsGRPCServer) GetItemParents(
 		Items:     res,
 		Paginator: paginator,
 	}, nil
+}
+
+func (s *ItemsGRPCServer) GetItemOfDay(ctx context.Context, in *ItemOfDayRequest) (*ItemOfDay, error) {
+	lang := in.GetLanguage()
+
+	itemOfDay, err := s.itemOfDayRepository.Current(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var (
+		itemOfDayInfo ItemOfDay
+		success       bool
+	)
+
+	if itemOfDay == nil {
+		return nil, status.Error(codes.NotFound, "Item of day not found")
+	}
+
+	if itemOfDay.ItemID == 0 {
+		return nil, status.Error(codes.Internal, "Invalid item_id: can't bet zero")
+	}
+
+	key := "API_ITEM_OF_DAY_123_" + strconv.FormatInt(itemOfDay.ItemID, 10) + "_" + lang
+
+	cacheItem, err := s.redis.Get(ctx, key).Bytes()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if err == nil {
+		err = proto.Unmarshal(cacheItem, &itemOfDayInfo)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		success = true
+	}
+
+	if !success {
+		fields := ItemFields{
+			NameHtml:              true,
+			ItemOfDayPictures:     true,
+			AcceptedPicturesCount: true,
+			Twins:                 &ItemsRequest{},
+			Categories: &ItemsRequest{
+				Fields: &ItemFields{NameHtml: true},
+			},
+			Route: true,
+		}
+		convertedFields := convertItemFields(&fields)
+
+		item, err := s.repository.Item(ctx, &query.ItemListOptions{
+			ItemID:   itemOfDay.ItemID,
+			Language: lang,
+		}, convertedFields)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, status.Errorf(codes.Internal, "row %d not found", itemOfDay.ItemID)
+			}
+
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		extracted, err := s.extractor.Extract(ctx, item, &fields, in.GetLanguage(), false, 0, "")
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		itemOfDayInfo = ItemOfDay{
+			Item:   extracted,
+			UserId: util.NullInt64ToScalar(itemOfDay.UserID),
+		}
+
+		cacheBytes, err := proto.Marshal(&itemOfDayInfo)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.redis.Set(ctx, key, cacheBytes, itemOfDayCacheDuration).Err()
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &itemOfDayInfo, nil
 }

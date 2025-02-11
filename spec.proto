@@ -83,6 +83,7 @@ service Rating {
 }
 
 service Items {
+  rpc GetItemOfDay(ItemOfDayRequest) returns (ItemOfDay) {}
   rpc GetBrands(GetBrandsRequest) returns (APIBrandsList) {}
   rpc GetBrandSections(GetBrandSectionsRequest) returns (APIBrandSections) {}
   rpc GetTopBrandsList(GetTopBrandsListRequest) returns (APITopBrandsList) {}
@@ -1343,6 +1344,15 @@ message ItemOfDayPicture {
   string name = 1;
   APIImage thumb = 2;
   repeated string route = 3;
+}
+
+message ItemOfDayRequest {
+  string language = 1;
+}
+
+message ItemOfDay {
+  APIItem item = 1;
+  int64 user_id = 2;
 }
 
 message RelatedGroupPicture {

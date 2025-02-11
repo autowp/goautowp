@@ -26,11 +26,11 @@ func TestDuplicateFinder(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	id1, _ := addPicture(t, imageStorage, goquDB, "./test/large.jpg")
+	id1, _ := addPicture(t, imageStorage, goquDB, "./test/large.jpg", schema.PictureStatusInbox)
 	err = df.Index(ctx, id1, "http://localhost:80/large.jpg")
 	require.NoError(t, err)
 
-	id2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	id2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 	err = df.Index(ctx, id2, "http://localhost:80/small.jpg")
 	require.NoError(t, err)
 

@@ -1319,7 +1319,7 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIDs []int, formatNam
 
 	defer util.Close(rows)
 
-	result := make(map[int]Image)
+	result := make(map[int]Image, len(imageIDs))
 
 	for rows.Next() {
 		var (

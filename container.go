@@ -1115,10 +1115,20 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 			return nil, err
 		}
 
+		itemOfDayRepository, err := s.ItemOfDayRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		redisClient, err := s.Redis()
+		if err != nil {
+			return nil, err
+		}
+
 		s.itemsGrpcServer = NewItemsGRPCServer(
 			repo, db, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
 			attrsRepository, picturesRepository, idx, events, usersRepository, messagingRepository, s.HostsManager(),
-			s.ItemParentExtractor(), s.NewLinkExtractor(),
+			s.ItemParentExtractor(), s.NewLinkExtractor(), itemOfDayRepository, redisClient,
 		)
 	}
 

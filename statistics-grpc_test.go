@@ -103,7 +103,7 @@ func BenchmarkAboutData(b *testing.B) {
 
 	statisticsClient := NewStatisticsClient(conn)
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		_, err := statisticsClient.GetAboutData(ctx, &emptypb.Empty{})
 		require.NoError(b, err)
 	}

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
@@ -395,7 +396,260 @@ func (s *ItemExtractor) extractPlain(
 		return err
 	}
 
+	resultRow.ItemOfDayPictures, err = s.extractItemOfDayPictures(ctx, fields, row, lang)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *ItemExtractor) extractItemOfDayPictures(
+	ctx context.Context, fields *ItemFields, carOfDay *items.Item, lang string,
+) ([]*ItemOfDayPicture, error) {
+	if !fields.GetItemOfDayPictures() {
+		return nil, nil
+	}
+
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	carOfDayPictures, err := s.orientedPictureList(ctx, carOfDay.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// images
+	formatRequests := make(map[string]map[int]int)
+
+	for idx, picture := range carOfDayPictures {
+		if picture != nil && picture.ImageID.Valid {
+			format := "picture-thumb-medium"
+			if idx == 0 {
+				format = "picture-thumb-large"
+			}
+
+			if _, ok := formatRequests[format]; !ok {
+				formatRequests[format] = make(map[int]int)
+			}
+
+			formatRequests[format][idx] = int(picture.ImageID.Int64)
+		}
+	}
+
+	imageStorage, err := s.container.ImageStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	imagesInfo := make(map[string]map[int]storage.Image)
+	for format, requests := range formatRequests {
+		imagesInfo[format], err = imageStorage.FormattedImages(ctx, slices.Collect(maps.Values(requests)), format)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// names
+	notEmptyPics := make([]*schema.PictureRow, 0)
+
+	for _, picture := range carOfDayPictures {
+		if picture != nil {
+			notEmptyPics = append(notEmptyPics, picture)
+		}
+	}
+
+	pictureRepository, err := s.container.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	names, err := pictureRepository.NameData(ctx, notEmptyPics, pictures.NameDataOptions{
+		Language: lang,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	paths, err := itemRepository.CataloguePaths(ctx, carOfDay.ID, items.CataloguePathOptions{
+		BreakOnFirst: true,
+		ToBrand:      false,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	i18nBundle, err := s.container.I18n()
+	if err != nil {
+		return nil, err
+	}
+
+	pictureNameFormatter := pictures.NewPictureNameFormatter(
+		items.NewItemNameFormatter(i18nBundle),
+		i18nBundle,
+	)
+
+	result := make([]*ItemOfDayPicture, 0)
+
+	for idx, row := range carOfDayPictures {
+		if row != nil {
+			var route []string
+
+			switch carOfDay.ItemTypeID {
+			case schema.ItemTableItemTypeIDTwins:
+				route = []string{"/twins/group", strconv.FormatInt(carOfDay.ID, 10), "pictures", row.Identity}
+			case schema.ItemTableItemTypeIDVehicle,
+				schema.ItemTableItemTypeIDEngine,
+				schema.ItemTableItemTypeIDCategory,
+				schema.ItemTableItemTypeIDBrand,
+				schema.ItemTableItemTypeIDFactory,
+				schema.ItemTableItemTypeIDMuseum,
+				schema.ItemTableItemTypeIDPerson,
+				schema.ItemTableItemTypeIDCopyright:
+				for _, path := range paths {
+					switch path.Type {
+					case items.CataloguePathResultTypeBrand:
+						route = []string{"/picture", row.Identity}
+					case items.CataloguePathResultTypeBrandItem:
+						route = append(
+							[]string{"/", path.BrandCatname, path.CarCatname},
+							path.Path...,
+						)
+						route = append(route, "pictures", row.Identity)
+					case items.CataloguePathResultTypeCategory:
+						route = []string{"/category", path.CategoryCatname, "pictures", row.Identity}
+					case items.CataloguePathResultTypePerson:
+						route = []string{"/persons", strconv.FormatInt(path.ID, 10)}
+					}
+				}
+			}
+
+			format := "picture-thumb-medium"
+			if idx == 0 {
+				format = "picture-thumb-large"
+			}
+
+			var imageID int
+			if idx < len(carOfDayPictures) && carOfDayPictures[idx].ImageID.Valid {
+				imageID = int(carOfDayPictures[idx].ImageID.Int64)
+			}
+
+			imageInfo, ok := imagesInfo[format][imageID]
+
+			var thumb *APIImage
+			if ok {
+				thumb = APIImageToGRPC(&imageInfo)
+			}
+
+			name := ""
+			if n, ok := names[row.ID]; ok {
+				name, err = pictureNameFormatter.FormatText(n, lang)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			result = append(result, &ItemOfDayPicture{
+				Thumb: thumb,
+				Name:  name,
+				Route: route,
+			})
+		}
+	}
+
+	return result, nil
+}
+
+func (s *ItemExtractor) orientedPictureList(ctx context.Context, itemID int64) ([]*schema.PictureRow, error) {
+	result := make([]*schema.PictureRow, 0)
+	usedIDs := make([]int64, 0)
+
+	pictureRepository, err := s.container.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	perspectivesGroupIDs, err := pictureRepository.PerspectivePageGroupIDs(ctx, schema.PerspectivesPageFivePics)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, groupID := range perspectivesGroupIDs {
+		sqSelect := query.PictureListOptions{
+			ExcludeIDs: usedIDs,
+			Status:     schema.PictureStatusAccepted,
+			PictureItem: &query.PictureItemListOptions{
+				ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+					ParentID: itemID,
+				},
+				PerspectiveGroupPerspective: &query.PerspectiveGroupPerspectiveListOptions{
+					GroupID: groupID,
+				},
+			},
+			Limit: 1,
+		}
+
+		picture, err := pictureRepository.Picture(ctx, &sqSelect, nil, pictures.OrderByVotesAndPerspectivesGroupPerspectives)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+
+		if picture != nil {
+			result = append(result, picture)
+			usedIDs = append(usedIDs, picture.ID)
+		} else {
+			result = append(result, nil)
+		}
+	}
+
+	resorted := make([]*schema.PictureRow, 0)
+
+	for _, picture := range result {
+		if picture != nil {
+			resorted = append(resorted, picture)
+		}
+	}
+
+	for _, picture := range result {
+		if picture == nil {
+			resorted = append(resorted, nil)
+		}
+	}
+
+	result = resorted
+	left := make([]int, 0)
+
+	for key, picture := range result {
+		if picture == nil {
+			left = append(left, key)
+		}
+	}
+
+	if len(left) > 0 {
+		rows, _, err := pictureRepository.Pictures(ctx, &query.PictureListOptions{
+			ExcludeIDs: usedIDs,
+			Status:     schema.PictureStatusAccepted,
+			PictureItem: &query.PictureItemListOptions{
+				ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
+					ParentID: itemID,
+				},
+			},
+			Limit: uint32(len(left)), //nolint: gosec
+		}, nil, pictures.OrderByResolutionDesc, false)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, pic := range rows {
+			key := left[0]
+			left = left[1:]
+			result[key] = pic
+		}
+	}
+
+	return result, nil
 }
 
 func (s *ItemExtractor) extractRelatedGroupsPictures(
@@ -849,10 +1103,11 @@ func (s *ItemExtractor) extractRoutes(
 
 					break
 				}
+			case schema.ItemTableItemTypeIDPerson:
+				route = []string{"/persons", strconv.FormatInt(row.ID, 10)}
 			case schema.ItemTableItemTypeIDFactory,
 				schema.ItemTableItemTypeIDMuseum,
-				schema.ItemTableItemTypeIDCopyright,
-				schema.ItemTableItemTypeIDPerson:
+				schema.ItemTableItemTypeIDCopyright:
 			}
 		}
 

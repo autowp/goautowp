@@ -2406,6 +2406,7 @@ var Rating_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
+	Items_GetItemOfDay_FullMethodName            = "/goautowp.Items/GetItemOfDay"
 	Items_GetBrands_FullMethodName               = "/goautowp.Items/GetBrands"
 	Items_GetBrandSections_FullMethodName        = "/goautowp.Items/GetBrandSections"
 	Items_GetTopBrandsList_FullMethodName        = "/goautowp.Items/GetTopBrandsList"
@@ -2449,6 +2450,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ItemsClient interface {
+	GetItemOfDay(ctx context.Context, in *ItemOfDayRequest, opts ...grpc.CallOption) (*ItemOfDay, error)
 	GetBrands(ctx context.Context, in *GetBrandsRequest, opts ...grpc.CallOption) (*APIBrandsList, error)
 	GetBrandSections(ctx context.Context, in *GetBrandSectionsRequest, opts ...grpc.CallOption) (*APIBrandSections, error)
 	GetTopBrandsList(ctx context.Context, in *GetTopBrandsListRequest, opts ...grpc.CallOption) (*APITopBrandsList, error)
@@ -2494,6 +2496,16 @@ type itemsClient struct {
 
 func NewItemsClient(cc grpc.ClientConnInterface) ItemsClient {
 	return &itemsClient{cc}
+}
+
+func (c *itemsClient) GetItemOfDay(ctx context.Context, in *ItemOfDayRequest, opts ...grpc.CallOption) (*ItemOfDay, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ItemOfDay)
+	err := c.cc.Invoke(ctx, Items_GetItemOfDay_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *itemsClient) GetBrands(ctx context.Context, in *GetBrandsRequest, opts ...grpc.CallOption) (*APIBrandsList, error) {
@@ -2870,6 +2882,7 @@ func (c *itemsClient) SetItemEngine(ctx context.Context, in *SetItemEngineReques
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility.
 type ItemsServer interface {
+	GetItemOfDay(context.Context, *ItemOfDayRequest) (*ItemOfDay, error)
 	GetBrands(context.Context, *GetBrandsRequest) (*APIBrandsList, error)
 	GetBrandSections(context.Context, *GetBrandSectionsRequest) (*APIBrandSections, error)
 	GetTopBrandsList(context.Context, *GetTopBrandsListRequest) (*APITopBrandsList, error)
@@ -2917,6 +2930,9 @@ type ItemsServer interface {
 // pointer dereference when methods are called.
 type UnimplementedItemsServer struct{}
 
+func (UnimplementedItemsServer) GetItemOfDay(context.Context, *ItemOfDayRequest) (*ItemOfDay, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItemOfDay not implemented")
+}
 func (UnimplementedItemsServer) GetBrands(context.Context, *GetBrandsRequest) (*APIBrandsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrands not implemented")
 }
@@ -3047,6 +3063,24 @@ func RegisterItemsServer(s grpc.ServiceRegistrar, srv ItemsServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Items_ServiceDesc, srv)
+}
+
+func _Items_GetItemOfDay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ItemOfDayRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetItemOfDay(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_GetItemOfDay_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetItemOfDay(ctx, req.(*ItemOfDayRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Items_GetBrands_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -3722,6 +3756,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "goautowp.Items",
 	HandlerType: (*ItemsServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetItemOfDay",
+			Handler:    _Items_GetItemOfDay_Handler,
+		},
 		{
 			MethodName: "GetBrands",
 			Handler:    _Items_GetBrands_Handler,

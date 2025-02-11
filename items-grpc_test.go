@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
@@ -2442,6 +2443,8 @@ func TestItemFields(t *testing.T) {
 				HasText:                    true,
 				DescendantTwinsGroupsCount: true,
 				Design:                     true,
+				RelatedGroupPictures:       true,
+				ItemOfDayPictures:          true,
 			},
 			Limit: 200,
 		},
@@ -2785,4 +2788,69 @@ func TestCutawayAuthorsWithPreviewPictures(t *testing.T) {
 	require.NotEmpty(t, res2.GetItems()[0].GetPreviewPictures())
 	require.EqualValues(t, 1, res2.GetItems()[0].GetPreviewPictures().GetTotalPictures())
 	require.EqualValues(t, pictureID, res2.GetItems()[0].GetPreviewPictures().GetPictures()[0].GetPicture().GetId())
+}
+
+func TestItemOfDayPicture(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := NewItemsClient(conn)
+	kc := cnt.Keycloak()
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	// admin
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	vehicleName := fmt.Sprintf("Vehicle-%d", randomInt)
+	vehicleID := createItem(t, goquDB, schema.ItemRow{
+		Name:       vehicleName,
+		IsGroup:    false,
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", randomInt)},
+	})
+
+	rep, err := cnt.ItemsRepository()
+	require.NoError(t, err)
+
+	_, err = rep.RebuildCache(ctx, vehicleID)
+	require.NoError(t, err)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusAccepted)
+
+	picturesClient := NewPicturesClient(conn)
+
+	_, err = picturesClient.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&CreatePictureItemRequest{
+			PictureId:     pictureID,
+			ItemId:        vehicleID,
+			Type:          PictureItemType_PICTURE_ITEM_CONTENT,
+			PerspectiveId: schema.PerspectiveFrontStrict,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.Item(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemRequest{
+			Language: "ru",
+			Fields:   &ItemFields{ItemOfDayPictures: true},
+			Id:       vehicleID,
+		},
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
+	require.NotEmpty(t, res.GetItemOfDayPictures())
+	require.NotEmpty(t, res.GetItemOfDayPictures()[0].GetThumb().GetSrc())
 }

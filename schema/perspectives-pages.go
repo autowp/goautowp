@@ -4,6 +4,8 @@ import "github.com/doug-martin/goqu/v9"
 
 const (
 	PerspectivesPagesTableName = "perspectives_pages"
+
+	PerspectivesPageFivePics = 5
 )
 
 var (

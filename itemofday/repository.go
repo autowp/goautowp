@@ -228,3 +228,23 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 
 	return true, nil
 }
+
+func (s *Repository) Current(ctx context.Context) (*schema.OfDayRow, error) {
+	var st schema.OfDayRow
+
+	success, err := s.db.Select(schema.OfDayTableItemIDCol, schema.OfDayTableUserIDCol).
+		From(schema.OfDayTable).
+		Where(schema.OfDayTableDayDateCol.Lte(goqu.Func("CURDATE"))).
+		Order(schema.OfDayTableDayDateCol.Desc()).
+		Limit(1).
+		ScanStructContext(ctx, &st)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, sql.ErrNoRows
+	}
+
+	return &st, nil
+}

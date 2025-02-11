@@ -14,7 +14,6 @@ const largeFormatThreshold = 30
 
 type PerspectivePictureFetcher struct {
 	picturesRepository *pictures.Repository
-	perspectiveCache   map[int32][]int32
 }
 
 type PerspectivePictureFetcherResult struct {
@@ -45,7 +44,6 @@ type selectOptions struct {
 func NewPerspectivePictureFetcher(picturesRepository *pictures.Repository) *PerspectivePictureFetcher {
 	return &PerspectivePictureFetcher{
 		picturesRepository: picturesRepository,
-		perspectiveCache:   make(map[int32][]int32),
 	}
 }
 
@@ -75,7 +73,7 @@ func (s *PerspectivePictureFetcher) Fetch(
 		}
 	}
 
-	perspectiveGroupIDs, err := s.perspectiveGroupIDs(ctx, pPageID)
+	perspectiveGroupIDs, err := s.picturesRepository.PerspectivePageGroupIDs(ctx, pPageID)
 	if err != nil {
 		return nil, err
 	}
@@ -186,21 +184,6 @@ func (s *PerspectivePictureFetcher) Fetch(
 		Pictures:      result,
 		TotalPictures: int32(totalPictures), //nolint: gosec
 	}, nil
-}
-
-func (s *PerspectivePictureFetcher) perspectiveGroupIDs(ctx context.Context, pageID int32) ([]int32, error) {
-	if ids, ok := s.perspectiveCache[pageID]; ok {
-		return ids, nil
-	}
-
-	ids, err := s.picturesRepository.PerspectivePageGroupIDs(ctx, pageID)
-	if err != nil {
-		return nil, err
-	}
-
-	s.perspectiveCache[pageID] = ids
-
-	return ids, nil
 }
 
 func (s *PerspectivePictureFetcher) pictureSelect(

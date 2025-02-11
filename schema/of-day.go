@@ -1,6 +1,10 @@
 package schema
 
-import "github.com/doug-martin/goqu/v9"
+import (
+	"database/sql"
+
+	"github.com/doug-martin/goqu/v9"
+)
 
 const (
 	OfDayTableName           = "of_day"
@@ -13,4 +17,10 @@ var (
 	OfDayTable           = goqu.T(OfDayTableName)
 	OfDayTableDayDateCol = OfDayTable.Col(OfDayTableDayDateColName)
 	OfDayTableItemIDCol  = OfDayTable.Col(OfDayTableItemIDColName)
+	OfDayTableUserIDCol  = OfDayTable.Col(OfDayTableUserIDColName)
 )
+
+type OfDayRow struct {
+	ItemID int64         `db:"item_id"`
+	UserID sql.NullInt64 `db:"user_id"`
+}

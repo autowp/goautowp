@@ -127,7 +127,7 @@ func TestModerVote(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -245,7 +245,7 @@ func TestFlopNormalizeAndRepair(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
 		schema.PictureTableStatusColName: schema.PictureStatusInbox,
@@ -312,7 +312,7 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
@@ -409,7 +409,7 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
@@ -500,7 +500,7 @@ func TestPictureCrop(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -553,7 +553,7 @@ func TestPictureCropByOneAxis(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -614,7 +614,7 @@ func TestInvalidPictureCrop(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -694,8 +694,8 @@ func TestClearReplacePicture(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
-	replacePictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
+	replacePictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
 		schema.PictureTableReplacePictureIDColName: replacePictureID,
@@ -738,7 +738,7 @@ func TestSetPicturePoint(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -843,7 +843,7 @@ func TestUpdatePicture(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -926,8 +926,8 @@ func TestSetPictureCopyrights(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
-	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
+	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1000,7 +1000,7 @@ func TestSetPictureStatus(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1120,8 +1120,8 @@ func TestReplacePicture(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
-	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
+	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1294,7 +1294,7 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	_, err = client.CreatePictureItem(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -1431,7 +1431,7 @@ func TestGetPicturePath(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg")
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
 	_, err = client.CreatePictureItem(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),

@@ -39,7 +39,9 @@ func randomHexString(t *testing.T, length int) string {
 	return hex.EncodeToString(randBytes)
 }
 
-func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, filepath string) (int64, int) {
+func addPicture(
+	t *testing.T, imageStorage *storage.Storage, db *goqu.Database, filepath string, status schema.PictureStatus,
+) (int64, int) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -61,7 +63,7 @@ func addPicture(t *testing.T, imageStorage *storage.Storage, db *goqu.Database, 
 		schema.PictureTableOwnerIDColName:  nil,
 		schema.PictureTableWidthColName:    img.Width(),
 		schema.PictureTableHeightColName:   img.Height(),
-		schema.PictureTableStatusColName:   schema.PictureStatusInbox,
+		schema.PictureTableStatusColName:   status,
 	}).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 

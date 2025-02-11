@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"sync"
 
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
@@ -73,6 +74,8 @@ type Repository struct {
 	imageStorage          *storage.Storage
 	textStorageRepository *textstorage.Repository
 	itemsRepository       *items.Repository
+	perspectiveCache      map[int32][]int32
+	perspectiveCacheMutex sync.Mutex
 }
 
 type PictureFields struct {
@@ -110,6 +113,7 @@ const (
 	OrderByIDAsc
 	OrderByFrontPerspectives
 	OrderByPerspectivesGroupPerspectives
+	OrderByVotesAndPerspectivesGroupPerspectives
 	OrderByAncestorStockFrontFirst
 )
 
@@ -129,6 +133,8 @@ func NewRepository(
 		imageStorage:          imageStorage,
 		textStorageRepository: textStorageRepository,
 		itemsRepository:       itemsRepository,
+		perspectiveCache:      make(map[int32][]int32),
+		perspectiveCacheMutex: sync.Mutex{},
 	}
 }
 
@@ -608,6 +614,36 @@ func (s *Repository) orderBy( //nolint: maintidx
 		sqSelect = sqSelect.Order(
 			goqu.MIN(goqu.T(dfDistanceAlias).Col(schema.DfDistanceTableDistanceColName)).Asc(),
 		)
+	case OrderByVotesAndPerspectivesGroupPerspectives:
+		if options.PictureItem == nil || options.PictureItem.ItemParentCacheAncestor == nil ||
+			options.PictureItem.PerspectiveGroupPerspective == nil {
+			return nil, false, errJoinNeededToSortByPerspective
+		}
+
+		var (
+			piAlias                 = options.PictureItemAlias(alias, 0)
+			ipcaAlias               = options.PictureItem.ItemParentCacheAncestorAlias(piAlias)
+			pgpAlias                = query.AppendPerspectiveGroupPerspectiveAlias(piAlias)
+			col       exp.Orderable = goqu.T(pgpAlias).Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
+		)
+
+		if !options.IsIDUnique() {
+			col = goqu.MAX(col)
+		}
+
+		sqSelect = sqSelect.
+			Join(schema.PictureVoteSummaryTable, goqu.On(
+				aliasTable.Col(schema.PictureTableIDColName).Eq(schema.PictureVoteSummaryTablePictureIDCol),
+			)).
+			Order(
+				goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableSportColName)).Asc(),
+				goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableTuningColName)).Asc(),
+				col.Asc(),
+				schema.PictureVoteSummaryTablePositiveCol.Desc(),
+				aliasTable.Col(schema.PictureTableWidthColName).Desc(),
+				aliasTable.Col(schema.PictureTableHeightColName).Desc(),
+			)
+
 	case OrderByPerspectivesGroupPerspectives:
 		if options.PictureItem == nil {
 			return nil, false, errJoinNeededToSortByPerspective
@@ -1768,7 +1804,7 @@ func (s *Repository) PictureModerVotes(
 	return rows, err
 }
 
-func (s *Repository) PerspectivePageGroupIDs(
+func (s *Repository) perspectivePageGroupIDs(
 	ctx context.Context, pageID int32,
 ) ([]int32, error) {
 	var ids []int32
@@ -1780,4 +1816,22 @@ func (s *Repository) PerspectivePageGroupIDs(
 		ScanValsContext(ctx, &ids)
 
 	return ids, err
+}
+
+func (s *Repository) PerspectivePageGroupIDs(ctx context.Context, pageID int32) ([]int32, error) {
+	s.perspectiveCacheMutex.Lock()
+	defer s.perspectiveCacheMutex.Unlock()
+
+	if ids, ok := s.perspectiveCache[pageID]; ok {
+		return ids, nil
+	}
+
+	ids, err := s.perspectivePageGroupIDs(ctx, pageID)
+	if err != nil {
+		return nil, err
+	}
+
+	s.perspectiveCache[pageID] = ids
+
+	return ids, nil
 }

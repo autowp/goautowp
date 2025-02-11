@@ -29,6 +29,7 @@ linters:
     - errorlint
     - exhaustive
     #- exhaustruct
+    - exptostd
     - fatcontext
     - forbidigo
     - forcetypeassert
@@ -74,6 +75,7 @@ linters:
     - nakedret
     #- nestif
     - nilerr
+    - nilnesserr
     - nilnil
     - nlreturn
     - noctx
@@ -102,17 +104,20 @@ linters:
     #- testpackage
     - thelper
     - tparallel
-    - typecheck
     - unconvert
     - unparam
     - unused
     - usestdlibvars
     - varnamelen
+    - usetesting
     - wastedassign
     - whitespace
     #- wrapcheck
     - wsl
     - zerologlint
+  disable:
+    - typecheck
+    - exportloopref
 linters-settings:
   mnd:
     ignored-numbers:
