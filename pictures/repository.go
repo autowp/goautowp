@@ -751,7 +751,7 @@ func (s *Repository) orderBy( //nolint: maintidx
 		sqSelect = sqSelect.Order(
 			goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableTuningColName)).Asc(),
 			goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableSportColName)).Asc(),
-			goqu.T(iAlias).Col(schema.ItemTableIsConceptColName).Asc(),
+			goqu.MAX(goqu.T(iAlias).Col(schema.ItemTableIsConceptColName)).Asc(),
 			goqu.L("?", perspectiveIDCol.Eq(schema.PerspectiveFrontStrict)).Desc(),
 			goqu.L("?", perspectiveIDCol.Eq(schema.PerspectiveFront)).Desc(),
 			goqu.L("?", perspectiveIDCol.Eq(schema.Perspective3Div4Left)).Desc(),
