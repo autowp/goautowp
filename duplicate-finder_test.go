@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
@@ -21,7 +20,7 @@ func TestDuplicateFinder(t *testing.T) {
 	df, err := NewDuplicateFinder(goquDB)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)

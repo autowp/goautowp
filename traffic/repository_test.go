@@ -1,7 +1,6 @@
 package traffic
 
 import (
-	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -45,7 +44,7 @@ func createTrafficService(t *testing.T) *Traffic {
 func TestAutoWhitelist(t *testing.T) { //nolint:paralleltest
 	svc := createTrafficService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ip := net.IPv4(66, 249, 73, 139) // google
 
@@ -82,7 +81,7 @@ func TestAutoWhitelist(t *testing.T) { //nolint:paralleltest
 func TestAutoBanByProfile(t *testing.T) { //nolint:paralleltest
 	svc := createTrafficService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	profile := AutobanProfile{
 		Limit:  3,
@@ -131,7 +130,7 @@ func TestWhitelistedNotBanned(t *testing.T) {
 
 	svc := createTrafficService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	profile := AutobanProfile{
 		Limit:  3,
@@ -170,7 +169,7 @@ func TestTop(t *testing.T) {
 
 	svc := createTrafficService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := svc.Ban.Clear(ctx)
 	require.NoError(t, err)

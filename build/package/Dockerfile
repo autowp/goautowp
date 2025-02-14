@@ -19,9 +19,9 @@ RUN apt-get update -qqy && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists && \
     update-ca-certificates && \
-    wget -q https://go.dev/dl/go1.23.6.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.6.linux-amd64.tar.gz && \
-    rm go1.23.6.linux-amd64.tar.gz
+    wget -q https://go.dev/dl/go1.24.0.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz && \
+    rm go1.24.0.linux-amd64.tar.gz
 
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
 

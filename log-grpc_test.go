@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
@@ -15,13 +14,13 @@ func TestGetEvents(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(t.Context(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
 	client := NewLogClient(conn)
 
-	ctx := metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken)
+	ctx := metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken)
 
 	_, err = client.GetEvents(ctx, &LogEventsRequest{})
 	require.NoError(t, err)
@@ -33,13 +32,13 @@ func TestGetEventsWithFilters(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(t.Context(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
 	client := NewLogClient(conn)
 
-	ctx := metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken)
+	ctx := metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken)
 
 	_, err = client.GetEvents(ctx, &LogEventsRequest{
 		UserId:    1,

@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
@@ -12,7 +11,7 @@ import (
 func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -39,7 +38,7 @@ func TestAddEmptyCommentShouldReturnError(t *testing.T) {
 func TestAddComment(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -116,7 +115,7 @@ func TestAddComment(t *testing.T) {
 }
 
 func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) { //nolint:paralleltest
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -170,7 +169,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) { //nolint:para
 func TestSubscribeComment(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -202,7 +201,7 @@ func TestSubscribeComment(t *testing.T) {
 func TestVoteComment(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -327,7 +326,7 @@ func TestVoteComment(t *testing.T) {
 func TestCompleteComment(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -368,7 +367,7 @@ func TestCompleteComment(t *testing.T) {
 func TestMessagesByUserIdentity(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -392,7 +391,7 @@ func TestMessagesByUserIdentity(t *testing.T) {
 
 //nolint:paralleltest
 func TestMoveComment(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	forumsClient := NewForumsClient(conn)
@@ -470,7 +469,7 @@ func TestMoveComment(t *testing.T) {
 func TestAddCommentOfUnexpectedItemType(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -497,7 +496,7 @@ func TestAddCommentOfUnexpectedItemType(t *testing.T) {
 func TestAddCommentToDeletedOrNotExistentParent(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewCommentsClient(conn)
 	cfg := config.LoadConfig(".")

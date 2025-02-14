@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -22,7 +21,7 @@ const TestImageFile = "./image/storage/_files/Towers_Schiphol_small.jpg"
 func TestCreateUpdateDeleteUser(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewUsersClient(conn)
 
@@ -107,7 +106,7 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -163,7 +162,7 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 func TestGetOnlineUsers(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -206,7 +205,7 @@ func TestGetOnlineUsers(t *testing.T) {
 func TestGetUsersPagination(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewUsersClient(conn)
 
@@ -217,7 +216,7 @@ func TestGetUsersPagination(t *testing.T) {
 func TestGetUsersSearch(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 

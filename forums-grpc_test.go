@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
@@ -13,7 +12,7 @@ import (
 func TestGetThemes(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -34,7 +33,7 @@ func TestGetThemes(t *testing.T) {
 func TestGetTheme(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -56,7 +55,7 @@ func TestGetTheme(t *testing.T) {
 
 //nolint:paralleltest
 func TestGetLastTopicAndLastMessage(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -104,7 +103,7 @@ func TestGetLastTopicAndLastMessage(t *testing.T) {
 func TestGetUserSummary(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -124,7 +123,7 @@ func TestGetUserSummary(t *testing.T) {
 func TestCloseTopic(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewForumsClient(conn)
 	cfg := config.LoadConfig(".")

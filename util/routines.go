@@ -1,6 +1,7 @@
 package util
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"database/sql/driver"
@@ -61,7 +62,7 @@ func Close(c io.Closer) {
 	}
 }
 
-func Contains[T constraints.Ordered](s []T, e T) bool {
+func Contains[T cmp.Ordered](s []T, e T) bool {
 	for _, a := range s {
 		if a == e {
 			return true
@@ -165,7 +166,7 @@ func TimePtr(v time.Time) *time.Time {
 	return &tVar
 }
 
-func Min[T constraints.Ordered](a, b T) T { //nolint: ireturn
+func Min[T cmp.Ordered](a, b T) T { //nolint: ireturn
 	if a < b {
 		return a
 	}
@@ -173,7 +174,7 @@ func Min[T constraints.Ordered](a, b T) T { //nolint: ireturn
 	return b
 }
 
-func Max[T constraints.Ordered](a, b T) T { //nolint: ireturn
+func Max[T cmp.Ordered](a, b T) T { //nolint: ireturn
 	if a > b {
 		return a
 	}
@@ -193,7 +194,7 @@ func RemoveValueFromArray[T comparable](l []T, item T) []T {
 	return out
 }
 
-type Rect[T constraints.Ordered] struct {
+type Rect[T cmp.Ordered] struct {
 	Left   T
 	Top    T
 	Width  T

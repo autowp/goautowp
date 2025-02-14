@@ -125,7 +125,7 @@ func (s *YoomoneyHandler) Handle(ctx context.Context, fields YoomoneyWebhook) er
 	re := regexp.MustCompile(`^vod/(\d{4}-\d{2}-\d{2})/(\d+)/(\d+)$`)
 
 	matches := re.FindStringSubmatch(fields.Label)
-	if matches == nil || len(matches) < 2 {
+	if len(matches) < 2 {
 		return errLabelNotMatchedByRegexp
 	}
 

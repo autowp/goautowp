@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
@@ -16,7 +15,7 @@ func TestGetText(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewTextClient(conn)
 	kc := cnt.Keycloak()

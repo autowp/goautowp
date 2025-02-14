@@ -1,7 +1,6 @@
 package messaging
 
 import (
-	"context"
 	"database/sql"
 	"math/rand"
 	"strconv"
@@ -43,7 +42,7 @@ func TestGetUserNewMessagesCount(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, err := s.GetUserNewMessagesCount(context.Background(), 1)
+	_, err := s.GetUserNewMessagesCount(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -51,7 +50,7 @@ func TestGetInboxCount(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, err := s.GetInboxCount(context.Background(), 1)
+	_, err := s.GetInboxCount(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -59,7 +58,7 @@ func TestGetInboxNewCount(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, err := s.GetInboxNewCount(context.Background(), 1)
+	_, err := s.GetInboxNewCount(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -67,7 +66,7 @@ func TestGetSentCount(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, err := s.GetSentCount(context.Background(), 1)
+	_, err := s.GetSentCount(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -75,7 +74,7 @@ func TestGetSystemCount(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, err := s.GetSystemCount(context.Background(), 1)
+	_, err := s.GetSystemCount(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -83,7 +82,7 @@ func TestGetSystemNewCount(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, err := s.GetSystemNewCount(context.Background(), 1)
+	_, err := s.GetSystemNewCount(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -91,7 +90,7 @@ func TestGetDialogCount(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, err := s.GetDialogCount(context.Background(), 1, 2)
+	_, err := s.GetDialogCount(t.Context(), 1, 2)
 	require.NoError(t, err)
 }
 
@@ -99,7 +98,7 @@ func TestDeleteMessage(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	err := s.DeleteMessage(context.Background(), 1, 1)
+	err := s.DeleteMessage(t.Context(), 1, 1)
 	require.NoError(t, err)
 }
 
@@ -107,7 +106,7 @@ func TestClearSent(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	err := s.ClearSent(context.Background(), 1)
+	err := s.ClearSent(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -115,7 +114,7 @@ func TestClearSystem(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	err := s.ClearSystem(context.Background(), 1)
+	err := s.ClearSystem(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -123,7 +122,7 @@ func TestGetInbox(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, _, err := s.GetInbox(context.Background(), 1, 1)
+	_, _, err := s.GetInbox(t.Context(), 1, 1)
 	require.NoError(t, err)
 }
 
@@ -131,7 +130,7 @@ func TestGetSentbox(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, _, err := s.GetSentbox(context.Background(), 1, 1)
+	_, _, err := s.GetSentbox(t.Context(), 1, 1)
 	require.NoError(t, err)
 }
 
@@ -139,7 +138,7 @@ func TestGetSystembox(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, _, err := s.GetSystembox(context.Background(), 1, 1)
+	_, _, err := s.GetSystembox(t.Context(), 1, 1)
 	require.NoError(t, err)
 }
 
@@ -147,7 +146,7 @@ func TestGetDialogbox(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, _, err := s.GetDialogbox(context.Background(), 1, 2, 1)
+	_, _, err := s.GetDialogbox(t.Context(), 1, 2, 1)
 	require.NoError(t, err)
 }
 
@@ -184,7 +183,7 @@ func createRandomUser(t *testing.T, s *Repository) int64 {
 
 func TestDialogCount(t *testing.T) { //nolint:paralleltest
 	repo := createRepository(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	user1 := createRandomUser(t, repo)
 	user2 := createRandomUser(t, repo)

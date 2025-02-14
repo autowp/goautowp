@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"database/sql"
 	"io"
 	"net/http"
@@ -26,7 +25,7 @@ const (
 func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -98,7 +97,7 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 func TestAddImageFromBlobAndFormat(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -129,7 +128,7 @@ func TestAddImageFromBlobAndFormat(t *testing.T) {
 func TestS3AddImageWithPreferredName(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -159,7 +158,7 @@ func TestS3AddImageWithPreferredName(t *testing.T) {
 func TestAddImageAndCrop(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -236,7 +235,7 @@ func TestAddImageAndCrop(t *testing.T) {
 func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)
@@ -279,7 +278,7 @@ func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 func TestRequestFormattedImageAgain(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig("../../")
 	db, err := sql.Open("mysql", cfg.AutowpDSN)

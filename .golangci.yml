@@ -58,6 +58,7 @@ linters:
     - gosmopolitan
     - govet
     - grouper
+    - iface
     - importas
     - inamedparam
     - ineffassign
@@ -89,6 +90,7 @@ linters:
     - promlinter
     - protogetter
     - reassign
+    #- recvcheck
     - revive
     - rowserrcheck
     - sloglint
@@ -98,7 +100,6 @@ linters:
     - stylecheck
     - tagalign
     #- tagliatelle
-    - tenv
     - testableexamples
     - testifylint
     #- testpackage
@@ -115,9 +116,6 @@ linters:
     #- wrapcheck
     - wsl
     - zerologlint
-  disable:
-    - typecheck
-    - exportloopref
 linters-settings:
   mnd:
     ignored-numbers:

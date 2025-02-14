@@ -1,7 +1,6 @@
 package traffic
 
 import (
-	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -54,7 +53,7 @@ func TestContains(t *testing.T) {
 
 	svc := createWhitelistService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ip := net.IPv4(66, 249, 73, 139)
 

@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -22,7 +21,7 @@ func TestYoomoneyWebhookInvalidLabel(t *testing.T) {
 
 	itemOfDayRepository := itemofday.NewRepository(goquDB)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	yh, err := NewYoomoneyHandler("0.99", "01234567890ABCDEF01234567890", itemOfDayRepository)
 	require.NoError(t, err)
@@ -54,7 +53,7 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	itemOfDayRepository := itemofday.NewRepository(goquDB)
 	itemOfDayRepository.SetMinPictures(0)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	yh, err := NewYoomoneyHandler("0.99", "01234567890ABCDEF01234567890", itemOfDayRepository)
 	require.NoError(t, err)

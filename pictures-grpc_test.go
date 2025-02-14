@@ -47,7 +47,7 @@ func getPictureID(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
 func TestView(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestView(t *testing.T) {
 func TestVote(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
@@ -84,7 +84,7 @@ func TestVote(t *testing.T) {
 func TestModerVoteTemplate(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -117,7 +117,7 @@ func TestModerVoteTemplate(t *testing.T) {
 func TestModerVote(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -214,7 +214,7 @@ func TestModerVote(t *testing.T) {
 func TestUserSummary(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -235,7 +235,7 @@ func TestUserSummary(t *testing.T) {
 func TestFlopNormalizeAndRepair(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -281,7 +281,7 @@ func TestFlopNormalizeAndRepair(t *testing.T) {
 func TestDeleteSimilar(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -302,7 +302,7 @@ func TestDeleteSimilar(t *testing.T) {
 func TestPictureItemAreaAndPerspective(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -399,7 +399,7 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 func TestPictureItemSetPictureItemItemID(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -490,7 +490,7 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 func TestPictureCrop(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -543,7 +543,7 @@ func TestPictureCrop(t *testing.T) {
 func TestPictureCropByOneAxis(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -604,7 +604,7 @@ func TestPictureCropByOneAxis(t *testing.T) {
 func TestInvalidPictureCrop(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -684,7 +684,7 @@ func TestInvalidPictureCrop(t *testing.T) {
 func TestClearReplacePicture(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -728,7 +728,7 @@ func TestClearReplacePicture(t *testing.T) {
 func TestSetPicturePoint(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -833,7 +833,7 @@ func TestSetPicturePoint(t *testing.T) {
 func TestUpdatePicture(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -914,7 +914,7 @@ func TestUpdatePicture(t *testing.T) {
 func TestSetPictureCopyrights(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -990,7 +990,7 @@ func TestSetPictureCopyrights(t *testing.T) {
 func TestSetPictureStatus(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1110,7 +1110,7 @@ func TestSetPictureStatus(t *testing.T) {
 func TestReplacePicture(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1204,7 +1204,7 @@ func TestReplacePicture(t *testing.T) {
 func TestGetPictures(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewPicturesClient(conn)
 
@@ -1246,7 +1246,7 @@ func TestGetPictures(t *testing.T) {
 func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	client := NewPicturesClient(conn)
 	itemsClient := NewItemsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -1359,7 +1359,7 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 func TestGetPicturePath(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	client := NewPicturesClient(conn)
 	itemsClient := NewItemsClient(conn)
 	cfg := config.LoadConfig(".")
@@ -1461,7 +1461,7 @@ func TestGetPicturePath(t *testing.T) {
 func TestGetPicturesOrders(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewPicturesClient(conn)
 
@@ -1528,7 +1528,7 @@ func TestGetPicturesOrders(t *testing.T) {
 func TestGetPicturesFilters(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewPicturesClient(conn)
 
@@ -1593,7 +1593,7 @@ func TestGetPictureIP(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	kc := cnt.Keycloak()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -1634,7 +1634,7 @@ func TestInbox(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	kc := cnt.Keycloak()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -1699,7 +1699,7 @@ func TestNewbox(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	kc := cnt.Keycloak()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -1737,7 +1737,7 @@ func TestInboxCount(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	kc := cnt.Keycloak()
 
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)

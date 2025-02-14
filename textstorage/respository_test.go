@@ -1,7 +1,6 @@
 package textstorage
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 
@@ -21,7 +20,7 @@ func TestGetText(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := goquDB.Insert(schema.TextstorageTextTable).Rows(goqu.Record{
 		schema.TextstorageTextTableTextColName:        "test",

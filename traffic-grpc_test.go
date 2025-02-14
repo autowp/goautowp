@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
@@ -16,7 +15,7 @@ func TestHttpBanPost(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(t.Context(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
@@ -27,7 +26,7 @@ func TestHttpBanPost(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
-		context.Background(),
+		t.Context(),
 		metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
 	)
 
@@ -62,7 +61,7 @@ func TestTop(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(t.Context(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
@@ -70,7 +69,7 @@ func TestTop(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
-		context.Background(),
+		t.Context(),
 		metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
 	)
 
@@ -82,10 +81,10 @@ func TestWhitelist(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
-	ctx := context.Background()
+	ctx := t.Context()
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(context.Background(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(t.Context(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 

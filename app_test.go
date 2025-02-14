@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -41,7 +40,6 @@ func TestServe(t *testing.T) {
 	cfg := config.LoadConfig(".")
 	cfg.PublicRest.Listen = ":9090"
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
 	done := make(chan bool)
 	go func() {
@@ -49,7 +47,7 @@ func TestServe(t *testing.T) {
 		close(done)
 	}()
 
-	err := app.Serve(ctx, ServeOptions{
+	err := app.Serve(t.Context(), ServeOptions{
 		DuplicateFinderAMQP:   true,
 		MonitoringAMQP:        true,
 		GRPC:                  true,
@@ -66,9 +64,8 @@ func TestImageStorageListBrokenImages(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
-	err := app.ImageStorageListBrokenImages(ctx, "picture", "")
+	err := app.ImageStorageListBrokenImages(t.Context(), "picture", "")
 	require.NoError(t, err)
 }
 
@@ -77,9 +74,8 @@ func TestImageStorageListUnlinkedObjects(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
-	err := app.ImageStorageListUnlinkedObjects(ctx, "format", true, "")
+	err := app.ImageStorageListUnlinkedObjects(t.Context(), "format", true, "")
 	require.NoError(t, err)
 }
 
@@ -88,9 +84,8 @@ func TestGenerateIndexCache(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
-	err := app.GenerateIndexCache(ctx)
+	err := app.GenerateIndexCache(t.Context())
 	require.NoError(t, err)
 }
 
@@ -99,9 +94,8 @@ func TestSpecsRefreshConflictFlags(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
-	err := app.SpecsRefreshConflictFlags(ctx)
+	err := app.SpecsRefreshConflictFlags(t.Context())
 	require.NoError(t, err)
 }
 
@@ -110,9 +104,8 @@ func TestSpecsRefreshItemConflictFlags(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
-	err := app.SpecsRefreshItemConflictFlags(ctx, 1)
+	err := app.SpecsRefreshItemConflictFlags(t.Context(), 1)
 	require.NoError(t, err)
 }
 
@@ -121,7 +114,7 @@ func TestSpecsRefreshUserConflicts(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	kc := cnt.Keycloak()
 	usersClient := NewUsersClient(conn)
@@ -147,9 +140,8 @@ func TestSpecsRefreshUsersConflicts(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
-	err := app.SpecsRefreshUsersConflicts(ctx)
+	err := app.SpecsRefreshUsersConflicts(t.Context())
 	require.NoError(t, err)
 }
 
@@ -158,9 +150,8 @@ func TestSpecsRefreshActualValues(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
-	err := app.SpecsRefreshActualValues(ctx)
+	err := app.SpecsRefreshActualValues(t.Context())
 	require.NoError(t, err)
 }
 
@@ -169,8 +160,7 @@ func TestRefreshItemParentLanguage(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 	app := NewApplication(cfg)
-	ctx := context.Background()
 
-	err := app.RefreshItemParentLanguage(ctx, schema.ItemTableItemTypeIDBrand, 10)
+	err := app.RefreshItemParentLanguage(t.Context(), schema.ItemTableItemTypeIDBrand, 10)
 	require.NoError(t, err)
 }

@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -18,7 +17,7 @@ import (
 func TestLikesRating(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewRatingClient(conn)
 
@@ -34,7 +33,7 @@ func TestLikesRating(t *testing.T) {
 func TestPictureLikesRating(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig("..")
 
@@ -97,7 +96,7 @@ func TestPictureLikesRating(t *testing.T) {
 func TestPicturesRating(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewRatingClient(conn)
 
@@ -116,7 +115,7 @@ func TestPicturesRating(t *testing.T) {
 func TestSpecsRating(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewRatingClient(conn)
 

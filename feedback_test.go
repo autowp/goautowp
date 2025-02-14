@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"net"
 	"testing"
 
@@ -15,7 +14,7 @@ func TestFeedbackNoBody(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+	ctx := peer.NewContext(t.Context(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
 
 	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{})
 	require.Error(t, err)
@@ -27,7 +26,7 @@ func TestFeedbackEmptyValues(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+	ctx := peer.NewContext(t.Context(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
 
 	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
 		Name:    "",
@@ -43,7 +42,7 @@ func TestFeedbackEmptyName(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+	ctx := peer.NewContext(t.Context(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
 
 	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
 		Name:    "",
@@ -59,7 +58,7 @@ func TestFeedbackEmptyEmail(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+	ctx := peer.NewContext(t.Context(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
 
 	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
 		Name:    "",
@@ -75,7 +74,7 @@ func TestFeedbackEmptyMessage(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+	ctx := peer.NewContext(t.Context(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
 
 	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
 		Name:    "user",
@@ -89,7 +88,7 @@ func TestFeedbackEmptyMessage(t *testing.T) {
 	config := LoadConfig()
 	config.Feedback.Captcha = false
 
-	ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
+	ctx := peer.NewContext(t.Context(), &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4(192, 168, 0, 1)}})
 
 	_, err = srv.CreateFeedback(ctx, &APICreateFeedbackRequest{
 		Name:    "user",

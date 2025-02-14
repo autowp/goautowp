@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"math/rand"
@@ -25,7 +24,7 @@ import (
 func TestTopCategoriesList(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -43,7 +42,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
@@ -170,7 +169,7 @@ func TestGetTwinsBrandsList(t *testing.T) {
 func TestTopBrandsList(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -184,7 +183,7 @@ func TestTopBrandsList(t *testing.T) {
 func TestTopPersonsAuthorList(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -199,7 +198,7 @@ func TestTopPersonsAuthorList(t *testing.T) {
 func TestTopPersonsContentList(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -214,7 +213,7 @@ func TestTopPersonsContentList(t *testing.T) {
 func TestTopFactoriesList(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -228,7 +227,7 @@ func TestTopFactoriesList(t *testing.T) {
 func TestContentLanguages(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -241,7 +240,7 @@ func TestContentLanguages(t *testing.T) {
 func TestItemLinks(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -318,7 +317,7 @@ func TestItemLinks(t *testing.T) {
 func TestItemVehicleTypes(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -411,7 +410,7 @@ func TestItemVehicleTypes(t *testing.T) {
 func TestItemParentLanguages(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -437,7 +436,7 @@ func TestItemParentLanguages(t *testing.T) {
 func TestItemLanguages(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -465,7 +464,7 @@ func TestCatalogueMenuList(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
@@ -510,7 +509,7 @@ func TestCatalogueMenuList(t *testing.T) {
 func TestStats(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -532,7 +531,7 @@ func TestStats(t *testing.T) {
 func TestSetItemParentLanguage(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -733,7 +732,7 @@ func TestBrandNewItems(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
@@ -767,7 +766,7 @@ func TestNewItems(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
@@ -825,7 +824,7 @@ func TestInboxPicturesCount(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	repository := items.NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 	kc := cnt.Keycloak()
 
@@ -967,7 +966,7 @@ func TestCreateMoveDeleteItemParent(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
@@ -1106,7 +1105,7 @@ func TestDeleteItemParentNotDeletesSecondChild(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
@@ -1218,7 +1217,7 @@ func TestUpdateItemParent(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -1350,7 +1349,7 @@ func TestUpdateItemLanguage(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -1541,7 +1540,7 @@ func TestSetUserItemSubscription(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -1601,7 +1600,7 @@ func TestSetItemEngine(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -1712,7 +1711,7 @@ func TestSetItemEngineInheritance(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -1830,7 +1829,7 @@ func TestGetBrands(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -1942,7 +1941,7 @@ func TestBrandSections(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -1967,7 +1966,7 @@ func TestBrandSections2(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -2119,7 +2118,7 @@ func TestTwinsGroupBrands(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -2221,7 +2220,7 @@ func TestAutocomplete(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// admin
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
@@ -2250,7 +2249,7 @@ func TestTooBig(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// admin
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
@@ -2278,7 +2277,7 @@ func TestSuggestionsTo(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// admin
 	_, adminToken := getUserWithCleanHistory(t, conn, cfg, goquDB, adminUsername, adminPassword)
@@ -2305,7 +2304,7 @@ func TestGetItemParents(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 
@@ -2365,7 +2364,7 @@ func TestGetItemParents(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	res, err := client.GetItemParents(context.Background(), &ItemParentsRequest{
+	res, err := client.GetItemParents(t.Context(), &ItemParentsRequest{
 		Options: &ItemParentListOptions{
 			ParentId: parentID,
 		},
@@ -2379,7 +2378,7 @@ func TestGetItemParents(t *testing.T) {
 		require.Contains(t, []int64{child1ID, child2ID}, row.GetItemId())
 	}
 
-	res, err = client.GetItemParents(context.Background(), &ItemParentsRequest{
+	res, err = client.GetItemParents(t.Context(), &ItemParentsRequest{
 		Options: &ItemParentListOptions{
 			ParentId: parentID,
 		},
@@ -2398,7 +2397,7 @@ func TestGetItemParents(t *testing.T) {
 func TestItemFields(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	client := NewItemsClient(conn)
 	kc := cnt.Keycloak()
 	cfg := config.LoadConfig(".")
@@ -2456,7 +2455,7 @@ func TestItemFields(t *testing.T) {
 func TestItemParentFields(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	client := NewItemsClient(conn)
 	kc := cnt.Keycloak()
 	cfg := config.LoadConfig(".")
@@ -2505,7 +2504,7 @@ func TestTwinsGroupPictures(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 	picturesClient := NewPicturesClient(conn)
@@ -2600,7 +2599,7 @@ func TestPersonPreviewPictures(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 	picturesClient := NewPicturesClient(conn)
@@ -2688,7 +2687,7 @@ func TestCutawayAuthorsWithPreviewPictures(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewItemsClient(conn)
 	picturesClient := NewPicturesClient(conn)
@@ -2793,7 +2792,7 @@ func TestCutawayAuthorsWithPreviewPictures(t *testing.T) {
 func TestItemOfDayPicture(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	client := NewItemsClient(conn)
 	kc := cnt.Keycloak()
 	cfg := config.LoadConfig(".")

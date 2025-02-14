@@ -1,7 +1,6 @@
 package traffic
 
 import (
-	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -34,7 +33,7 @@ func TestMonitoringAdd(t *testing.T) {
 
 	svc := createMonitoringService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := svc.Add(ctx, net.IPv4(192, 168, 0, 1), time.Now())
 	require.NoError(t, err)
@@ -48,7 +47,7 @@ func TestMonitoringGC(t *testing.T) {
 
 	svc := createMonitoringService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := svc.Clear(ctx)
 	require.NoError(t, err)
@@ -67,7 +66,7 @@ func TestMonitoringGC(t *testing.T) {
 func TestListByBanProfile(t *testing.T) { //nolint:paralleltest
 	svc := createMonitoringService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := svc.Clear(ctx)
 	require.NoError(t, err)

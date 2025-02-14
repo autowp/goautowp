@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
@@ -20,7 +19,7 @@ func TestGetVehicleTypesInaccessibleAnonymously(t *testing.T) {
 	srv, err := cnt.GRPCServer()
 	require.NoError(t, err)
 
-	_, err = srv.GetVehicleTypes(context.Background(), &emptypb.Empty{})
+	_, err = srv.GetVehicleTypes(t.Context(), &emptypb.Empty{})
 	require.Error(t, err)
 }
 
@@ -31,7 +30,7 @@ func TestGetVehicleTypesInaccessibleWithEmptyToken(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
-		context.Background(),
+		t.Context(),
 		metadata.New(map[string]string{authorizationHeader: bearerPrefix}),
 	)
 
@@ -46,7 +45,7 @@ func TestGetVehicleTypesInaccessibleWithInvalidToken(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
-		context.Background(),
+		t.Context(),
 		metadata.New(map[string]string{authorizationHeader: bearerPrefix + "abc"}),
 	)
 
@@ -61,7 +60,7 @@ func TestGetVehicleTypesInaccessibleWithWronglySignedToken(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := metadata.NewIncomingContext(
-		context.Background(),
+		t.Context(),
 		metadata.New(map[string]string{
 			authorizationHeader: bearerPrefix + tokenWithInvalidSignature,
 		}),
@@ -76,7 +75,7 @@ func TestGetVehicleTypesInaccessibleWithoutModeratePrivilege(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
@@ -101,7 +100,7 @@ func TestGetVehicleTypes(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)

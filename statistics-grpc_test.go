@@ -31,7 +31,7 @@ func assertGridNotEmpty(grid []*PulseGrid) error {
 func TestStatisticsPulse(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, 5000*time.Second)
 	defer cancel()
@@ -90,7 +90,7 @@ func TestStatisticsPulse(t *testing.T) {
 func TestAboutData(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	statisticsClient := NewStatisticsClient(conn)
 
@@ -99,7 +99,7 @@ func TestAboutData(t *testing.T) {
 }
 
 func BenchmarkAboutData(b *testing.B) {
-	ctx := context.Background()
+	ctx := b.Context()
 
 	statisticsClient := NewStatisticsClient(conn)
 

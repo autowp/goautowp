@@ -104,7 +104,7 @@ func TestCleanupDeleted(t *testing.T) {
 
 	s, _ := createRepository(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := s.CleanupDeleted(ctx)
 	require.NoError(t, err)
@@ -115,7 +115,7 @@ func TestRefreshRepliesCount(t *testing.T) {
 
 	s, _ := createRepository(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := s.RefreshRepliesCount(ctx)
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestAdd(t *testing.T) {
 	t.Parallel()
 
 	repo, db := createRepository(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	userID := createRandomUser(ctx, t, db)
 
 	var (
@@ -142,7 +142,7 @@ func TestCleanBrokenMessages(t *testing.T) {
 
 	repo, _ := createRepository(t)
 
-	_, err := repo.CleanBrokenMessages(context.Background())
+	_, err := repo.CleanBrokenMessages(t.Context())
 	require.NoError(t, err)
 }
 
@@ -151,6 +151,6 @@ func TestCleanTopics(t *testing.T) {
 
 	repo, _ := createRepository(t)
 
-	_, err := repo.CleanTopics(context.Background())
+	_, err := repo.CleanTopics(t.Context())
 	require.NoError(t, err)
 }

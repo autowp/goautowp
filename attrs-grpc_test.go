@@ -41,7 +41,7 @@ const (
 func TestGetUnits(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	client := NewAttrsClient(conn)
 
 	_, err := client.GetUnits(
@@ -54,7 +54,7 @@ func TestGetUnits(t *testing.T) {
 func TestGetZones(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewAttrsClient(conn)
 
@@ -65,7 +65,7 @@ func TestGetZones(t *testing.T) {
 func TestGetAttributeTypes(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewAttrsClient(conn)
 
@@ -76,7 +76,7 @@ func TestGetAttributeTypes(t *testing.T) {
 func TestGetAttributes(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -97,7 +97,7 @@ func TestGetAttributes(t *testing.T) {
 func TestGetZoneAttributes(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewAttrsClient(conn)
 
@@ -108,7 +108,7 @@ func TestGetZoneAttributes(t *testing.T) {
 func TestGetListOptions(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -251,7 +251,7 @@ func requireValues(t *testing.T, values *AttrValuesResponse) {
 func TestGetValues(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -280,7 +280,7 @@ func TestGetValues(t *testing.T) {
 	require.Empty(t, values.GetItems())
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -380,7 +380,7 @@ func TestGetValues(t *testing.T) {
 func TestGetEmptyValues(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -411,7 +411,7 @@ func TestGetEmptyValues(t *testing.T) {
 	t.Helper()
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -542,7 +542,7 @@ func TestGetEmptyValues(t *testing.T) {
 func TestConflicts(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -597,7 +597,7 @@ func TestConflicts(t *testing.T) {
 func TestValuesInherits(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -636,7 +636,7 @@ func TestValuesInherits(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -686,7 +686,7 @@ func TestValuesInherits(t *testing.T) {
 func TestEngineValuesApplied(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -713,7 +713,7 @@ func TestEngineValuesApplied(t *testing.T) {
 	})
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -763,7 +763,7 @@ func TestEngineValuesApplied(t *testing.T) {
 func TestSetUserValuesList(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -815,7 +815,7 @@ func TestSetUserValuesList(t *testing.T) {
 
 	for _, testCase := range cases {
 		_, err = client.SetUserValues(
-			metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 			&AttrSetUserValuesRequest{
 				Items: []*AttrUserValue{
 					{
@@ -870,7 +870,7 @@ func TestSetUserValuesList(t *testing.T) {
 func TestSetValuesRaceConditions(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1087,7 +1087,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 func TestValuesInheritsThroughItem(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1147,7 +1147,7 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1195,7 +1195,7 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 
 	// delete user value
 	_, err = client.DeleteUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&DeleteAttrUserValuesRequest{
 			AttributeId: intAttributeID,
 			ItemId:      itemID,
@@ -1221,7 +1221,7 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 func TestInheritedValueOverridden(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1255,7 +1255,7 @@ func TestInheritedValueOverridden(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1273,7 +1273,7 @@ func TestInheritedValueOverridden(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1348,7 +1348,7 @@ func TestInheritedValueOverridden(t *testing.T) {
 func TestMoveValues(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1371,7 +1371,7 @@ func TestMoveValues(t *testing.T) {
 	})
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1389,7 +1389,7 @@ func TestMoveValues(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.MoveUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&MoveAttrUserValuesRequest{
 			SrcItemId:  srcItemID,
 			DestItemId: destItemID,
@@ -1439,7 +1439,7 @@ func TestMoveValues(t *testing.T) {
 func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1459,7 +1459,7 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 
 	// set initial value
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1499,7 +1499,7 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	time.Sleep(time.Second)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1541,7 +1541,7 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	time.Sleep(time.Second)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1583,7 +1583,7 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 func TestNonMultipleValuesFiltered(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1603,7 +1603,7 @@ func TestNonMultipleValuesFiltered(t *testing.T) {
 
 	// set value
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1643,7 +1643,7 @@ func TestNonMultipleValuesFiltered(t *testing.T) {
 func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1663,7 +1663,7 @@ func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 
 	// set value
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1695,7 +1695,7 @@ func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1715,7 +1715,7 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 
 	// set value
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1747,7 +1747,7 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 func TestSpecifications(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -1968,7 +1968,7 @@ func TestSpecifications(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err := client.GetSpecifications(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&GetSpecificationsRequest{
 			ItemId:   itemID,
 			Language: "en",
@@ -2003,7 +2003,7 @@ func TestSpecifications(t *testing.T) {
 func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
 
@@ -2256,7 +2256,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 	require.NoError(t, err)
 
 	res, err := client.GetChildSpecifications(
-		metadata.AppendToOutgoingContext(context.Background(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
 		&GetSpecificationsRequest{
 			ItemId:   itemID,
 			Language: "en",

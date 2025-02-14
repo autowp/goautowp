@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"testing"
@@ -44,7 +43,7 @@ func addPicture(
 ) (int64, int) {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	imageID, err := imageStorage.AddImageFromFile(ctx, filepath, "picture", storage.GenerateOptions{})
 	require.NoError(t, err)
@@ -84,7 +83,7 @@ func getUserWithCleanHistory(
 ) (int64, string) {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	kc := gocloak.NewClient(cfg.Keycloak.URL)
 
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, username, password)
@@ -114,7 +113,7 @@ func getUserWithCleanHistory(
 func createItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	cfg := config.LoadConfig(".")
 	repository := items.NewRepository(goquDB, 0, cfg.ContentLanguages, textstorage.New(goquDB))
 

@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
@@ -13,7 +12,7 @@ import (
 func TestGetBrandVehicleTypes(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	grpcClient := NewAutowpClient(conn)
 
@@ -38,7 +37,7 @@ func TestGetBrandVehicleTypes(t *testing.T) {
 func TestGetPerspectives(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	grpcClient := NewAutowpClient(conn)
 
@@ -61,7 +60,7 @@ func TestGetPerspectives(t *testing.T) {
 func TestGetPerspectivePages(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	grpcClient := NewAutowpClient(conn)
 
@@ -84,7 +83,7 @@ func TestGetPerspectivePages(t *testing.T) {
 func TestGetSpecs(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	grpcClient := NewAutowpClient(conn)
 

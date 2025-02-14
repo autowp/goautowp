@@ -29,7 +29,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
@@ -70,7 +70,7 @@ func TestListFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
@@ -115,7 +115,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 	options := query.ItemListOptions{
@@ -172,7 +172,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	userID := createRandomUser(ctx, t, goquDB)
 
@@ -260,7 +260,7 @@ func TestPaginator(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestPaginator" + strconv.Itoa(int(random.Uint32()%100000))
@@ -298,7 +298,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -405,7 +405,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -546,7 +546,7 @@ func TestOrderByAddDatetime(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -625,7 +625,7 @@ func TestOrderByName(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -732,7 +732,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -874,7 +874,7 @@ func TestOrderByStarCount(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -954,7 +954,7 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	ctx := context.Background()
+	ctx := t.Context()
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -1042,7 +1042,7 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 func CreateItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	cfg := config.LoadConfig("../")
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 

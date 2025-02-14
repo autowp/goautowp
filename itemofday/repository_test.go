@@ -1,7 +1,6 @@
 package itemofday
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 
@@ -31,6 +30,6 @@ func TestGetUserNewMessagesCount(t *testing.T) {
 	t.Parallel()
 
 	s := createRepository(t)
-	_, err := s.Pick(context.Background())
+	_, err := s.Pick(t.Context())
 	require.NoError(t, err)
 }

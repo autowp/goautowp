@@ -1,7 +1,6 @@
 package attrs
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 
@@ -47,7 +46,7 @@ func TestAttributes(t *testing.T) {
 
 	repo := createRepository(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := repo.Attributes(ctx, 0, 0)
 	require.NoError(t, err)
@@ -62,7 +61,7 @@ func TestAttributeTypes(t *testing.T) {
 
 	repo := createRepository(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := repo.AttributeTypes(ctx)
 	require.NoError(t, err)
@@ -73,7 +72,7 @@ func TestUnits(t *testing.T) {
 
 	repo := createRepository(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := repo.Units(ctx)
 	require.NoError(t, err)
@@ -84,7 +83,7 @@ func TestZones(t *testing.T) {
 
 	repo := createRepository(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := repo.Zones(ctx)
 	require.NoError(t, err)

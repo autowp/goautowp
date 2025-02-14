@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 
@@ -15,7 +14,7 @@ import (
 func TestGetVODData(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := NewDonationsClient(conn)
 
@@ -29,7 +28,7 @@ func TestGetVODData(t *testing.T) {
 func TestGetTransactions(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	cfg := config.LoadConfig("..")
 
 	postgresDB, err := sql.Open("postgres", cfg.PostgresDSN)

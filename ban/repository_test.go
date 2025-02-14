@@ -1,7 +1,6 @@
 package ban
 
 import (
-	"context"
 	"database/sql"
 	"net"
 	"testing"
@@ -35,7 +34,7 @@ func TestAddRemove(t *testing.T) {
 
 	repo := createBanService(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ip := net.IPv4(66, 249, 73, 139)
 

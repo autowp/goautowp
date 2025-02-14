@@ -43,7 +43,7 @@ func createItemWithPoint(ctx context.Context, t *testing.T) {
 func TestGetPoints(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	createItemWithPoint(ctx, t)
 
@@ -62,7 +62,7 @@ func TestGetPoints(t *testing.T) {
 func TestGetPointsOnly(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	createItemWithPoint(ctx, t)
 
