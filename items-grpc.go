@@ -2646,32 +2646,7 @@ func (s *ItemsGRPCServer) GetTopSpecsContributions(
 
 	lang := in.GetLanguage()
 
-	fields := ItemFields{
-		NameHtml:    true,
-		NameDefault: true,
-		Description: true,
-		HasText:     true,
-		Design:      true,
-		EngineVehicles: &ItemsRequest{
-			Fields: &ItemFields{NameHtml: true, Route: true},
-		},
-		CanEditSpecs: true,
-		SpecsRoute:   true,
-		Route:        true,
-		Categories: &ItemsRequest{
-			Fields: &ItemFields{NameHtml: true},
-		},
-		Twins: &ItemsRequest{},
-		PreviewPictures: &PreviewPicturesRequest{
-			Pictures:          &PicturesRequest{Fields: &PictureFields{ThumbMedium: true, NameText: true}},
-			PerspectivePageId: 1,
-		},
-		ChildsCount:           true,
-		AcceptedPicturesCount: true,
-		SpecsContributors:     true,
-	}
-
-	cacheKey := "API_INDEX_SPEC_CARS_5_" + lang
+	cacheKey := "API_INDEX_SPEC_CARS_7_" + lang
 	success := false
 
 	var res TopSpecsContributions
@@ -2691,13 +2666,38 @@ func (s *ItemsGRPCServer) GetTopSpecsContributions(
 	}
 
 	if !success {
+		fields := ItemFields{
+			NameHtml:    true,
+			NameDefault: true,
+			Description: true,
+			HasText:     true,
+			Design:      true,
+			EngineVehicles: &ItemsRequest{
+				Fields: &ItemFields{NameHtml: true, Route: true},
+			},
+			CanEditSpecs: true,
+			SpecsRoute:   true,
+			Route:        true,
+			Categories: &ItemsRequest{
+				Fields: &ItemFields{NameHtml: true},
+			},
+			Twins: &ItemsRequest{},
+			PreviewPictures: &PreviewPicturesRequest{
+				Pictures:          &PicturesRequest{Fields: &PictureFields{ThumbMedium: true, NameText: true}},
+				PerspectivePageId: 1,
+			},
+			ChildsCount:           true,
+			AcceptedPicturesCount: true,
+			SpecsContributors:     true,
+		}
+
 		cars, _, err := s.repository.List(ctx, &query.ItemListOptions{
 			Language: lang,
 			Limit:    topSpecsContributorsLimit,
 			AttrsUserValues: &query.AttrsUserValueListOptions{
 				UpdatedInDays: topSpecsContributorsInDays,
 			},
-			AttrsUserValuesCountGt: topSpecsContributorsValuesCountThreshold,
+			AttrsUserValuesCountGte: topSpecsContributorsValuesCountThreshold,
 		}, convertItemFields(&fields), items.OrderByAttrsUserValuesUpdateDate, false)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())

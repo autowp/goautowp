@@ -69,7 +69,7 @@ type ItemListOptions struct {
 	NoVehicleType                bool
 	ItemVehicleType              *ItemVehicleTypeListOptions
 	AttrsUserValues              *AttrsUserValueListOptions
-	AttrsUserValuesCountGt       int
+	AttrsUserValuesCountGte      int
 }
 
 func ItemParentNoParentAlias(alias string) string {
@@ -293,10 +293,10 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 		sqSelect = s.AttrsUserValues.JoinToItemIDAndApply(aliasIDCol, AppendAttrsUserValuesAlias(alias), sqSelect)
 	}
 
-	if s.AttrsUserValuesCountGt > 0 {
+	if s.AttrsUserValuesCountGte > 0 {
 		auvAlias := AppendAttrsUserValuesAlias(alias)
 		sqSelect = sqSelect.Having(
-			goqu.COUNT(goqu.T(auvAlias).Col(schema.AttrsUserValuesTableItemIDColName)).Gt(s.AttrsUserValuesCountGt),
+			goqu.COUNT(goqu.T(auvAlias).Col(schema.AttrsUserValuesTableItemIDColName)).Gte(s.AttrsUserValuesCountGte),
 		)
 	}
 
