@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
@@ -2860,4 +2861,141 @@ func TestItemOfDayPicture(t *testing.T) {
 	require.NotEmpty(t, res)
 	require.NotEmpty(t, res.GetItemOfDayPictures())
 	require.NotEmpty(t, res.GetItemOfDayPictures()[0].GetThumb().GetSrc())
+}
+
+func TestGetTopSpecsContributions(t *testing.T) {
+	t.Parallel()
+
+	client := NewItemsClient(conn)
+	attsClient := NewAttrsClient(conn)
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	cfg := config.LoadConfig(".")
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Name:       "Test",
+		Body:       "E31",
+		IsGroup:    true,
+	})
+
+	rep, err := cnt.ItemsRepository()
+	require.NoError(t, err)
+
+	_, err = rep.RebuildCache(ctx, itemID)
+	require.NoError(t, err)
+
+	_, err = attsClient.SetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: attrs.FuelSupplySystemAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						ListValue: []int64{25},
+					},
+				},
+				{
+					AttributeId: attrs.EngineCylinderDiameter,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_FLOAT,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.WidthAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_INTEGER,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.ABSAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:    AttrAttributeType_BOOLEAN,
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+				{
+					AttributeId: attrs.EngineTypeAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_TREE,
+						Valid:     true,
+						IsEmpty:   false,
+						ListValue: []int64{105},
+					},
+				},
+				{
+					AttributeId: attrs.EnginePlacementOrientationAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						IsEmpty:   true,
+						ListValue: []int64{},
+					},
+				},
+				{
+					AttributeId: attrs.DriveUnitAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:      AttrAttributeType_LIST,
+						Valid:     true,
+						IsEmpty:   true,
+						ListValue: []int64{},
+					},
+				},
+				{
+					AttributeId: attrs.TurningDiameterAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:       AttrAttributeType_FLOAT,
+						Valid:      true,
+						FloatValue: 7.091,
+					},
+				},
+				{
+					AttributeId: attrs.LengthAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:     AttrAttributeType_INTEGER,
+						Valid:    true,
+						IntValue: 6,
+					},
+				},
+				{
+					AttributeId: attrs.FrontSuspensionTypeAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:        AttrAttributeType_STRING,
+						Valid:       true,
+						StringValue: "suspension test",
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetTopSpecsContributions(ctx, &TopSpecsContributionsRequest{Language: "ru"})
+	require.NoError(t, err)
+	require.NotEmpty(t, res.GetItems())
 }

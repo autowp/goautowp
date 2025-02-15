@@ -93,6 +93,7 @@ service Items {
   rpc GetTopCategoriesList(GetTopCategoriesListRequest) returns (APITopCategoriesList) {}
   rpc GetTwinsBrandsList(GetTwinsBrandsListRequest) returns (APITwinsBrandsList) {}
   rpc GetTopTwinsBrandsList(GetTopTwinsBrandsListRequest) returns (APITopTwinsBrandsList) {}
+  rpc GetTopSpecsContributions(TopSpecsContributionsRequest) returns (TopSpecsContributions) {}
   rpc Item(ItemRequest) returns (APIItem) {}
   rpc List(ItemsRequest) returns (APIItemList) {}
   rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
@@ -922,6 +923,14 @@ message GetTopTwinsBrandsListRequest {
   string language = 1;
 }
 
+message TopSpecsContributionsRequest {
+  string language = 1;
+}
+
+message TopSpecsContributions {
+  repeated APIItem items = 1;
+}
+
 message GetTopCategoriesListRequest {
   string language = 1;
 }
@@ -1153,6 +1162,7 @@ message ItemFields {
   bool exact_pictures_count = 50;
   bool specifications_count = 51;
   bool subscription = 52;
+  bool specs_contributors = 53;
 }
 
 message AltName {
@@ -1368,6 +1378,12 @@ message APIItem {
   int32 links_count = 66;
   int32 specifications_count = 70;
   bool subscription = 71;
+  repeated SpecsContributor specs_contributors = 73;
+}
+
+message SpecsContributor {
+  int64 user_id = 1;
+  int32 count = 2;
 }
 
 message ItemOfDayPicture {

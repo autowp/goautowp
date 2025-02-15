@@ -473,7 +473,41 @@ func (s *ItemExtractor) extractPlain(
 		return err
 	}
 
+	resultRow.SpecsContributors, err = s.extractSpecsContributors(ctx, fields, row)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *ItemExtractor) extractSpecsContributors(
+	ctx context.Context, fields *ItemFields, row *items.Item,
+) ([]*SpecsContributor, error) {
+	if !fields.GetSpecsContributors() {
+		return nil, nil
+	}
+
+	attrsRepository, err := s.container.AttrsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	contributors, err := attrsRepository.Contributors(ctx, row.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*SpecsContributor, 0, len(contributors))
+
+	for _, contributor := range contributors {
+		res = append(res, &SpecsContributor{
+			UserId: contributor.UserID,
+			Count:  contributor.Count,
+		})
+	}
+
+	return res, nil
 }
 
 func (s *ItemExtractor) extractItemOfDayPictures(

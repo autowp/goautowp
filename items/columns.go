@@ -399,6 +399,15 @@ func (s ItemParentParentTimestampColumn) SelectExpr(_ string, _ string) (Aliasea
 		nil
 }
 
+type AttrsUserValuesUpdateDateColumn struct{}
+
+func (s AttrsUserValuesUpdateDateColumn) SelectExpr(_ string, _ string) (AliaseableExpression, error) {
+	return goqu.MAX(
+			goqu.T(query.AppendAttrsUserValuesAlias(query.ItemAlias)).Col(schema.AttrsUserValuesTableUpdateDateColName),
+		),
+		nil
+}
+
 type HasChildSpecsColumn struct {
 	db *goqu.Database
 }

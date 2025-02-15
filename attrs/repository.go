@@ -3353,3 +3353,26 @@ func (s *Repository) flatternAttributes(attributes []*AttributeRow) []*Attribute
 
 	return result
 }
+
+type Contributor struct {
+	UserID int64 `db:"user_id"`
+	Count  int32 `db:"count"`
+}
+
+func (s *Repository) Contributors(ctx context.Context, itemID int64) ([]Contributor, error) {
+	if itemID == 0 {
+		return nil, nil
+	}
+
+	var sts []Contributor
+
+	err := s.db.Select(
+		schema.AttrsUserValuesTableUserIDCol, goqu.COUNT(goqu.Star()).As("count")).
+		From(schema.AttrsUserValuesTable).
+		Where(schema.AttrsUserValuesTableItemIDCol.Eq(itemID)).
+		GroupBy(schema.AttrsUserValuesTableUserIDCol).
+		Order(goqu.C("count").Desc()).
+		ScanStructsContext(ctx, &sts)
+
+	return sts, err
+}

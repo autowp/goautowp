@@ -76,6 +76,7 @@ const (
 	colItemParentParentTimestamp  = "item_parent_parent_timestamp"
 	colHasChildSpecs              = "has_child_specs"
 	colHasSpecs                   = "has_specs"
+	colAttrsUserValuesUpdateDate  = "attrs_user_values_update_date"
 )
 
 const (
@@ -135,6 +136,7 @@ const (
 	OrderByAge
 	OrderByIDDesc
 	OrderByIDAsc
+	OrderByAttrsUserValuesUpdateDate
 )
 
 type ItemParentOrderBy int
@@ -252,6 +254,7 @@ type Repository struct {
 	itemParentParentTimestampColumn  *ItemParentParentTimestampColumn
 	producedColumn                   *SimpleColumn
 	producedExactlyColumn            *SimpleColumn
+	attrsUserValuesUpdateDateColumn  *AttrsUserValuesUpdateDateColumn
 	contentLanguages                 []string
 	textStorageRepository            *textstorage.Repository
 }
@@ -380,6 +383,7 @@ func NewRepository(
 		specShortNameColumn:             &SpecShortNameColumn{},
 		starCountColumn:                 &StarCountColumn{},
 		itemParentParentTimestampColumn: &ItemParentParentTimestampColumn{},
+		attrsUserValuesUpdateDateColumn: &AttrsUserValuesUpdateDateColumn{},
 		contentLanguages:                contentLanguages,
 		textStorageRepository:           textStorageRepository,
 	}
@@ -730,7 +734,7 @@ func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, f
 	return res[0], nil
 }
 
-func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields *ListFields) error {
+func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields *ListFields, orderBy OrderBy) error {
 	if fields == nil {
 		return nil
 	}
@@ -751,6 +755,13 @@ func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields *ListF
 		(options.ItemParentCacheDescendant == nil || options.ItemParentCacheDescendant.ItemParentByItemID == nil) {
 		return fmt.Errorf(
 			"%w: (New)DescendantsParentsCount requires ItemParentCacheDescendant.ItemParentByItemID",
+			errFieldRequires,
+		)
+	}
+
+	if orderBy == OrderByAttrsUserValuesUpdateDate && options.AttrsUserValues == nil {
+		return fmt.Errorf(
+			"%w: OrderByAttrsUserValuesUpdateDate requires AttrsUserValues",
 			errFieldRequires,
 		)
 	}
@@ -801,6 +812,8 @@ func (s *Repository) orderBy(alias string, orderBy OrderBy, language string) ([]
 		columns = []columnOrder{{col: s.idColumn, asc: false}}
 	case OrderByIDAsc:
 		columns = []columnOrder{{col: s.idColumn, asc: true}}
+	case OrderByAttrsUserValuesUpdateDate:
+		columns = []columnOrder{{col: s.attrsUserValuesUpdateDateColumn, asc: false}}
 	case OrderByNone:
 	}
 
@@ -862,6 +875,8 @@ func (s *Repository) wrapperOrderBy(wrapperAlias string, wrappedAlias string, or
 		return []exp.OrderedExpression{wrappedAliasTable.Col(schema.ItemTableIDColName).Desc()}
 	case OrderByIDAsc:
 		return []exp.OrderedExpression{wrappedAliasTable.Col(schema.ItemTableIDColName).Asc()}
+	case OrderByAttrsUserValuesUpdateDate:
+		return []exp.OrderedExpression{wrappedAliasTable.Col(colAttrsUserValuesUpdateDate).Desc()}
 	case OrderByNone:
 	}
 
@@ -908,6 +923,8 @@ func (s *Repository) wrappedOrderBy(alias string, orderBy OrderBy) []exp.Ordered
 		orderByExp = []exp.OrderedExpression{aliasTable.Col(schema.ItemTableIDColName).Desc()}
 	case OrderByIDAsc:
 		orderByExp = []exp.OrderedExpression{aliasTable.Col(schema.ItemTableIDColName).Asc()}
+	case OrderByAttrsUserValuesUpdateDate:
+		orderByExp = []exp.OrderedExpression{goqu.C(colAttrsUserValuesUpdateDate).Desc()}
 	case OrderByNone:
 	}
 
@@ -932,6 +949,8 @@ func (s *Repository) wrappedSelectColumns(orderBy OrderBy) map[string]Column {
 		columns[colStarCount] = s.starCountColumn
 	case OrderByItemParentParentTimestamp:
 		columns[colItemParentParentTimestamp] = s.itemParentParentTimestampColumn
+	case OrderByAttrsUserValuesUpdateDate:
+		columns[colAttrsUserValuesUpdateDate] = s.attrsUserValuesUpdateDateColumn
 	case OrderByName, OrderByAddDatetime, OrderByAge, OrderByIDDesc, OrderByIDAsc, OrderByNone:
 	}
 
@@ -947,7 +966,7 @@ func (s *Repository) List( //nolint:maintidx
 	alias := query.ItemAlias
 	aliasTable := goqu.T(alias)
 
-	err = s.isFieldsValid(options, fields)
+	err = s.isFieldsValid(options, fields, orderBy)
 	if err != nil {
 		return nil, nil, err
 	}

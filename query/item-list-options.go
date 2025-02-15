@@ -68,6 +68,8 @@ type ItemListOptions struct {
 	Text                         string
 	NoVehicleType                bool
 	ItemVehicleType              *ItemVehicleTypeListOptions
+	AttrsUserValues              *AttrsUserValueListOptions
+	AttrsUserValuesCountGt       int
 }
 
 func ItemParentNoParentAlias(alias string) string {
@@ -283,6 +285,19 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 	sqSelect, subGroupBy = s.applyAutocompleteFilter(alias, sqSelect)
 	if subGroupBy {
 		groupBy = true
+	}
+
+	if s.AttrsUserValues != nil {
+		groupBy = true
+
+		sqSelect = s.AttrsUserValues.JoinToItemIDAndApply(aliasIDCol, AppendAttrsUserValuesAlias(alias), sqSelect)
+	}
+
+	if s.AttrsUserValuesCountGt > 0 {
+		auvAlias := AppendAttrsUserValuesAlias(alias)
+		sqSelect = sqSelect.Having(
+			goqu.COUNT(goqu.T(auvAlias).Col(schema.AttrsUserValuesTableItemIDColName)).Gt(s.AttrsUserValuesCountGt),
+		)
 	}
 
 	return sqSelect, groupBy, nil

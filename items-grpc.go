@@ -41,8 +41,13 @@ import (
 const (
 	itemLinkNameMaxLength = 255
 
-	typicalPicturesInList  = 4
-	itemOfDayCacheDuration = time.Hour * 25
+	typicalPicturesInList            = 4
+	itemOfDayCacheDuration           = time.Hour * 25
+	topSpecsContriutorsCacheDuration = time.Hour
+
+	topSpecsContributorsValuesCountThreshold = 10
+	topSpecsContributorsInDays               = 3
+	topSpecsContributorsLimit                = 4
 )
 
 func (s *ItemParent) Validate() ([]*errdetails.BadRequest_FieldViolation, error) {
@@ -2632,4 +2637,91 @@ func (s *ItemsGRPCServer) GetItemOfDay(ctx context.Context, in *ItemOfDayRequest
 	}
 
 	return &itemOfDayInfo, nil
+}
+
+func (s *ItemsGRPCServer) GetTopSpecsContributions(
+	ctx context.Context, in *TopSpecsContributionsRequest,
+) (*TopSpecsContributions, error) {
+	var err error
+
+	lang := in.GetLanguage()
+
+	fields := ItemFields{
+		NameHtml:    true,
+		NameDefault: true,
+		Description: true,
+		HasText:     true,
+		Design:      true,
+		EngineVehicles: &ItemsRequest{
+			Fields: &ItemFields{NameHtml: true, Route: true},
+		},
+		CanEditSpecs: true,
+		SpecsRoute:   true,
+		Route:        true,
+		Categories: &ItemsRequest{
+			Fields: &ItemFields{NameHtml: true},
+		},
+		Twins: &ItemsRequest{},
+		PreviewPictures: &PreviewPicturesRequest{
+			Pictures:          &PicturesRequest{Fields: &PictureFields{ThumbMedium: true, NameText: true}},
+			PerspectivePageId: 1,
+		},
+		ChildsCount:           true,
+		AcceptedPicturesCount: true,
+		SpecsContributors:     true,
+	}
+
+	cacheKey := "API_INDEX_SPEC_CARS_5_" + lang
+	success := false
+
+	var res TopSpecsContributions
+
+	cacheItem, err := s.redis.Get(ctx, cacheKey).Bytes()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if err == nil {
+		err = proto.Unmarshal(cacheItem, &res)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		success = true
+	}
+
+	if !success {
+		cars, _, err := s.repository.List(ctx, &query.ItemListOptions{
+			Language: lang,
+			Limit:    topSpecsContributorsLimit,
+			AttrsUserValues: &query.AttrsUserValueListOptions{
+				UpdatedInDays: topSpecsContributorsInDays,
+			},
+			AttrsUserValuesCountGt: topSpecsContributorsValuesCountThreshold,
+		}, convertItemFields(&fields), items.OrderByAttrsUserValuesUpdateDate, false)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		extracted, err := s.extractor.ExtractRows(ctx, cars, &fields, lang, false, 0, "")
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		res = TopSpecsContributions{
+			Items: extracted,
+		}
+
+		cacheBytes, err := proto.Marshal(&res)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.redis.Set(ctx, cacheKey, cacheBytes, topSpecsContriutorsCacheDuration).Err()
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &res, nil
 }

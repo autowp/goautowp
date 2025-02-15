@@ -8,6 +8,10 @@ import (
 
 const AttrsUserValuesAlias = "auv"
 
+func AppendAttrsUserValuesAlias(alias string) string {
+	return alias + "_" + AttrsUserValuesAlias
+}
+
 type AttrsUserValueListOptions struct {
 	ZoneID         int64
 	AttributeID    int64
@@ -17,6 +21,7 @@ type AttrsUserValueListOptions struct {
 	WeightLtZero   bool
 	ConflictLtZero bool
 	ConflictGtZero bool
+	UpdatedInDays  int
 }
 
 func (s *AttrsUserValueListOptions) Select(db *goqu.Database, alias string) *goqu.SelectDataset {
@@ -25,6 +30,20 @@ func (s *AttrsUserValueListOptions) Select(db *goqu.Database, alias string) *goq
 		db.From(schema.AttrsUserValuesTable.As(alias)).
 			Order(goqu.T(alias).Col(schema.AttrsUserValuesTableUpdateDateColName).Desc()),
 	)
+}
+
+func (s *AttrsUserValueListOptions) JoinToItemIDAndApply(
+	srcItemCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
+	if s == nil {
+		return sqSelect
+	}
+
+	sqSelect = sqSelect.Join(schema.AttrsUserValuesTable.As(alias), goqu.On(
+		srcItemCol.Eq(goqu.T(alias).Col(schema.AttrsUserValuesTableItemIDColName)),
+	))
+
+	return s.apply(alias, sqSelect)
 }
 
 func (s *AttrsUserValueListOptions) JoinToAttributeIDItemIDAndApply(
@@ -46,9 +65,11 @@ func (s *AttrsUserValueListOptions) JoinToAttributeIDItemIDAndApply(
 func (s *AttrsUserValueListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
 	aliasTable := goqu.T(alias)
 
-	sqSelect = sqSelect.Where(
-		aliasTable.Col(schema.AttrsUserValuesTableItemIDColName).Eq(s.ItemID),
-	)
+	if s.ItemID != 0 {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsUserValuesTableItemIDColName).Eq(s.ItemID),
+		)
+	}
 
 	if s.ZoneID != 0 {
 		azaAlias := AppendAttrsZoneAttributesAlias(alias)
@@ -94,6 +115,14 @@ func (s *AttrsUserValueListOptions) apply(alias string, sqSelect *goqu.SelectDat
 	if s.ConflictGtZero {
 		sqSelect = sqSelect.Where(
 			aliasTable.Col(schema.AttrsUserValuesTableConflictColName).Gt(0),
+		)
+	}
+
+	if s.UpdatedInDays > 0 {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.AttrsUserValuesTableUpdateDateColName).Gt(
+				goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL ? DAY", s.UpdatedInDays)),
+			),
 		)
 	}
 

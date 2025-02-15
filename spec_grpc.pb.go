@@ -2406,44 +2406,45 @@ var Rating_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	Items_GetItemOfDay_FullMethodName            = "/goautowp.Items/GetItemOfDay"
-	Items_GetBrands_FullMethodName               = "/goautowp.Items/GetBrands"
-	Items_GetBrandSections_FullMethodName        = "/goautowp.Items/GetBrandSections"
-	Items_GetTopBrandsList_FullMethodName        = "/goautowp.Items/GetTopBrandsList"
-	Items_GetTopPersonsList_FullMethodName       = "/goautowp.Items/GetTopPersonsList"
-	Items_GetTopFactoriesList_FullMethodName     = "/goautowp.Items/GetTopFactoriesList"
-	Items_GetTopCategoriesList_FullMethodName    = "/goautowp.Items/GetTopCategoriesList"
-	Items_GetTwinsBrandsList_FullMethodName      = "/goautowp.Items/GetTwinsBrandsList"
-	Items_GetTopTwinsBrandsList_FullMethodName   = "/goautowp.Items/GetTopTwinsBrandsList"
-	Items_Item_FullMethodName                    = "/goautowp.Items/Item"
-	Items_List_FullMethodName                    = "/goautowp.Items/List"
-	Items_GetTree_FullMethodName                 = "/goautowp.Items/GetTree"
-	Items_GetContentLanguages_FullMethodName     = "/goautowp.Items/GetContentLanguages"
-	Items_GetItemLink_FullMethodName             = "/goautowp.Items/GetItemLink"
-	Items_GetItemLinks_FullMethodName            = "/goautowp.Items/GetItemLinks"
-	Items_DeleteItemLink_FullMethodName          = "/goautowp.Items/DeleteItemLink"
-	Items_CreateItemLink_FullMethodName          = "/goautowp.Items/CreateItemLink"
-	Items_UpdateItemLink_FullMethodName          = "/goautowp.Items/UpdateItemLink"
-	Items_GetItemVehicleTypes_FullMethodName     = "/goautowp.Items/GetItemVehicleTypes"
-	Items_GetItemVehicleType_FullMethodName      = "/goautowp.Items/GetItemVehicleType"
-	Items_CreateItemVehicleType_FullMethodName   = "/goautowp.Items/CreateItemVehicleType"
-	Items_DeleteItemVehicleType_FullMethodName   = "/goautowp.Items/DeleteItemVehicleType"
-	Items_GetItemLanguages_FullMethodName        = "/goautowp.Items/GetItemLanguages"
-	Items_UpdateItemLanguage_FullMethodName      = "/goautowp.Items/UpdateItemLanguage"
-	Items_GetItemParentLanguages_FullMethodName  = "/goautowp.Items/GetItemParentLanguages"
-	Items_SetItemParentLanguage_FullMethodName   = "/goautowp.Items/SetItemParentLanguage"
-	Items_GetStats_FullMethodName                = "/goautowp.Items/GetStats"
-	Items_GetBrandNewItems_FullMethodName        = "/goautowp.Items/GetBrandNewItems"
-	Items_GetNewItems_FullMethodName             = "/goautowp.Items/GetNewItems"
-	Items_GetItemParent_FullMethodName           = "/goautowp.Items/GetItemParent"
-	Items_GetItemParents_FullMethodName          = "/goautowp.Items/GetItemParents"
-	Items_CreateItemParent_FullMethodName        = "/goautowp.Items/CreateItemParent"
-	Items_UpdateItemParent_FullMethodName        = "/goautowp.Items/UpdateItemParent"
-	Items_DeleteItemParent_FullMethodName        = "/goautowp.Items/DeleteItemParent"
-	Items_MoveItemParent_FullMethodName          = "/goautowp.Items/MoveItemParent"
-	Items_RefreshInheritance_FullMethodName      = "/goautowp.Items/RefreshInheritance"
-	Items_SetUserItemSubscription_FullMethodName = "/goautowp.Items/SetUserItemSubscription"
-	Items_SetItemEngine_FullMethodName           = "/goautowp.Items/SetItemEngine"
+	Items_GetItemOfDay_FullMethodName             = "/goautowp.Items/GetItemOfDay"
+	Items_GetBrands_FullMethodName                = "/goautowp.Items/GetBrands"
+	Items_GetBrandSections_FullMethodName         = "/goautowp.Items/GetBrandSections"
+	Items_GetTopBrandsList_FullMethodName         = "/goautowp.Items/GetTopBrandsList"
+	Items_GetTopPersonsList_FullMethodName        = "/goautowp.Items/GetTopPersonsList"
+	Items_GetTopFactoriesList_FullMethodName      = "/goautowp.Items/GetTopFactoriesList"
+	Items_GetTopCategoriesList_FullMethodName     = "/goautowp.Items/GetTopCategoriesList"
+	Items_GetTwinsBrandsList_FullMethodName       = "/goautowp.Items/GetTwinsBrandsList"
+	Items_GetTopTwinsBrandsList_FullMethodName    = "/goautowp.Items/GetTopTwinsBrandsList"
+	Items_GetTopSpecsContributions_FullMethodName = "/goautowp.Items/GetTopSpecsContributions"
+	Items_Item_FullMethodName                     = "/goautowp.Items/Item"
+	Items_List_FullMethodName                     = "/goautowp.Items/List"
+	Items_GetTree_FullMethodName                  = "/goautowp.Items/GetTree"
+	Items_GetContentLanguages_FullMethodName      = "/goautowp.Items/GetContentLanguages"
+	Items_GetItemLink_FullMethodName              = "/goautowp.Items/GetItemLink"
+	Items_GetItemLinks_FullMethodName             = "/goautowp.Items/GetItemLinks"
+	Items_DeleteItemLink_FullMethodName           = "/goautowp.Items/DeleteItemLink"
+	Items_CreateItemLink_FullMethodName           = "/goautowp.Items/CreateItemLink"
+	Items_UpdateItemLink_FullMethodName           = "/goautowp.Items/UpdateItemLink"
+	Items_GetItemVehicleTypes_FullMethodName      = "/goautowp.Items/GetItemVehicleTypes"
+	Items_GetItemVehicleType_FullMethodName       = "/goautowp.Items/GetItemVehicleType"
+	Items_CreateItemVehicleType_FullMethodName    = "/goautowp.Items/CreateItemVehicleType"
+	Items_DeleteItemVehicleType_FullMethodName    = "/goautowp.Items/DeleteItemVehicleType"
+	Items_GetItemLanguages_FullMethodName         = "/goautowp.Items/GetItemLanguages"
+	Items_UpdateItemLanguage_FullMethodName       = "/goautowp.Items/UpdateItemLanguage"
+	Items_GetItemParentLanguages_FullMethodName   = "/goautowp.Items/GetItemParentLanguages"
+	Items_SetItemParentLanguage_FullMethodName    = "/goautowp.Items/SetItemParentLanguage"
+	Items_GetStats_FullMethodName                 = "/goautowp.Items/GetStats"
+	Items_GetBrandNewItems_FullMethodName         = "/goautowp.Items/GetBrandNewItems"
+	Items_GetNewItems_FullMethodName              = "/goautowp.Items/GetNewItems"
+	Items_GetItemParent_FullMethodName            = "/goautowp.Items/GetItemParent"
+	Items_GetItemParents_FullMethodName           = "/goautowp.Items/GetItemParents"
+	Items_CreateItemParent_FullMethodName         = "/goautowp.Items/CreateItemParent"
+	Items_UpdateItemParent_FullMethodName         = "/goautowp.Items/UpdateItemParent"
+	Items_DeleteItemParent_FullMethodName         = "/goautowp.Items/DeleteItemParent"
+	Items_MoveItemParent_FullMethodName           = "/goautowp.Items/MoveItemParent"
+	Items_RefreshInheritance_FullMethodName       = "/goautowp.Items/RefreshInheritance"
+	Items_SetUserItemSubscription_FullMethodName  = "/goautowp.Items/SetUserItemSubscription"
+	Items_SetItemEngine_FullMethodName            = "/goautowp.Items/SetItemEngine"
 )
 
 // ItemsClient is the client API for Items service.
@@ -2459,6 +2460,7 @@ type ItemsClient interface {
 	GetTopCategoriesList(ctx context.Context, in *GetTopCategoriesListRequest, opts ...grpc.CallOption) (*APITopCategoriesList, error)
 	GetTwinsBrandsList(ctx context.Context, in *GetTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITwinsBrandsList, error)
 	GetTopTwinsBrandsList(ctx context.Context, in *GetTopTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITopTwinsBrandsList, error)
+	GetTopSpecsContributions(ctx context.Context, in *TopSpecsContributionsRequest, opts ...grpc.CallOption) (*TopSpecsContributions, error)
 	Item(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*APIItem, error)
 	List(ctx context.Context, in *ItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*APITreeItem, error)
@@ -2582,6 +2584,16 @@ func (c *itemsClient) GetTopTwinsBrandsList(ctx context.Context, in *GetTopTwins
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(APITopTwinsBrandsList)
 	err := c.cc.Invoke(ctx, Items_GetTopTwinsBrandsList_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) GetTopSpecsContributions(ctx context.Context, in *TopSpecsContributionsRequest, opts ...grpc.CallOption) (*TopSpecsContributions, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TopSpecsContributions)
+	err := c.cc.Invoke(ctx, Items_GetTopSpecsContributions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2891,6 +2903,7 @@ type ItemsServer interface {
 	GetTopCategoriesList(context.Context, *GetTopCategoriesListRequest) (*APITopCategoriesList, error)
 	GetTwinsBrandsList(context.Context, *GetTwinsBrandsListRequest) (*APITwinsBrandsList, error)
 	GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error)
+	GetTopSpecsContributions(context.Context, *TopSpecsContributionsRequest) (*TopSpecsContributions, error)
 	Item(context.Context, *ItemRequest) (*APIItem, error)
 	List(context.Context, *ItemsRequest) (*APIItemList, error)
 	GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error)
@@ -2956,6 +2969,9 @@ func (UnimplementedItemsServer) GetTwinsBrandsList(context.Context, *GetTwinsBra
 }
 func (UnimplementedItemsServer) GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopTwinsBrandsList not implemented")
+}
+func (UnimplementedItemsServer) GetTopSpecsContributions(context.Context, *TopSpecsContributionsRequest) (*TopSpecsContributions, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTopSpecsContributions not implemented")
 }
 func (UnimplementedItemsServer) Item(context.Context, *ItemRequest) (*APIItem, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Item not implemented")
@@ -3223,6 +3239,24 @@ func _Items_GetTopTwinsBrandsList_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ItemsServer).GetTopTwinsBrandsList(ctx, req.(*GetTopTwinsBrandsListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_GetTopSpecsContributions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TopSpecsContributionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetTopSpecsContributions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_GetTopSpecsContributions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetTopSpecsContributions(ctx, req.(*TopSpecsContributionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3791,6 +3825,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTopTwinsBrandsList",
 			Handler:    _Items_GetTopTwinsBrandsList_Handler,
+		},
+		{
+			MethodName: "GetTopSpecsContributions",
+			Handler:    _Items_GetTopSpecsContributions_Handler,
 		},
 		{
 			MethodName: "Item",
