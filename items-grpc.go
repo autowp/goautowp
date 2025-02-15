@@ -879,7 +879,7 @@ func (s *ItemsGRPCServer) GetItemLanguages(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.LanguageList(ctx, in.GetItemId())
+	rows, err := s.repository.ItemLanguageList(ctx, in.GetItemId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

@@ -21,6 +21,7 @@ type ItemParentListOptions struct {
 	Type                              schema.ItemParentType
 	StrictType                        bool
 	ParentIDExpr                      exp.Expression
+	ItemIDExpr                        exp.Expression
 	LinkedInDays                      int
 	ParentItems                       *ItemListOptions
 	ChildItems                        *ItemListOptions
@@ -127,6 +128,10 @@ func (s *ItemParentListOptions) apply(alias string, sqSelect *goqu.SelectDataset
 
 	if s.ParentIDExpr != nil {
 		sqSelect = sqSelect.Where(parentIDCol.Eq(s.ParentIDExpr))
+	}
+
+	if s.ItemIDExpr != nil {
+		sqSelect = sqSelect.Where(itemIDCol.Eq(s.ItemIDExpr))
 	}
 
 	if s.Type != 0 || s.StrictType {

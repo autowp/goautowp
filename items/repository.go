@@ -65,11 +65,13 @@ const (
 	colNewChildItemsCount         = "new_child_items_count"
 	colDescendantPicturesCount    = "descendant_pictures_count"
 	colChildsCount                = "childs_count"
+	colParentsCount               = "parents_count"
 	colDescendantTwinsGroupsCount = "descendant_twins_groups_count"
 	colInboxPicturesCount         = "inbox_pictures_count"
 	colMostsActive                = "mosts_active"
 	colCommentsAttentionsCount    = "comments_attentions_count"
 	colAcceptedPicturesCount      = "accepted_pictures_count"
+	colExactPicturesCount         = "exact_pictures_count"
 	colStarCount                  = "star_count"
 	colItemParentParentTimestamp  = "item_parent_parent_timestamp"
 	colHasChildSpecs              = "has_child_specs"
@@ -200,15 +202,17 @@ type Repository struct {
 	descendantsCountColumn           *DescendantsCountColumn
 	newDescendantsCountColumn        *NewDescendantsCountColumn
 	descendantTwinsGroupsCountColumn *DescendantTwinsGroupsCountColumn
-	descendantPicturesCountColumn    *DescendantPicturesCountColumn
 	childsCountColumn                *ChildsCountColumn
+	parentsCountColumn               *ParentsCountColumn
 	descriptionColumn                *TextstorageRefColumn
 	fullTextColumn                   *TextstorageRefColumn
 	nameOnlyColumn                   *NameOnlyColumn
 	nameDefaultColumn                *NameDefaultColumn
 	commentsAttentionsCountColumn    *CommentsAttentionsCountColumn
+	descendantPicturesCountColumn    *DescendantPicturesCountColumn
 	acceptedPicturesCountColumn      *StatusPicturesCountColumn
 	inboxPicturesCountColumn         *StatusPicturesCountColumn
+	exactPicturesCountColumn         *ExactPicturesCountColumn
 	mostsActiveColumn                *MostsActiveColumn
 	descendantsParentsCountColumn    *DescendantsParentsCountColumn
 	newDescendantsParentsCountColumn *NewDescendantsParentsCountColumn
@@ -227,6 +231,7 @@ type Repository struct {
 	isConceptColumn                  *SimpleColumn
 	isConceptInheritColumn           *SimpleColumn
 	specIDColumn                     *SimpleColumn
+	specInheritColumn                *SimpleColumn
 	beginYearColumn                  *SimpleColumn
 	endYearColumn                    *SimpleColumn
 	beginMonthColumn                 *SimpleColumn
@@ -272,12 +277,14 @@ type Item struct {
 	FullText                   string
 	DescendantPicturesCount    int32
 	ChildsCount                int32
+	ParentsCount               int32
 	DescendantTwinsGroupsCount int32
 	InboxPicturesCount         int32
 	FullName                   string
 	MostsActive                bool
 	CommentsAttentionsCount    int32
 	AcceptedPicturesCount      int32
+	ExactPicturesCount         int32
 	HasChildSpecs              bool
 	HasSpecs                   bool
 }
@@ -312,6 +319,7 @@ func NewRepository(
 		descendantTwinsGroupsCountColumn: &DescendantTwinsGroupsCountColumn{db: db},
 		descendantPicturesCountColumn:    &DescendantPicturesCountColumn{},
 		childsCountColumn:                &ChildsCountColumn{db: db},
+		parentsCountColumn:               &ParentsCountColumn{db: db},
 		descriptionColumn: &TextstorageRefColumn{
 			db:  db,
 			col: schema.ItemLanguageTableTextIDColName,
@@ -325,6 +333,7 @@ func NewRepository(
 		commentsAttentionsCountColumn: &CommentsAttentionsCountColumn{db: db},
 		acceptedPicturesCountColumn:   &StatusPicturesCountColumn{db: db, status: schema.PictureStatusAccepted},
 		inboxPicturesCountColumn:      &StatusPicturesCountColumn{db: db, status: schema.PictureStatusInbox},
+		exactPicturesCountColumn:      &ExactPicturesCountColumn{db: db},
 		mostsActiveColumn: &MostsActiveColumn{
 			db:                db,
 			mostsMinCarsCount: mostsMinCarsCount,
@@ -350,6 +359,7 @@ func NewRepository(
 		isConceptColumn:                 &SimpleColumn{col: schema.ItemTableIsConceptColName},
 		isConceptInheritColumn:          &SimpleColumn{col: schema.ItemTableIsConceptInheritColName},
 		specIDColumn:                    &SimpleColumn{col: schema.ItemTableSpecIDColName},
+		specInheritColumn:               &SimpleColumn{col: schema.ItemTableSpecInheritColName},
 		beginYearColumn:                 &SimpleColumn{col: schema.ItemTableBeginYearColName},
 		endYearColumn:                   &SimpleColumn{col: schema.ItemTableEndYearColName},
 		beginMonthColumn:                &SimpleColumn{col: schema.ItemTableBeginMonthColName},
@@ -387,6 +397,7 @@ type ListFields struct {
 	FullText                   bool
 	HasText                    bool
 	AcceptedPicturesCount      bool
+	ExactPicturesCount         bool
 	ChildItemsCount            bool
 	NewChildItemsCount         bool
 	DescendantsCount           bool
@@ -394,6 +405,7 @@ type ListFields struct {
 	NameText                   bool
 	DescendantPicturesCount    bool
 	ChildsCount                bool
+	ParentsCount               bool
 	DescendantTwinsGroupsCount bool
 	InboxPicturesCount         bool
 	FullName                   bool
@@ -488,6 +500,7 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		schema.ItemTableIsConceptColName:        s.isConceptColumn,
 		schema.ItemTableIsConceptInheritColName: s.isConceptInheritColumn,
 		schema.ItemTableSpecIDColName:           s.specIDColumn,
+		schema.ItemTableSpecInheritColName:      s.specInheritColumn,
 		schema.ItemTableIsGroupColName:          s.isGroupColumn,
 		schema.ItemTableProducedColName:         s.producedColumn,
 		schema.ItemTableProducedExactlyColName:  s.producedExactlyColumn,
@@ -559,6 +572,10 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		columns[colChildsCount] = s.childsCountColumn
 	}
 
+	if fields.ParentsCount {
+		columns[colParentsCount] = s.parentsCountColumn
+	}
+
 	if fields.DescendantsCount {
 		columns[colDescendantsCount] = s.descendantsCountColumn
 	}
@@ -571,24 +588,28 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		columns[colDescendantTwinsGroupsCount] = s.descendantTwinsGroupsCountColumn
 	}
 
-	if fields.DescendantPicturesCount {
-		columns[colDescendantPicturesCount] = s.descendantPicturesCountColumn
-	}
-
 	if fields.MostsActive {
 		columns[colMostsActive] = s.mostsActiveColumn
+	}
+
+	if fields.DescendantPicturesCount {
+		columns[colDescendantPicturesCount] = s.descendantPicturesCountColumn
 	}
 
 	if fields.InboxPicturesCount {
 		columns[colInboxPicturesCount] = s.inboxPicturesCountColumn
 	}
 
-	if fields.CommentsAttentionsCount {
-		columns[colCommentsAttentionsCount] = s.commentsAttentionsCountColumn
-	}
-
 	if fields.AcceptedPicturesCount {
 		columns[colAcceptedPicturesCount] = s.acceptedPicturesCountColumn
+	}
+
+	if fields.ExactPicturesCount {
+		columns[colExactPicturesCount] = s.exactPicturesCountColumn
+	}
+
+	if fields.CommentsAttentionsCount {
+		columns[colCommentsAttentionsCount] = s.commentsAttentionsCountColumn
 	}
 
 	if fields.HasChildSpecs {
@@ -1115,6 +1136,8 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &row.IsConceptInherit
 			case schema.ItemTableSpecIDColName:
 				pointers[i] = &row.SpecID
+			case schema.ItemTableSpecInheritColName:
+				pointers[i] = &row.SpecInherit
 			case colDescription:
 				pointers[i] = &description
 			case colFullText:
@@ -1159,6 +1182,8 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &row.DescendantPicturesCount
 			case colChildsCount:
 				pointers[i] = &row.ChildsCount
+			case colParentsCount:
+				pointers[i] = &row.ParentsCount
 			case colDescendantTwinsGroupsCount:
 				pointers[i] = &row.DescendantTwinsGroupsCount
 			case colInboxPicturesCount:
@@ -1171,6 +1196,8 @@ func (s *Repository) List( //nolint:maintidx
 				pointers[i] = &row.CommentsAttentionsCount
 			case colAcceptedPicturesCount:
 				pointers[i] = &row.AcceptedPicturesCount
+			case colExactPicturesCount:
+				pointers[i] = &row.ExactPicturesCount
 			case colHasChildSpecs:
 				pointers[i] = &row.HasChildSpecs
 			case colHasSpecs:
@@ -1704,7 +1731,22 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 	return updates, nil
 }
 
-func (s *Repository) LanguageList(ctx context.Context, itemID int64) ([]ItemLanguage, error) {
+func (s *Repository) ItemLanguageCount(ctx context.Context, options *query.ItemLanguageListOptions) (int32, error) {
+	var count int
+
+	success, err := options.CountSelect(s.db, query.ItemLanguageAlias).Executor().ScanValContext(ctx, &count)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, sql.ErrNoRows
+	}
+
+	return int32(count), nil //nolint: gosec
+}
+
+func (s *Repository) ItemLanguageList(ctx context.Context, itemID int64) ([]ItemLanguage, error) {
 	sqSelect := s.db.Select(schema.ItemLanguageTableItemIDCol, schema.ItemLanguageTableLanguageCol,
 		schema.ItemLanguageTableNameCol, schema.ItemLanguageTableTextIDCol, schema.ItemLanguageTableFullTextIDCol).
 		From(schema.ItemLanguageTable).Where(
@@ -3180,6 +3222,17 @@ func (s *Repository) ItemParent(
 	return &res, nil
 }
 
+func (s *Repository) UserItemSubscribed(ctx context.Context, itemID, userID int64) (bool, error) {
+	var exists bool
+
+	success, err := s.db.Select(goqu.V(true)).From(schema.UserItemSubscribeTable).Where(
+		schema.UserItemSubscribeTableUserIDCol.Eq(userID),
+		schema.UserItemSubscribeTableItemIDCol.Eq(itemID),
+	).ScanValContext(ctx, &exists)
+
+	return success && exists, err
+}
+
 func (s *Repository) UserItemSubscribe(ctx context.Context, itemID, userID int64) error {
 	_, err := s.db.Insert(schema.UserItemSubscribeTable).Rows(goqu.Record{
 		schema.UserItemSubscribeTableUserIDColName: userID,
@@ -3800,6 +3853,26 @@ func (s *Repository) LinksSelect(options *query.LinkListOptions) (*goqu.SelectDa
 	}
 
 	return sqSelect, nil
+}
+
+func (s *Repository) LinksCount(ctx context.Context, options *query.LinkListOptions) (int32, error) {
+	var count int
+
+	sqSelect, err := options.CountSelect(s.db, query.LinkAlias)
+	if err != nil {
+		return 0, err
+	}
+
+	success, err := sqSelect.Executor().ScanValContext(ctx, &count)
+	if err != nil {
+		return 0, err
+	}
+
+	if !success {
+		return 0, sql.ErrNoRows
+	}
+
+	return int32(count), nil //nolint: gosec
 }
 
 func (s *Repository) Links(ctx context.Context, options *query.LinkListOptions) ([]*schema.LinkRow, error) {

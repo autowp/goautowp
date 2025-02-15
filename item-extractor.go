@@ -15,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"google.golang.org/genproto/googleapis/type/latlng"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 var (
@@ -209,6 +210,11 @@ func (s *ItemExtractor) ExtractRows(
 		return nil, err
 	}
 
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, row := range rows {
 		resultRow := &APIItem{
 			Id:                         row.ID,
@@ -219,14 +225,17 @@ func (s *ItemExtractor) ExtractRows(
 			ItemTypeId:                 extractItemTypeID(row.ItemTypeID),
 			IsConcept:                  row.IsConcept,
 			IsConceptInherit:           row.IsConceptInherit,
-			SpecId:                     int64(util.NullInt32ToScalar(row.SpecID)),
+			SpecId:                     util.NullInt32ToScalar(row.SpecID),
+			SpecInherit:                row.SpecInherit,
 			Description:                row.Description,
 			FullText:                   row.FullText,
 			DescendantPicturesCount:    row.DescendantPicturesCount,
 			ChildsCount:                row.ChildsCount,
+			ParentsCount:               row.ParentsCount,
 			DescendantTwinsGroupsCount: row.DescendantTwinsGroupsCount,
 			InboxPicturesCount:         row.InboxPicturesCount,
 			AcceptedPicturesCount:      row.AcceptedPicturesCount,
+			ExactPicturesCount:         row.ExactPicturesCount,
 			FullName:                   row.FullName,
 			MostsActive:                row.MostsActive,
 			CommentsAttentionsCount:    row.CommentsAttentionsCount,
@@ -237,6 +246,29 @@ func (s *ItemExtractor) ExtractRows(
 			IsGroup:                    row.IsGroup,
 			NameOnly:                   row.NameOnly,
 			NameDefault:                row.NameDefault,
+		}
+
+		if fields.GetMeta() && isModer {
+			resultRow.Name, err = itemRepository.LanguageName(ctx, row.ID, items.DefaultLanguageCode)
+			if err != nil {
+				return nil, err
+			}
+
+			resultRow.Body = row.Body
+			resultRow.BeginYear = util.NullInt32ToScalar(row.BeginYear)
+			resultRow.EndYear = util.NullInt32ToScalar(row.EndYear)
+			resultRow.BeginMonth = int32(util.NullInt16ToScalar(row.BeginMonth))
+			resultRow.EndMonth = int32(util.NullInt16ToScalar(row.EndMonth))
+			resultRow.BeginModelYear = util.NullInt32ToScalar(row.BeginModelYear)
+			resultRow.EndModelYear = util.NullInt32ToScalar(row.EndModelYear)
+			resultRow.BeginModelYearFraction = util.NullStringToString(row.BeginModelYearFraction)
+			resultRow.EndModelYearFraction = util.NullStringToString(row.EndModelYearFraction)
+
+			if row.Today.Valid {
+				resultRow.Today = &wrapperspb.BoolValue{
+					Value: row.Today.Bool,
+				}
+			}
 		}
 
 		if pictureItemRequest != nil {
@@ -298,7 +330,7 @@ func (s *ItemExtractor) extractPlain(
 		return err
 	}
 
-	resultRow.Logo120, resultRow.Brandicon, err = s.extractLogos(ctx, fields, row)
+	resultRow.Logo, resultRow.Logo120, resultRow.Brandicon, err = s.extractLogos(ctx, fields, row)
 	if err != nil {
 		return err
 	}
@@ -315,6 +347,22 @@ func (s *ItemExtractor) extractPlain(
 		}
 
 		resultRow.AttrZoneId = attrsRepository.ZoneIDByVehicleTypeIDs(row.ItemTypeID, vehicleTypes)
+	}
+
+	if fields.GetSpecificationsCount() && isModer {
+		resultRow.SpecificationsCount, err = attrsRepository.ValuesCount(ctx, query.AttrsValueListOptions{
+			ItemID: row.ID,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if fields.GetSubscription() && userID != 0 {
+		resultRow.Subscription, err = itemRepository.UserItemSubscribed(ctx, row.ID, userID)
+		if err != nil {
+			return err
+		}
 	}
 
 	resultRow.Location, err = s.extractLocation(ctx, fields, row)
@@ -389,6 +437,30 @@ func (s *ItemExtractor) extractPlain(
 	resultRow.EngineVehicles, err = s.extractEngineVehicles(ctx, fields, row, lang, isModer, userID, role)
 	if err != nil {
 		return err
+	}
+
+	resultRow.EngineVehiclesCount, err = s.extractEngineVehiclesCount(ctx, fields, row, isModer)
+	if err != nil {
+		return err
+	}
+
+	if fields.GetItemLanguageCount() && isModer {
+		resultRow.ItemLanguageCount, err = itemRepository.ItemLanguageCount(ctx, &query.ItemLanguageListOptions{
+			ItemID:          row.ID,
+			ExcludeLanguage: items.DefaultLanguageCode,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if fields.GetLinksCount() && isModer {
+		resultRow.LinksCount, err = itemRepository.LinksCount(ctx, &query.LinkListOptions{
+			ItemID: row.ID,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	resultRow.RelatedGroupPictures, err = s.extractRelatedGroupsPictures(ctx, fields, row, lang)
@@ -848,6 +920,31 @@ func (s *ItemExtractor) extractEngineVehicles(
 	return itemExtractor.ExtractRows(ctx, rows, itemFields, lang, isModer, userID, role)
 }
 
+func (s *ItemExtractor) extractEngineVehiclesCount(
+	ctx context.Context, fields *ItemFields, row *items.Item, isModer bool,
+) (int32, error) {
+	if !fields.GetEngineVehiclesCount() || !isModer {
+		return 0, nil
+	}
+
+	if row.ItemTypeID != schema.ItemTableItemTypeIDEngine {
+		return 0, nil
+	}
+
+	itemRepository, err := s.container.ItemsRepository()
+	if err != nil {
+		return 0, err
+	}
+
+	listOptions := query.ItemListOptions{
+		EngineItemID: row.ID,
+	}
+
+	res, err := itemRepository.Count(ctx, listOptions)
+
+	return int32(res), err //nolint: gosec
+}
+
 func (s *ItemExtractor) extractPreviewPictures(
 	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
 ) (*PreviewPictures, error) {
@@ -963,25 +1060,35 @@ func (s *ItemExtractor) extractCommentsCount(ctx context.Context, fields *ItemFi
 
 func (s *ItemExtractor) extractLogos(
 	ctx context.Context, fields *ItemFields, row *items.Item,
-) (*APIImage, *APIImage, error) {
+) (*APIImage, *APIImage, *APIImage, error) {
 	if !row.LogoID.Valid {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	var (
+		logo      *APIImage
 		logo120   *APIImage
 		brandicon *APIImage
 	)
 
 	imageStorage, err := s.container.ImageStorage()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+
+	if fields.GetLogo() {
+		img, err := imageStorage.Image(ctx, int(row.LogoID.Int64))
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		logo = APIImageToGRPC(img)
 	}
 
 	if fields.GetLogo120() {
 		img, err := imageStorage.FormattedImage(ctx, int(row.LogoID.Int64), "logo")
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		logo120 = APIImageToGRPC(img)
@@ -990,13 +1097,13 @@ func (s *ItemExtractor) extractLogos(
 	if fields.GetBrandicon() {
 		img, err := imageStorage.FormattedImage(ctx, int(row.LogoID.Int64), "brandicon2")
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		brandicon = APIImageToGRPC(img)
 	}
 
-	return logo120, brandicon, nil
+	return logo, logo120, brandicon, nil
 }
 
 func (s *ItemExtractor) extractConnectedItems(

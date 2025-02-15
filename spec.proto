@@ -2,6 +2,7 @@ syntax = "proto3";
 package goautowp;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
 import "google/type/latlng.proto";
@@ -1143,6 +1144,15 @@ message ItemFields {
   int64 route_brand_id = 41;
   bool related_group_pictures = 42;
   bool item_of_day_pictures = 43;
+  bool meta = 44;
+  bool engine_vehicles_count = 45;
+  bool item_language_count = 46;
+  bool links_count = 47;
+  bool logo = 48;
+  bool parents_count = 49;
+  bool exact_pictures_count = 50;
+  bool specifications_count = 51;
+  bool subscription = 52;
 }
 
 message AltName {
@@ -1298,13 +1308,18 @@ message APIItem {
   string description = 9;
   bool is_concept = 10;
   bool is_concept_inherit = 11;
-  int64 spec_id = 12;
+  int32 spec_id = 12;
+  bool spec_inherit = 72;
   string full_text = 13;
   int32 descendant_pictures_count = 14;
-  int32 childs_count = 15;
-  int32 descendant_twins_groups_count = 16;
   int32 inbox_pictures_count = 17;
+  int32 accepted_pictures_count = 27;
+  int32 exact_pictures_count = 69;
+  int32 childs_count = 15;
+  int32 parents_count = 68;
+  int32 descendant_twins_groups_count = 16;
   string full_name = 18;
+  APIImage logo = 67;
   APIImage logo120 = 19;
   bool mosts_active = 20;
   int32 comments_attentions_count = 21;
@@ -1313,7 +1328,6 @@ message APIItem {
   int64 attr_zone_id = 24;
   bool engine_inherit = 25;
   google.type.LatLng location = 26;
-  int32 accepted_pictures_count = 27;
   bool has_child_specs = 28;
   bool has_specs = 29;
   int32 produced = 30;
@@ -1338,6 +1352,22 @@ message APIItem {
   repeated APIItem engine_vehicles = 50;
   repeated RelatedGroupPicture related_group_pictures = 51;
   repeated ItemOfDayPicture item_of_day_pictures = 52;
+  int32 begin_year = 53;
+  int32 end_year = 54;
+  int32 begin_month = 55;
+  int32 end_month = 56;
+  int32 begin_model_year = 57;
+  int32 end_model_year = 58;
+  string begin_model_year_fraction = 59;
+  string end_model_year_fraction = 60;
+  string body = 61;
+  string name = 62;
+  google.protobuf.BoolValue today = 63;
+  int32 engine_vehicles_count = 64;
+  int32 item_language_count = 65;
+  int32 links_count = 66;
+  int32 specifications_count = 70;
+  bool subscription = 71;
 }
 
 message ItemOfDayPicture {

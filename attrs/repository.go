@@ -527,6 +527,17 @@ func (s *Repository) TopUserBrands(
 	return rows, err
 }
 
+func (s *Repository) ValuesCount(ctx context.Context, options query.AttrsValueListOptions) (int32, error) {
+	sqSelect := s.ValuesSelect(options, ValuesOrderByNone)
+
+	result, err := sqSelect.CountContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return int32(result), nil //nolint: gosec
+}
+
 func (s *Repository) ValuesSelect(options query.AttrsValueListOptions, orderBy ValuesOrderBy) *goqu.SelectDataset {
 	alias := query.AttrsValuesAlias
 	aliasTable := goqu.T(alias)

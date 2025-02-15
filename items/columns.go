@@ -109,6 +109,23 @@ func (s ChildsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpress
 	return goqu.L("?", sqSelect), nil
 }
 
+type ParentsCountColumn struct {
+	db *goqu.Database
+}
+
+func (s ParentsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+	options := query.ItemParentListOptions{
+		ItemIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
+	}
+
+	sqSelect, err := options.CountSelect(s.db, query.ItemParentAlias)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("?", sqSelect), nil
+}
+
 type TextstorageRefColumn struct {
 	db  *goqu.Database
 	col string
@@ -241,6 +258,25 @@ func (s StatusPicturesCountColumn) SelectExpr(alias string, _ string) (Aliaseabl
 			ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
 				ParentIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 			},
+		},
+	}
+
+	sqSelect, err := opts.CountSelect(s.db, query.PictureAlias)
+	if err != nil {
+		return nil, err
+	}
+
+	return goqu.L("?", sqSelect), nil
+}
+
+type ExactPicturesCountColumn struct {
+	db *goqu.Database
+}
+
+func (s ExactPicturesCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+	opts := query.PictureListOptions{
+		PictureItem: &query.PictureItemListOptions{
+			ItemIDExpr: goqu.T(alias).Col(schema.ItemTableIDColName),
 		},
 	}
 
