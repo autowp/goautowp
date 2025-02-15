@@ -2462,9 +2462,16 @@ func (s *ItemsGRPCServer) GetItemParent(ctx context.Context, in *ItemParentsRequ
 		options = &query.ItemParentListOptions{}
 	}
 
+	if options.ItemID == 0 || options.ParentID == 0 {
+		return nil, status.Error(codes.NotFound, "primary key is zero")
+	}
+
 	fields := convertItemParentFields(in.GetFields())
 
-	row, err := s.repository.ItemParent(ctx, options.ItemID, options.ParentID, fields)
+	row, err := s.repository.ItemParent(ctx, &query.ItemParentListOptions{
+		ItemID:   options.ItemID,
+		ParentID: options.ParentID,
+	}, fields)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2724,4 +2731,124 @@ func (s *ItemsGRPCServer) GetTopSpecsContributions(
 	}
 
 	return &res, nil
+}
+
+func (s *ItemsGRPCServer) GetPath(ctx context.Context, in *PathRequest) (*PathResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	lang := in.GetLanguage()
+
+	fields := ItemFields{
+		NameHtml: true,
+		NameText: true,
+		NameOnly: true,
+	}
+	convertedFields := convertItemFields(&fields)
+
+	currentCategory, err := s.repository.Item(ctx, &query.ItemListOptions{
+		Language: lang,
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
+		Catname:  in.GetCatname(),
+	}, convertedFields)
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, "category not found")
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	type breadcrumb struct {
+		Catname string
+		Item    *items.Item
+	}
+
+	breadcrumbs := []breadcrumb{
+		{
+			Catname: "",
+			Item:    currentCategory,
+		},
+	}
+
+	parentCategory := currentCategory
+
+	for {
+		parentCategory, err = s.repository.Item(ctx, &query.ItemListOptions{
+			Language: lang,
+			TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
+			ItemParentChild: &query.ItemParentListOptions{
+				ItemID: parentCategory.ID,
+			},
+		}, convertedFields)
+		if err != nil {
+			if errors.Is(err, items.ErrItemNotFound) {
+				break
+			}
+
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		breadcrumbs = append([]breadcrumb{{
+			Catname: "",
+			Item:    parentCategory,
+		}}, breadcrumbs...)
+	}
+
+	var path []string
+	if len(in.GetPath()) > 0 {
+		path = strings.Split(in.GetPath(), "/")
+	}
+
+	currentCar := currentCategory
+	for _, pathNode := range path {
+		currentCar, err = s.repository.Item(ctx, &query.ItemListOptions{
+			Language: lang,
+			ItemParentParent: &query.ItemParentListOptions{
+				ParentID: currentCar.ID,
+				Catname:  pathNode,
+			},
+		}, convertedFields)
+		if err != nil {
+			if errors.Is(err, items.ErrItemNotFound) {
+				return nil, status.Error(codes.NotFound, "path node not found")
+			}
+
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		breadcrumbs = append(breadcrumbs, breadcrumb{
+			Catname: pathNode,
+			Item:    currentCar,
+		})
+	}
+
+	res := make([]*PathItem, 0)
+
+	var parentID int64
+
+	for idx, item := range breadcrumbs {
+		if idx == len(breadcrumbs)-1 {
+			fields.Description = true
+		}
+
+		extracted, err := s.extractor.Extract(ctx, item.Item, &fields, lang, isModer, userID, role)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		res = append(res, &PathItem{
+			Catname:  item.Catname,
+			ParentId: parentID,
+			Item:     extracted,
+		})
+		parentID = item.Item.ID
+	}
+
+	return &PathResponse{
+		Path: res,
+	}, nil
 }

@@ -123,6 +123,7 @@ service Items {
   rpc RefreshInheritance(RefreshInheritanceRequest) returns (google.protobuf.Empty) {}
   rpc SetUserItemSubscription(SetUserItemSubscriptionRequest) returns (google.protobuf.Empty) {}
   rpc SetItemEngine(SetItemEngineRequest) returns (google.protobuf.Empty) {}
+  rpc GetPath(PathRequest) returns (PathResponse) {}
 }
 
 service Comments {
@@ -2209,6 +2210,22 @@ message SetItemEngineRequest {
   int64 item_id = 1;
   int64 engine_item_id = 2;
   bool engine_inherited = 3;
+}
+
+message PathRequest {
+  string catname = 1;
+  string path = 2;
+  string language = 3;
+}
+
+message PathResponse {
+  repeated PathItem path = 1;
+}
+
+message PathItem {
+  string catname = 1;
+  APIItem item = 2;
+  int64 parent_id = 3;
 }
 
 message AddCommentRequest {

@@ -2445,6 +2445,7 @@ const (
 	Items_RefreshInheritance_FullMethodName       = "/goautowp.Items/RefreshInheritance"
 	Items_SetUserItemSubscription_FullMethodName  = "/goautowp.Items/SetUserItemSubscription"
 	Items_SetItemEngine_FullMethodName            = "/goautowp.Items/SetItemEngine"
+	Items_GetPath_FullMethodName                  = "/goautowp.Items/GetPath"
 )
 
 // ItemsClient is the client API for Items service.
@@ -2490,6 +2491,7 @@ type ItemsClient interface {
 	RefreshInheritance(ctx context.Context, in *RefreshInheritanceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetUserItemSubscription(ctx context.Context, in *SetUserItemSubscriptionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetItemEngine(ctx context.Context, in *SetItemEngineRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetPath(ctx context.Context, in *PathRequest, opts ...grpc.CallOption) (*PathResponse, error)
 }
 
 type itemsClient struct {
@@ -2890,6 +2892,16 @@ func (c *itemsClient) SetItemEngine(ctx context.Context, in *SetItemEngineReques
 	return out, nil
 }
 
+func (c *itemsClient) GetPath(ctx context.Context, in *PathRequest, opts ...grpc.CallOption) (*PathResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PathResponse)
+	err := c.cc.Invoke(ctx, Items_GetPath_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility.
@@ -2933,6 +2945,7 @@ type ItemsServer interface {
 	RefreshInheritance(context.Context, *RefreshInheritanceRequest) (*emptypb.Empty, error)
 	SetUserItemSubscription(context.Context, *SetUserItemSubscriptionRequest) (*emptypb.Empty, error)
 	SetItemEngine(context.Context, *SetItemEngineRequest) (*emptypb.Empty, error)
+	GetPath(context.Context, *PathRequest) (*PathResponse, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -3059,6 +3072,9 @@ func (UnimplementedItemsServer) SetUserItemSubscription(context.Context, *SetUse
 }
 func (UnimplementedItemsServer) SetItemEngine(context.Context, *SetItemEngineRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetItemEngine not implemented")
+}
+func (UnimplementedItemsServer) GetPath(context.Context, *PathRequest) (*PathResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPath not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 func (UnimplementedItemsServer) testEmbeddedByValue()               {}
@@ -3783,6 +3799,24 @@ func _Items_SetItemEngine_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetPath_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PathRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetPath(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_GetPath_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetPath(ctx, req.(*PathRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3945,6 +3979,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetItemEngine",
 			Handler:    _Items_SetItemEngine_Handler,
+		},
+		{
+			MethodName: "GetPath",
+			Handler:    _Items_GetPath_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

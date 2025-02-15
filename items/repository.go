@@ -3215,14 +3215,9 @@ func (s *Repository) ItemParents(
 }
 
 func (s *Repository) ItemParent(
-	ctx context.Context, itemID, parentID int64, fields ItemParentFields,
+	ctx context.Context, listOptions *query.ItemParentListOptions, fields ItemParentFields,
 ) (*ItemParent, error) {
-	listOptions := query.ItemParentListOptions{
-		ItemID:   itemID,
-		ParentID: parentID,
-	}
-
-	sqSelect, err := s.ItemParentSelect(&listOptions, fields, ItemParentOrderByNone)
+	sqSelect, err := s.ItemParentSelect(listOptions, fields, ItemParentOrderByNone)
 	if err != nil {
 		return nil, err
 	}

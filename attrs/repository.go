@@ -2815,9 +2815,10 @@ func (s *Repository) Specifications(
 		name := ""
 
 		if contextItemID > 0 {
-			itemParentRow, err := s.itemsRepository.ItemParent(ctx,
-				car.ID, contextItemID, items.ItemParentFields{Name: true},
-			)
+			itemParentRow, err := s.itemsRepository.ItemParent(ctx, &query.ItemParentListOptions{
+				ItemID:   car.ID,
+				ParentID: contextItemID,
+			}, items.ItemParentFields{Name: true})
 			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
 				return nil, fmt.Errorf("ItemParent(): %w", err)
 			}

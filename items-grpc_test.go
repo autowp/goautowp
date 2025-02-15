@@ -14,6 +14,7 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
@@ -1288,7 +1289,10 @@ func TestUpdateItemParent(t *testing.T) {
 	rep, err := cnt.ItemsRepository()
 	require.NoError(t, err)
 
-	row, err := rep.ItemParent(ctx, childID, parentID, items.ItemParentFields{})
+	row, err := rep.ItemParent(ctx, &query.ItemParentListOptions{
+		ItemID:   childID,
+		ParentID: parentID,
+	}, items.ItemParentFields{})
 	require.NoError(t, err)
 	require.Equal(t, "407", row.Catname)
 	require.Equal(t, schema.ItemParentTypeDefault, row.Type)
@@ -1319,7 +1323,10 @@ func TestUpdateItemParent(t *testing.T) {
 	require.Equal(t, childID, resItem.GetId())
 
 	// check row
-	row, err = rep.ItemParent(ctx, childID, parentID, items.ItemParentFields{})
+	row, err = rep.ItemParent(ctx, &query.ItemParentListOptions{
+		ItemID:   childID,
+		ParentID: parentID,
+	}, items.ItemParentFields{})
 	require.NoError(t, err)
 	require.Equal(t, "custom", row.Catname)
 	require.Equal(t, schema.ItemParentTypeDesign, row.Type)
@@ -1335,7 +1342,10 @@ func TestUpdateItemParent(t *testing.T) {
 	require.NoError(t, err)
 
 	// check row
-	row, err = rep.ItemParent(ctx, childID, parentID, items.ItemParentFields{})
+	row, err = rep.ItemParent(ctx, &query.ItemParentListOptions{
+		ItemID:   childID,
+		ParentID: parentID,
+	}, items.ItemParentFields{})
 	require.NoError(t, err)
 	require.Equal(t, "407", row.Catname)
 	require.Equal(t, schema.ItemParentTypeTuning, row.Type)
