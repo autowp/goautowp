@@ -1605,7 +1605,7 @@ func (s *PicturesGRPCServer) NotifyInboxed(ctx context.Context, pic *schema.Pict
 		}
 
 		return fmt.Sprintf(
-			"С картинки `%s` снят статус \"принято\"",
+			`С картинки %s снят статус "принято"`,
 			pictureURL,
 		), nil
 	})
