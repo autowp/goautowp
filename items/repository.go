@@ -4053,3 +4053,88 @@ func (s *Repository) RelatedCarGroups(ctx context.Context, itemID int64) (map[in
 
 	return result, nil
 }
+
+func (s *Repository) EngineVehiclesGroups(
+	ctx context.Context, engineID int64, groupJoinLimit int,
+) ([]int64, error) {
+	var vehicleIDs []int64
+
+	err := s.db.Select(schema.ItemTableIDCol).
+		From(schema.ItemTable).
+		Join(schema.ItemParentCacheTable, goqu.On(schema.ItemTableEngineItemIDCol.Eq(schema.ItemParentCacheTableItemIDCol))).
+		Where(schema.ItemParentCacheTableParentIDCol.Eq(engineID)).
+		ScanValsContext(ctx, &vehicleIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	vectors := make([][]int64, 0, len(vehicleIDs))
+
+	for _, vehicleID := range vehicleIDs {
+		var parentIDs []int64
+
+		err = s.db.Select(schema.ItemParentCacheTableParentIDCol).
+			From(schema.ItemParentCacheTable).
+			Join(schema.ItemTable, goqu.On(schema.ItemParentCacheTableParentIDCol.Eq(schema.ItemTableIDCol))).
+			Where(
+				schema.ItemTableItemTypeIDCol.Eq(schema.ItemTableItemTypeIDVehicle),
+				schema.ItemParentCacheTableItemIDCol.Eq(vehicleID),
+				schema.ItemParentCacheTableItemIDCol.Neq(schema.ItemParentCacheTableParentIDCol),
+			).
+			Order(schema.ItemParentCacheTableDiffCol.Desc()).
+			ScanValsContext(ctx, &parentIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		// remove parents
+		for _, parentID := range parentIDs {
+			index := slices.Index(vehicleIDs, parentID)
+			if index != -1 {
+				vehicleIDs = append(vehicleIDs[:index], vehicleIDs[index+1:]...)
+			}
+		}
+
+		vector := parentIDs
+		vector = append(vector, vehicleID)
+
+		vectors = append(vectors, vector)
+	}
+
+	if groupJoinLimit > 0 && len(vehicleIDs) <= groupJoinLimit {
+		return vehicleIDs, nil
+	}
+
+	for {
+		matched := false
+		// look for same root
+		for i := 0; i < (len(vectors)-1) && !matched; i++ {
+			for j := i + 1; j < len(vectors) && !matched; j++ {
+				if vectors[i][0] == vectors[j][0] {
+					matched = true
+					// matched root
+					newVector := make([]int64, 0)
+					length := min(len(vectors[i]), len(vectors[j]))
+
+					for k := 0; k < length && vectors[i][k] == vectors[j][k]; k++ {
+						newVector = append(newVector, vectors[i][k])
+					}
+
+					vectors[i] = newVector
+					vectors = append(vectors[:j], vectors[j+1:]...)
+				}
+			}
+		}
+
+		if !matched {
+			break
+		}
+	}
+
+	resultIDs := make([]int64, 0, len(vectors))
+	for _, vector := range vectors {
+		resultIDs = append(resultIDs, vector[len(vector)-1])
+	}
+
+	return resultIDs, nil
+}

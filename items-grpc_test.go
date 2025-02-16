@@ -3009,3 +3009,157 @@ func TestGetTopSpecsContributions(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, res.GetItems())
 }
+
+func TestVehiclesOnEnginesMerge(t *testing.T) {
+	t.Parallel()
+
+	client := NewItemsClient(conn)
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	cfg := config.LoadConfig(".")
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Name:       "5 Series",
+		Body:       "",
+		IsGroup:    true,
+	})
+
+	childID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Name:       "5 Series",
+		Body:       "E31",
+		IsGroup:    true,
+	})
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemParent{
+			ItemId: childID, ParentId: itemID, Catname: "vehicle1",
+		},
+	)
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	engineName := fmt.Sprintf("Peugeot-%d-Engine", randomInt)
+	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+		Name:            engineName,
+		IsGroup:         true,
+		ItemTypeID:      schema.ItemTableItemTypeIDEngine,
+		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d-engine", randomInt)},
+		Body:            "",
+		ProducedExactly: false,
+	}).Executor().ExecContext(ctx)
+	require.NoError(t, err)
+
+	engineID, err := r2.LastInsertId()
+	require.NoError(t, err)
+
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetItemEngineRequest{
+			ItemId:          itemID,
+			EngineItemId:    engineID,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.Item(ctx, &ItemRequest{
+		Id: itemID,
+	})
+	require.NoError(t, err)
+	require.Equal(t, engineID, res.GetEngineItemId())
+
+	_, err = client.SetItemEngine(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetItemEngineRequest{
+			ItemId:          childID,
+			EngineItemId:    engineID,
+			EngineInherited: false,
+		},
+	)
+	require.NoError(t, err)
+
+	rep, err := cnt.ItemsRepository()
+	require.NoError(t, err)
+
+	_, err = rep.RebuildCache(ctx, itemID)
+	require.NoError(t, err)
+
+	_, err = rep.RebuildCache(ctx, childID)
+	require.NoError(t, err)
+
+	_, err = rep.RebuildCache(ctx, engineID)
+	require.NoError(t, err)
+
+	res, err = client.Item(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemRequest{
+			Id: engineID,
+			Fields: &ItemFields{
+				EngineVehicles:      &ItemsRequest{},
+				EngineVehiclesCount: true,
+			},
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, res.GetEngineVehicles(), 1)
+	require.EqualValues(t, 2, res.GetEngineVehiclesCount())
+
+	for i := range 10 {
+		childChildID := createItem(t, goquDB, schema.ItemRow{
+			ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+			Name:       "5 Series",
+			Body:       fmt.Sprintf("E31-%d", i),
+			IsGroup:    false,
+		})
+
+		_, err = client.CreateItemParent(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			&ItemParent{
+				ItemId: childChildID, ParentId: childID, Catname: "vehicle1",
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = rep.RebuildCache(ctx, childChildID)
+		require.NoError(t, err)
+
+		_, err = client.SetItemEngine(
+			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			&SetItemEngineRequest{
+				ItemId:          childChildID,
+				EngineItemId:    engineID,
+				EngineInherited: false,
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	res, err = client.Item(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemRequest{
+			Id: engineID,
+			Fields: &ItemFields{
+				EngineVehicles:      &ItemsRequest{},
+				EngineVehiclesCount: true,
+			},
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, res.GetEngineVehicles(), 1)
+	require.EqualValues(t, 12, res.GetEngineVehiclesCount())
+}

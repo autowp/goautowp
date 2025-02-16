@@ -2653,7 +2653,7 @@ func (s *ItemsGRPCServer) GetTopSpecsContributions(
 
 	lang := in.GetLanguage()
 
-	cacheKey := "API_INDEX_SPEC_CARS_7_" + lang
+	cacheKey := "API_INDEX_SPEC_CARS_8_" + lang
 	success := false
 
 	var res TopSpecsContributions

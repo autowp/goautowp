@@ -18,6 +18,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+const engineVehiclesGroupsLimit = 3
+
 var (
 	itemTypeCanHaveSpecs = []schema.ItemTableItemTypeID{
 		schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDTwins,
@@ -927,6 +929,15 @@ func (s *ItemExtractor) extractEngineVehicles(
 		return nil, err
 	}
 
+	ids, err := itemRepository.EngineVehiclesGroups(ctx, row.ID, engineVehiclesGroupsLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
 	itemExtractor := s.container.ItemExtractor()
 
 	itemFields := evs.GetFields()
@@ -939,12 +950,12 @@ func (s *ItemExtractor) extractEngineVehicles(
 		listOptions = &ItemListOptions{}
 	}
 
-	listOptions.EngineId = row.ID
-
 	repoListOptions, err := convertItemListOptions(listOptions)
 	if err != nil {
 		return nil, err
 	}
+
+	repoListOptions.ItemIDs = ids
 
 	rows, _, err := itemRepository.List(ctx, repoListOptions, convertItemFields(itemFields), items.OrderByNone, false)
 	if err != nil {
