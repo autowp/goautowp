@@ -3163,3 +3163,80 @@ func TestVehiclesOnEnginesMerge(t *testing.T) {
 	require.Len(t, res.GetEngineVehicles(), 1)
 	require.EqualValues(t, 12, res.GetEngineVehiclesCount())
 }
+
+func TestBrandSectionLanguageName(t *testing.T) {
+	t.Parallel()
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	cfg := config.LoadConfig(".")
+	client := NewItemsClient(conn)
+
+	// admin
+	kc := cnt.Keycloak()
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	brandID := createItem(t, goquDB, schema.ItemRow{
+		Name:       fmt.Sprintf("brand-%d", random.Int()),
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDBrand,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("brand-%d", randomInt)},
+	})
+
+	vehicleID := createItem(t, goquDB, schema.ItemRow{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("vehicle-%d", randomInt)},
+	})
+
+	_, err = client.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParent{
+			ItemId: vehicleID, ParentId: brandID, Catname: "vehicle1",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetItemParentLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParentLanguage{
+			ItemId:   vehicleID,
+			ParentId: brandID,
+			Language: "ru",
+			Name:     "Azazaza",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.SetItemParentLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&ItemParentLanguage{
+			ItemId:   vehicleID,
+			ParentId: brandID,
+			Language: "en",
+			Name:     "Custom name",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CreateItemVehicleType(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&APIItemVehicleType{
+			ItemId:        vehicleID,
+			VehicleTypeId: 19,
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetBrandSections(ctx, &GetBrandSectionsRequest{Language: "en", ItemId: brandID})
+	require.NoError(t, err)
+	require.NotEmpty(t, res.GetSections()[2].GetGroups())
+	require.Equal(t, "Custom name", res.GetSections()[2].GetGroups()[0].Name)
+}

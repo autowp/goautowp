@@ -58,7 +58,7 @@ func (s *ItemParentExtractor) ExtractRows(
 	var err error
 
 	itemFields := fields.GetItem()
-	itemsMap := make(map[int64]*items.Item, 0)
+	itemsMap := make(map[int64]*items.Item)
 
 	if itemFields != nil && len(rows) > 0 {
 		ids := make([]int64, 0, len(rows))

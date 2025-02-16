@@ -2170,8 +2170,9 @@ func (s *ItemsGRPCServer) GetBrandSections(
 	ctx context.Context, in *GetBrandSectionsRequest,
 ) (*APIBrandSections, error) {
 	item, err := s.repository.Item(ctx, &query.ItemListOptions{
-		ItemID: in.GetItemId(),
-		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		ItemID:   in.GetItemId(),
+		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		Language: in.GetLanguage(),
 	}, nil)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
