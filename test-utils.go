@@ -129,5 +129,8 @@ func createItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	_, err = repository.RebuildCache(ctx, itemID)
 	require.NoError(t, err)
 
+	_, err = repository.UpdateOrderCache(ctx, itemID)
+	require.NoError(t, err)
+
 	return itemID
 }

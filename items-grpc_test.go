@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
@@ -2908,7 +2907,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
-					AttributeId: attrs.FuelSupplySystemAttr,
+					AttributeId: schema.FuelSupplySystemAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -2917,7 +2916,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EngineCylinderDiameter,
+					AttributeId: schema.EngineCylinderDiameter,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_FLOAT,
@@ -2926,7 +2925,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.WidthAttr,
+					AttributeId: schema.WidthAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_INTEGER,
@@ -2935,7 +2934,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.ABSAttr,
+					AttributeId: schema.ABSAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_BOOLEAN,
@@ -2944,7 +2943,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EngineTypeAttr,
+					AttributeId: schema.EngineTypeAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_TREE,
@@ -2954,7 +2953,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EnginePlacementOrientationAttr,
+					AttributeId: schema.EnginePlacementOrientationAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -2964,7 +2963,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.DriveUnitAttr,
+					AttributeId: schema.DriveUnitAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -2974,7 +2973,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.TurningDiameterAttr,
+					AttributeId: schema.TurningDiameterAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:       AttrAttributeType_FLOAT,
@@ -2983,7 +2982,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.LengthAttr,
+					AttributeId: schema.LengthAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:     AttrAttributeType_INTEGER,
@@ -2992,7 +2991,7 @@ func TestGetTopSpecsContributions(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.FrontSuspensionTypeAttr,
+					AttributeId: schema.FrontSuspensionTypeAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:        AttrAttributeType_STRING,
@@ -3238,5 +3237,5 @@ func TestBrandSectionLanguageName(t *testing.T) {
 	res, err := client.GetBrandSections(ctx, &GetBrandSectionsRequest{Language: "en", ItemId: brandID})
 	require.NoError(t, err)
 	require.NotEmpty(t, res.GetSections()[2].GetGroups())
-	require.Equal(t, "Custom name", res.GetSections()[2].GetGroups()[0].Name)
+	require.Equal(t, "Custom name", res.GetSections()[2].GetGroups()[0].GetName())
 }

@@ -26,3 +26,11 @@ type AttrsListOptionRow struct {
 	AttributeID int64         `db:"attribute_id"`
 	ParentID    sql.NullInt64 `db:"parent_id"`
 }
+
+const (
+	EngineTurboNone int64 = 46
+	EngineTurboYes  int64 = 47
+	EngineTurboX2   int64 = 48
+	EngineTurboX3   int64 = 64
+	EngineTurboX4   int64 = 49
+)

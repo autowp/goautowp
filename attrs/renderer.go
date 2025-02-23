@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"strings"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 )
 
@@ -145,7 +146,7 @@ func (s FuelTank) Render(_ *AttributeRow, values map[int64]string, units map[int
 	}
 
 	if len(res) > 0 {
-		if unit, ok := units[fuelTankPrimaryAttr]; ok {
+		if unit, ok := units[schema.FuelTankPrimaryAttr]; ok {
 			res += unitSuffixHTML(unit.Name, unit.Abbr)
 		}
 	}

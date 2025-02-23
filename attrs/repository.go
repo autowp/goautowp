@@ -31,59 +31,17 @@ import (
 type ValuesOrderBy int
 
 var (
-	errAttributeNotFound  = errors.New("attribute not found")
-	errListOptionFound    = errors.New("listOption not found")
-	errInvalidItemID      = errors.New("invalid itemID provided")
-	errAttrTypeUnexpected = errors.New("unexpected attribute type")
+	errAttributeNotFound         = errors.New("attribute not found")
+	errListOptionFound           = errors.New("listOption not found")
+	errInvalidItemID             = errors.New("invalid itemID provided")
+	errAttrTypeUnexpected        = errors.New("unexpected attribute type")
+	errAttributeTypeNotSupported = errors.New("attribute type not supported")
 )
 
 const (
 	defaultZoneID int64 = 1
 	engineZoneID  int64 = 5
 	busZoneID     int64 = 3
-
-	TurningDiameterAttr int64 = 11
-
-	LengthAttr                             int64 = 1
-	WidthAttr                              int64 = 2
-	FrontSuspensionTypeAttr                int64 = 8
-	RearSuspensionType                     int64 = 9
-	enginePlacementAttr                    int64 = 19
-	EnginePlacementPlacementAttr           int64 = 20
-	EnginePlacementOrientationAttr         int64 = 21
-	FuelSupplySystemAttr                   int64 = 23
-	engineConfigurationAttr                int64 = 24
-	EngineConfigurationCylindersCountAttr  int64 = 25
-	EngineConfigurationCylindersLayoutAttr int64 = 26
-	EngineConfigurationValvesCountAttr     int64 = 27
-	EngineCylinderDiameter                 int64 = 28
-	EngineStrokeAttr                       int64 = 29
-	DriveUnitAttr                          int64 = 41
-	gearboxAttr                            int64 = 42
-	gearboxTypeAttr                        int64 = 43
-	gearboxGearsAttr                       int64 = 44
-	SpeedLimiterAttr                       int64 = 53
-	fuelTankAttr                           int64 = 57
-	fuelTankPrimaryAttr                    int64 = 58
-	fuelTankSecondaryAttr                  int64 = 59
-	bootVolumeAttr                         int64 = 60
-	bootVolumeMinAttr                      int64 = 61
-	bootVolumeMaxAttr                      int64 = 62
-	ABSAttr                                int64 = 77
-	frontWheelAttr                         int64 = 85
-	rearWheelAttr                          int64 = 86
-	frontWheelTyreWidthAttr                int64 = 87
-	frontWheelRadiusAttr                   int64 = 88
-	frontWheelRimWidthAttr                 int64 = 89
-	frontWheelTyreSeriesAttr               int64 = 90
-	rearWheelTyreWidthAttr                 int64 = 91
-	rearWheelRadiusAttr                    int64 = 92
-	rearWheelRimWidthAttr                  int64 = 93
-	rearWheelTyreSeriesAttr                int64 = 94
-	FuelTypeAttr                           int64 = 98
-	engineNameAttr                         int64 = 100
-	gearboxNameAttr                        int64 = 139
-	EngineTypeAttr                         int64 = 207
 )
 
 var busVehicleTypes = []int64{19, 39, 28, 32}
@@ -442,6 +400,17 @@ func (s *Repository) unitsMap(ctx context.Context) (map[int64]schema.AttrsUnitRo
 	}
 
 	return s.units, nil
+}
+
+func (s *Repository) Unit(ctx context.Context, id int64) (*schema.AttrsUnitRow, error) {
+	units, err := s.unitsMap(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	unit := units[id]
+
+	return &unit, nil
 }
 
 func (s *Repository) Units(ctx context.Context) ([]schema.AttrsUnitRow, error) {
@@ -2689,7 +2658,7 @@ func (s *Repository) zoneByItemsList(ctx context.Context, list []*items.Item) (i
 	ids := make(map[int64]bool)
 
 	for _, car := range list {
-		vehicleTypeIDs, err := s.itemsRepository.VehicleTypes(ctx, car.ID, false)
+		vehicleTypeIDs, err := s.itemsRepository.VehicleTypeIDs(ctx, car.ID, false)
 		if err != nil {
 			return 0, fmt.Errorf("VehicleTypes(): %w", err)
 		}
@@ -2774,7 +2743,7 @@ func (s *Repository) Specifications(
 		itemID := car.ID
 		values := actualValuesText[itemID]
 
-		_, ok := values[engineNameAttr]
+		_, ok := values[schema.EngineNameAttr]
 
 		// append engine name
 		if !ok && car.EngineItemID.Valid {
@@ -2808,7 +2777,7 @@ func (s *Repository) Specifications(
 					return nil, err
 				}
 
-				values[engineNameAttr] = nameText
+				values[schema.EngineNameAttr] = nameText
 			}
 		}
 
@@ -3376,4 +3345,54 @@ func (s *Repository) Contributors(ctx context.Context, itemID int64) ([]Contribu
 		ScanStructsContext(ctx, &sts)
 
 	return sts, err
+}
+
+type ValueTable struct {
+	Table              exp.IdentifierExpression
+	AttributeIDCol     exp.IdentifierExpression
+	AttributeIDColName string
+	ValueCol           exp.IdentifierExpression
+	ValueColName       string
+	ItemIDCol          exp.IdentifierExpression
+	ItemIDColName      string
+}
+
+func ValueTableByType(typeID schema.AttrsAttributeTypeID) (ValueTable, error) {
+	switch typeID {
+	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
+		return ValueTable{
+			Table:              schema.AttrsValuesStringTable,
+			AttributeIDCol:     schema.AttrsValuesStringTableAttributeIDCol,
+			AttributeIDColName: schema.AttrsValuesStringTableAttributeIDColName,
+			ValueCol:           schema.AttrsValuesStringTableValueCol,
+			ValueColName:       schema.AttrsValuesStringTableValueColName,
+			ItemIDCol:          schema.AttrsValuesStringTableItemIDCol,
+			ItemIDColName:      schema.AttrsValuesStringTableItemIDColName,
+		}, nil
+	case schema.AttrsAttributeTypeIDInteger:
+		return ValueTable{
+			Table:              schema.AttrsValuesIntTable,
+			AttributeIDCol:     schema.AttrsValuesIntTableAttributeIDCol,
+			AttributeIDColName: schema.AttrsValuesIntTableAttributeIDColName,
+			ValueCol:           schema.AttrsValuesIntTableValueCol,
+			ValueColName:       schema.AttrsValuesIntTableValueColName,
+			ItemIDCol:          schema.AttrsValuesIntTableItemIDCol,
+			ItemIDColName:      schema.AttrsValuesIntTableItemIDColName,
+		}, nil
+	case schema.AttrsAttributeTypeIDFloat:
+		return ValueTable{
+			Table:              schema.AttrsValuesFloatTable,
+			AttributeIDCol:     schema.AttrsValuesFloatTableAttributeIDCol,
+			AttributeIDColName: schema.AttrsValuesFloatTableAttributeIDColName,
+			ValueCol:           schema.AttrsValuesFloatTableValueCol,
+			ValueColName:       schema.AttrsValuesFloatTableValueColName,
+			ItemIDCol:          schema.AttrsValuesFloatTableItemIDCol,
+			ItemIDColName:      schema.AttrsValuesFloatTableItemIDColName,
+		}, nil
+	case schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree, schema.AttrsAttributeTypeIDBoolean,
+		schema.AttrsAttributeTypeIDUnknown:
+		return ValueTable{}, fmt.Errorf("%w: '%d'", errAttributeTypeNotSupported, typeID)
+	}
+
+	return ValueTable{}, fmt.Errorf("%w: '%d'", errAttributeTypeNotSupported, typeID)
 }

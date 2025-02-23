@@ -186,11 +186,14 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 		return nil, err
 	}
 
-	sqSelect = s.ItemVehicleType.JoinToVehicleIDAndApply(
+	sqSelect, err = s.ItemVehicleType.JoinToVehicleIDAndApply(
 		itemIDCol,
 		AppendItemVehicleTypeAlias(alias),
 		sqSelect,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	sqSelect, err = s.PictureItemByItemID.JoinToItemIDAndApply(
 		itemIDCol,

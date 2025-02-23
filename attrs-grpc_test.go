@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
@@ -20,22 +19,22 @@ import (
 )
 
 const (
-	floatAttributeID        = attrs.TurningDiameterAttr
-	intAttributeID          = attrs.LengthAttr
-	stringAttributeID       = attrs.FrontSuspensionTypeAttr
-	boolAttributeID         = attrs.SpeedLimiterAttr
-	listAttributeID         = attrs.EnginePlacementPlacementAttr
-	treeAttributeID         = attrs.FuelSupplySystemAttr
-	treeMultipleAttributeID = attrs.FuelTypeAttr
+	floatAttributeID        = schema.TurningDiameterAttr
+	intAttributeID          = schema.LengthAttr
+	stringAttributeID       = schema.FrontSuspensionTypeAttr
+	boolAttributeID         = schema.SpeedLimiterAttr
+	listAttributeID         = schema.EnginePlacementPlacementAttr
+	treeAttributeID         = schema.FuelSupplySystemAttr
+	treeMultipleAttributeID = schema.FuelTypeAttr
 )
 
 const (
-	floatEmptyAttributeID  = attrs.EngineCylinderDiameter
-	intEmptyAttributeID    = attrs.WidthAttr
-	stringEmptyAttributeID = attrs.RearSuspensionType
-	boolEmptyAttributeID   = attrs.ABSAttr
-	listEmptyAttributeID   = attrs.EnginePlacementOrientationAttr
-	treeEmptyAttributeID   = attrs.DriveUnitAttr
+	floatEmptyAttributeID  = schema.EngineCylinderDiameter
+	intEmptyAttributeID    = schema.WidthAttr
+	stringEmptyAttributeID = schema.RearSuspensionType
+	boolEmptyAttributeID   = schema.ABSAttr
+	listEmptyAttributeID   = schema.EnginePlacementOrientationAttr
+	treeEmptyAttributeID   = schema.DriveUnitAttr
 )
 
 func TestGetUnits(t *testing.T) {
@@ -717,7 +716,7 @@ func TestEngineValuesApplied(t *testing.T) {
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
-					AttributeId: attrs.EngineTypeAttr,
+					AttributeId: schema.EngineTypeAttr,
 					ItemId:      engineItemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_TREE,
@@ -747,7 +746,7 @@ func TestEngineValuesApplied(t *testing.T) {
 		for _, val := range values.GetItems() {
 			require.Equal(t, val.GetItemId(), currentItemID)
 
-			if val.GetAttributeId() == attrs.EngineTypeAttr {
+			if val.GetAttributeId() == schema.EngineTypeAttr {
 				attributeFound = true
 
 				require.True(t, val.GetValue().GetValid())
@@ -819,7 +818,7 @@ func TestSetUserValuesList(t *testing.T) {
 			&AttrSetUserValuesRequest{
 				Items: []*AttrUserValue{
 					{
-						AttributeId: attrs.EngineTypeAttr,
+						AttributeId: schema.EngineTypeAttr,
 						ItemId:      itemID,
 						Value: &AttrValueValue{
 							Type:      AttrAttributeType_TREE,
@@ -853,7 +852,7 @@ func TestSetUserValuesList(t *testing.T) {
 			for _, val := range values.GetItems() {
 				require.Equal(t, val.GetItemId(), itemID)
 
-				if val.GetAttributeId() == attrs.EngineTypeAttr {
+				if val.GetAttributeId() == schema.EngineTypeAttr {
 					attributeFound = true
 
 					require.True(t, val.GetValue().GetValid())
@@ -893,7 +892,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 		Value       *AttrValueValue
 	}{
 		{
-			AttributeID: attrs.EngineTypeAttr,
+			AttributeID: schema.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -902,7 +901,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 			},
 		},
 		{
-			AttributeID: attrs.EngineTypeAttr,
+			AttributeID: schema.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -911,7 +910,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 			},
 		},
 		{
-			AttributeID: attrs.EngineTypeAttr,
+			AttributeID: schema.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -920,7 +919,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 			},
 		},
 		{
-			AttributeID: attrs.EngineTypeAttr,
+			AttributeID: schema.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -929,7 +928,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 			},
 		},
 		{
-			AttributeID: attrs.EngineTypeAttr,
+			AttributeID: schema.EngineTypeAttr,
 			Value: &AttrValueValue{
 				Type:      AttrAttributeType_TREE,
 				Valid:     true,
@@ -1059,7 +1058,7 @@ func TestSetValuesRaceConditions(t *testing.T) {
 					&AttrSetUserValuesRequest{
 						Items: []*AttrUserValue{
 							{
-								AttributeId: attrs.EngineTypeAttr,
+								AttributeId: schema.EngineTypeAttr,
 								ItemId:      itemID,
 								Value:       testCase.Value,
 							},
@@ -1810,7 +1809,7 @@ func TestSpecifications(t *testing.T) {
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
-					AttributeId: attrs.EngineTypeAttr,
+					AttributeId: schema.EngineTypeAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_TREE,
@@ -1820,7 +1819,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EngineCylinderDiameter,
+					AttributeId: schema.EngineCylinderDiameter,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_FLOAT,
@@ -1829,7 +1828,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.WidthAttr,
+					AttributeId: schema.WidthAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_INTEGER,
@@ -1838,7 +1837,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.RearSuspensionType,
+					AttributeId: schema.RearSuspensionType,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_STRING,
@@ -1847,7 +1846,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.ABSAttr,
+					AttributeId: schema.ABSAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_BOOLEAN,
@@ -1856,7 +1855,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EnginePlacementOrientationAttr,
+					AttributeId: schema.EnginePlacementOrientationAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -1866,7 +1865,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.DriveUnitAttr,
+					AttributeId: schema.DriveUnitAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -1876,7 +1875,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.TurningDiameterAttr,
+					AttributeId: schema.TurningDiameterAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:       AttrAttributeType_FLOAT,
@@ -1885,7 +1884,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.LengthAttr,
+					AttributeId: schema.LengthAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:     AttrAttributeType_INTEGER,
@@ -1894,7 +1893,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.FrontSuspensionTypeAttr,
+					AttributeId: schema.FrontSuspensionTypeAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:        AttrAttributeType_STRING,
@@ -1903,7 +1902,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.SpeedLimiterAttr,
+					AttributeId: schema.SpeedLimiterAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_BOOLEAN,
@@ -1912,7 +1911,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EnginePlacementPlacementAttr,
+					AttributeId: schema.EnginePlacementPlacementAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -1921,7 +1920,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.FuelSupplySystemAttr,
+					AttributeId: schema.FuelSupplySystemAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -1930,7 +1929,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.FuelTypeAttr,
+					AttributeId: schema.FuelTypeAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -1939,7 +1938,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EngineConfigurationCylindersCountAttr,
+					AttributeId: schema.EngineConfigurationCylindersCountAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Valid:    true,
@@ -1947,7 +1946,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EngineConfigurationCylindersLayoutAttr,
+					AttributeId: schema.EngineConfigurationCylindersLayoutAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Valid:     true,
@@ -1955,7 +1954,7 @@ func TestSpecifications(t *testing.T) {
 					},
 				},
 				{
-					AttributeId: attrs.EngineConfigurationValvesCountAttr,
+					AttributeId: schema.EngineConfigurationValvesCountAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Valid:    true,
@@ -2097,7 +2096,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
-					AttributeId: attrs.FuelSupplySystemAttr,
+					AttributeId: schema.FuelSupplySystemAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -2106,7 +2105,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.EngineCylinderDiameter,
+					AttributeId: schema.EngineCylinderDiameter,
 					ItemId:      child1ID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_FLOAT,
@@ -2115,7 +2114,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.WidthAttr,
+					AttributeId: schema.WidthAttr,
 					ItemId:      child2ID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_INTEGER,
@@ -2124,7 +2123,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.ABSAttr,
+					AttributeId: schema.ABSAttr,
 					ItemId:      child1ID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_BOOLEAN,
@@ -2133,7 +2132,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.EngineTypeAttr,
+					AttributeId: schema.EngineTypeAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_TREE,
@@ -2143,7 +2142,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.EnginePlacementOrientationAttr,
+					AttributeId: schema.EnginePlacementOrientationAttr,
 					ItemId:      child2ID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -2153,7 +2152,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.DriveUnitAttr,
+					AttributeId: schema.DriveUnitAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -2163,7 +2162,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.TurningDiameterAttr,
+					AttributeId: schema.TurningDiameterAttr,
 					ItemId:      child1ID,
 					Value: &AttrValueValue{
 						Type:       AttrAttributeType_FLOAT,
@@ -2172,7 +2171,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.LengthAttr,
+					AttributeId: schema.LengthAttr,
 					ItemId:      child2ID,
 					Value: &AttrValueValue{
 						Type:     AttrAttributeType_INTEGER,
@@ -2181,7 +2180,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.FrontSuspensionTypeAttr,
+					AttributeId: schema.FrontSuspensionTypeAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:        AttrAttributeType_STRING,
@@ -2190,7 +2189,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.RearSuspensionType,
+					AttributeId: schema.RearSuspensionType,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Type:    AttrAttributeType_STRING,
@@ -2199,7 +2198,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.SpeedLimiterAttr,
+					AttributeId: schema.SpeedLimiterAttr,
 					ItemId:      child1ID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_BOOLEAN,
@@ -2208,7 +2207,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.EnginePlacementPlacementAttr,
+					AttributeId: schema.EnginePlacementPlacementAttr,
 					ItemId:      child2ID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -2218,7 +2217,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 				},
 
 				{
-					AttributeId: attrs.FuelTypeAttr,
+					AttributeId: schema.FuelTypeAttr,
 					ItemId:      child1ID,
 					Value: &AttrValueValue{
 						Type:      AttrAttributeType_LIST,
@@ -2227,7 +2226,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.EngineConfigurationCylindersCountAttr,
+					AttributeId: schema.EngineConfigurationCylindersCountAttr,
 					ItemId:      child2ID,
 					Value: &AttrValueValue{
 						Valid:    true,
@@ -2235,7 +2234,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.EngineConfigurationCylindersLayoutAttr,
+					AttributeId: schema.EngineConfigurationCylindersLayoutAttr,
 					ItemId:      itemID,
 					Value: &AttrValueValue{
 						Valid:     true,
@@ -2243,7 +2242,7 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 					},
 				},
 				{
-					AttributeId: attrs.EngineConfigurationValvesCountAttr,
+					AttributeId: schema.EngineConfigurationValvesCountAttr,
 					ItemId:      child1ID,
 					Value: &AttrValueValue{
 						Valid:    true,

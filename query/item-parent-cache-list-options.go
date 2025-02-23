@@ -27,6 +27,7 @@ type ItemParentCacheListOptions struct {
 	PictureItemsByParentID          *PictureItemListOptions
 	ItemParentCacheAncestorByItemID *ItemParentCacheListOptions
 	ExcludeSelf                     bool
+	ExcludeTuning                   bool
 	StockOnly                       bool
 	ItemVehicleTypeByItemID         *ItemVehicleTypeListOptions
 }
@@ -189,12 +190,19 @@ func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDa
 		)
 	}
 
+	if s.ExcludeTuning {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentCacheTableTuningColName).IsFalse())
+	}
+
 	if s.ItemVehicleTypeByItemID != nil {
-		sqSelect = s.ItemVehicleTypeByItemID.JoinToVehicleIDAndApply(
+		sqSelect, err = s.ItemVehicleTypeByItemID.JoinToVehicleIDAndApply(
 			itemIDCol,
 			AppendItemVehicleTypeAlias(alias),
 			sqSelect,
 		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return sqSelect, nil

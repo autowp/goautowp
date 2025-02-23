@@ -126,6 +126,11 @@ service Items {
   rpc GetPath(PathRequest) returns (PathResponse) {}
 }
 
+service Mosts {
+  rpc GetItems(MostsItemsRequest) returns (MostsItems) {}
+  rpc GetMenu(MostsMenuRequest) returns (MostsMenu) {}
+}
+
 service Comments {
   rpc GetCommentVotes(GetCommentVotesRequest) returns (CommentVoteItems) {}
   rpc Subscribe(CommentsSubscribeRequest) returns (google.protobuf.Empty) {}
@@ -2226,6 +2231,50 @@ message PathItem {
   string catname = 1;
   APIItem item = 2;
   int64 parent_id = 3;
+}
+
+message MostsMenuRequest {
+  int64 brand_id = 1;
+}
+
+message YearsRange {
+  string name = 1;
+  string catname = 2;
+}
+
+message MostsRating {
+  string name = 1;
+  string catname = 2;
+}
+
+message MostsVehicleType {
+  string name_rp = 1;
+  string catname = 2;
+  repeated MostsVehicleType childs = 3;
+}
+
+message MostsMenu {
+  repeated YearsRange years = 1;
+  repeated MostsRating ratings = 2;
+  repeated MostsVehicleType vehicle_types = 3;
+}
+
+message MostsItemsRequest {
+  string language = 1;
+  string years_catname = 2;
+  string type_catname = 3;
+  string rating_catname = 4;
+  int64 brand_id = 5;
+}
+
+message MostsItem {
+  APIItem item = 1;
+  string value_html = 2;
+  AttrUnit unit = 3;
+}
+
+message MostsItems {
+  repeated MostsItem items = 1;
 }
 
 message AddCommentRequest {

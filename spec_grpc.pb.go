@@ -3990,6 +3990,146 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
+	Mosts_GetItems_FullMethodName = "/goautowp.Mosts/GetItems"
+	Mosts_GetMenu_FullMethodName  = "/goautowp.Mosts/GetMenu"
+)
+
+// MostsClient is the client API for Mosts service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type MostsClient interface {
+	GetItems(ctx context.Context, in *MostsItemsRequest, opts ...grpc.CallOption) (*MostsItems, error)
+	GetMenu(ctx context.Context, in *MostsMenuRequest, opts ...grpc.CallOption) (*MostsMenu, error)
+}
+
+type mostsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMostsClient(cc grpc.ClientConnInterface) MostsClient {
+	return &mostsClient{cc}
+}
+
+func (c *mostsClient) GetItems(ctx context.Context, in *MostsItemsRequest, opts ...grpc.CallOption) (*MostsItems, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MostsItems)
+	err := c.cc.Invoke(ctx, Mosts_GetItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mostsClient) GetMenu(ctx context.Context, in *MostsMenuRequest, opts ...grpc.CallOption) (*MostsMenu, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MostsMenu)
+	err := c.cc.Invoke(ctx, Mosts_GetMenu_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MostsServer is the server API for Mosts service.
+// All implementations must embed UnimplementedMostsServer
+// for forward compatibility.
+type MostsServer interface {
+	GetItems(context.Context, *MostsItemsRequest) (*MostsItems, error)
+	GetMenu(context.Context, *MostsMenuRequest) (*MostsMenu, error)
+	mustEmbedUnimplementedMostsServer()
+}
+
+// UnimplementedMostsServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedMostsServer struct{}
+
+func (UnimplementedMostsServer) GetItems(context.Context, *MostsItemsRequest) (*MostsItems, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItems not implemented")
+}
+func (UnimplementedMostsServer) GetMenu(context.Context, *MostsMenuRequest) (*MostsMenu, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMenu not implemented")
+}
+func (UnimplementedMostsServer) mustEmbedUnimplementedMostsServer() {}
+func (UnimplementedMostsServer) testEmbeddedByValue()               {}
+
+// UnsafeMostsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MostsServer will
+// result in compilation errors.
+type UnsafeMostsServer interface {
+	mustEmbedUnimplementedMostsServer()
+}
+
+func RegisterMostsServer(s grpc.ServiceRegistrar, srv MostsServer) {
+	// If the following call pancis, it indicates UnimplementedMostsServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&Mosts_ServiceDesc, srv)
+}
+
+func _Mosts_GetItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MostsItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MostsServer).GetItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Mosts_GetItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MostsServer).GetItems(ctx, req.(*MostsItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Mosts_GetMenu_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MostsMenuRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MostsServer).GetMenu(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Mosts_GetMenu_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MostsServer).GetMenu(ctx, req.(*MostsMenuRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Mosts_ServiceDesc is the grpc.ServiceDesc for Mosts service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Mosts_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Mosts",
+	HandlerType: (*MostsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetItems",
+			Handler:    _Mosts_GetItems_Handler,
+		},
+		{
+			MethodName: "GetMenu",
+			Handler:    _Mosts_GetMenu_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}
+
+const (
 	Comments_GetCommentVotes_FullMethodName = "/goautowp.Comments/GetCommentVotes"
 	Comments_Subscribe_FullMethodName       = "/goautowp.Comments/Subscribe"
 	Comments_UnSubscribe_FullMethodName     = "/goautowp.Comments/UnSubscribe"

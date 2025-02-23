@@ -71,3 +71,63 @@ type AttrsAttributeRow struct {
 	Multiple    bool                `db:"multiple"`
 	Precision   sql.NullInt32       `db:"precision"`
 }
+
+const (
+	LengthAttr                             int64 = 1
+	WidthAttr                              int64 = 2
+	HeightAttr                             int64 = 3
+	ClearanceAttr                          int64 = 7
+	FrontSuspensionTypeAttr                int64 = 8
+	RearSuspensionType                     int64 = 9
+	TurningDiameterAttr                    int64 = 11
+	EnginePlacementAttr                    int64 = 19
+	EnginePlacementPlacementAttr           int64 = 20
+	EnginePlacementOrientationAttr         int64 = 21
+	FuelSupplySystemAttr                   int64 = 23
+	EngineConfigurationAttr                int64 = 24
+	EngineConfigurationCylindersCountAttr  int64 = 25
+	EngineConfigurationCylindersLayoutAttr int64 = 26
+	EngineConfigurationValvesCountAttr     int64 = 27
+	EngineCylinderDiameter                 int64 = 28
+	EngineStrokeAttr                       int64 = 29
+	EngineVolumeAttr                       int64 = 31
+	EnginePowerAttr                        int64 = 33
+	DriveUnitAttr                          int64 = 41
+	GearboxAttr                            int64 = 42
+	GearboxTypeAttr                        int64 = 43
+	GearboxGearsAttr                       int64 = 44
+	MaxSpeedAttr                           int64 = 47
+	AccelerationTo100KmhAttr               int64 = 48
+	SpeedLimiterAttr                       int64 = 53
+	FuelTankAttr                           int64 = 57
+	FuelTankPrimaryAttr                    int64 = 58
+	FuelTankSecondaryAttr                  int64 = 59
+	BootVolumeAttr                         int64 = 60
+	BootVolumeMinAttr                      int64 = 61
+	BootVolumeMaxAttr                      int64 = 62
+	AirResistanceFrontal                   int64 = 64
+	CurbWeightAttr                         int64 = 72
+	ABSAttr                                int64 = 77
+	FuelConsumptionMixedAttr               int64 = 81
+	EmissionsAttr                          int64 = 82
+	FrontWheelAttr                         int64 = 85
+	RearWheelAttr                          int64 = 86
+	FrontWheelTyreWidthAttr                int64 = 87
+	FrontWheelRadiusAttr                   int64 = 88
+	FrontWheelRimWidthAttr                 int64 = 89
+	FrontWheelTyreSeriesAttr               int64 = 90
+	RearWheelTyreWidthAttr                 int64 = 91
+	RearWheelRadiusAttr                    int64 = 92
+	RearWheelRimWidthAttr                  int64 = 93
+	RearWheelTyreSeriesAttr                int64 = 94
+	FuelTypeAttr                           int64 = 98
+	EngineTurboAttr                        int64 = 99
+	EngineNameAttr                         int64 = 100
+	GearboxNameAttr                        int64 = 139
+	FrontBrakesDiameterAttr                int64 = 146
+	RearBrakesDiameterAttr                 int64 = 147
+	FrontBrakesThicknessAttr               int64 = 148
+	RearBrakesThicknessAttr                int64 = 149
+	AccelerationTo60MphAttr                int64 = 175
+	EngineTypeAttr                         int64 = 207
+)

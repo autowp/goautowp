@@ -1,6 +1,7 @@
 package query
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,6 +19,11 @@ const (
 
 func AppendItemAlias(alias string, suffix string) string {
 	return alias + "_" + ItemAlias + suffix
+}
+
+type YearsRange struct {
+	Min int
+	Max int
 }
 
 type ItemListOptions struct {
@@ -70,6 +76,7 @@ type ItemListOptions struct {
 	ItemVehicleType              *ItemVehicleTypeListOptions
 	AttrsUserValues              *AttrsUserValueListOptions
 	AttrsUserValuesCountGte      int
+	YearsRange                   YearsRange
 }
 
 func ItemParentNoParentAlias(alias string) string {
@@ -92,6 +99,16 @@ func (s *ItemListOptions) Clone() *ItemListOptions {
 	clone.EngineItem = s.EngineItem.Clone()
 
 	return &clone
+}
+
+func (s *ItemListOptions) IsIDUnique() bool {
+	return (s.PictureItems == nil || s.PictureItems.IsItemIDUnique()) &&
+		(s.ItemParentChild == nil) && // || s.ItemParentChild.IsXXXIDUnique()
+		(s.ItemParentParent == nil) && // || s.ItemParentParent.IsXXXIDUnique()
+		(s.ItemParentCacheDescendant == nil) && // || s.ItemParentCacheDescendant.IsXXXIDUnique()
+		(s.ItemParentCacheAncestor == nil) && // || s.ItemParentCacheDescendant.IsXXXIDUnique()
+		(s.ItemVehicleType == nil) && // || s.ItemVehicleType.IsXXXIDUnique()
+		(s.AttrsUserValues == nil) // || s.AttrsUserValues.IsXXXIDUnique()
 }
 
 func (s *ItemListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
@@ -300,6 +317,35 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 		)
 	}
 
+	if s.YearsRange.Min > 0 || s.YearsRange.Max > 0 {
+		var (
+			boc     = aliasTable.Col(schema.ItemTableBeginOrderCacheColName)
+			eoc     = aliasTable.Col(schema.ItemTableEndOrderCacheColName)
+			minDate = fmt.Sprintf("%04d-01-01", s.YearsRange.Min)
+			maxDate = fmt.Sprintf("%04d-12-31", s.YearsRange.Max)
+		)
+
+		if s.YearsRange.Min > 0 {
+			if s.YearsRange.Max > 0 {
+				sqSelect = sqSelect.Where(goqu.Or(
+					goqu.And(boc.Gte(minDate), boc.Lte(maxDate)),
+					goqu.And(eoc.Gte(minDate), eoc.Lte(maxDate)),
+					goqu.And(boc.Lt(minDate), eoc.Gt(maxDate)),
+				))
+			} else {
+				sqSelect = sqSelect.Where(goqu.Or(
+					goqu.And(eoc.Gte(minDate)),
+					goqu.And(eoc.IsNull(), aliasTable.Col(schema.ItemTableTodayColName)),
+				))
+			}
+		} else if s.YearsRange.Max > 0 {
+			sqSelect = sqSelect.Where(goqu.Or(
+				goqu.And(boc.Lte(maxDate)),
+				goqu.And(eoc.Gte(maxDate)),
+			))
+		}
+	}
+
 	return sqSelect, groupBy, nil
 }
 
@@ -445,11 +491,14 @@ func (s *ItemListOptions) applyJoins(
 	if s.ItemVehicleType != nil {
 		groupBy = true
 
-		sqSelect = s.ItemVehicleType.JoinToVehicleIDAndApply(
+		sqSelect, err = s.ItemVehicleType.JoinToVehicleIDAndApply(
 			idCol,
 			AppendItemVehicleTypeAlias(alias),
 			sqSelect,
 		)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 
 	sqSelect = s.applyExcludeSelfAndChilds(alias, sqSelect)

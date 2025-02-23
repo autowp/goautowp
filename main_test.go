@@ -121,6 +121,13 @@ func TestMain(m *testing.M) {
 
 	RegisterMapServer(grpcServer, mapSrv)
 
+	mostsSrv, err := cnt.MostsGRPCServer()
+	if err != nil {
+		panic(err)
+	}
+
+	RegisterMostsServer(grpcServer, mostsSrv)
+
 	logSrv, err := cnt.LogGRPCServer()
 	if err != nil {
 		panic(err)

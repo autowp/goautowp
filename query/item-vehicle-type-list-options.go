@@ -15,7 +15,8 @@ func AppendItemVehicleTypeAlias(alias string) string {
 }
 
 type ItemVehicleTypeListOptions struct {
-	VehicleTypeID int64
+	VehicleTypeID           int64
+	ItemParentCacheAncestor *ItemParentCacheListOptions
 }
 
 func (s *ItemVehicleTypeListOptions) Clone() *ItemVehicleTypeListOptions {
@@ -30,9 +31,9 @@ func (s *ItemVehicleTypeListOptions) Clone() *ItemVehicleTypeListOptions {
 
 func (s *ItemVehicleTypeListOptions) JoinToVehicleIDAndApply(
 	srcCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
-) *goqu.SelectDataset {
+) (*goqu.SelectDataset, error) {
 	if s == nil {
-		return sqSelect
+		return sqSelect, nil
 	}
 
 	sqSelect = sqSelect.Join(
@@ -45,12 +46,42 @@ func (s *ItemVehicleTypeListOptions) JoinToVehicleIDAndApply(
 	return s.apply(alias, sqSelect)
 }
 
-func (s *ItemVehicleTypeListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *ItemVehicleTypeListOptions) JoinToVehicleTypeIDAndApply(
+	srcCol exp.IdentifierExpression, alias string, sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
+	if s == nil {
+		return sqSelect, nil
+	}
+
+	sqSelect = sqSelect.Join(
+		schema.VehicleVehicleTypeTable.As(alias),
+		goqu.On(
+			srcCol.Eq(goqu.T(alias).Col(schema.VehicleVehicleTypeTableVehicleTypeIDColName)),
+		),
+	)
+
+	return s.apply(alias, sqSelect)
+}
+
+func (s *ItemVehicleTypeListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
 	aliasTable := goqu.T(alias)
+
+	var err error
 
 	if s.VehicleTypeID != 0 {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.VehicleVehicleTypeTableVehicleTypeIDColName).Eq(s.VehicleTypeID))
 	}
 
-	return sqSelect
+	if s.ItemParentCacheAncestor != nil {
+		sqSelect, err = s.ItemParentCacheAncestor.JoinToItemIDAndApply(
+			aliasTable.Col(schema.VehicleVehicleTypeTableVehicleIDColName),
+			AppendItemParentCacheAlias(alias, "a"),
+			sqSelect,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return sqSelect, nil
 }

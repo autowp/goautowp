@@ -11,7 +11,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/filter"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
@@ -77,6 +79,13 @@ const (
 	colHasChildSpecs              = "has_child_specs"
 	colHasSpecs                   = "has_specs"
 	colAttrsUserValuesUpdateDate  = "attrs_user_values_update_date"
+)
+
+const (
+	fractionDefaultMonth       = 10
+	fractionQuarterMonths      = 3
+	fractionTwoQuarterMonths   = 6
+	fractionThreeQuarterMonths = 9
 )
 
 const (
@@ -3315,7 +3324,62 @@ func (s *Repository) SetItemEngine(
 	return affected > 0, nil
 }
 
-func (s *Repository) VehicleTypes(ctx context.Context, vehicleID int64, inherited bool) ([]int64, error) {
+func (s *Repository) VehicleType(
+	ctx context.Context, options *query.VehicleTypeListOptions,
+) (*schema.CarTypeRow, error) {
+	var st schema.CarTypeRow
+
+	aliasTable := goqu.T(query.VehicleTypeTableAlias)
+
+	sqSelect, err := options.Select(s.db, query.VehicleTypeTableAlias)
+	if err != nil {
+		return nil, err
+	}
+
+	success, err := sqSelect.Select(
+		aliasTable.Col(schema.CarTypesTableIDColName),
+		aliasTable.Col(schema.CarTypesTableCatnameColName),
+		aliasTable.Col(schema.CarTypesTableNameRpColName),
+	).Limit(1).ScanStructContext(ctx, &st)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, sql.ErrNoRows
+	}
+
+	return &st, nil
+}
+
+func (s *Repository) VehicleTypes(
+	ctx context.Context, options *query.VehicleTypeListOptions,
+) ([]*schema.CarTypeRow, error) {
+	var sts []*schema.CarTypeRow
+
+	sqSelect, err := options.Select(s.db, query.VehicleTypeTableAlias)
+	if err != nil {
+		return nil, err
+	}
+
+	aliasTable := goqu.T(query.VehicleTypeTableAlias)
+
+	err = sqSelect.
+		Select(
+			aliasTable.Col(schema.CarTypesTableIDColName),
+			aliasTable.Col(schema.CarTypesTableCatnameColName),
+			aliasTable.Col(schema.CarTypesTableNameRpColName),
+		).
+		Order(aliasTable.Col(schema.CarTypesTablePositionColName).Asc()).
+		ScanStructsContext(ctx, &sts)
+	if err != nil {
+		return nil, err
+	}
+
+	return sts, nil
+}
+
+func (s *Repository) VehicleTypeIDs(ctx context.Context, vehicleID int64, inherited bool) ([]int64, error) {
 	sqSelect := s.db.Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).
 		From(schema.VehicleVehicleTypeTable).
 		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(vehicleID))
@@ -4137,4 +4201,96 @@ func (s *Repository) EngineVehiclesGroups(
 	}
 
 	return resultIDs, nil
+}
+
+func fractionToMonth(fraction sql.NullString) time.Month {
+	if !fraction.Valid {
+		return fractionDefaultMonth
+	}
+
+	switch fraction.String {
+	case "¼":
+		return fractionDefaultMonth + fractionQuarterMonths
+	case "½":
+		return fractionDefaultMonth + fractionTwoQuarterMonths
+	case "¾":
+		return fractionDefaultMonth + fractionThreeQuarterMonths
+	}
+
+	return fractionDefaultMonth
+}
+
+func (s *Repository) UpdateOrderCache(ctx context.Context, itemID int64) (bool, error) {
+	var row schema.ItemRow
+
+	success, err := s.db.Select(
+		schema.ItemTableBeginYearCol, schema.ItemTableBeginMonthCol,
+		schema.ItemTableBeginModelYearCol, schema.ItemTableBeginModelYearFractionCol,
+		schema.ItemTableEndYearCol, schema.ItemTableEndMonthCol,
+		schema.ItemTableEndModelYearCol, schema.ItemTableEndModelYearFractionCol,
+	).
+		From(schema.ItemTable).
+		Where(schema.ItemTableIDCol.Eq(itemID)).
+		ScanStructContext(ctx, &row)
+	if err != nil {
+		return false, err
+	}
+
+	if !success {
+		return false, nil
+	}
+
+	begin := civil.Date{
+		Day: 1,
+	}
+
+	switch {
+	case row.BeginYear.Valid && row.BeginYear.Int32 > 0:
+		begin.Year = int(row.BeginYear.Int32)
+		begin.Month = time.January
+
+		if row.BeginMonth.Valid && row.BeginMonth.Int16 > 0 {
+			begin.Month = time.Month(row.BeginMonth.Int16)
+		}
+	case row.BeginModelYear.Valid && row.BeginModelYear.Int32 > 0:
+		begin.Year = int(row.BeginModelYear.Int32) - 1
+		begin.Month = fractionToMonth(row.BeginModelYearFraction)
+	default:
+		begin.Year = 2100
+		begin.Month = time.January
+	}
+
+	end := civil.Date{
+		Day: 1,
+	}
+
+	switch {
+	case row.EndYear.Valid && row.EndYear.Int32 > 0:
+		end.Year = int(row.EndYear.Int32)
+		end.Month = time.December
+
+		if row.EndMonth.Valid && row.EndMonth.Int16 > 0 {
+			end.Month = time.Month(row.EndMonth.Int16)
+		}
+
+		end = end.AddMonths(1).AddDays(-1)
+	case row.EndModelYear.Valid && row.EndModelYear.Int32 > 0:
+		end.Year = int(row.EndModelYear.Int32)
+		end.Month = fractionToMonth(row.EndModelYearFraction) - 1
+
+		if row.EndMonth.Valid && row.EndMonth.Int16 > 0 {
+			end.Month = time.Month(row.EndMonth.Int16)
+		}
+
+		end = end.AddMonths(1).AddDays(-1)
+	default:
+		end = begin
+	}
+
+	_, err = s.db.Update(schema.ItemTable).Set(goqu.Record{
+		schema.ItemTableBeginOrderCacheColName: begin.String(),
+		schema.ItemTableEndOrderCacheColName:   end.String(),
+	}).Where(schema.ItemTableIDCol.Eq(itemID)).Executor().ExecContext(ctx)
+
+	return true, err
 }

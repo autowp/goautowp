@@ -343,7 +343,7 @@ func (s *ItemExtractor) extractPlain(
 	}
 
 	if fields.GetAttrZoneId() {
-		vehicleTypes, err := itemRepository.VehicleTypes(ctx, row.ID, false)
+		vehicleTypes, err := itemRepository.VehicleTypeIDs(ctx, row.ID, false)
 		if err != nil {
 			return err
 		}

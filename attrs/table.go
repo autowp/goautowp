@@ -5,6 +5,7 @@ import (
 	"embed"
 	"html/template"
 
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 )
 
@@ -12,49 +13,49 @@ import (
 var TemplatesFS embed.FS
 
 var hideAttrs = []int64{
-	frontWheelTyreWidthAttr, frontWheelTyreSeriesAttr, frontWheelRadiusAttr, frontWheelRimWidthAttr,
-	rearWheelTyreWidthAttr, rearWheelTyreSeriesAttr, rearWheelRadiusAttr, rearWheelRimWidthAttr,
-	EnginePlacementPlacementAttr, EnginePlacementOrientationAttr,
-	bootVolumeMinAttr, bootVolumeMaxAttr,
-	fuelTankPrimaryAttr, fuelTankSecondaryAttr,
-	EngineConfigurationCylindersCountAttr, EngineConfigurationCylindersLayoutAttr, EngineConfigurationValvesCountAttr,
-	gearboxTypeAttr, gearboxGearsAttr, gearboxNameAttr,
+	schema.FrontWheelTyreWidthAttr, schema.FrontWheelTyreSeriesAttr, schema.FrontWheelRadiusAttr,
+	schema.FrontWheelRimWidthAttr, schema.RearWheelTyreWidthAttr, schema.RearWheelTyreSeriesAttr,
+	schema.RearWheelRadiusAttr, schema.RearWheelRimWidthAttr, schema.EnginePlacementPlacementAttr,
+	schema.EnginePlacementOrientationAttr, schema.BootVolumeMinAttr, schema.BootVolumeMaxAttr,
+	schema.FuelTankPrimaryAttr, schema.FuelTankSecondaryAttr, schema.EngineConfigurationCylindersCountAttr,
+	schema.EngineConfigurationCylindersLayoutAttr, schema.EngineConfigurationValvesCountAttr, schema.GearboxTypeAttr,
+	schema.GearboxGearsAttr, schema.GearboxNameAttr,
 }
 
 var renderMap = map[int64]Renderer{
-	frontWheelAttr: Wheel{
-		TyreWidth:  frontWheelTyreWidthAttr,
-		TyreSeries: frontWheelTyreSeriesAttr,
-		Radius:     frontWheelRadiusAttr,
-		Rimwidth:   frontWheelRimWidthAttr,
+	schema.FrontWheelAttr: Wheel{
+		TyreWidth:  schema.FrontWheelTyreWidthAttr,
+		TyreSeries: schema.FrontWheelTyreSeriesAttr,
+		Radius:     schema.FrontWheelRadiusAttr,
+		Rimwidth:   schema.FrontWheelRimWidthAttr,
 	},
-	rearWheelAttr: Wheel{
-		TyreWidth:  rearWheelTyreWidthAttr,
-		TyreSeries: rearWheelTyreSeriesAttr,
-		Radius:     rearWheelRadiusAttr,
-		Rimwidth:   rearWheelRimWidthAttr,
+	schema.RearWheelAttr: Wheel{
+		TyreWidth:  schema.RearWheelTyreWidthAttr,
+		TyreSeries: schema.RearWheelTyreSeriesAttr,
+		Radius:     schema.RearWheelRadiusAttr,
+		Rimwidth:   schema.RearWheelRimWidthAttr,
 	},
-	enginePlacementAttr: EnginePlacement{
-		Placement:   EnginePlacementPlacementAttr,
-		Orientation: EnginePlacementOrientationAttr,
+	schema.EnginePlacementAttr: EnginePlacement{
+		Placement:   schema.EnginePlacementPlacementAttr,
+		Orientation: schema.EnginePlacementOrientationAttr,
 	},
-	bootVolumeAttr: BootVolume{
-		Min: bootVolumeMinAttr,
-		Max: bootVolumeMaxAttr,
+	schema.BootVolumeAttr: BootVolume{
+		Min: schema.BootVolumeMinAttr,
+		Max: schema.BootVolumeMaxAttr,
 	},
-	fuelTankAttr: FuelTank{
-		Primary:   fuelTankPrimaryAttr,
-		Secondary: fuelTankSecondaryAttr,
+	schema.FuelTankAttr: FuelTank{
+		Primary:   schema.FuelTankPrimaryAttr,
+		Secondary: schema.FuelTankSecondaryAttr,
 	},
-	engineConfigurationAttr: EngineConfiguration{
-		CylindersCount:  EngineConfigurationCylindersCountAttr,
-		CylindersLayout: EngineConfigurationCylindersLayoutAttr,
-		ValvesCount:     EngineConfigurationValvesCountAttr,
+	schema.EngineConfigurationAttr: EngineConfiguration{
+		CylindersCount:  schema.EngineConfigurationCylindersCountAttr,
+		CylindersLayout: schema.EngineConfigurationCylindersLayoutAttr,
+		ValvesCount:     schema.EngineConfigurationValvesCountAttr,
 	},
-	gearboxAttr: Gearbox{
-		Type:  gearboxTypeAttr,
-		Gears: gearboxGearsAttr,
-		Name:  gearboxNameAttr,
+	schema.GearboxAttr: Gearbox{
+		Type:  schema.GearboxTypeAttr,
+		Gears: schema.GearboxGearsAttr,
+		Name:  schema.GearboxNameAttr,
 	},
 }
 

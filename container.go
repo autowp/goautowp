@@ -21,6 +21,7 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/log"
 	"github.com/autowp/goautowp/messaging"
+	"github.com/autowp/goautowp/mosts"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/textstorage"
@@ -51,8 +52,10 @@ type Container struct {
 	banRepository          *ban.Repository
 	catalogue              *Catalogue
 	commentsRepository     *comments.Repository
+	mostsRepository        *mosts.Repository
 	config                 config.Config
 	commentsGrpcServer     *CommentsGRPCServer
+	mostsGrpcServer        *MostsGRPCServer
 	contactsGrpcServer     *ContactsGRPCServer
 	contactsRepository     *ContactsRepository
 	duplicateFinder        *DuplicateFinder
@@ -293,6 +296,29 @@ func (s *Container) CommentsRepository() (*comments.Repository, error) {
 	}
 
 	return s.commentsRepository, nil
+}
+
+func (s *Container) MostsRepository() (*mosts.Repository, error) {
+	if s.mostsRepository == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		itemsRepository, err := s.ItemsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		attrsRepository, err := s.AttrsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.mostsRepository = mosts.NewRepository(db, itemsRepository, attrsRepository)
+	}
+
+	return s.mostsRepository, nil
 }
 
 func (s *Container) Config() config.Config {
@@ -622,6 +648,11 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
+	mostsSrv, err := s.MostsGRPCServer()
+	if err != nil {
+		return nil, err
+	}
+
 	textSrv, err := s.TextGRPCServer()
 	if err != nil {
 		return nil, err
@@ -682,6 +713,7 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 	RegisterItemsServer(grpcServer, itemsSrv)
 	RegisterLogServer(grpcServer, logSrv)
 	RegisterMapServer(grpcServer, mapSrv)
+	RegisterMostsServer(grpcServer, mostsSrv)
 	RegisterMessagingServer(grpcServer, messagingSrv)
 	RegisterPicturesServer(grpcServer, picturesSrv)
 	RegisterStatisticsServer(grpcServer, statSrv)
@@ -1133,6 +1165,28 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 	}
 
 	return s.itemsGrpcServer, nil
+}
+
+func (s *Container) MostsGRPCServer() (*MostsGRPCServer, error) {
+	if s.mostsGrpcServer == nil {
+		mostsRepository, err := s.MostsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		s.mostsGrpcServer = NewMostsGRPCServer(
+			auth,
+			s.ItemExtractor(),
+			mostsRepository,
+		)
+	}
+
+	return s.mostsGrpcServer, nil
 }
 
 func (s *Container) CommentsGRPCServer() (*CommentsGRPCServer, error) {
