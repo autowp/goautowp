@@ -66,6 +66,7 @@ func (s Power) Items(
 			valueTable.ValueCol.Gt(0),
 		).
 		Order(orderExpr).
+		Limit(uint(listOptions.Limit)).
 		ScanValsContext(ctx, &itemIDs)
 	if err != nil {
 		return nil, err
