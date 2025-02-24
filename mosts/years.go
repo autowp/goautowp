@@ -94,5 +94,7 @@ var years = []YearsRange{
 		Name:    "mosts/period/present",
 		Folder:  "today",
 		MinYear: cy,
+		// to prevent infinite order cache matches
+		MaxYear: cy + 10, //nolint: mnd
 	},
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 )
 
@@ -59,7 +60,7 @@ func (s Attr) Items(
 
 	var itemIDs []int64
 
-	err = sqSelect.
+	sqSelect = sqSelect.
 		Select(itemIDCol).
 		Join(valueTable.Table, goqu.On(itemIDCol.Eq(valueTable.ItemIDCol))).
 		Where(
@@ -67,7 +68,13 @@ func (s Attr) Items(
 			valueTable.ValueCol.IsNotNull(),
 		).
 		Order(orderExp).
-		ScanValsContext(ctx, &itemIDs)
+		Limit(uint(listOptions.Limit))
+
+	if !listOptions.IsIDUnique() {
+		sqSelect = sqSelect.GroupBy(itemIDCol)
+	}
+
+	err = sqSelect.ScanValsContext(ctx, &itemIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -86,16 +93,8 @@ func (s Attr) Items(
 		})
 	}
 
-	var unit *schema.AttrsUnitRow
-	if attribute.UnitID.Valid {
-		unit, err = attrsRepository.Unit(ctx, attribute.UnitID.Int64)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return &MostData{
-		Unit: unit,
-		Cars: result,
+		UnitID: util.NullInt64ToScalar(attribute.UnitID),
+		Cars:   result,
 	}, nil
 }

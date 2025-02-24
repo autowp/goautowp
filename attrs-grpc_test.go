@@ -2287,3 +2287,66 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 	require.Contains(t, res.GetHtml(), "V6")
 	require.Contains(t, res.GetHtml(), engineName)
 }
+
+func TestLocalizedFormat(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, goquDB, schema.ItemRow{
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Name:       "Test",
+		Body:       "E31",
+		IsGroup:    true,
+	})
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: schema.MaxSpeedAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Type:       AttrAttributeType_FLOAT,
+						Valid:      true,
+						FloatValue: 250,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetSpecifications(
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&GetSpecificationsRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+	require.Contains(t, res.GetHtml(), "250.0")
+
+	res, err = client.GetSpecifications(
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&GetSpecificationsRequest{
+			ItemId:   itemID,
+			Language: "ru",
+		},
+	)
+	require.NoError(t, err)
+	require.Contains(t, res.GetHtml(), "250,0")
+}

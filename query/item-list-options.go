@@ -108,7 +108,8 @@ func (s *ItemListOptions) IsIDUnique() bool {
 		(s.ItemParentCacheDescendant == nil) && // || s.ItemParentCacheDescendant.IsXXXIDUnique()
 		(s.ItemParentCacheAncestor == nil) && // || s.ItemParentCacheDescendant.IsXXXIDUnique()
 		(s.ItemVehicleType == nil) && // || s.ItemVehicleType.IsXXXIDUnique()
-		(s.AttrsUserValues == nil) // || s.AttrsUserValues.IsXXXIDUnique()
+		(s.AttrsUserValues == nil) && // || s.AttrsUserValues.IsXXXIDUnique()
+		(s.VehicleTypeAncestorID == 0)
 }
 
 func (s *ItemListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
@@ -334,14 +335,14 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 				))
 			} else {
 				sqSelect = sqSelect.Where(goqu.Or(
-					goqu.And(eoc.Gte(minDate)),
-					goqu.And(eoc.IsNull(), aliasTable.Col(schema.ItemTableTodayColName)),
+					eoc.Gte(minDate),
+					goqu.And(eoc.IsNull(), aliasTable.Col(schema.ItemTableTodayColName).IsTrue()),
 				))
 			}
 		} else if s.YearsRange.Max > 0 {
 			sqSelect = sqSelect.Where(goqu.Or(
-				goqu.And(boc.Lte(maxDate)),
-				goqu.And(eoc.Gte(maxDate)),
+				boc.Lte(maxDate),
+				eoc.Lte(maxDate),
 			))
 		}
 	}

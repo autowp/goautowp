@@ -2038,8 +2038,8 @@ func (s *ItemsGRPCServer) notifyItemEngineInherited(
 
 	return s.notifyItemSubscribers(
 		ctx, []int64{item.ID, oldEngineID}, user.ID, "pm/user-%s-set-inherited-vehicle-engine-%s-%s",
-		func(uri *url.URL, language string) (map[string]interface{}, error) {
-			itemNameText, err := s.formatItemNameText(item, language)
+		func(uri *url.URL, lang string) (map[string]interface{}, error) {
+			itemNameText, err := s.formatItemNameText(item, lang)
 			if err != nil {
 				return nil, err
 			}
@@ -2061,21 +2061,21 @@ func (s *ItemsGRPCServer) notifyItemEngineCleared(ctx context.Context, user *sch
 
 	return s.notifyItemSubscribers(
 		ctx, []int64{item.ID, oldEngineID}, user.ID, "pm/user-%s-canceled-vehicle-engine-%s-%s-%s",
-		func(uri *url.URL, language string) (map[string]interface{}, error) {
-			itemNameText, err := s.formatItemNameText(item, language)
+		func(uri *url.URL, lang string) (map[string]interface{}, error) {
+			itemNameText, err := s.formatItemNameText(item, lang)
 			if err != nil {
 				return nil, err
 			}
 
 			oldEngine, err := s.repository.Item(
-				ctx, &query.ItemListOptions{ItemID: oldEngineID, Language: language},
+				ctx, &query.ItemListOptions{ItemID: oldEngineID, Language: lang},
 				&items.ListFields{NameText: true},
 			)
 			if err != nil {
 				return nil, err
 			}
 
-			oldEngineNameText, err := s.formatItemNameText(oldEngine, language)
+			oldEngineNameText, err := s.formatItemNameText(oldEngine, lang)
 			if err != nil {
 				return nil, err
 			}
@@ -2100,21 +2100,21 @@ func (s *ItemsGRPCServer) notifyItemEngineUpdated(
 
 	return s.notifyItemSubscribers(
 		ctx, []int64{item.ID, oldEngineID, newEngineID}, user.ID, "pm/user-%s-set-vehicle-engine-%s-%s-%s",
-		func(uri *url.URL, language string) (map[string]interface{}, error) {
-			itemNameText, err := s.formatItemNameText(item, language)
+		func(uri *url.URL, lang string) (map[string]interface{}, error) {
+			itemNameText, err := s.formatItemNameText(item, lang)
 			if err != nil {
 				return nil, err
 			}
 
 			newEngine, err := s.repository.Item(
-				ctx, &query.ItemListOptions{ItemID: newEngineID, Language: language},
+				ctx, &query.ItemListOptions{ItemID: newEngineID, Language: lang},
 				&items.ListFields{NameText: true},
 			)
 			if err != nil {
 				return nil, err
 			}
 
-			newEngineNameText, err := s.formatItemNameText(newEngine, language)
+			newEngineNameText, err := s.formatItemNameText(newEngine, lang)
 			if err != nil {
 				return nil, err
 			}

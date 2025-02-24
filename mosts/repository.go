@@ -36,8 +36,8 @@ type ItemsOptions struct {
 }
 
 type MostData struct {
-	Unit *schema.AttrsUnitRow
-	Cars []MostDataCar
+	UnitID int64
+	Cars   []MostDataCar
 }
 
 type MostDataCar struct {
@@ -69,10 +69,10 @@ func NewRepository(
 
 func (s *Repository) Items(
 	ctx context.Context, options ItemsOptions, fields *items.ListFields,
-) ([]ResultItem, *schema.AttrsUnitRow, error) {
+) ([]ResultItem, int64, error) {
 	lang := options.Language
 	if len(lang) == 0 {
-		return nil, nil, errLanguageNotProvided
+		return nil, 0, errLanguageNotProvided
 	}
 
 	ratingIndex := slices.IndexFunc(ratings, func(r Rating) bool {
@@ -80,7 +80,7 @@ func (s *Repository) Items(
 	})
 
 	if ratingIndex == -1 {
-		return nil, nil, fmt.Errorf("%w: `%s`", errRatingNotFound, options.Most)
+		return nil, 0, fmt.Errorf("%w: `%s`", errRatingNotFound, options.Most)
 	}
 
 	rating := ratings[ratingIndex]
@@ -95,7 +95,7 @@ func (s *Repository) Items(
 	if len(options.CarType) > 0 {
 		carType, err = s.itemsRepository.VehicleType(ctx, &query.VehicleTypeListOptions{Catname: options.CarType})
 		if err != nil {
-			return nil, nil, err
+			return nil, 0, err
 		}
 	}
 
@@ -103,7 +103,7 @@ func (s *Repository) Items(
 		return options.Years == r.Folder
 	})
 	if yearIndex == -1 && len(options.Years) > 0 {
-		return nil, nil, fmt.Errorf("%w: %s", errYearsRangeNotFound, options.Years)
+		return nil, 0, fmt.Errorf("%w: %s", errYearsRangeNotFound, options.Years)
 	}
 
 	if yearIndex != -1 {
@@ -137,7 +137,7 @@ func (s *Repository) Items(
 
 	data, err := rating.Adapter.Items(ctx, s.db, s.attrsRepository, &listOptions, lang)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, err
 	}
 
 	itemIDs := make([]int64, 0, len(data.Cars))
@@ -154,7 +154,7 @@ func (s *Repository) Items(
 			Limit:    listOptions.Limit,
 		}, fields, items.OrderByNone, false)
 		if err != nil {
-			return nil, nil, err
+			return nil, 0, err
 		}
 
 		for _, row := range rows {
@@ -174,11 +174,11 @@ func (s *Repository) Items(
 		}
 	}
 
-	return res, data.Unit, nil
+	return res, data.UnitID, nil
 }
 
 func (s *Repository) YearsMenu() []YearsRange {
-	yearsMenu := make([]YearsRange, 0, len(years)+1)
+	yearsMenu := make([]YearsRange, len(years), len(years)+1)
 	copy(yearsMenu, years)
 	yearsMenu = append(yearsMenu, YearsRange{
 		Name:   "mosts/period/all-time",

@@ -14,7 +14,7 @@ type AliaseableExpression interface {
 }
 
 type Column interface {
-	SelectExpr(alias string, language string) (AliaseableExpression, error)
+	SelectExpr(alias string, lang string) (AliaseableExpression, error)
 }
 
 type DescendantsCountColumn struct {
@@ -131,10 +131,10 @@ type TextstorageRefColumn struct {
 	col string
 }
 
-func (s TextstorageRefColumn) SelectExpr(alias string, language string) (AliaseableExpression, error) {
+func (s TextstorageRefColumn) SelectExpr(alias string, lang string) (AliaseableExpression, error) {
 	ilAlias := alias + "_" + s.col
 
-	orderExpr, err := langPriorityOrderExpr(goqu.T(ilAlias).Col(schema.ItemLanguageTableLanguageColName), language)
+	orderExpr, err := langPriorityOrderExpr(goqu.T(ilAlias).Col(schema.ItemLanguageTableLanguageColName), lang)
 	if err != nil {
 		return nil, err
 	}
@@ -202,8 +202,8 @@ type NameOnlyColumn struct {
 	DB *goqu.Database
 }
 
-func (s NameOnlyColumn) SelectExpr(alias string, language string) (AliaseableExpression, error) {
-	orderExpr, err := langPriorityOrderExpr(schema.ItemLanguageTableLanguageCol, language)
+func (s NameOnlyColumn) SelectExpr(alias string, lang string) (AliaseableExpression, error) {
+	orderExpr, err := langPriorityOrderExpr(schema.ItemLanguageTableLanguageCol, lang)
 	if err != nil {
 		return nil, err
 	}

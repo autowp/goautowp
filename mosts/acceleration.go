@@ -97,6 +97,10 @@ func (s Acceleration) Items(
 			axisSelect = axisSelect.Order(valueColumnAliasCol.Desc())
 		}
 
+		if !listOptions.IsIDUnique() {
+			axisSelect = axisSelect.GroupBy(itemIDCol)
+		}
+
 		selects = append(selects, axisSelect)
 	}
 
@@ -134,8 +138,8 @@ func (s Acceleration) Items(
 	}
 
 	return &MostData{
-		Unit: nil,
-		Cars: result,
+		UnitID: 0,
+		Cars:   result,
 	}, nil
 }
 

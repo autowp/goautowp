@@ -867,27 +867,27 @@ func (s *Repository) UserValue(ctx context.Context, attributeID int64, itemID in
 }
 
 func (s *Repository) UserValueText(
-	ctx context.Context, attributeID int64, itemID int64, userID int64, language string,
+	ctx context.Context, attributeID int64, itemID int64, userID int64, lang string,
 ) (Value, string, error) {
 	value, err := s.UserValue(ctx, attributeID, itemID, userID)
 	if err != nil {
 		return Value{}, "", err
 	}
 
-	text, err := s.valueToText(ctx, attributeID, value, language)
+	text, err := s.valueToText(ctx, attributeID, value, lang)
 
 	return value, text, err
 }
 
 func (s *Repository) ActualValueText(
-	ctx context.Context, attributeID int64, itemID int64, language string,
+	ctx context.Context, attributeID int64, itemID int64, lang string,
 ) (Value, string, error) {
 	value, err := s.ActualValue(ctx, attributeID, itemID)
 	if err != nil {
 		return Value{}, "", err
 	}
 
-	text, err := s.valueToText(ctx, attributeID, value, language)
+	text, err := s.valueToText(ctx, attributeID, value, lang)
 
 	return value, text, err
 }

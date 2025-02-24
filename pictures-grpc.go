@@ -541,8 +541,8 @@ func (s *PicturesGRPCServer) notifyVote(
 
 	return s.sendLocalizedMessage(
 		ctx, userID, picture.OwnerID, tpl,
-		func(language string) (map[string]interface{}, error) {
-			uri, err := s.hostManager.URIByLanguage(language)
+		func(lang string) (map[string]interface{}, error) {
+			uri, err := s.hostManager.URIByLanguage(lang)
 			if err != nil {
 				return nil, err
 			}
@@ -1133,8 +1133,8 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 	for _, recipient := range recipients {
 		err = s.sendLocalizedMessage(
 			ctx, userID, recipient, "pm/user-%s-accept-replace-%s-%s",
-			func(language string) (map[string]interface{}, error) {
-				uri, err := s.hostManager.URIByLanguage(language)
+			func(lang string) (map[string]interface{}, error) {
+				uri, err := s.hostManager.URIByLanguage(lang)
 				if err != nil {
 					return nil, err
 				}
@@ -1347,8 +1347,8 @@ func (s *PicturesGRPCServer) notifyCopyrightsEdited(
 	return nil
 }
 
-func (s *PicturesGRPCServer) userURL(userID int64, identity *string, language string) (string, error) {
-	userURL, err := s.hostManager.URIByLanguage(language)
+func (s *PicturesGRPCServer) userURL(userID int64, identity *string, lang string) (string, error) {
+	userURL, err := s.hostManager.URIByLanguage(lang)
 	if err != nil {
 		return "", err
 	}
@@ -1358,8 +1358,8 @@ func (s *PicturesGRPCServer) userURL(userID int64, identity *string, language st
 	return userURL.String(), nil
 }
 
-func (s *PicturesGRPCServer) pictureURL(identity string, language string) (string, error) {
-	pictureURL, err := s.hostManager.URIByLanguage(language)
+func (s *PicturesGRPCServer) pictureURL(identity string, lang string) (string, error) {
+	pictureURL, err := s.hostManager.URIByLanguage(lang)
 	if err != nil {
 		return "", err
 	}
@@ -1497,7 +1497,7 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 }
 
 func (s *PicturesGRPCServer) sendMessage(
-	ctx context.Context, userID int64, receiverID sql.NullInt64, messageFunc func(language string) (string, error),
+	ctx context.Context, userID int64, receiverID sql.NullInt64, messageFunc func(lang string) (string, error),
 ) error {
 	if !receiverID.Valid || (receiverID.Int64 == userID) {
 		return nil
@@ -1525,7 +1525,7 @@ func (s *PicturesGRPCServer) sendMessage(
 
 func (s *PicturesGRPCServer) sendLocalizedMessage(
 	ctx context.Context, userID int64, receiverID sql.NullInt64, messageID string,
-	templateDataFunc func(language string) (map[string]interface{}, error),
+	templateDataFunc func(lang string) (map[string]interface{}, error),
 ) error {
 	if !receiverID.Valid || (receiverID.Int64 == userID) {
 		return nil
@@ -1557,8 +1557,8 @@ func (s *PicturesGRPCServer) NotifyAccepted(
 	if isFirstTimeAccepted {
 		err := s.sendLocalizedMessage(
 			ctx, userID, pic.OwnerID, "pm/your-picture-accepted-%s",
-			func(language string) (map[string]interface{}, error) {
-				pictureURL, err := s.pictureURL(pic.Identity, language)
+			func(lang string) (map[string]interface{}, error) {
+				pictureURL, err := s.pictureURL(pic.Identity, lang)
 				if err != nil {
 					return nil, err
 				}
@@ -1578,8 +1578,8 @@ func (s *PicturesGRPCServer) NotifyAccepted(
 	}
 
 	err := s.sendMessage(
-		ctx, userID, pic.ChangeStatusUserID, func(language string) (string, error) {
-			pictureURL, err := s.pictureURL(pic.Identity, language)
+		ctx, userID, pic.ChangeStatusUserID, func(lang string) (string, error) {
+			pictureURL, err := s.pictureURL(pic.Identity, lang)
 			if err != nil {
 				return "", err
 			}
@@ -1598,8 +1598,8 @@ func (s *PicturesGRPCServer) NotifyInboxed(ctx context.Context, pic *schema.Pict
 		return nil
 	}
 
-	return s.sendMessage(ctx, userID, pic.ChangeStatusUserID, func(language string) (string, error) {
-		pictureURL, err := s.pictureURL(pic.Identity, language)
+	return s.sendMessage(ctx, userID, pic.ChangeStatusUserID, func(lang string) (string, error) {
+		pictureURL, err := s.pictureURL(pic.Identity, lang)
 		if err != nil {
 			return "", err
 		}
@@ -1614,7 +1614,7 @@ func (s *PicturesGRPCServer) NotifyInboxed(ctx context.Context, pic *schema.Pict
 func (s *PicturesGRPCServer) notifyRemoving(ctx context.Context, pic *schema.PictureRow, userID int64) error {
 	return s.sendLocalizedMessage(
 		ctx, userID, pic.OwnerID, "pm/your-picture-%s-enqueued-to-remove-%s",
-		func(language string) (map[string]interface{}, error) {
+		func(lang string) (map[string]interface{}, error) {
 			deleteRequests, err := s.repository.NegativeVotes(ctx, pic.ID)
 			if err != nil {
 				return nil, err
@@ -1638,7 +1638,7 @@ func (s *PicturesGRPCServer) notifyRemoving(ctx context.Context, pic *schema.Pic
 				reasons = append(reasons, userURL+" : "+request.Reason)
 			}
 
-			pictureURL, err := s.pictureURL(pic.Identity, language)
+			pictureURL, err := s.pictureURL(pic.Identity, lang)
 			if err != nil {
 				return nil, err
 			}

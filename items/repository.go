@@ -464,15 +464,15 @@ func yearsPrefix(begin int32, end int32) string {
 }
 
 func langPriorityOrderExpr( //nolint: ireturn
-	col exp.IdentifierExpression, language string,
+	col exp.IdentifierExpression, lang string,
 ) (exp.OrderedExpression, error) {
-	langPriority, ok := languagePriority[language]
+	langPriority, ok := languagePriority[lang]
 	if !ok {
 		langPriority, ok = languagePriority[DefaultLanguageCode]
 	}
 
 	if !ok {
-		return nil, fmt.Errorf("%w: `%s`", errLangNotFound, language)
+		return nil, fmt.Errorf("%w: `%s`", errLangNotFound, lang)
 	}
 
 	langs := make([]interface{}, len(langPriority)+1)
@@ -778,7 +778,7 @@ func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields *ListF
 	return nil
 }
 
-func (s *Repository) orderBy(alias string, orderBy OrderBy, language string) ([]exp.OrderedExpression, error) {
+func (s *Repository) orderBy(alias string, orderBy OrderBy, lang string) ([]exp.OrderedExpression, error) {
 	type columnOrder struct {
 		col Column
 		asc bool
@@ -829,7 +829,7 @@ func (s *Repository) orderBy(alias string, orderBy OrderBy, language string) ([]
 	orderByExp := make([]exp.OrderedExpression, 0, len(columns))
 
 	for _, column := range columns {
-		expr, err := column.col.SelectExpr(alias, language)
+		expr, err := column.col.SelectExpr(alias, lang)
 		if err != nil {
 			return nil, err
 		}
@@ -2009,7 +2009,7 @@ func (s *Repository) ItemsWithPicturesCount(
 }
 
 func (s *Repository) SetItemParentLanguage(
-	ctx context.Context, parentID int64, itemID int64, language string, newName string, forceIsAuto bool,
+	ctx context.Context, parentID int64, itemID int64, lang string, newName string, forceIsAuto bool,
 ) error {
 	bvlRow := struct {
 		IsAuto bool   `db:"is_auto"`
@@ -2019,7 +2019,7 @@ func (s *Repository) SetItemParentLanguage(
 	success, err := s.db.From(schema.ItemParentLanguageTable).Where(
 		schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
 		schema.ItemParentLanguageTableItemIDCol.Eq(itemID),
-		schema.ItemParentLanguageTableLanguageCol.Eq(language),
+		schema.ItemParentLanguageTableLanguageCol.Eq(lang),
 	).ScanStructContext(ctx, &bvlRow)
 	if err != nil {
 		return err
@@ -2076,7 +2076,7 @@ func (s *Repository) SetItemParentLanguage(
 			return ErrItemNotFound
 		}
 
-		newName, err = s.extractName(ctx, parentRow, itmRow, language)
+		newName, err = s.extractName(ctx, parentRow, itmRow, lang)
 		if err != nil {
 			return err
 		}
@@ -2091,7 +2091,7 @@ func (s *Repository) SetItemParentLanguage(
 	_, err = s.db.Insert(schema.ItemParentLanguageTable).Rows(goqu.Record{
 		schema.ItemParentLanguageTableItemIDColName:   itemID,
 		schema.ItemParentLanguageTableParentIDColName: parentID,
-		schema.ItemParentLanguageTableLanguageColName: language,
+		schema.ItemParentLanguageTableLanguageColName: lang,
 		schema.ItemParentLanguageTableNameColName:     newName,
 		schema.ItemParentLanguageTableIsAutoColName:   isAuto,
 	}).OnConflict(
@@ -2111,7 +2111,7 @@ func (s *Repository) SetItemParentLanguage(
 	return err
 }
 
-func (s *Repository) namePreferLanguage(ctx context.Context, parentID, itemID int64, language string) (string, error) {
+func (s *Repository) namePreferLanguage(ctx context.Context, parentID, itemID int64, lang string) (string, error) {
 	res := ""
 
 	success, err := s.db.Select(schema.ItemParentLanguageTableNameCol).
@@ -2121,7 +2121,7 @@ func (s *Repository) namePreferLanguage(ctx context.Context, parentID, itemID in
 			schema.ItemParentLanguageTableParentIDCol.Eq(parentID),
 			goqu.Func("LENGTH", schema.ItemParentLanguageTableNameCol).Gt(0),
 		).
-		Order(goqu.L("? > 0", schema.ItemParentLanguageTableLanguageCol.Eq(language)).Desc()).
+		Order(goqu.L("? > 0", schema.ItemParentLanguageTableLanguageCol.Eq(lang)).Desc()).
 		ScanValContext(ctx, &res)
 	if err != nil {
 		return "", err
@@ -2173,9 +2173,9 @@ func (s *Repository) extractCatname(ctx context.Context, brandRow, vehicleRow sc
 }
 
 func (s *Repository) extractName(
-	ctx context.Context, parentRow schema.ItemRow, vehicleRow schema.ItemRow, language string,
+	ctx context.Context, parentRow schema.ItemRow, vehicleRow schema.ItemRow, lang string,
 ) (string, error) {
-	langName, err := s.getName(ctx, vehicleRow.ID, language)
+	langName, err := s.getName(ctx, vehicleRow.ID, lang)
 	if err != nil {
 		return "", err
 	}
@@ -2286,18 +2286,18 @@ func (s *Repository) getAliases(ctx context.Context, itemID int64) ([]string, er
 	return aliases, nil
 }
 
-func (s *Repository) getName(ctx context.Context, itemID int64, language string) (string, error) {
-	langPriority, ok := languagePriority[language]
+func (s *Repository) getName(ctx context.Context, itemID int64, lang string) (string, error) {
+	langPriority, ok := languagePriority[lang]
 	if !ok {
 		langPriority, ok = languagePriority[DefaultLanguageCode]
 	}
 
 	if !ok {
-		return "", fmt.Errorf("%w: `%s`", errLangNotFound, language)
+		return "", fmt.Errorf("%w: `%s`", errLangNotFound, lang)
 	}
 
 	fieldParams := make([]interface{}, len(langPriority)+1)
-	fieldParams[0] = language
+	fieldParams[0] = lang
 
 	for i, v := range langPriority {
 		fieldParams[i+1] = v

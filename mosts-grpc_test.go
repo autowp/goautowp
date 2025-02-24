@@ -666,7 +666,7 @@ func TestMostsRatings(t *testing.T) { //nolint: maintidx
 					},
 				},
 			},
-			value1: `175/75 R15.5, 225/75 R15.5`,
+			value1: `175/75 R15.5<br />225/75 R15.5`,
 			value2: `175/75 R15.5`,
 		},
 		{
@@ -772,7 +772,7 @@ func TestMostsRatings(t *testing.T) { //nolint: maintidx
 				},
 			},
 			value1: `175/75 R15.5`,
-			value2: `175/75 R15.5, 225/75 R15.5`,
+			value2: `175/75 R15.5<br />225/75 R15.5`,
 		},
 	}
 

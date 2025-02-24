@@ -2270,7 +2270,7 @@ message MostsItemsRequest {
 message MostsItem {
   APIItem item = 1;
   string value_html = 2;
-  AttrUnit unit = 3;
+  int64 unit_id = 3;
 }
 
 message MostsItems {

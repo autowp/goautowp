@@ -92,6 +92,10 @@ func (s Wheelsize) Items(
 
 	var itemIDs []int64
 
+	if !listOptions.IsIDUnique() {
+		sqSelect = sqSelect.GroupBy(itemIDCol)
+	}
+
 	err = sqSelect.
 		Select(itemIDCol).
 		Join(tyrewidthValueTable.Table.As(tyrewidthAlias), goqu.On(
@@ -130,8 +134,8 @@ func (s Wheelsize) Items(
 	}
 
 	return &MostData{
-		Unit: nil,
-		Cars: result,
+		UnitID: 0,
+		Cars:   result,
 	}, nil
 }
 
@@ -166,5 +170,5 @@ func (s Wheelsize) wheelSizeText(ctx context.Context, attrsRepository *attrs.Rep
 		}
 	}
 
-	return strings.Join(text, ", "), nil
+	return strings.Join(text, "<br />"), nil
 }

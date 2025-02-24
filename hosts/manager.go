@@ -20,21 +20,21 @@ func NewManager(languages map[string]config.LanguageConfig) *Manager {
 	}
 }
 
-func (s *Manager) URIByLanguage(language string) (*url.URL, error) {
-	langConfig, ok := s.languages[language]
+func (s *Manager) URIByLanguage(lang string) (*url.URL, error) {
+	langConfig, ok := s.languages[lang]
 
 	if !ok {
-		return nil, fmt.Errorf("%w: `%s`", errHostForLanguageNotFound, language)
+		return nil, fmt.Errorf("%w: `%s`", errHostForLanguageNotFound, lang)
 	}
 
 	return url.Parse("https://" + langConfig.Hostname)
 }
 
-func (s *Manager) TimezoneByLanguage(language string) (string, error) {
-	langConfig, ok := s.languages[language]
+func (s *Manager) TimezoneByLanguage(lang string) (string, error) {
+	langConfig, ok := s.languages[lang]
 
 	if !ok {
-		return "", fmt.Errorf("%w: `%s`", errHostForLanguageNotFound, language)
+		return "", fmt.Errorf("%w: `%s`", errHostForLanguageNotFound, lang)
 	}
 
 	return langConfig.Timezone, nil

@@ -43,6 +43,9 @@ func (s *MostsGRPCServer) GetItems(ctx context.Context, in *MostsItemsRequest) (
 			PreviewPictures: &PreviewPicturesRequest{
 				PerspectivePageId: 1,
 				Pictures: &PicturesRequest{
+					Fields: &PictureFields{
+						NameText: true,
+					},
 					Options: &PictureListOptions{
 						PictureItem: &PictureItemListOptions{
 							TypeId: PictureItemType_PICTURE_ITEM_CONTENT,
@@ -55,7 +58,7 @@ func (s *MostsGRPCServer) GetItems(ctx context.Context, in *MostsItemsRequest) (
 		repoFields = convertItemFields(&fields)
 	)
 
-	list, unit, err := s.repository.Items(ctx, mosts.ItemsOptions{
+	list, unitID, err := s.repository.Items(ctx, mosts.ItemsOptions{
 		Language: lang,
 		Most:     mostCatname,
 		Years:    yearsCatname,
@@ -64,14 +67,6 @@ func (s *MostsGRPCServer) GetItems(ctx context.Context, in *MostsItemsRequest) (
 	}, repoFields)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var unitExtracted *AttrUnit
-	if unit != nil {
-		unitExtracted = &AttrUnit{
-			Abbr: unit.Abbr,
-			Name: unit.Name,
-		}
 	}
 
 	result := make([]*MostsItem, 0)
@@ -85,7 +80,7 @@ func (s *MostsGRPCServer) GetItems(ctx context.Context, in *MostsItemsRequest) (
 		result = append(result, &MostsItem{
 			Item:      extracted,
 			ValueHtml: car.ValueHTML,
-			Unit:      unitExtracted,
+			UnitId:    unitID,
 		})
 	}
 

@@ -54,6 +54,10 @@ func (s Power) Items(
 
 	var itemIDs []int64
 
+	if !listOptions.IsIDUnique() {
+		sqSelect = sqSelect.GroupBy(itemIDCol)
+	}
+
 	err = sqSelect.
 		Select(itemIDCol).
 		Join(valueTable.Table, goqu.On(itemIDCol.Eq(valueTable.ItemIDCol))).
@@ -151,8 +155,8 @@ func (s Power) Items(
 	}
 
 	return &MostData{
-		Unit: nil,
-		Cars: result,
+		UnitID: 0,
+		Cars:   result,
 	}, nil
 }
 

@@ -1122,8 +1122,8 @@ func (s *Repository) RefreshRepliesCount(ctx context.Context) (int64, error) {
 	return affected, nil
 }
 
-func (s *Repository) userURL(userID int64, identity *string, language string) (string, error) {
-	uri, err := s.hostManager.URIByLanguage(language)
+func (s *Repository) userURL(userID int64, identity *string, lang string) (string, error) {
+	uri, err := s.hostManager.URIByLanguage(lang)
 	if err != nil {
 		return "", err
 	}
