@@ -124,6 +124,7 @@ service Items {
   rpc SetUserItemSubscription(SetUserItemSubscriptionRequest) returns (google.protobuf.Empty) {}
   rpc SetItemEngine(SetItemEngineRequest) returns (google.protobuf.Empty) {}
   rpc GetPath(PathRequest) returns (PathResponse) {}
+  rpc GetAlpha(google.protobuf.Empty) returns (AlphaResponse) {}
 }
 
 service Mosts {
@@ -2225,6 +2226,12 @@ message PathRequest {
 
 message PathResponse {
   repeated PathItem path = 1;
+}
+
+message AlphaResponse {
+  repeated string numbers = 1;
+  repeated string latin = 2;
+  repeated string other = 3;
 }
 
 message PathItem {

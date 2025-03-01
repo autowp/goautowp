@@ -3239,3 +3239,20 @@ func TestBrandSectionLanguageName(t *testing.T) {
 	require.NotEmpty(t, res.GetSections()[2].GetGroups())
 	require.Equal(t, "Custom name", res.GetSections()[2].GetGroups()[0].GetName())
 }
+
+func TestAlpha(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg := config.LoadConfig(".")
+	client := NewItemsClient(conn)
+
+	// admin
+	kc := cnt.Keycloak()
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	_, err = client.GetAlpha(ctx, &emptypb.Empty{})
+	require.NoError(t, err)
+}

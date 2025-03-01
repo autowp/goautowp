@@ -2446,6 +2446,7 @@ const (
 	Items_SetUserItemSubscription_FullMethodName  = "/goautowp.Items/SetUserItemSubscription"
 	Items_SetItemEngine_FullMethodName            = "/goautowp.Items/SetItemEngine"
 	Items_GetPath_FullMethodName                  = "/goautowp.Items/GetPath"
+	Items_GetAlpha_FullMethodName                 = "/goautowp.Items/GetAlpha"
 )
 
 // ItemsClient is the client API for Items service.
@@ -2492,6 +2493,7 @@ type ItemsClient interface {
 	SetUserItemSubscription(ctx context.Context, in *SetUserItemSubscriptionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetItemEngine(ctx context.Context, in *SetItemEngineRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPath(ctx context.Context, in *PathRequest, opts ...grpc.CallOption) (*PathResponse, error)
+	GetAlpha(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AlphaResponse, error)
 }
 
 type itemsClient struct {
@@ -2902,6 +2904,16 @@ func (c *itemsClient) GetPath(ctx context.Context, in *PathRequest, opts ...grpc
 	return out, nil
 }
 
+func (c *itemsClient) GetAlpha(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AlphaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AlphaResponse)
+	err := c.cc.Invoke(ctx, Items_GetAlpha_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemsServer is the server API for Items service.
 // All implementations must embed UnimplementedItemsServer
 // for forward compatibility.
@@ -2946,6 +2958,7 @@ type ItemsServer interface {
 	SetUserItemSubscription(context.Context, *SetUserItemSubscriptionRequest) (*emptypb.Empty, error)
 	SetItemEngine(context.Context, *SetItemEngineRequest) (*emptypb.Empty, error)
 	GetPath(context.Context, *PathRequest) (*PathResponse, error)
+	GetAlpha(context.Context, *emptypb.Empty) (*AlphaResponse, error)
 	mustEmbedUnimplementedItemsServer()
 }
 
@@ -3075,6 +3088,9 @@ func (UnimplementedItemsServer) SetItemEngine(context.Context, *SetItemEngineReq
 }
 func (UnimplementedItemsServer) GetPath(context.Context, *PathRequest) (*PathResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPath not implemented")
+}
+func (UnimplementedItemsServer) GetAlpha(context.Context, *emptypb.Empty) (*AlphaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAlpha not implemented")
 }
 func (UnimplementedItemsServer) mustEmbedUnimplementedItemsServer() {}
 func (UnimplementedItemsServer) testEmbeddedByValue()               {}
@@ -3817,6 +3833,24 @@ func _Items_GetPath_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Items_GetAlpha_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).GetAlpha(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_GetAlpha_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).GetAlpha(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Items_ServiceDesc is the grpc.ServiceDesc for Items service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3983,6 +4017,10 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPath",
 			Handler:    _Items_GetPath_Handler,
+		},
+		{
+			MethodName: "GetAlpha",
+			Handler:    _Items_GetAlpha_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

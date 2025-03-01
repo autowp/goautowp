@@ -4294,3 +4294,19 @@ func (s *Repository) UpdateOrderCache(ctx context.Context, itemID int64) (bool, 
 
 	return true, err
 }
+
+func (s *Repository) FirstCharacters(ctx context.Context) ([]string, error) {
+	var res []string
+
+	err := s.db.Select(goqu.Func("UPPER", goqu.Func("LEFT", schema.ItemLanguageTableNameCol, 1)).As("char")).
+		Distinct().
+		From(schema.ItemLanguageTable).
+		Where(
+			schema.ItemLanguageTableNameCol.IsNotNull(),
+			schema.ItemLanguageTableNameCol.Neq(""),
+		).
+		Order(goqu.C("char").Asc()).
+		ScanValsContext(ctx, &res)
+
+	return res, err
+}

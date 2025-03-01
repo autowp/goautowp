@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -2852,4 +2853,43 @@ func (s *ItemsGRPCServer) GetPath(ctx context.Context, in *PathRequest) (*PathRe
 	return &PathResponse{
 		Path: res,
 	}, nil
+}
+
+func (s *ItemsGRPCServer) GetAlpha(ctx context.Context, _ *emptypb.Empty) (*AlphaResponse, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	if !isModer {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	chars, err := s.repository.FirstCharacters(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	res := AlphaResponse{
+		Numbers: make([]string, 0),
+		Latin:   make([]string, 0),
+		Other:   make([]string, 0),
+	}
+
+	reNumbers := regexp.MustCompile(`^["0-9-]$`)
+	reLatinChars := regexp.MustCompile(`^[A-Za-z]$`)
+
+	for _, char := range chars {
+		switch {
+		case reNumbers.MatchString(char):
+			res.Numbers = append(res.Numbers, char)
+		case reLatinChars.MatchString(char):
+			res.Latin = append(res.Latin, char)
+		default:
+			res.Other = append(res.Other, char)
+		}
+	}
+
+	return &res, nil
 }
