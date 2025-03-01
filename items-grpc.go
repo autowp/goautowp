@@ -2872,16 +2872,24 @@ func (s *ItemsGRPCServer) GetAlpha(ctx context.Context, _ *emptypb.Empty) (*Alph
 	}
 
 	res := AlphaResponse{
-		Numbers: make([]string, 0),
-		Latin:   make([]string, 0),
-		Other:   make([]string, 0),
+		Numbers:  make([]string, 0),
+		Latin:    make([]string, 0),
+		Cyrillic: make([]string, 0),
+		Han:      make([]string, 0),
+		Other:    make([]string, 0),
 	}
 
-	reNumbers := regexp.MustCompile(`^["0-9-]$`)
+	reNumbers := regexp.MustCompile(`^[~>/§("0-9-]$`)
 	reLatinChars := regexp.MustCompile(`^[A-Za-z]$`)
+	reCyrillic := regexp.MustCompile(`^\p{Cyrillic}$`)
+	reHan := regexp.MustCompile(`^\p{Han}$`)
 
 	for _, char := range chars {
 		switch {
+		case reHan.MatchString(char):
+			res.Han = append(res.Han, char)
+		case reCyrillic.MatchString(char):
+			res.Cyrillic = append(res.Cyrillic, char)
 		case reNumbers.MatchString(char):
 			res.Numbers = append(res.Numbers, char)
 		case reLatinChars.MatchString(char):

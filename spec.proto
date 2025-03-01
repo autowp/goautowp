@@ -2231,7 +2231,9 @@ message PathResponse {
 message AlphaResponse {
   repeated string numbers = 1;
   repeated string latin = 2;
-  repeated string other = 3;
+  repeated string cyrillic = 3;
+  repeated string han = 4;
+  repeated string other = 5;
 }
 
 message PathItem {
