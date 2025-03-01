@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -2470,4 +2472,92 @@ func (s *PicturesGRPCServer) expandSmallItems(items []*NewboxGroupDraft) []*Newb
 	}
 
 	return result
+}
+
+func (s *PicturesGRPCServer) GetCanonicalRoute(
+	ctx context.Context, in *CanonicalRouteRequest,
+) (*CanonicalRoute, error) {
+	identity := in.GetIdentity()
+	if identity == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
+	picture, err := s.repository.Picture(ctx, &query.PictureListOptions{
+		Identity: identity,
+	}, nil, pictures.OrderByNone)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var route []string
+
+	pictureItems, err := s.repository.PictureItems(ctx, &query.PictureItemListOptions{
+		PictureID: picture.ID,
+		TypeID:    schema.PictureItemTypeContent,
+		Item: &query.ItemListOptions{
+			TypeID: []schema.ItemTableItemTypeID{
+				schema.ItemTableItemTypeIDBrand,
+				schema.ItemTableItemTypeIDVehicle,
+				schema.ItemTableItemTypeIDEngine,
+				schema.ItemTableItemTypeIDPerson,
+			},
+		},
+	}, pictures.OrderByNone, 0)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(pictureItems) > 0 {
+		pictureItem := pictureItems[0]
+
+		paths, err := s.itemRepository.CataloguePaths(ctx, pictureItem.ItemID, items.CataloguePathOptions{
+			BreakOnFirst: true,
+			StockFirst:   true,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		if len(paths) > 0 {
+			path := paths[0]
+
+			switch path.Type {
+			case items.CataloguePathResultTypeBrand:
+				if len(path.CarCatname) > 0 {
+					route = slices.Concat(
+						[]string{"/", path.BrandCatname, path.CarCatname},
+						path.Path,
+						[]string{"pictures", picture.Identity},
+					)
+				} else {
+					action := "other"
+
+					if pictureItem.PerspectiveID.Valid {
+						switch pictureItem.PerspectiveID.Int64 {
+						case schema.PerspectiveLogo:
+							action = "logotypes"
+						case schema.PerspectiveMixed:
+							action = "mixed"
+						}
+					}
+
+					route = []string{"/", path.BrandCatname, action, picture.Identity}
+				}
+			case items.CataloguePathResultTypeBrandItem:
+				route = slices.Concat(
+					[]string{"/", path.BrandCatname, path.CarCatname},
+					path.Path,
+					[]string{"pictures", picture.Identity},
+				)
+			case items.CataloguePathResultTypeCategory:
+				route = []string{"/category", path.CategoryCatname, "pictures", picture.Identity}
+			case items.CataloguePathResultTypePerson:
+				route = []string{"/persons", strconv.FormatInt(path.ID, 10), picture.Identity}
+			}
+		}
+	}
+
+	return &CanonicalRoute{
+		Route: route,
+	}, nil
 }

@@ -186,6 +186,7 @@ service Pictures {
   rpc SetPictureStatus(SetPictureStatusRequest) returns (google.protobuf.Empty) {}
   rpc GetInbox(InboxRequest) returns (Inbox) {}
   rpc GetNewbox(NewboxRequest) returns (Newbox) {}
+  rpc GetCanonicalRoute(CanonicalRouteRequest) returns (CanonicalRoute) {}
 }
 
 service Messaging {
@@ -1848,6 +1849,14 @@ message Inbox {
   int32 current_count = 5;
   google.type.Date next_date = 6;
   int32 next_count = 7;
+}
+
+message CanonicalRouteRequest {
+  string identity = 1;
+}
+
+message CanonicalRoute {
+  repeated string route = 1;
 }
 
 message DeleteSimilarRequest {

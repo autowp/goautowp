@@ -4885,6 +4885,7 @@ const (
 	Pictures_SetPictureStatus_FullMethodName          = "/goautowp.Pictures/SetPictureStatus"
 	Pictures_GetInbox_FullMethodName                  = "/goautowp.Pictures/GetInbox"
 	Pictures_GetNewbox_FullMethodName                 = "/goautowp.Pictures/GetNewbox"
+	Pictures_GetCanonicalRoute_FullMethodName         = "/goautowp.Pictures/GetCanonicalRoute"
 )
 
 // PicturesClient is the client API for Pictures service.
@@ -4922,6 +4923,7 @@ type PicturesClient interface {
 	SetPictureStatus(ctx context.Context, in *SetPictureStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetInbox(ctx context.Context, in *InboxRequest, opts ...grpc.CallOption) (*Inbox, error)
 	GetNewbox(ctx context.Context, in *NewboxRequest, opts ...grpc.CallOption) (*Newbox, error)
+	GetCanonicalRoute(ctx context.Context, in *CanonicalRouteRequest, opts ...grpc.CallOption) (*CanonicalRoute, error)
 }
 
 type picturesClient struct {
@@ -5242,6 +5244,16 @@ func (c *picturesClient) GetNewbox(ctx context.Context, in *NewboxRequest, opts 
 	return out, nil
 }
 
+func (c *picturesClient) GetCanonicalRoute(ctx context.Context, in *CanonicalRouteRequest, opts ...grpc.CallOption) (*CanonicalRoute, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CanonicalRoute)
+	err := c.cc.Invoke(ctx, Pictures_GetCanonicalRoute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PicturesServer is the server API for Pictures service.
 // All implementations must embed UnimplementedPicturesServer
 // for forward compatibility.
@@ -5277,6 +5289,7 @@ type PicturesServer interface {
 	SetPictureStatus(context.Context, *SetPictureStatusRequest) (*emptypb.Empty, error)
 	GetInbox(context.Context, *InboxRequest) (*Inbox, error)
 	GetNewbox(context.Context, *NewboxRequest) (*Newbox, error)
+	GetCanonicalRoute(context.Context, *CanonicalRouteRequest) (*CanonicalRoute, error)
 	mustEmbedUnimplementedPicturesServer()
 }
 
@@ -5379,6 +5392,9 @@ func (UnimplementedPicturesServer) GetInbox(context.Context, *InboxRequest) (*In
 }
 func (UnimplementedPicturesServer) GetNewbox(context.Context, *NewboxRequest) (*Newbox, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNewbox not implemented")
+}
+func (UnimplementedPicturesServer) GetCanonicalRoute(context.Context, *CanonicalRouteRequest) (*CanonicalRoute, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCanonicalRoute not implemented")
 }
 func (UnimplementedPicturesServer) mustEmbedUnimplementedPicturesServer() {}
 func (UnimplementedPicturesServer) testEmbeddedByValue()                  {}
@@ -5959,6 +5975,24 @@ func _Pictures_GetNewbox_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Pictures_GetCanonicalRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CanonicalRouteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).GetCanonicalRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_GetCanonicalRoute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).GetCanonicalRoute(ctx, req.(*CanonicalRouteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Pictures_ServiceDesc is the grpc.ServiceDesc for Pictures service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -6089,6 +6123,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNewbox",
 			Handler:    _Pictures_GetNewbox_Handler,
+		},
+		{
+			MethodName: "GetCanonicalRoute",
+			Handler:    _Pictures_GetCanonicalRoute_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

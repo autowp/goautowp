@@ -24,6 +24,7 @@ const (
 	PerspectiveLogo           = 22
 	PerspectiveMascot         = 23
 	PerspectiveSketch         = 24
+	PerspectiveMixed          = 25
 	PerspectiveChassis        = 28
 )
 
