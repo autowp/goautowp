@@ -3253,6 +3253,9 @@ func TestAlpha(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	_, err = client.GetAlpha(ctx, &emptypb.Empty{})
+	_, err = client.GetAlpha(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&emptypb.Empty{},
+	)
 	require.NoError(t, err)
 }
