@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"net/http"
 	"strconv"
 	"testing"
 	"time"
@@ -1757,4 +1758,161 @@ func TestInboxCount(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, res)
+}
+
+func TestCorrectFileNamesVote(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	cfg := config.LoadConfig(".")
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewPicturesClient(conn)
+	itemsClient := NewItemsClient(conn)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	vehicleName := fmt.Sprintf("Toyota %d Corolla", randomInt)
+	vehicleID := createItem(t, goquDB, schema.ItemRow{
+		Name:       vehicleName,
+		IsGroup:    false,
+		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("toyota-%d-corolla", randomInt)},
+	})
+
+	_, err = client.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&CreatePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    vehicleID,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CorrectFileNames(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PictureIDRequest{Id: pictureID},
+	)
+	require.NoError(t, err)
+
+	picture, err := client.GetPicture(ctx, &PicturesRequest{
+		Options: &PictureListOptions{Id: pictureID},
+		Fields:  &PictureFields{Image: true},
+	})
+	require.NoError(t, err)
+	require.Contains(t,
+		picture.GetImage().GetSrc(),
+		fmt.Sprintf("t/toyota_%d_corolla/toyota_%d_corolla", randomInt, randomInt),
+	)
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
+	require.NoError(t, err)
+
+	httpResponse, err := http.DefaultClient.Do(request) //nolint: bodyclose
+	require.NoError(t, err)
+
+	defer util.Close(httpResponse.Body)
+
+	require.EqualValues(t, 33914, httpResponse.ContentLength)
+
+	// add brand
+	brandName := fmt.Sprintf("Toyota %d", randomInt)
+	brandID := createItem(t, goquDB, schema.ItemRow{
+		Name:       brandName,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDBrand,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("toyota-%d", randomInt)},
+	})
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemParent{
+			ItemId: vehicleID, ParentId: brandID, Type: ItemParentType_ITEM_TYPE_DEFAULT, Catname: "corolla",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CorrectFileNames(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PictureIDRequest{Id: pictureID},
+	)
+	require.NoError(t, err)
+
+	picture, err = client.GetPicture(ctx, &PicturesRequest{
+		Options: &PictureListOptions{Id: pictureID},
+		Fields:  &PictureFields{Image: true},
+	})
+	require.NoError(t, err)
+	require.Contains(t,
+		picture.GetImage().GetSrc(),
+		fmt.Sprintf("t/toyota-%d/corolla/toyota_%d_corolla", randomInt, randomInt),
+	)
+
+	request, err = http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
+	require.NoError(t, err)
+
+	httpResponse, err = http.DefaultClient.Do(request) //nolint: bodyclose
+	require.NoError(t, err)
+
+	defer util.Close(httpResponse.Body)
+
+	require.EqualValues(t, 33914, httpResponse.ContentLength)
+
+	// add second brand
+	brand2Name := fmt.Sprintf("Peugeot %d", randomInt)
+	brand2ID := createItem(t, goquDB, schema.ItemRow{
+		Name:       brand2Name,
+		IsGroup:    true,
+		ItemTypeID: schema.ItemTableItemTypeIDBrand,
+		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d", randomInt)},
+	})
+
+	_, err = itemsClient.CreateItemParent(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemParent{
+			ItemId: vehicleID, ParentId: brand2ID, Type: ItemParentType_ITEM_TYPE_DEFAULT, Catname: "corolla",
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.CorrectFileNames(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PictureIDRequest{Id: pictureID},
+	)
+	require.NoError(t, err)
+
+	picture, err = client.GetPicture(ctx, &PicturesRequest{
+		Options: &PictureListOptions{Id: pictureID},
+		Fields:  &PictureFields{Image: true},
+	})
+	require.NoError(t, err)
+	require.Contains(t,
+		picture.GetImage().GetSrc(),
+		fmt.Sprintf("p/peugeot-%d/toyota-%d/corolla/toyota_%d_corolla", randomInt, randomInt, randomInt),
+	)
+
+	request, err = http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
+	require.NoError(t, err)
+
+	httpResponse, err = http.DefaultClient.Do(request) //nolint: bodyclose
+	require.NoError(t, err)
+
+	defer util.Close(httpResponse.Body)
+
+	require.EqualValues(t, 33914, httpResponse.ContentLength)
 }

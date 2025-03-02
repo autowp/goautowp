@@ -6,8 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"math/rand"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
@@ -16,6 +20,7 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
+	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/paulmach/orb"
@@ -1834,4 +1839,208 @@ func (s *Repository) PerspectivePageGroupIDs(ctx context.Context, pageID int32) 
 	s.perspectiveCache[pageID] = ids
 
 	return ids, nil
+}
+
+func (s *Repository) CorrectFileNames(ctx context.Context, id int64) error {
+	picture, err := s.Picture(ctx, &query.PictureListOptions{
+		ID: id,
+	}, nil, OrderByNone)
+	if err != nil {
+		return err
+	}
+
+	if picture.ImageID.Valid {
+		pattern, err := s.FileNamePattern(ctx, picture.ID)
+		if err != nil {
+			return err
+		}
+
+		err = s.imageStorage.ChangeImageName(ctx, int(picture.ImageID.Int64), storage.GenerateOptions{
+			Pattern: pattern,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) FileNamePattern(ctx context.Context, pictureID int64) (string, error) {
+	const (
+		maxFilenameNumber = 9999
+		maxPictureItems   = 3
+	)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	result := strconv.FormatInt(int64((random.Uint32()%maxFilenameNumber)+1), 10)
+
+	filenameFilter := validation.StringSanitizeFilename{}
+
+	type PictureItemInfo struct {
+		ID                int64                  `db:"id"`
+		Name              sql.NullString         `db:"name"`
+		PictureItemTypeID schema.PictureItemType `db:"type"`
+	}
+
+	var (
+		pictureItemInfos []PictureItemInfo
+		nameCol          = items.NameOnlyColumn{DB: s.db}
+	)
+
+	nameColExpr, err := nameCol.SelectExpr(schema.ItemTableName, "en")
+	if err != nil {
+		return "", err
+	}
+
+	err = s.db.Select(schema.ItemTableIDCol, nameColExpr.As("name"), schema.PictureItemTableTypeCol).
+		From(schema.ItemTable).
+		Join(schema.PictureItemTable, goqu.On(schema.ItemTableIDCol.Eq(schema.PictureItemTableItemIDCol))).
+		Where(schema.PictureItemTablePictureIDCol.Eq(pictureID)).
+		Order(goqu.L("?", schema.PictureItemTableTypeCol.Eq(schema.PictureItemTypeContent)).Desc()).
+		Limit(maxPictureItems).
+		ScanStructsContext(ctx, &pictureItemInfos)
+	if err != nil {
+		return "", err
+	}
+
+	primaryItems := make([]PictureItemInfo, 0, len(pictureItemInfos))
+
+	for _, item := range pictureItemInfos {
+		if item.PictureItemTypeID == schema.PictureItemTypeContent {
+			primaryItems = append(primaryItems, item)
+		}
+	}
+
+	switch {
+	case len(primaryItems) > 1:
+		brands, _, err := s.itemsRepository.List(ctx, &query.ItemListOptions{
+			TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+			ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+				PictureItemsByItemID: &query.PictureItemListOptions{
+					PictureID: pictureID,
+				},
+			},
+		}, nil, 0, false)
+		if err != nil {
+			return "", err
+		}
+
+		parts := make([]string, 0)
+
+		for _, brand := range brands {
+			if brand.Catname.Valid {
+				parts = append(parts, filenameFilter.FilterString(brand.Catname.String))
+			}
+		}
+
+		slices.Sort(parts)
+
+		brandsFolder := strings.Join(parts, "/")
+		parts = make([]string, 0)
+
+		for _, item := range primaryItems {
+			if item.Name.Valid {
+				parts = append(parts, filenameFilter.FilterString(item.Name.String))
+			}
+		}
+
+		itemCatname := strings.Join(parts, "/")
+		itemFilename := strings.Join(parts, "_")
+
+		result = itemCatname + "/" + itemFilename
+		if len(brandsFolder) > 0 {
+			result = brandsFolder + "/" + result
+		}
+
+		firstChar := result[:1]
+		result = firstChar + "/" + result
+	case len(primaryItems) == 1:
+		primaryItem := primaryItems[0]
+		carCatname := ""
+
+		if primaryItem.Name.Valid {
+			carCatname = filenameFilter.FilterString(primaryItem.Name.String)
+		}
+
+		brands, _, err := s.itemsRepository.List(ctx, &query.ItemListOptions{
+			TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+			ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+				ItemID: primaryItem.ID,
+			},
+		}, nil, 0, false)
+		if err != nil {
+			return "", err
+		}
+
+		switch {
+		case len(brands) > 1:
+			parts := make([]string, 0)
+
+			for _, brand := range brands {
+				if brand.Catname.Valid {
+					parts = append(parts, filenameFilter.FilterString(brand.Catname.String))
+				}
+			}
+
+			slices.Sort(parts)
+
+			carFolder := carCatname
+
+			for _, part := range parts {
+				part = strings.ReplaceAll(part, "-", "_")
+				carFolder = strings.ReplaceAll(carFolder, part, "")
+			}
+
+			carFolder = strings.ReplaceAll(carFolder, "__", "_")
+			carFolder = strings.Trim(carFolder, "_-")
+
+			brandsFolder := strings.Join(parts, "/")
+			firstChar := brandsFolder[:1]
+
+			result = firstChar + "/" + brandsFolder + "/" + carFolder + "/" + carCatname
+		case len(brands) == 1:
+			brand := brands[0]
+			brandFolder := ""
+			stripBrandFolder := ""
+
+			if brand.Catname.Valid {
+				brandFolder = filenameFilter.FilterString(brand.Catname.String)
+				stripBrandFolder = strings.ReplaceAll(brandFolder, "-", "_")
+			}
+
+			firstChar := brandFolder[:1]
+			carFolder := carCatname
+			carFolder = strings.Trim(strings.ReplaceAll(carFolder, stripBrandFolder, ""), "_-")
+
+			result = strings.Join([]string{
+				firstChar,
+				brandFolder,
+				carFolder,
+				carCatname,
+			}, "/")
+		default:
+			carFolder := ""
+			if primaryItem.Name.Valid {
+				carFolder = filenameFilter.FilterString(primaryItem.Name.String)
+			}
+
+			firstChar := carFolder[:1]
+			result = firstChar + "/" + carFolder + "/" + carCatname
+		}
+	case len(pictureItemInfos) > 0:
+		parts := make([]string, 0)
+
+		for _, pictureItemInfo := range pictureItemInfos {
+			if pictureItemInfo.Name.Valid {
+				parts = append(parts, filenameFilter.FilterString(pictureItemInfo.Name.String))
+			}
+		}
+
+		folder := strings.Join(parts, "/")
+		firstChar := folder[:1]
+		result = firstChar + "/" + folder
+	}
+
+	return strings.ReplaceAll(result, "//", "/"), nil
 }

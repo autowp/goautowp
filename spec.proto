@@ -165,6 +165,7 @@ service Pictures {
   rpc GetUserSummary(google.protobuf.Empty) returns (PicturesUserSummary) {}
   rpc Normalize(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc Flop(PictureIDRequest) returns (google.protobuf.Empty) {}
+  rpc CorrectFileNames(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc DeleteSimilar(DeleteSimilarRequest) returns (google.protobuf.Empty) {}
   rpc Repair(PictureIDRequest) returns (google.protobuf.Empty) {}
   rpc GetPicture(PicturesRequest) returns (Picture) {}

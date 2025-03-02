@@ -4864,6 +4864,7 @@ const (
 	Pictures_GetUserSummary_FullMethodName            = "/goautowp.Pictures/GetUserSummary"
 	Pictures_Normalize_FullMethodName                 = "/goautowp.Pictures/Normalize"
 	Pictures_Flop_FullMethodName                      = "/goautowp.Pictures/Flop"
+	Pictures_CorrectFileNames_FullMethodName          = "/goautowp.Pictures/CorrectFileNames"
 	Pictures_DeleteSimilar_FullMethodName             = "/goautowp.Pictures/DeleteSimilar"
 	Pictures_Repair_FullMethodName                    = "/goautowp.Pictures/Repair"
 	Pictures_GetPicture_FullMethodName                = "/goautowp.Pictures/GetPicture"
@@ -4902,6 +4903,7 @@ type PicturesClient interface {
 	GetUserSummary(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PicturesUserSummary, error)
 	Normalize(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Flop(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CorrectFileNames(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteSimilar(ctx context.Context, in *DeleteSimilarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Repair(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPicture(ctx context.Context, in *PicturesRequest, opts ...grpc.CallOption) (*Picture, error)
@@ -5028,6 +5030,16 @@ func (c *picturesClient) Flop(ctx context.Context, in *PictureIDRequest, opts ..
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Pictures_Flop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *picturesClient) CorrectFileNames(ctx context.Context, in *PictureIDRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Pictures_CorrectFileNames_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5268,6 +5280,7 @@ type PicturesServer interface {
 	GetUserSummary(context.Context, *emptypb.Empty) (*PicturesUserSummary, error)
 	Normalize(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	Flop(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
+	CorrectFileNames(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	DeleteSimilar(context.Context, *DeleteSimilarRequest) (*emptypb.Empty, error)
 	Repair(context.Context, *PictureIDRequest) (*emptypb.Empty, error)
 	GetPicture(context.Context, *PicturesRequest) (*Picture, error)
@@ -5329,6 +5342,9 @@ func (UnimplementedPicturesServer) Normalize(context.Context, *PictureIDRequest)
 }
 func (UnimplementedPicturesServer) Flop(context.Context, *PictureIDRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Flop not implemented")
+}
+func (UnimplementedPicturesServer) CorrectFileNames(context.Context, *PictureIDRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CorrectFileNames not implemented")
 }
 func (UnimplementedPicturesServer) DeleteSimilar(context.Context, *DeleteSimilarRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteSimilar not implemented")
@@ -5593,6 +5609,24 @@ func _Pictures_Flop_Handler(srv interface{}, ctx context.Context, dec func(inter
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PicturesServer).Flop(ctx, req.(*PictureIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Pictures_CorrectFileNames_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PictureIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PicturesServer).CorrectFileNames(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Pictures_CorrectFileNames_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PicturesServer).CorrectFileNames(ctx, req.(*PictureIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -6039,6 +6073,10 @@ var Pictures_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Flop",
 			Handler:    _Pictures_Flop_Handler,
+		},
+		{
+			MethodName: "CorrectFileNames",
+			Handler:    _Pictures_CorrectFileNames_Handler,
 		},
 		{
 			MethodName: "DeleteSimilar",

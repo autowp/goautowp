@@ -2561,3 +2561,26 @@ func (s *PicturesGRPCServer) GetCanonicalRoute(
 		Route: route,
 	}, nil
 }
+
+func (s *PicturesGRPCServer) CorrectFileNames(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	id := in.GetId()
+	if id == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
+	err = s.repository.CorrectFileNames(ctx, id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
+}
