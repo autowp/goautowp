@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"html"
 	"maps"
 	"net/url"
 	"regexp"
@@ -31,6 +32,7 @@ import (
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	geo "github.com/paulmach/go.geo"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -399,7 +401,7 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 
 	fields := convertItemFields(in.GetFields())
 
-	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount) &&
+	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) &&
 		!s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -428,7 +430,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemL
 	isModer := s.enforcer.Enforce(role, "global", "moderate")
 
 	fields := convertItemFields(in.GetFields())
-	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount) &&
+	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) &&
 		!s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -1888,250 +1890,6 @@ func (s *ItemsGRPCServer) SetUserItemSubscription(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if !s.enforcer.Enforce(role, "car", "edit_meta") ||
-		!s.enforcer.Enforce(role, "specifications", "edit-engine") ||
-		!s.enforcer.Enforce(role, "specifications", "edit") {
-		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
-	}
-
-	itemID := in.GetItemId()
-
-	item, err := s.repository.Item(
-		ctx, &query.ItemListOptions{ItemID: itemID, Language: EventsDefaultLanguage},
-		&items.ListFields{NameText: true},
-	)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	ctx = context.WithoutCancel(ctx)
-
-	changed, err := s.repository.SetItemEngine(ctx, itemID, in.GetEngineItemId(), in.GetEngineInherited())
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if changed {
-		user, err := s.usersRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		eventItemIDs := []int64{itemID}
-		if item.EngineItemID.Valid {
-			eventItemIDs = append(eventItemIDs, item.EngineItemID.Int64)
-		}
-
-		itemNameText, err := s.formatItemNameText(item, EventsDefaultLanguage)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		switch {
-		case in.GetEngineInherited():
-			err = s.events.Add(ctx, Event{
-				UserID: userID,
-				Message: fmt.Sprintf(
-					"У автомобиля %s установлено наследование двигателя",
-					itemNameText,
-				),
-				Items: eventItemIDs,
-			})
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
-			err = s.notifyItemEngineInherited(ctx, user, item)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		case in.GetEngineItemId() == 0:
-			if item.EngineItemID.Valid {
-				oldEngine, err := s.repository.Item(
-					ctx, &query.ItemListOptions{ItemID: item.EngineItemID.Int64, Language: EventsDefaultLanguage},
-					&items.ListFields{NameText: true},
-				)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-
-				oldEngineNameText, err := s.formatItemNameText(oldEngine, EventsDefaultLanguage)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-
-				err = s.events.Add(ctx, Event{
-					UserID: userID,
-					Message: fmt.Sprintf(
-						"У автомобиля %s убран двигатель (был %s)",
-						itemNameText,
-						oldEngineNameText,
-					),
-					Items: append(eventItemIDs, item.EngineItemID.Int64),
-				})
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-
-				err = s.notifyItemEngineCleared(ctx, user, item)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-			}
-		default:
-			newEngine, err := s.repository.Item(ctx, &query.ItemListOptions{
-				ItemID: in.GetEngineItemId(),
-				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDEngine},
-			}, &items.ListFields{NameText: true})
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
-			newEngineNameText, err := s.formatItemNameText(newEngine, EventsDefaultLanguage)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
-			err = s.events.Add(ctx, Event{
-				UserID: userID,
-				Message: fmt.Sprintf(
-					"Автомобилю %s назначен двигатель %s",
-					itemNameText,
-					newEngineNameText,
-				),
-				Items: []int64{itemID, newEngine.ID},
-			})
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
-			err = s.notifyItemEngineUpdated(ctx, user, item, in.GetEngineItemId())
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		err = s.attrsRepository.UpdateActualValues(ctx, item.ID)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	}
-
-	err = s.repository.UserItemSubscribe(ctx, itemID, userID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (s *ItemsGRPCServer) notifyItemEngineInherited(
-	ctx context.Context, user *schema.UsersRow, item *items.Item,
-) error {
-	var oldEngineID int64
-	if item.EngineItemID.Valid {
-		oldEngineID = item.EngineItemID.Int64
-	}
-
-	return s.notifyItemSubscribers(
-		ctx, []int64{item.ID, oldEngineID}, user.ID, "pm/user-%s-set-inherited-vehicle-engine-%s-%s",
-		func(uri *url.URL, lang string) (map[string]interface{}, error) {
-			itemNameText, err := s.formatItemNameText(item, lang)
-			if err != nil {
-				return nil, err
-			}
-
-			return map[string]interface{}{
-				"UserURL":      frontend.UserURL(uri, user.ID, user.Identity),
-				"ItemName":     itemNameText,
-				"ItemModerURL": frontend.ItemModerURL(uri, item.ID),
-			}, nil
-		},
-	)
-}
-
-func (s *ItemsGRPCServer) notifyItemEngineCleared(ctx context.Context, user *schema.UsersRow, item *items.Item) error {
-	var oldEngineID int64
-	if item.EngineItemID.Valid {
-		oldEngineID = item.EngineItemID.Int64
-	}
-
-	return s.notifyItemSubscribers(
-		ctx, []int64{item.ID, oldEngineID}, user.ID, "pm/user-%s-canceled-vehicle-engine-%s-%s-%s",
-		func(uri *url.URL, lang string) (map[string]interface{}, error) {
-			itemNameText, err := s.formatItemNameText(item, lang)
-			if err != nil {
-				return nil, err
-			}
-
-			oldEngine, err := s.repository.Item(
-				ctx, &query.ItemListOptions{ItemID: oldEngineID, Language: lang},
-				&items.ListFields{NameText: true},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			oldEngineNameText, err := s.formatItemNameText(oldEngine, lang)
-			if err != nil {
-				return nil, err
-			}
-
-			return map[string]interface{}{
-				"UserURL":      frontend.UserURL(uri, user.ID, user.Identity),
-				"EngineName":   oldEngineNameText,
-				"ItemName":     itemNameText,
-				"ItemModerURL": frontend.ItemModerURL(uri, item.ID),
-			}, nil
-		},
-	)
-}
-
-func (s *ItemsGRPCServer) notifyItemEngineUpdated(
-	ctx context.Context, user *schema.UsersRow, item *items.Item, newEngineID int64,
-) error {
-	var oldEngineID int64
-	if item.EngineItemID.Valid {
-		oldEngineID = item.EngineItemID.Int64
-	}
-
-	return s.notifyItemSubscribers(
-		ctx, []int64{item.ID, oldEngineID, newEngineID}, user.ID, "pm/user-%s-set-vehicle-engine-%s-%s-%s",
-		func(uri *url.URL, lang string) (map[string]interface{}, error) {
-			itemNameText, err := s.formatItemNameText(item, lang)
-			if err != nil {
-				return nil, err
-			}
-
-			newEngine, err := s.repository.Item(
-				ctx, &query.ItemListOptions{ItemID: newEngineID, Language: lang},
-				&items.ListFields{NameText: true},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			newEngineNameText, err := s.formatItemNameText(newEngine, lang)
-			if err != nil {
-				return nil, err
-			}
-
-			return map[string]interface{}{
-				"UserURL":      frontend.UserURL(uri, user.ID, user.Identity),
-				"EngineName":   newEngineNameText,
-				"ItemName":     itemNameText,
-				"ItemModerURL": frontend.ItemModerURL(uri, item.ID),
-			}, nil
-		},
-	)
-}
-
 func (s *ItemsGRPCServer) notifyItemSubscribers(
 	ctx context.Context, itemIDs []int64, excludeUserID int64, messageID string,
 	templateData func(*url.URL, string) (map[string]interface{}, error),
@@ -2902,4 +2660,846 @@ func (s *ItemsGRPCServer) GetAlpha(ctx context.Context, _ *emptypb.Empty) (*Alph
 	}
 
 	return &res, nil
+}
+
+func (s *ItemsGRPCServer) CreateItem(ctx context.Context, in *APIItem) (*ItemID, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "add") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	in.Id = 0
+
+	InvalidParams, err := in.Validate(ctx, s.repository, nil, s.enforcer, role)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	itemTypeID := in.GetItemTypeId()
+
+	filter := validation.StringSanitizeFilename{}
+
+	set := schema.ItemRow{
+		ItemTypeID:       convertItemTypeID(itemTypeID),
+		IsConcept:        in.GetIsConcept(),
+		IsConceptInherit: in.GetIsConceptInherit(),
+		SpecInherit:      in.GetSpecInherit(),
+		SpecID: sql.NullInt32{
+			Valid: in.GetSpecId() > 0,
+			Int32: in.GetSpecId(),
+		},
+		AddDatetime: sql.NullTime{Valid: true, Time: time.Now()},
+		Name:        in.GetName(),
+		FullName: sql.NullString{
+			Valid:  in.GetFullName() != "",
+			String: in.GetFullName(),
+		},
+		Body: in.GetBody(),
+		BeginYear: sql.NullInt32{
+			Valid: in.GetBeginYear() > 0,
+			Int32: in.GetBeginYear(),
+		},
+		BeginMonth: sql.NullInt16{
+			Valid: in.GetBeginMonth() > 0,
+			Int16: int16(in.GetBeginMonth()), //nolint: gosec
+		},
+		EndYear: sql.NullInt32{
+			Valid: in.GetEndYear() > 0,
+			Int32: in.GetEndYear(),
+		},
+		EndMonth: sql.NullInt16{
+			Valid: in.GetEndMonth() > 0,
+			Int16: int16(in.GetEndMonth()), //nolint: gosec
+		},
+		Today: sql.NullBool{
+			Valid: in.GetToday() != nil,
+			Bool:  in.GetToday().GetValue(),
+		},
+		BeginModelYear: sql.NullInt32{
+			Valid: in.GetBeginModelYear() > 0,
+			Int32: in.GetBeginModelYear(),
+		},
+		EndModelYear: sql.NullInt32{
+			Valid: in.GetEndModelYear() > 0,
+			Int32: in.GetEndModelYear(),
+		},
+		BeginModelYearFraction: sql.NullString{
+			Valid:  in.GetBeginModelYearFraction() != "",
+			String: in.GetBeginModelYearFraction(),
+		},
+		EndModelYearFraction: sql.NullString{
+			Valid:  in.GetEndModelYearFraction() != "",
+			String: in.GetEndModelYearFraction(),
+		},
+		ProducedExactly: in.GetProducedExactly(),
+		Produced: sql.NullInt32{
+			Valid: in.GetProduced() != nil,
+			Int32: in.GetProduced().GetValue(),
+		},
+		Catname: sql.NullString{
+			Valid:  in.GetCatname() != "",
+			String: filter.FilterString(in.GetCatname()),
+		},
+		IsGroup:       in.GetIsGroup(),
+		EngineInherit: in.GetEngineInherit(),
+		EngineItemID: sql.NullInt64{
+			Valid: in.GetEngineItemId() > 0,
+			Int64: in.GetEngineItemId(),
+		},
+	}
+
+	ctx = context.WithoutCancel(ctx)
+
+	itemID, err := s.repository.CreateItem(ctx, set, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if location := in.GetLocation(); location != nil {
+		point := geo.NewPointFromLatLng(location.GetLatitude(), location.GetLongitude())
+
+		err = s.repository.SetItemLocation(ctx, itemID, point)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	err = s.attrsRepository.UpdateInheritedValues(ctx, itemID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	item, err := s.repository.Item(ctx, &query.ItemListOptions{ItemID: itemID}, &items.ListFields{NameText: true})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	itemNameText, err := s.formatItemNameText(item, "en")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.events.Add(ctx, Event{
+		UserID:  userID,
+		Message: "Создан новый автомобиль " + html.EscapeString(itemNameText),
+		Items:   []int64{itemID},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &ItemID{Id: itemID}, nil
+}
+
+func (s *ItemsGRPCServer) UpdateItem( //nolint: maintidx
+	ctx context.Context, in *UpdateItemRequest,
+) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "car", "add") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	if in.GetItem().GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "id is zero")
+	}
+
+	values := in.GetItem()
+	mask := in.GetUpdateMask()
+
+	item, err := s.repository.Item(ctx, &query.ItemListOptions{ItemID: values.GetId(), Language: EventsDefaultLanguage},
+		&items.ListFields{Meta: true})
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	values.ItemTypeId = extractItemTypeID(item.ItemTypeID)
+	oldData := item
+
+	InvalidParams, err := values.Validate(ctx, s.repository, mask.GetPaths(), s.enforcer, role)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	set := schema.ItemRow{
+		ID: item.ID,
+	}
+	notifyMeta := false
+
+	if util.Contains(mask.GetPaths(), "name") {
+		notifyMeta = true
+		set.Name = values.GetName()
+	}
+
+	if util.Contains(mask.GetPaths(), "full_name") {
+		notifyMeta = true
+		set.FullName = sql.NullString{
+			String: values.GetFullName(),
+			Valid:  len(values.GetFullName()) > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "body") {
+		notifyMeta = true
+		set.Body = values.GetBody()
+	}
+
+	if util.Contains(mask.GetPaths(), "begin_year") {
+		notifyMeta = true
+		set.BeginYear = sql.NullInt32{
+			Int32: values.GetBeginYear(),
+			Valid: values.GetBeginYear() > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "begin_month") {
+		notifyMeta = true
+		set.BeginMonth = sql.NullInt16{
+			Int16: int16(values.GetBeginMonth()), //nolint: gosec
+			Valid: values.GetBeginMonth() > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "end_year") {
+		notifyMeta = true
+		endYear := values.GetEndYear()
+		set.EndYear = sql.NullInt32{
+			Int32: endYear,
+			Valid: endYear > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "end_month") {
+		notifyMeta = true
+		set.EndMonth = sql.NullInt16{
+			Int16: int16(values.GetEndMonth()), //nolint: gosec
+			Valid: values.GetEndMonth() > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "today") {
+		notifyMeta = true
+
+		set.Today = sql.NullBool{
+			Bool:  values.GetToday().GetValue(),
+			Valid: values.GetToday() != nil,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "begin_model_year") {
+		notifyMeta = true
+		set.BeginModelYear = sql.NullInt32{
+			Int32: values.GetBeginModelYear(),
+			Valid: values.GetBeginModelYear() > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "end_model_year") {
+		notifyMeta = true
+		set.EndModelYear = sql.NullInt32{
+			Int32: values.GetEndModelYear(),
+			Valid: values.GetEndModelYear() > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "begin_model_year_fraction") {
+		notifyMeta = true
+		set.BeginModelYearFraction = sql.NullString{
+			String: values.GetBeginModelYearFraction(),
+			Valid:  len(values.GetBeginModelYearFraction()) > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "end_model_year_fraction") {
+		notifyMeta = true
+		set.EndModelYearFraction = sql.NullString{
+			String: values.GetEndModelYearFraction(),
+			Valid:  len(values.GetEndModelYearFraction()) > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "is_concept") {
+		notifyMeta = true
+		set.IsConcept = values.GetIsConcept()
+	}
+
+	if util.Contains(mask.GetPaths(), "is_concept_inherit") {
+		notifyMeta = true
+		set.IsConceptInherit = values.GetIsConceptInherit()
+	}
+
+	if util.Contains(mask.GetPaths(), "catname") {
+		notifyMeta = true
+		set.Catname = sql.NullString{
+			String: values.GetCatname(),
+			Valid:  len(values.GetCatname()) > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "produced") {
+		notifyMeta = true
+		set.Produced = sql.NullInt32{
+			Int32: values.GetProduced().GetValue(),
+			Valid: values.GetProduced() != nil,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "produced_exactly") {
+		notifyMeta = true
+		set.ProducedExactly = values.GetProducedExactly()
+	}
+
+	if util.Contains(mask.GetPaths(), "is_group") {
+		notifyMeta = true
+		set.IsGroup = values.GetIsGroup()
+	}
+
+	if util.Contains(mask.GetPaths(), "spec_inherit") {
+		notifyMeta = true
+		set.SpecInherit = values.GetSpecInherit()
+	}
+
+	if util.Contains(mask.GetPaths(), "spec_id") {
+		notifyMeta = true
+		set.SpecID = sql.NullInt32{
+			Int32: values.GetSpecId(),
+			Valid: values.GetSpecId() > 0,
+		}
+	}
+
+	if util.Contains(mask.GetPaths(), "engine_inherit") {
+		notifyMeta = true
+		set.EngineInherit = values.GetEngineInherit()
+	}
+
+	if util.Contains(mask.GetPaths(), "engine_item_id") {
+		notifyMeta = true
+		set.EngineItemID = sql.NullInt64{
+			Int64: values.GetEngineItemId(),
+			Valid: values.GetEngineItemId() > 0,
+		}
+	}
+
+	ctx = context.WithoutCancel(ctx)
+
+	err = s.repository.UpdateItem(ctx, set, mask.GetPaths(), userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if util.Contains(mask.GetPaths(), "location") {
+		var point *geo.Point
+		if location := values.GetLocation(); location != nil {
+			point = geo.NewPointFromLatLng(location.GetLatitude(), location.GetLongitude())
+		}
+
+		err = s.repository.SetItemLocation(ctx, item.ID, point)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	if notifyMeta {
+		item, err = s.repository.Item(ctx, &query.ItemListOptions{ItemID: item.ID, Language: EventsDefaultLanguage},
+			&items.ListFields{NameText: true, Meta: true})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		newData := item
+		htmlChanges := make([]string, 0)
+
+		changes, err := s.buildChangesMessage(ctx, oldData.ItemRow, newData.ItemRow, EventsDefaultLanguage)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		for _, line := range changes {
+			htmlChanges = append(htmlChanges, html.EscapeString(line))
+		}
+
+		itemNameText, err := s.formatItemNameText(item, EventsDefaultLanguage)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		message := "Редактирование мета-информации автомобиля " + itemNameText
+		if len(htmlChanges) > 0 {
+			message += "<p>" + strings.Join(htmlChanges, "<br />") + "</p>"
+		}
+
+		err = s.events.Add(ctx, Event{
+			UserID:  userID,
+			Message: message,
+			Items:   []int64{item.ID},
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		user, err := s.usersRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = s.notifyItemSubscribers(
+			ctx, []int64{item.ID}, user.ID, "pm/user-%s-edited-vehicle-meta-data-%s-%s-%s",
+			func(uri *url.URL, lang string) (map[string]interface{}, error) {
+				changes, err := s.buildChangesMessage(ctx, oldData.ItemRow, newData.ItemRow, lang)
+				if err != nil {
+					return nil, err
+				}
+
+				changesStr := ""
+				if len(changes) > 0 {
+					changesStr = strings.Join(changes, "\n")
+				}
+
+				itemNameText, err := s.formatItemNameText(item, lang)
+				if err != nil {
+					return nil, err
+				}
+
+				return map[string]interface{}{
+					"UserURL":      frontend.UserURL(uri, user.ID, user.Identity),
+					"ItemName":     itemNameText,
+					"ItemModerURL": frontend.ItemModerURL(uri, item.ID),
+					"Changes":      changesStr,
+				}, nil
+			},
+		)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ItemsGRPCServer) translateBool(value bool, lang string) (string, error) {
+	localizer := s.i18n.Localizer(lang)
+
+	msg := "moder/vehicle/changes/boolean/false"
+	if value {
+		msg = "moder/vehicle/changes/boolean/true"
+	}
+
+	return localizer.Localize(&i18n.LocalizeConfig{
+		DefaultMessage: &i18n.Message{ID: msg},
+	})
+}
+
+func (s *ItemsGRPCServer) translateNullBool(value sql.NullBool, lang string) (string, error) {
+	if !value.Valid {
+		return "", nil
+	}
+
+	return s.translateBool(value.Bool, lang)
+}
+
+func (s *ItemsGRPCServer) boolChange(oldValue, newValue bool, msg string, lang string) (string, error) {
+	if oldValue == newValue {
+		return "", nil
+	}
+
+	from, err := s.translateBool(oldValue, lang)
+	if err != nil {
+		return "", err
+	}
+
+	to, err := s.translateBool(newValue, lang)
+	if err != nil {
+		return "", err
+	}
+
+	localizer := s.i18n.Localizer(lang)
+
+	return localizer.Localize(&i18n.LocalizeConfig{
+		DefaultMessage: &i18n.Message{ID: msg},
+		TemplateData: map[string]interface{}{
+			"From": from,
+			"To":   to,
+		},
+	})
+}
+
+func (s *ItemsGRPCServer) nullBoolChange(oldValue, newValue sql.NullBool, msg string, lang string) (string, error) {
+	if oldValue.Valid != newValue.Valid || oldValue.Valid && newValue.Valid && (oldValue.Bool != newValue.Bool) {
+		from, err := s.translateNullBool(oldValue, lang)
+		if err != nil {
+			return "", err
+		}
+
+		to, err := s.translateNullBool(newValue, lang)
+		if err != nil {
+			return "", err
+		}
+
+		localizer := s.i18n.Localizer(lang)
+
+		return localizer.Localize(&i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{ID: msg},
+			TemplateData: map[string]interface{}{
+				"From": from,
+				"To":   to,
+			},
+		})
+	}
+
+	return "", nil
+}
+
+func (s *ItemsGRPCServer) nullInt16Change(oldValue, newValue sql.NullInt16, msg string, lang string) (string, error) {
+	from := util.NullInt16ToScalar(oldValue)
+	to := util.NullInt16ToScalar(newValue)
+
+	if from == to {
+		return "", nil
+	}
+
+	localizer := s.i18n.Localizer(lang)
+
+	return localizer.Localize(&i18n.LocalizeConfig{
+		DefaultMessage: &i18n.Message{ID: msg},
+		TemplateData: map[string]interface{}{
+			"From": from,
+			"To":   to,
+		},
+	})
+}
+
+func (s *ItemsGRPCServer) nullInt32Change(oldValue, newValue sql.NullInt32, msg string, lang string) (string, error) {
+	from := util.NullInt32ToScalar(oldValue)
+	to := util.NullInt32ToScalar(newValue)
+
+	if from == to {
+		return "", nil
+	}
+
+	localizer := s.i18n.Localizer(lang)
+
+	return localizer.Localize(&i18n.LocalizeConfig{
+		DefaultMessage: &i18n.Message{ID: msg},
+		TemplateData: map[string]interface{}{
+			"From": from,
+			"To":   to,
+		},
+	})
+}
+
+func (s *ItemsGRPCServer) nullStringChange(oldValue, newValue sql.NullString, msg string, lang string) (string, error) {
+	from := util.NullStringToString(oldValue)
+	to := util.NullStringToString(newValue)
+
+	return s.stringChange(from, to, msg, lang)
+}
+
+func (s *ItemsGRPCServer) stringChange(oldValue, newValue string, msg string, lang string) (string, error) {
+	if oldValue == newValue {
+		return "", nil
+	}
+
+	localizer := s.i18n.Localizer(lang)
+
+	return localizer.Localize(&i18n.LocalizeConfig{
+		DefaultMessage: &i18n.Message{ID: msg},
+		TemplateData: map[string]interface{}{
+			"From": oldValue,
+			"To":   newValue,
+		},
+	})
+}
+
+func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
+	ctx context.Context, oldData schema.ItemRow, newData schema.ItemRow, lang string,
+) ([]string, error) {
+	changes := make([]string, 0)
+
+	change, err := s.stringChange(oldData.Name, newData.Name, "moder/vehicle/changes/name-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullStringChange(oldData.Catname, newData.Catname, "moder/vehicle/changes/catname-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.stringChange(oldData.Body, newData.Body, "moder/vehicle/changes/body-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullInt32Change(oldData.BeginYear, newData.BeginYear,
+		"moder/vehicle/changes/from/year-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullInt16Change(oldData.BeginMonth, newData.BeginMonth,
+		"moder/vehicle/changes/from/month-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullInt32Change(oldData.EndYear, newData.EndYear, "moder/vehicle/changes/to/year-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullInt16Change(oldData.EndMonth, newData.EndMonth, "moder/vehicle/changes/to/month-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullBoolChange(oldData.Today, newData.Today, "moder/vehicle/changes/to/today-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullInt32Change(oldData.Produced, newData.Produced,
+		"moder/vehicle/changes/produced/count-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.boolChange(oldData.ProducedExactly, newData.ProducedExactly,
+		"moder/vehicle/changes/produced/exactly-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.boolChange(oldData.IsConcept, newData.IsConcept, "moder/vehicle/changes/is-concept-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.boolChange(oldData.IsConceptInherit, newData.IsConceptInherit,
+		"moder/vehicle/changes/is-concept-inherit-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.boolChange(oldData.IsGroup, newData.IsGroup,
+		"moder/vehicle/changes/is-group-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullInt32Change(oldData.BeginModelYear, newData.BeginModelYear,
+		"moder/vehicle/changes/model-years/from-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullInt32Change(oldData.EndModelYear, newData.EndModelYear,
+		"moder/vehicle/changes/model-years/to-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullStringChange(oldData.BeginModelYearFraction, newData.BeginModelYearFraction,
+		"moder/vehicle/changes/model-years-fraction/from-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.nullStringChange(oldData.EndModelYearFraction, newData.EndModelYearFraction,
+		"moder/vehicle/changes/model-years-fraction/to-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	if oldData.SpecID.Valid != newData.SpecID.Valid ||
+		(oldData.SpecID.Valid && newData.SpecID.Valid && oldData.SpecID.Int32 != newData.SpecID.Int32) {
+		from := ""
+		to := ""
+
+		if oldData.SpecID.Valid {
+			spec, err := s.repository.Spec(ctx, oldData.SpecID.Int32)
+			if err != nil {
+				return nil, err
+			}
+
+			from = spec.ShortName
+		}
+
+		if newData.SpecID.Valid {
+			spec, err := s.repository.Spec(ctx, newData.SpecID.Int32)
+			if err != nil {
+				return nil, err
+			}
+
+			to = spec.ShortName
+		}
+
+		localizer := s.i18n.Localizer(lang)
+
+		change, err = localizer.Localize(&i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{ID: "moder/vehicle/changes/spec-%s-%s"},
+			TemplateData: map[string]interface{}{
+				"From": from,
+				"To":   to,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		changes = append(changes, change)
+	}
+
+	change, err = s.boolChange(oldData.SpecInherit, newData.SpecInherit, "moder/vehicle/changes/spec-inherit-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	change, err = s.boolChange(oldData.EngineInherit, newData.EngineInherit,
+		"moder/vehicle/changes/engine-inherit-%s-%s", lang)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(change) > 0 {
+		changes = append(changes, change)
+	}
+
+	if oldData.EngineItemID.Valid != newData.EngineItemID.Valid ||
+		(oldData.EngineItemID.Valid &&
+			newData.EngineItemID.Valid && oldData.EngineItemID.Int64 != newData.EngineItemID.Int64) {
+		from := ""
+		to := ""
+
+		if oldData.EngineItemID.Valid && oldData.EngineItemID.Int64 > 0 {
+			engine, err := s.repository.Item(ctx, &query.ItemListOptions{
+				ItemID: oldData.EngineItemID.Int64,
+			}, &items.ListFields{NameOnly: true})
+			if err != nil {
+				return nil, err
+			}
+
+			from = engine.NameOnly
+		}
+
+		if newData.EngineItemID.Valid && newData.EngineItemID.Int64 > 0 {
+			engine, err := s.repository.Item(ctx, &query.ItemListOptions{
+				ItemID: newData.EngineItemID.Int64,
+			}, &items.ListFields{NameOnly: true})
+			if err != nil {
+				return nil, err
+			}
+
+			to = engine.NameOnly
+		}
+
+		localizer := s.i18n.Localizer(lang)
+
+		change, err = localizer.Localize(&i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{ID: "moder/vehicle/changes/engine-item-id-%s-%s"},
+			TemplateData: map[string]interface{}{
+				"From": from,
+				"To":   to,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		changes = append(changes, change)
+	}
+
+	// "vehicle_type_id": []string{"vehicle_type_id", "moder/vehicle/changes/car-type-%s-%s"},
+
+	return changes, nil
 }

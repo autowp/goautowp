@@ -2,20 +2,20 @@ package goautowp
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"math/rand"
+	"slices"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 const (
@@ -253,10 +253,6 @@ func TestGetValues(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -264,8 +260,9 @@ func TestGetValues(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+		Name:       "TestGetValues",
 	})
 
 	values, err := client.GetValues(
@@ -382,10 +379,6 @@ func TestGetEmptyValues(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -393,8 +386,9 @@ func TestGetEmptyValues(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+		Name:       "TestGetEmptyValues",
 	})
 
 	values, err := client.GetValues(
@@ -599,10 +593,6 @@ func TestValuesInherits(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -610,13 +600,15 @@ func TestValuesInherits(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestValuesInherits Parent",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		IsGroup:    true,
 	})
 
-	childItemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	childItemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestValuesInherits Child",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	itemsClient := NewItemsClient(conn)
@@ -686,12 +678,7 @@ func TestEngineValuesApplied(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -699,16 +686,15 @@ func TestEngineValuesApplied(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	engineItemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDEngine,
+	engineItemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestEngineValuesApplied Engine",
+		ItemTypeId: ItemType_ITEM_TYPE_ENGINE,
 	})
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
-		EngineItemID: sql.NullInt64{
-			Valid: true,
-			Int64: engineItemID,
-		},
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:         "TestEngineValuesApplied Engine",
+		ItemTypeId:   ItemType_ITEM_TYPE_VEHICLE,
+		EngineItemId: engineItemID,
 	})
 
 	_, err = client.SetUserValues(
@@ -765,10 +751,6 @@ func TestSetUserValuesList(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -776,8 +758,9 @@ func TestSetUserValuesList(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestSetUserValuesList",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	cases := []struct {
@@ -872,10 +855,6 @@ func TestSetValuesRaceConditions(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -883,8 +862,9 @@ func TestSetValuesRaceConditions(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestSetValuesRaceConditions",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	cases := []struct {
@@ -1089,10 +1069,6 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1108,18 +1084,21 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestValuesInheritsThroughItem item",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		IsGroup:    true,
 	})
 
-	childItemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	childItemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestValuesInheritsThroughItem child",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		IsGroup:    true,
 	})
 
-	inheritorItemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	inheritorItemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestValuesInheritsThroughItem interior",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	itemsClient := NewItemsClient(conn)
@@ -1223,10 +1202,6 @@ func TestInheritedValueOverridden(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1234,13 +1209,15 @@ func TestInheritedValueOverridden(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestInheritedValueOverridden",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		IsGroup:    true,
 	})
 
-	childItemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	childItemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestInheritedValueOverridden child",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	itemsClient := NewItemsClient(conn)
@@ -1350,10 +1327,6 @@ func TestMoveValues(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1361,12 +1334,14 @@ func TestMoveValues(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	srcItemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	srcItemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestMoveValues",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	destItemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	destItemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestMoveValues dest",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	_, err = client.SetUserValues(
@@ -1441,10 +1416,6 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1452,8 +1423,9 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestValueDateMustChangesWhenValueChanged",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	// set initial value
@@ -1585,10 +1557,6 @@ func TestNonMultipleValuesFiltered(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1596,8 +1564,9 @@ func TestNonMultipleValuesFiltered(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestNonMultipleValuesFiltered",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	// set value
@@ -1645,10 +1614,6 @@ func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1656,8 +1621,9 @@ func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestEmptyListValueConsiderAsNonValid",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	// set value
@@ -1697,10 +1663,6 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1708,8 +1670,9 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestEmptyStringValueConsiderAsNonValid",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	// set value
@@ -1747,12 +1710,7 @@ func TestSpecifications(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1761,8 +1719,8 @@ func TestSpecifications(t *testing.T) {
 	client := NewAttrsClient(conn)
 	itemsClient := NewItemsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		Name:       "Test",
 		Body:       "E31",
 	})
@@ -1771,35 +1729,21 @@ func TestSpecifications(t *testing.T) {
 	randomInt := random.Int()
 
 	engineName := fmt.Sprintf("Peugeot-%d-Engine", randomInt)
-	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
-		Name:            engineName,
-		IsGroup:         true,
-		ItemTypeID:      schema.ItemTableItemTypeIDEngine,
-		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d-engine", randomInt)},
-		Body:            "",
-		ProducedExactly: false,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
+	engineID := createItem(t, conn, cnt, &APIItem{
+		Name:       engineName,
+		IsGroup:    true,
+		ItemTypeId: ItemType_ITEM_TYPE_ENGINE,
+	})
 
-	engineID, err := r2.LastInsertId()
-	require.NoError(t, err)
-
-	_, err = itemsClient.UpdateItemLanguage(
+	_, err = itemsClient.UpdateItem(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&ItemLanguage{
-			ItemId:   engineID,
-			Language: items.DefaultLanguageCode,
-			Name:     engineName,
-		},
-	)
-	require.NoError(t, err)
-
-	_, err = itemsClient.SetItemEngine(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&SetItemEngineRequest{
-			ItemId:          itemID,
-			EngineItemId:    engineID,
-			EngineInherited: false,
+		&UpdateItemRequest{
+			Item: &APIItem{
+				Id:            itemID,
+				EngineItemId:  engineID,
+				EngineInherit: false,
+			},
+			UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"engine_item_id", "engine_inherit"}},
 		},
 	)
 	require.NoError(t, err)
@@ -1999,16 +1943,11 @@ func TestSpecifications(t *testing.T) {
 	require.Contains(t, res.GetHtml(), engineName)
 }
 
-func TestChildSpecifications(t *testing.T) { //nolint: maintidx
+func TestChildSpecifications(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -2017,15 +1956,15 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 	client := NewAttrsClient(conn)
 	itemsClient := NewItemsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		Name:       "Test",
 		Body:       "E31",
 		IsGroup:    true,
 	})
 
-	child1ID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	child1ID := createItem(t, conn, cnt, &APIItem{
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		Name:       "Test Child 1",
 		Body:       "E31",
 	})
@@ -2039,8 +1978,8 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 	)
 	require.NoError(t, err)
 
-	child2ID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	child2ID := createItem(t, conn, cnt, &APIItem{
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		Name:       "Test Child 1",
 		Body:       "E31",
 	})
@@ -2058,35 +1997,21 @@ func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 	require.NoError(t, err)
 
 	engineName := fmt.Sprintf("Peugeot-%d-Engine", randomInt)
-	r2, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
-		Name:            engineName,
-		IsGroup:         true,
-		ItemTypeID:      schema.ItemTableItemTypeIDEngine,
-		Catname:         sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d-engine", randomInt)},
-		Body:            "",
-		ProducedExactly: false,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
+	engineID := createItem(t, conn, cnt, &APIItem{
+		Name:       engineName,
+		IsGroup:    true,
+		ItemTypeId: ItemType_ITEM_TYPE_ENGINE,
+	})
 
-	engineID, err := r2.LastInsertId()
-	require.NoError(t, err)
-
-	_, err = itemsClient.UpdateItemLanguage(
+	_, err = itemsClient.UpdateItem(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&ItemLanguage{
-			ItemId:   engineID,
-			Language: items.DefaultLanguageCode,
-			Name:     engineName,
-		},
-	)
-	require.NoError(t, err)
-
-	_, err = itemsClient.SetItemEngine(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&SetItemEngineRequest{
-			ItemId:          child1ID,
-			EngineItemId:    engineID,
-			EngineInherited: false,
+		&UpdateItemRequest{
+			Item: &APIItem{
+				Id:            child1ID,
+				EngineItemId:  engineID,
+				EngineInherit: false,
+			},
+			UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"engine_item_id", "engine_inherit"}},
 		},
 	)
 	require.NoError(t, err)
@@ -2294,10 +2219,6 @@ func TestLocalizedFormat(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -2305,8 +2226,8 @@ func TestLocalizedFormat(t *testing.T) {
 
 	client := NewAttrsClient(conn)
 
-	itemID := createItem(t, goquDB, schema.ItemRow{
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
+	itemID := createItem(t, conn, cnt, &APIItem{
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 		Name:       "Test",
 		Body:       "E31",
 		IsGroup:    true,
@@ -2349,4 +2270,56 @@ func TestLocalizedFormat(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Contains(t, res.GetHtml(), "250,0")
+}
+
+func TestSetUserValuesIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	cfg := config.LoadConfig(".")
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	client := NewAttrsClient(conn)
+
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       "TestSetUserValuesIsEmpty",
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	_, err = client.SetUserValues(
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrSetUserValuesRequest{
+			Items: []*AttrUserValue{
+				{
+					AttributeId: schema.EngineTypeAttr,
+					ItemId:      itemID,
+					Value: &AttrValueValue{
+						Valid:   true,
+						IsEmpty: true,
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	// check values
+	values, err := client.GetUserValues(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&AttrUserValuesRequest{
+			ItemId:   itemID,
+			Language: "en",
+		},
+	)
+	require.NoError(t, err)
+
+	index := slices.IndexFunc(values.GetItems(), func(value *AttrUserValue) bool {
+		return value.GetAttributeId() == schema.EngineTypeAttr
+	})
+	require.NotEqualValues(t, -1, index)
+	require.True(t, values.GetItems()[index].Value.IsEmpty)
 }

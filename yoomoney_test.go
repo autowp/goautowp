@@ -7,10 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestYoomoneyWebhookInvalidLabel(t *testing.T) {
@@ -50,10 +52,15 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
+	ctx := t.Context()
+	cfg := config.LoadConfig(".")
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
 	itemOfDayRepository := itemofday.NewRepository(goquDB)
 	itemOfDayRepository.SetMinPictures(0)
-
-	ctx := t.Context()
 
 	yh, err := NewYoomoneyHandler("0.99", "01234567890ABCDEF01234567890", itemOfDayRepository)
 	require.NoError(t, err)
@@ -66,25 +73,14 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	r1, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("item-of-day-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDBrand,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("brand1-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	itemID, err := r1.LastInsertId()
-	require.NoError(t, err)
-
-	_, err = goquDB.Insert(schema.ItemParentCacheTable).Rows(goqu.Record{
-		schema.ItemParentCacheTableItemIDColName:   itemID,
-		schema.ItemParentCacheTableParentIDColName: itemID,
-		schema.ItemParentCacheTableDiffColName:     0,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:            fmt.Sprintf("item-of-day-%d", random.Int()),
+		IsGroup:         true,
+		ItemTypeId:      ItemType_ITEM_TYPE_BRAND,
+		Catname:         fmt.Sprintf("brand1-%d", random.Int()),
+		Body:            "",
+		ProducedExactly: false,
+	})
 
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
@@ -99,10 +95,16 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	pictureID, err := res.LastInsertId()
 	require.NoError(t, err)
 
-	_, err = goquDB.Insert(schema.PictureItemTable).Rows(goqu.Record{
-		schema.PictureItemTablePictureIDColName: pictureID,
-		schema.PictureItemTableItemIDColName:    itemID,
-	}).Executor().ExecContext(ctx)
+	picturesClient := NewPicturesClient(conn)
+
+	_, err = picturesClient.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&CreatePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    itemID,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		},
+	)
 	require.NoError(t, err)
 
 	// check prepared item passes candidate checks

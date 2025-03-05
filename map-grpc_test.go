@@ -1,43 +1,26 @@
 package goautowp
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/autowp/goautowp/schema"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
-func createItemWithPoint(ctx context.Context, t *testing.T) {
+func createItemWithPoint(t *testing.T) {
 	t.Helper()
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      ItemType_ITEM_TYPE_VEHICLE,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	itemID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	_, err = goquDB.Insert(schema.ItemPointTable).Rows(goqu.Record{
-		schema.ItemPointTableItemIDColName: itemID,
-		schema.ItemPointTablePointColName:  goqu.Func("point", 30, 30),
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
+	createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("factory-%d", random.Int()),
+		IsGroup:    false,
+		ItemTypeId: ItemType_ITEM_TYPE_FACTORY,
+		Location:   &latlng.LatLng{Latitude: 30, Longitude: 30},
+	})
 }
 
 func TestGetPoints(t *testing.T) {
@@ -45,7 +28,7 @@ func TestGetPoints(t *testing.T) {
 
 	ctx := t.Context()
 
-	createItemWithPoint(ctx, t)
+	createItemWithPoint(t)
 
 	client := NewMapClient(conn)
 
@@ -64,7 +47,7 @@ func TestGetPointsOnly(t *testing.T) {
 
 	ctx := t.Context()
 
-	createItemWithPoint(ctx, t)
+	createItemWithPoint(t)
 
 	client := NewMapClient(conn)
 

@@ -319,6 +319,7 @@ func convertItemFields(fields *ItemFields) *items.ListFields {
 		CommentsAttentionsCount:    fields.GetCommentsAttentionsCount(),
 		HasChildSpecs:              fields.GetHasChildSpecs(),
 		HasSpecs:                   fields.GetHasSpecs() || fields.GetSpecsRoute(),
+		Meta:                       fields.GetMeta(),
 	}
 }
 

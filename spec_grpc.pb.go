@@ -2416,6 +2416,8 @@ const (
 	Items_GetTwinsBrandsList_FullMethodName       = "/goautowp.Items/GetTwinsBrandsList"
 	Items_GetTopTwinsBrandsList_FullMethodName    = "/goautowp.Items/GetTopTwinsBrandsList"
 	Items_GetTopSpecsContributions_FullMethodName = "/goautowp.Items/GetTopSpecsContributions"
+	Items_CreateItem_FullMethodName               = "/goautowp.Items/CreateItem"
+	Items_UpdateItem_FullMethodName               = "/goautowp.Items/UpdateItem"
 	Items_Item_FullMethodName                     = "/goautowp.Items/Item"
 	Items_List_FullMethodName                     = "/goautowp.Items/List"
 	Items_GetTree_FullMethodName                  = "/goautowp.Items/GetTree"
@@ -2444,7 +2446,6 @@ const (
 	Items_MoveItemParent_FullMethodName           = "/goautowp.Items/MoveItemParent"
 	Items_RefreshInheritance_FullMethodName       = "/goautowp.Items/RefreshInheritance"
 	Items_SetUserItemSubscription_FullMethodName  = "/goautowp.Items/SetUserItemSubscription"
-	Items_SetItemEngine_FullMethodName            = "/goautowp.Items/SetItemEngine"
 	Items_GetPath_FullMethodName                  = "/goautowp.Items/GetPath"
 	Items_GetAlpha_FullMethodName                 = "/goautowp.Items/GetAlpha"
 )
@@ -2463,6 +2464,8 @@ type ItemsClient interface {
 	GetTwinsBrandsList(ctx context.Context, in *GetTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITwinsBrandsList, error)
 	GetTopTwinsBrandsList(ctx context.Context, in *GetTopTwinsBrandsListRequest, opts ...grpc.CallOption) (*APITopTwinsBrandsList, error)
 	GetTopSpecsContributions(ctx context.Context, in *TopSpecsContributionsRequest, opts ...grpc.CallOption) (*TopSpecsContributions, error)
+	CreateItem(ctx context.Context, in *APIItem, opts ...grpc.CallOption) (*ItemID, error)
+	UpdateItem(ctx context.Context, in *UpdateItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Item(ctx context.Context, in *ItemRequest, opts ...grpc.CallOption) (*APIItem, error)
 	List(ctx context.Context, in *ItemsRequest, opts ...grpc.CallOption) (*APIItemList, error)
 	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*APITreeItem, error)
@@ -2491,7 +2494,6 @@ type ItemsClient interface {
 	MoveItemParent(ctx context.Context, in *MoveItemParentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	RefreshInheritance(ctx context.Context, in *RefreshInheritanceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SetUserItemSubscription(ctx context.Context, in *SetUserItemSubscriptionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	SetItemEngine(ctx context.Context, in *SetItemEngineRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPath(ctx context.Context, in *PathRequest, opts ...grpc.CallOption) (*PathResponse, error)
 	GetAlpha(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AlphaResponse, error)
 }
@@ -2598,6 +2600,26 @@ func (c *itemsClient) GetTopSpecsContributions(ctx context.Context, in *TopSpecs
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TopSpecsContributions)
 	err := c.cc.Invoke(ctx, Items_GetTopSpecsContributions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) CreateItem(ctx context.Context, in *APIItem, opts ...grpc.CallOption) (*ItemID, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ItemID)
+	err := c.cc.Invoke(ctx, Items_CreateItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemsClient) UpdateItem(ctx context.Context, in *UpdateItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Items_UpdateItem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2884,16 +2906,6 @@ func (c *itemsClient) SetUserItemSubscription(ctx context.Context, in *SetUserIt
 	return out, nil
 }
 
-func (c *itemsClient) SetItemEngine(ctx context.Context, in *SetItemEngineRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Items_SetItemEngine_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *itemsClient) GetPath(ctx context.Context, in *PathRequest, opts ...grpc.CallOption) (*PathResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PathResponse)
@@ -2928,6 +2940,8 @@ type ItemsServer interface {
 	GetTwinsBrandsList(context.Context, *GetTwinsBrandsListRequest) (*APITwinsBrandsList, error)
 	GetTopTwinsBrandsList(context.Context, *GetTopTwinsBrandsListRequest) (*APITopTwinsBrandsList, error)
 	GetTopSpecsContributions(context.Context, *TopSpecsContributionsRequest) (*TopSpecsContributions, error)
+	CreateItem(context.Context, *APIItem) (*ItemID, error)
+	UpdateItem(context.Context, *UpdateItemRequest) (*emptypb.Empty, error)
 	Item(context.Context, *ItemRequest) (*APIItem, error)
 	List(context.Context, *ItemsRequest) (*APIItemList, error)
 	GetTree(context.Context, *GetTreeRequest) (*APITreeItem, error)
@@ -2956,7 +2970,6 @@ type ItemsServer interface {
 	MoveItemParent(context.Context, *MoveItemParentRequest) (*emptypb.Empty, error)
 	RefreshInheritance(context.Context, *RefreshInheritanceRequest) (*emptypb.Empty, error)
 	SetUserItemSubscription(context.Context, *SetUserItemSubscriptionRequest) (*emptypb.Empty, error)
-	SetItemEngine(context.Context, *SetItemEngineRequest) (*emptypb.Empty, error)
 	GetPath(context.Context, *PathRequest) (*PathResponse, error)
 	GetAlpha(context.Context, *emptypb.Empty) (*AlphaResponse, error)
 	mustEmbedUnimplementedItemsServer()
@@ -2998,6 +3011,12 @@ func (UnimplementedItemsServer) GetTopTwinsBrandsList(context.Context, *GetTopTw
 }
 func (UnimplementedItemsServer) GetTopSpecsContributions(context.Context, *TopSpecsContributionsRequest) (*TopSpecsContributions, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopSpecsContributions not implemented")
+}
+func (UnimplementedItemsServer) CreateItem(context.Context, *APIItem) (*ItemID, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateItem not implemented")
+}
+func (UnimplementedItemsServer) UpdateItem(context.Context, *UpdateItemRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateItem not implemented")
 }
 func (UnimplementedItemsServer) Item(context.Context, *ItemRequest) (*APIItem, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Item not implemented")
@@ -3082,9 +3101,6 @@ func (UnimplementedItemsServer) RefreshInheritance(context.Context, *RefreshInhe
 }
 func (UnimplementedItemsServer) SetUserItemSubscription(context.Context, *SetUserItemSubscriptionRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetUserItemSubscription not implemented")
-}
-func (UnimplementedItemsServer) SetItemEngine(context.Context, *SetItemEngineRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetItemEngine not implemented")
 }
 func (UnimplementedItemsServer) GetPath(context.Context, *PathRequest) (*PathResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPath not implemented")
@@ -3289,6 +3305,42 @@ func _Items_GetTopSpecsContributions_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ItemsServer).GetTopSpecsContributions(ctx, req.(*TopSpecsContributionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_CreateItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIItem)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).CreateItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_CreateItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).CreateItem(ctx, req.(*APIItem))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Items_UpdateItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemsServer).UpdateItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Items_UpdateItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemsServer).UpdateItem(ctx, req.(*UpdateItemRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3797,24 +3849,6 @@ func _Items_SetUserItemSubscription_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Items_SetItemEngine_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetItemEngineRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ItemsServer).SetItemEngine(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Items_SetItemEngine_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemsServer).SetItemEngine(ctx, req.(*SetItemEngineRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Items_GetPath_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PathRequest)
 	if err := dec(in); err != nil {
@@ -3897,6 +3931,14 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTopSpecsContributions",
 			Handler:    _Items_GetTopSpecsContributions_Handler,
+		},
+		{
+			MethodName: "CreateItem",
+			Handler:    _Items_CreateItem_Handler,
+		},
+		{
+			MethodName: "UpdateItem",
+			Handler:    _Items_UpdateItem_Handler,
 		},
 		{
 			MethodName: "Item",
@@ -4009,10 +4051,6 @@ var Items_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetUserItemSubscription",
 			Handler:    _Items_SetUserItemSubscription_Handler,
-		},
-		{
-			MethodName: "SetItemEngine",
-			Handler:    _Items_SetItemEngine_Handler,
 		},
 		{
 			MethodName: "GetPath",

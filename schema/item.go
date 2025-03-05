@@ -50,6 +50,16 @@ const (
 	ItemTableCarTypeIDColName              = "car_type_id"
 	ItemTableSpecInheritColName            = "spec_inherit"
 	ItemTableProducedColName               = "produced"
+
+	ItemNameMinLength     = 2
+	ItemNameMaxLength     = 150
+	ItemFullNameMaxLength = 255
+	ItemCatnameMinLength  = 3
+	ItemCatnameMaxLength  = 100
+	ItemBodyMinLength     = 0
+	ItemBodyMaxLength     = 20
+	ItemYearMin           = 1500
+	ItemYearMax           = 2100
 )
 
 var ( //nolint: dupl
@@ -108,6 +118,8 @@ type ItemRow struct {
 	CarTypeInherit         bool                `db:"car_type_inherit"`
 	CarTypeID              sql.NullInt64       `db:"car_type_id"`
 	SpecInherit            bool                `db:"spec_inherit"`
+	AddDatetime            sql.NullTime        `db:"add_datetime"`
+	FullName               sql.NullString      `db:"full_name"`
 }
 
 var AllowedTypeCombinations = map[ItemTableItemTypeID][]ItemTableItemTypeID{

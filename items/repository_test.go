@@ -175,31 +175,24 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	ctx := t.Context()
 
 	userID := createRandomUser(ctx, t, goquDB)
-
-	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDBrand,
-		schema.ItemTableNameColName:            "",
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
-		schema.ItemTableIsGroupColName:         true,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	brandID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	res, err = goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableItemTypeIDColName:      schema.ItemTableItemTypeIDVehicle,
-		schema.ItemTableNameColName:            "",
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	vehicleID, err := res.LastInsertId()
-	require.NoError(t, err)
-
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+
+	brandID, err := repository.CreateItem(ctx, schema.ItemRow{
+		ItemTypeID:      schema.ItemTableItemTypeIDBrand,
+		Name:            "",
+		Body:            "",
+		ProducedExactly: false,
+		IsGroup:         true,
+	}, userID)
+	require.NoError(t, err)
+
+	vehicleID, err := repository.CreateItem(ctx, schema.ItemRow{
+		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
+		Name:            "",
+		Body:            "",
+		ProducedExactly: false,
+	}, userID)
+	require.NoError(t, err)
 
 	success, err := repository.CreateItemParent(ctx, vehicleID, brandID, schema.ItemParentTypeDefault, "")
 	require.NoError(t, err)
@@ -209,7 +202,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 
 	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
 
-	res, err = goquDB.Insert(schema.PictureTable).Rows(goqu.Record{
+	res, err := goquDB.Insert(schema.PictureTable).Rows(goqu.Record{
 		schema.PictureTableIdentityColName: identity,
 		schema.PictureTableStatusColName:   schema.PictureStatusAccepted,
 		schema.PictureTableIPColName:       "",
@@ -1046,16 +1039,10 @@ func CreateItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 	cfg := config.LoadConfig("../")
 	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
 
-	res, err := goquDB.Insert(schema.ItemTable).Rows(row).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	itemID, err := res.LastInsertId()
+	itemID, err := repository.CreateItem(ctx, row, 0)
 	require.NoError(t, err)
 
 	_, err = repository.UpdateItemLanguage(ctx, itemID, "en", row.Name, "", "", 0)
-	require.NoError(t, err)
-
-	_, err = repository.RebuildCache(ctx, itemID)
 	require.NoError(t, err)
 
 	return itemID

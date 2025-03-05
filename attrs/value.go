@@ -24,6 +24,12 @@ func (s Value) Equals(val Value) bool {
 		return false
 	}
 
+	if s.IsEmpty && !val.IsEmpty || !s.IsEmpty && val.IsEmpty {
+		return false
+	} else if s.IsEmpty {
+		return true
+	}
+
 	switch s.Type {
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
 		return s.StringValue == val.StringValue

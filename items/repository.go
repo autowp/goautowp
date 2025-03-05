@@ -430,6 +430,7 @@ type ListFields struct {
 	HasChildSpecs              bool
 	HasSpecs                   bool
 	OtherNames                 bool
+	Meta                       bool
 }
 
 func yearsPrefix(begin int32, end int32) string {
@@ -523,7 +524,7 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		return columns
 	}
 
-	if fields.FullName {
+	if fields.FullName || fields.Meta {
 		columns[schema.ItemTableFullNameColName] = s.fullNameColumn
 	}
 
@@ -531,7 +532,11 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		columns[schema.ItemTableLogoIDColName] = s.logoColumn
 	}
 
-	if fields.NameText || fields.NameHTML {
+	if fields.Meta {
+		columns[schema.ItemTableNameColName] = s.nameColumn
+	}
+
+	if fields.NameText || fields.NameHTML || fields.Meta {
 		columns[schema.ItemTableBeginYearColName] = s.beginYearColumn
 		columns[schema.ItemTableEndYearColName] = s.endYearColumn
 		columns[schema.ItemTableBeginMonthColName] = s.beginMonthColumn
@@ -542,11 +547,14 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		columns[schema.ItemTableEndModelYearFractionColName] = s.endModelYearFractionColumn
 		columns[schema.ItemTableTodayColName] = s.todayColumn
 		columns[schema.ItemTableBodyColName] = s.bodyColumn
-		columns[colSpecShortName] = s.specShortNameColumn
 
-		if fields.NameHTML {
-			columns[colSpecName] = s.specNameColumn
+		if fields.NameText || fields.NameHTML {
+			columns[colSpecShortName] = s.specShortNameColumn
 		}
+	}
+
+	if fields.NameHTML {
+		columns[colSpecName] = s.specNameColumn
 	}
 
 	if fields.Description {
@@ -557,7 +565,7 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		columns[colFullText] = s.fullTextColumn
 	}
 
-	if fields.NameOnly || fields.NameText || fields.NameHTML {
+	if fields.NameOnly || fields.NameText || fields.NameHTML || fields.Meta {
 		columns[colNameOnly] = s.nameOnlyColumn
 	}
 
@@ -1142,6 +1150,8 @@ func (s *Repository) List( //nolint:maintidx
 			switch colName {
 			case schema.ItemTableIDColName:
 				pointers[i] = &row.ID
+			case schema.ItemTableNameColName:
+				pointers[i] = &row.Name
 			case colNameOnly:
 				pointers[i] = &row.NameOnly
 			case colNameDefault:
@@ -2685,7 +2695,7 @@ func (s *Repository) UpdateInheritance(ctx context.Context, itemID int64) error 
 	success, err := s.db.Select(
 		schema.ItemTableIDCol, schema.ItemTableIsConceptCol, schema.ItemTableIsConceptInheritCol,
 		schema.ItemTableEngineInheritCol, schema.ItemTableCarTypeInheritCol, schema.ItemTableCarTypeIDCol,
-		schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol,
+		schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol, schema.ItemTableEngineItemIDCol,
 	).
 		From(schema.ItemTable).
 		Where(schema.ItemTableIDCol.Eq(itemID)).
@@ -3309,58 +3319,6 @@ func (s *Repository) UserItemUnsubscribe(ctx context.Context, itemID, userID int
 	return err
 }
 
-func (s *Repository) SetItemEngine(
-	ctx context.Context, itemID int64, engineID int64, engineInherited bool,
-) (bool, error) {
-	set := goqu.Record{
-		schema.ItemTableEngineInheritColName: engineInherited,
-	}
-
-	if engineInherited || engineID == 0 {
-		set[schema.ItemTableEngineItemIDColName] = nil
-	} else {
-		set[schema.ItemTableEngineItemIDColName] = engineID
-	}
-
-	var found int64
-
-	success, err := s.db.Select(schema.ItemTableIDCol).From(schema.ItemTable).Where(
-		schema.ItemTableIDCol.Eq(itemID),
-		schema.ItemTableItemTypeIDCol.Eq(schema.ItemTableItemTypeIDVehicle),
-	).ScanValContext(ctx, &found)
-	if err != nil {
-		return false, err
-	}
-
-	if !success {
-		return false, ErrItemNotFound
-	}
-
-	ctx = context.WithoutCancel(ctx)
-
-	res, err := s.db.Update(schema.ItemTable).
-		Set(set).
-		Where(schema.ItemTableIDCol.Eq(itemID)).
-		Executor().ExecContext(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return false, err
-	}
-
-	if affected > 0 {
-		err = s.UpdateInheritance(ctx, itemID)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	return affected > 0, nil
-}
-
 func (s *Repository) VehicleType(
 	ctx context.Context, options *query.VehicleTypeListOptions,
 ) (*schema.CarTypeRow, error) {
@@ -3431,6 +3389,31 @@ func (s *Repository) VehicleTypeIDs(ctx context.Context, vehicleID int64, inheri
 	err := sqSelect.ScanValsContext(ctx, &res)
 
 	return res, err
+}
+
+func (s *Repository) SetItemLocation(ctx context.Context, itemID int64, point *geo.Point) error {
+	if point == nil {
+		_, err := s.db.Delete(schema.ItemPointTable).
+			Where(schema.ItemPointTableItemIDCol.Eq(itemID)).
+			Executor().ExecContext(ctx)
+
+		return err
+	}
+
+	_, err := s.db.Insert(schema.ItemPointTable).Rows(goqu.Record{
+		schema.ItemPointTableItemIDColName: itemID,
+		schema.ItemPointTablePointColName:  goqu.Func("Point", point.Lng(), point.Lat()),
+	}).OnConflict(goqu.DoUpdate(
+		schema.ItemPointTableItemIDColName,
+		goqu.Record{
+			schema.ItemPointTablePointColName: goqu.Func(
+				"VALUES",
+				goqu.C(schema.ItemPointTablePointColName),
+			),
+		},
+	)).Executor().ExecContext(ctx)
+
+	return err
 }
 
 func (s *Repository) ItemLocation(ctx context.Context, itemID int64) (geo.Point, error) {
@@ -4326,6 +4309,10 @@ func (s *Repository) UpdateOrderCache(ctx context.Context, itemID int64) (bool, 
 		end = begin
 	}
 
+	// normalize
+	begin = begin.AddDays(0)
+	end = end.AddDays(0)
+
 	_, err = s.db.Update(schema.ItemTable).Set(goqu.Record{
 		schema.ItemTableBeginOrderCacheColName: begin.String(),
 		schema.ItemTableEndOrderCacheColName:   end.String(),
@@ -4348,4 +4335,260 @@ func (s *Repository) FirstCharacters(ctx context.Context) ([]string, error) {
 		ScanValsContext(ctx, &res)
 
 	return res, err
+}
+
+func (s *Repository) CreateItem(ctx context.Context, row schema.ItemRow, userID int64) (int64, error) {
+	res, err := s.db.Insert(schema.ItemTable).Rows(row).Executor().ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	itemID, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	if len(row.Name) > 0 {
+		err = s.setItemLanguageName(ctx, itemID, DefaultLanguageCode, row.Name)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	_, err = s.UpdateOrderCache(ctx, itemID)
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = s.RebuildCache(ctx, itemID)
+	if err != nil {
+		return 0, err
+	}
+
+	err = s.RefreshItemVehicleTypeInheritanceFromParents(ctx, itemID)
+	if err != nil {
+		return 0, err
+	}
+
+	err = s.UserItemSubscribe(ctx, itemID, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	err = s.UpdateInheritance(ctx, itemID)
+	if err != nil {
+		return 0, err
+	}
+
+	return itemID, nil
+}
+
+func (s *Repository) SpecExists(ctx context.Context, specID int32) (bool, error) {
+	var exists bool
+
+	success, err := s.db.Select(goqu.V(true)).
+		From(schema.SpecTable).
+		Where(schema.SpecTableIDCol.Eq(specID)).
+		ScanValContext(ctx, &exists)
+
+	return success && exists, err
+}
+
+func (s *Repository) UpdateItem(ctx context.Context, row schema.ItemRow, mask []string, userID int64) error {
+	set := goqu.Record{}
+	subscribe := false
+
+	if util.Contains(mask, "name") {
+		subscribe = true
+		set[schema.ItemTableNameColName] = row.Name
+	}
+
+	if util.Contains(mask, "full_name") {
+		subscribe = true
+		set[schema.ItemTableFullNameColName] = row.FullName
+	}
+
+	if util.Contains(mask, "body") {
+		subscribe = true
+		set[schema.ItemTableBodyColName] = row.Body
+	}
+
+	if util.Contains(mask, "begin_year") {
+		subscribe = true
+		set[schema.ItemTableBeginYearColName] = row.BeginYear
+	}
+
+	if util.Contains(mask, "begin_month") {
+		subscribe = true
+		set[schema.ItemTableBeginMonthColName] = row.BeginMonth
+	}
+
+	if util.Contains(mask, "end_year") {
+		subscribe = true
+		set[schema.ItemTableEndYearColName] = row.EndYear
+	}
+
+	if util.Contains(mask, "end_month") {
+		subscribe = true
+		set[schema.ItemTableEndMonthColName] = row.EndMonth
+	}
+
+	if util.Contains(mask, "today") {
+		subscribe = true
+
+		set[schema.ItemTableTodayColName] = row.Today
+	}
+
+	if util.Contains(mask, "begin_model_year") {
+		subscribe = true
+		set[schema.ItemTableBeginModelYearColName] = row.BeginModelYear
+	}
+
+	if util.Contains(mask, "end_model_year") {
+		subscribe = true
+		set[schema.ItemTableEndModelYearColName] = row.EndModelYear
+	}
+
+	if util.Contains(mask, "begin_model_year_fraction") {
+		subscribe = true
+		set[schema.ItemTableBeginModelYearFractionColName] = row.BeginModelYearFraction
+	}
+
+	if util.Contains(mask, "end_model_year_fraction") {
+		subscribe = true
+		set[schema.ItemTableEndModelYearFractionColName] = row.EndModelYearFraction
+	}
+
+	if util.Contains(mask, "is_concept") {
+		subscribe = true
+		set[schema.ItemTableIsConceptColName] = row.IsConcept
+	}
+
+	if util.Contains(mask, "is_concept_inherit") {
+		subscribe = true
+		set[schema.ItemTableIsConceptInheritColName] = row.IsConceptInherit
+	}
+
+	if util.Contains(mask, "catname") {
+		subscribe = true
+		set[schema.ItemTableCatnameColName] = row.Catname
+	}
+
+	if util.Contains(mask, "produced") {
+		subscribe = true
+		set[schema.ItemTableProducedColName] = row.Produced
+	}
+
+	if util.Contains(mask, "produced_exactly") {
+		subscribe = true
+		set[schema.ItemTableProducedExactlyColName] = row.ProducedExactly
+	}
+
+	if util.Contains(mask, "is_group") {
+		subscribe = true
+		set[schema.ItemTableIsGroupColName] = row.IsGroup
+	}
+
+	if util.Contains(mask, "spec_inherit") {
+		subscribe = true
+		set[schema.ItemTableSpecInheritColName] = row.SpecInherit
+	}
+
+	if util.Contains(mask, "spec_id") {
+		subscribe = true
+		set[schema.ItemTableSpecIDColName] = row.SpecID
+	}
+
+	if util.Contains(mask, "engine_inherit") {
+		subscribe = true
+		set[schema.ItemTableEngineInheritColName] = row.EngineInherit
+	}
+
+	if util.Contains(mask, "engine_item_id") {
+		subscribe = true
+		set[schema.ItemTableEngineItemIDColName] = row.EngineItemID
+	}
+
+	ctx = context.WithoutCancel(ctx)
+
+	if len(set) > 0 {
+		_, err := s.db.Update(schema.ItemTable).
+			Set(set).
+			Where(schema.ItemTableIDCol.Eq(row.ID)).
+			Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	if util.Contains(mask, "name") {
+		err := s.setItemLanguageName(ctx, row.ID, DefaultLanguageCode, row.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := s.UpdateInheritance(ctx, row.ID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.UpdateOrderCache(ctx, row.ID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.RefreshAutoByVehicle(ctx, row.ID)
+	if err != nil {
+		return err
+	}
+
+	if subscribe {
+		err = s.UserItemSubscribe(ctx, row.ID, userID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) setItemLanguageName(ctx context.Context, itemID int64, lang string, name string) error {
+	if itemID == 0 {
+		return ErrItemNotFound
+	}
+
+	_, err := s.db.Insert(schema.ItemLanguageTable).Rows(goqu.Record{
+		schema.ItemLanguageTableItemIDColName:   itemID,
+		schema.ItemLanguageTableLanguageColName: lang,
+		schema.ItemLanguageTableNameColName: sql.NullString{
+			String: name,
+			Valid:  len(name) > 0,
+		},
+	}).OnConflict(goqu.DoUpdate(
+		schema.ItemLanguageTableItemIDColName+","+schema.ItemLanguageTableLanguageColName,
+		goqu.Record{
+			schema.ItemLanguageTableNameColName: goqu.Func("VALUES", goqu.C(schema.ItemLanguageTableNameColName)),
+		},
+	)).Executor().ExecContext(ctx)
+
+	return err
+}
+
+func (s *Repository) Spec(ctx context.Context, id int32) (*schema.SpecRow, error) {
+	var st schema.SpecRow
+
+	success, err := s.db.Select(schema.SpecTableIDCol, schema.SpecTableShortNameCol).
+		From(schema.SpecTable).
+		Where(schema.SpecTableIDCol.Eq(id)).
+		ScanStructContext(ctx, &st)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, ErrItemNotFound
+	}
+
+	return &st, nil
 }

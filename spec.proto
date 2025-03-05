@@ -5,6 +5,7 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/field_mask.proto";
 import "google/type/latlng.proto";
 import "google/type/date.proto";
 import "google/rpc/error_details.proto";
@@ -94,6 +95,8 @@ service Items {
   rpc GetTwinsBrandsList(GetTwinsBrandsListRequest) returns (APITwinsBrandsList) {}
   rpc GetTopTwinsBrandsList(GetTopTwinsBrandsListRequest) returns (APITopTwinsBrandsList) {}
   rpc GetTopSpecsContributions(TopSpecsContributionsRequest) returns (TopSpecsContributions) {}
+  rpc CreateItem(APIItem) returns (ItemID) {}
+  rpc UpdateItem(UpdateItemRequest) returns (google.protobuf.Empty) {}
   rpc Item(ItemRequest) returns (APIItem) {}
   rpc List(ItemsRequest) returns (APIItemList) {}
   rpc GetTree(GetTreeRequest) returns (APITreeItem) {}
@@ -122,7 +125,6 @@ service Items {
   rpc MoveItemParent(MoveItemParentRequest) returns (google.protobuf.Empty) {}
   rpc RefreshInheritance(RefreshInheritanceRequest) returns (google.protobuf.Empty) {}
   rpc SetUserItemSubscription(SetUserItemSubscriptionRequest) returns (google.protobuf.Empty) {}
-  rpc SetItemEngine(SetItemEngineRequest) returns (google.protobuf.Empty) {}
   rpc GetPath(PathRequest) returns (PathResponse) {}
   rpc GetAlpha(google.protobuf.Empty) returns (AlphaResponse) {}
 }
@@ -1179,6 +1181,16 @@ message AltName {
   string name = 2;
 }
 
+message ItemID {
+  int64 id = 1;
+}
+
+message UpdateItemRequest {
+  APIItem item = 1;
+
+  google.protobuf.FieldMask update_mask = 2;
+}
+
 message ItemRequest {
   string language = 1;
   int64 id = 2;
@@ -2220,12 +2232,6 @@ message RefreshInheritanceRequest {
 message SetUserItemSubscriptionRequest {
   int64 item_id = 1;
   bool subscribed = 2;
-}
-
-message SetItemEngineRequest {
-  int64 item_id = 1;
-  int64 engine_item_id = 2;
-  bool engine_inherited = 3;
 }
 
 message PathRequest {

@@ -9,7 +9,8 @@ const (
 	SpecTableShortNameColName = "short_name"
 	SpecTableParentIDColName  = "parent_id"
 
-	SpecIDWorldwide = 29
+	SpecIDNorthAmerica = 1
+	SpecIDWorldwide    = 29
 )
 
 var (
@@ -19,3 +20,8 @@ var (
 	SpecTableShortNameCol = SpecTable.Col(SpecTableShortNameColName)
 	SpecTableParentIDCol  = SpecTable.Col(SpecTableParentIDColName)
 )
+
+type SpecRow struct {
+	ID        int32  `db:"id"`
+	ShortName string `db:"short_name"`
+}

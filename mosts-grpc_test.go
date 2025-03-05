@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"database/sql"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -29,9 +28,6 @@ func TestMostsMenu(t *testing.T) {
 // nolint: dupl, nolintlint
 func TestMostsRatings(t *testing.T) { //nolint: maintidx
 	t.Parallel()
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
 
 	ctx := t.Context()
 	cfg := config.LoadConfig(".")
@@ -782,30 +778,28 @@ func TestMostsRatings(t *testing.T) { //nolint: maintidx
 
 			randomInt := random.Int()
 
-			brandID := createItem(t, goquDB, schema.ItemRow{ //nolint: contextcheck
+			brandID := createItem(t, conn, cnt, &APIItem{ //nolint: contextcheck
 				Name:       fmt.Sprintf("brand-%d", randomInt),
 				IsGroup:    true,
-				ItemTypeID: schema.ItemTableItemTypeIDBrand,
-				Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("brand-%d", randomInt)},
+				ItemTypeId: ItemType_ITEM_TYPE_BRAND,
+				Catname:    fmt.Sprintf("brand-%d", randomInt),
 			})
 
-			vehicle1ID := createItem(t, goquDB, schema.ItemRow{ //nolint: contextcheck
+			vehicle1ID := createItem(t, conn, cnt, &APIItem{ //nolint: contextcheck
 				Name:       fmt.Sprintf("vehicle1-%d", randomInt),
 				IsGroup:    true,
-				ItemTypeID: schema.ItemTableItemTypeIDVehicle,
-				Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("vehicle1-%d", randomInt)},
-				BeginYear:  sql.NullInt32{Int32: 1930, Valid: true},
-				EndYear:    sql.NullInt32{Int32: 1944, Valid: true},
+				ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+				BeginYear:  1930,
+				EndYear:    1944,
 			})
 
 			// second vehicle
-			vehicle2ID := createItem(t, goquDB, schema.ItemRow{ //nolint: contextcheck
+			vehicle2ID := createItem(t, conn, cnt, &APIItem{ //nolint: contextcheck
 				Name:       fmt.Sprintf("vehicle2-%d", randomInt),
 				IsGroup:    true,
-				ItemTypeID: schema.ItemTableItemTypeIDVehicle,
-				Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("vehicle2-%d", randomInt)},
-				BeginYear:  sql.NullInt32{Int32: 1920, Valid: true},
-				EndYear:    sql.NullInt32{Int32: 1950, Valid: true},
+				ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+				BeginYear:  1920,
+				EndYear:    1950,
 			})
 
 			_, err = itemsClient.CreateItemParent(

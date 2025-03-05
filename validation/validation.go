@@ -9,6 +9,8 @@ const (
 	EmailNotExistsExists      = "E-mail already registered"
 	IdenticalStringsNotSame   = "The two given tokens do not match"
 	NotInArray                = "The input was not found in the haystack"
+	ValueTooSmall             = "The input is lower than %d"
+	ValueTooBig               = "The input is greater than %d"
 )
 
 type FilterInterface interface {

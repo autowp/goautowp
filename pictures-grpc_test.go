@@ -13,7 +13,6 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
-	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
@@ -23,6 +22,7 @@ import (
 	"google.golang.org/genproto/googleapis/type/latlng"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func getPictureID(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
@@ -316,18 +316,11 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      ItemType_ITEM_TYPE_VEHICLE,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	itemID, err := res.LastInsertId()
-	require.NoError(t, err)
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		IsGroup:    true,
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -413,31 +406,17 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
-	res, err := goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-1-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      ItemType_ITEM_TYPE_VEHICLE,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-1-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
+	itemID1 := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-1-%d", random.Int()),
+		IsGroup:    false,
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
 
-	itemID1, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	res, err = goquDB.Insert(schema.ItemTable).Rows(goqu.Record{
-		schema.ItemTableNameColName:            fmt.Sprintf("vehicle-2-%d", random.Int()),
-		schema.ItemTableIsGroupColName:         0,
-		schema.ItemTableItemTypeIDColName:      ItemType_ITEM_TYPE_VEHICLE,
-		schema.ItemTableCatnameColName:         fmt.Sprintf("vehicle-2-%d", random.Int()),
-		schema.ItemTableBodyColName:            "",
-		schema.ItemTableProducedExactlyColName: 0,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	itemID2, err := res.LastInsertId()
-	require.NoError(t, err)
+	itemID2 := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-2-%d", random.Int()),
+		IsGroup:    false,
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
@@ -1267,33 +1246,18 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 
 	itemName := fmt.Sprintf("vehicle-%d", random.Int())
 
-	res, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+	itemID := createItem(t, conn, cnt, &APIItem{
 		Name:            itemName,
 		IsGroup:         false,
-		ItemTypeID:      schema.ItemTableItemTypeIDVehicle,
-		Body:            "",
-		Produced:        sql.NullInt32{Valid: true, Int32: 777},
+		ItemTypeId:      ItemType_ITEM_TYPE_VEHICLE,
+		Produced:        &wrapperspb.Int32Value{Value: 777},
 		ProducedExactly: true,
-		BeginYear:       sql.NullInt32{Valid: true, Int32: 1999},
-		EndYear:         sql.NullInt32{Valid: true, Int32: 2001},
-		BeginModelYear:  sql.NullInt32{Valid: true, Int32: 2000},
-		EndModelYear:    sql.NullInt32{Valid: true, Int32: 2001},
-		SpecID:          sql.NullInt32{Valid: true, Int32: schema.SpecIDWorldwide},
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	itemID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	_, err = itemsClient.UpdateItemLanguage(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&ItemLanguage{
-			ItemId:   itemID,
-			Language: items.DefaultLanguageCode,
-			Name:     itemName,
-		},
-	)
-	require.NoError(t, err)
+		BeginYear:       1999,
+		EndYear:         2001,
+		BeginModelYear:  2000,
+		EndModelYear:    2001,
+		SpecId:          schema.SpecIDWorldwide,
+	})
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 
@@ -1382,39 +1346,27 @@ func TestGetPicturePath(t *testing.T) {
 
 	// create brand
 	brandName := fmt.Sprintf("Opel-%d", randomInt)
-	res, err := goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+	brandID := createItem(t, conn, cnt, &APIItem{
 		Name:       brandName,
 		IsGroup:    true,
-		ItemTypeID: schema.ItemTableItemTypeIDBrand,
-		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("opel-%d", randomInt)},
+		ItemTypeId: ItemType_ITEM_TYPE_BRAND,
+		Catname:    fmt.Sprintf("opel-%d", randomInt),
 		Body:       "",
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	brandID, err := res.LastInsertId()
-	require.NoError(t, err)
+	})
 
 	itemName := fmt.Sprintf("vehicle-%d", randomInt)
-	res, err = goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+	itemID := createItem(t, conn, cnt, &APIItem{
 		Name:       itemName,
 		IsGroup:    true,
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	itemID, err := res.LastInsertId()
-	require.NoError(t, err)
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
 
 	childName := fmt.Sprintf("child-%d", randomInt)
-	res, err = goquDB.Insert(schema.ItemTable).Rows(schema.ItemRow{
+	childID := createItem(t, conn, cnt, &APIItem{
 		Name:       childName,
 		IsGroup:    false,
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	childID, err := res.LastInsertId()
-	require.NoError(t, err)
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
 
 	_, err = itemsClient.CreateItemParent(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -1787,11 +1739,10 @@ func TestCorrectFileNamesVote(t *testing.T) {
 	randomInt := random.Int()
 
 	vehicleName := fmt.Sprintf("Toyota %d Corolla", randomInt)
-	vehicleID := createItem(t, goquDB, schema.ItemRow{
+	vehicleID := createItem(t, conn, cnt, &APIItem{
 		Name:       vehicleName,
 		IsGroup:    false,
-		ItemTypeID: schema.ItemTableItemTypeIDVehicle,
-		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("toyota-%d-corolla", randomInt)},
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
 	_, err = client.CreatePictureItem(
@@ -1832,11 +1783,11 @@ func TestCorrectFileNamesVote(t *testing.T) {
 
 	// add brand
 	brandName := fmt.Sprintf("Toyota %d", randomInt)
-	brandID := createItem(t, goquDB, schema.ItemRow{
+	brandID := createItem(t, conn, cnt, &APIItem{
 		Name:       brandName,
 		IsGroup:    true,
-		ItemTypeID: schema.ItemTableItemTypeIDBrand,
-		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("toyota-%d", randomInt)},
+		ItemTypeId: ItemType_ITEM_TYPE_BRAND,
+		Catname:    fmt.Sprintf("toyota-%d", randomInt),
 	})
 
 	_, err = itemsClient.CreateItemParent(
@@ -1875,11 +1826,11 @@ func TestCorrectFileNamesVote(t *testing.T) {
 
 	// add second brand
 	brand2Name := fmt.Sprintf("Peugeot %d", randomInt)
-	brand2ID := createItem(t, goquDB, schema.ItemRow{
+	brand2ID := createItem(t, conn, cnt, &APIItem{
 		Name:       brand2Name,
 		IsGroup:    true,
-		ItemTypeID: schema.ItemTableItemTypeIDBrand,
-		Catname:    sql.NullString{Valid: true, String: fmt.Sprintf("peugeot-%d", randomInt)},
+		ItemTypeId: ItemType_ITEM_TYPE_BRAND,
+		Catname:    fmt.Sprintf("peugeot-%d", randomInt),
 	})
 
 	_, err = itemsClient.CreateItemParent(

@@ -8,9 +8,7 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
-	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/textstorage"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -110,27 +108,37 @@ func getUserWithCleanHistory(
 	return user.GetId(), token.AccessToken
 }
 
-func createItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
+func createItem(t *testing.T, conn *grpc.ClientConn, cnt *Container, row *APIItem) int64 {
 	t.Helper()
 
 	ctx := t.Context()
+
 	cfg := config.LoadConfig(".")
-	repository := items.NewRepository(goquDB, 0, cfg.ContentLanguages, textstorage.New(goquDB))
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	res, err := goquDB.Insert(schema.ItemTable).Rows(row).Executor().ExecContext(ctx)
+	itemsClient := NewItemsClient(conn)
+
+	res, err := itemsClient.CreateItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		row,
+	)
 	require.NoError(t, err)
 
-	itemID, err := res.LastInsertId()
-	require.NoError(t, err)
+	itemID := res.GetId()
+	require.NotEmpty(t, itemID)
 
-	_, err = repository.UpdateItemLanguage(ctx, itemID, "en", row.Name, "", "", 0)
-	require.NoError(t, err)
-
-	_, err = repository.RebuildCache(ctx, itemID)
-	require.NoError(t, err)
-
-	_, err = repository.UpdateOrderCache(ctx, itemID)
-	require.NoError(t, err)
+	/*_, err = itemsClient.UpdateItemLanguage(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&ItemLanguage{
+			Language: "en",
+			ItemId:   itemID,
+			Name:     row.GetName(),
+		},
+	)
+	require.NoError(t, err)*/
 
 	return itemID
 }
