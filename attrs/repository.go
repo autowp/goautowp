@@ -1061,6 +1061,8 @@ func (s *Repository) DeleteUserValue(ctx context.Context, attributeID, itemID, u
 		return fmt.Errorf("%w: `%d`", errAttributeNotFound, attributeID)
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	switch attribute.TypeID.AttributeTypeID {
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
 		_, err = util.ExecAndRetryOnDeadlock(ctx,
@@ -1189,6 +1191,8 @@ func (s *Repository) updateAttributeActualValue(
 			return false, fmt.Errorf("calcInheritedValue(%d, %d): %w", attribute.ID, itemID, err)
 		}
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	somethingChanged, err := s.setActualValue(ctx, attribute, itemID, actualValue)
 	if err != nil {
@@ -1530,6 +1534,8 @@ func (s *Repository) clearValue(ctx context.Context, attribute *schema.AttrsAttr
 		res              sql.Result
 	)
 
+	ctx = context.WithoutCancel(ctx)
+
 	// value
 	switch attribute.TypeID.AttributeTypeID {
 	case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText:
@@ -1695,6 +1701,8 @@ func (s *Repository) setListValue(
 		orderings = append(orderings, index)
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := util.ExecAndRetryOnDeadlock(ctx,
 		s.db.Insert(schema.AttrsValuesListTable).Rows(records).OnConflict(
 			goqu.DoUpdate(
@@ -1740,6 +1748,8 @@ func (s *Repository) setActualValue(
 	if !attribute.TypeID.Valid {
 		return false, nil
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	if !actualValue.Valid {
 		res, err := s.clearValue(ctx, attribute, itemID)
@@ -1903,6 +1913,8 @@ func (s *Repository) setListUserValue(
 		deleted  int64
 	)
 
+	ctx = context.WithoutCancel(ctx)
+
 	insertExpr := s.db.Insert(schema.AttrsUserValuesListTable).Cols(
 		schema.AttrsUserValuesListTableAttributeIDCol,
 		schema.AttrsUserValuesListTableItemIDCol,
@@ -2005,6 +2017,8 @@ func (s *Repository) SetUserValue(ctx context.Context, userID, attributeID, item
 	if !attribute.TypeID.Valid {
 		return false, nil
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	// convert empty values to valid = false
 	if value.Valid && !value.IsEmpty {
@@ -2163,6 +2177,8 @@ func (s *Repository) propagateInheritance(
 		return err
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	for _, childID := range childIDs {
 		// update only if row use inheritance
 		haveValue, err := s.haveOwnAttributeValue(ctx, attribute.ID, childID)
@@ -2235,6 +2251,8 @@ func (s *Repository) propagateEngine(ctx context.Context, attribute *schema.Attr
 		return err
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	for _, vehicleID := range vehicleIDs {
 		_, err = s.updateAttributeActualValue(ctx, attribute, vehicleID)
 		if err != nil {
@@ -2301,6 +2319,8 @@ func (s *Repository) refreshConflictFlag(ctx context.Context, attributeID, itemI
 			}
 		}
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	_, err = util.ExecAndRetryOnDeadlock(ctx,
 		s.db.Update(schema.AttrsValuesTable).Set(goqu.Record{
@@ -2419,6 +2439,8 @@ func (s *Repository) RefreshItemConflictFlags(ctx context.Context, itemID int64)
 		return err
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	for _, id := range ids {
 		err = s.refreshConflictFlag(ctx, id, itemID)
 		if err != nil {
@@ -2493,6 +2515,8 @@ func (s *Repository) MoveUserValues(ctx context.Context, srcItemID, destItemID i
 	if err != nil {
 		return err
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	for _, row := range rows {
 		_, err = s.db.Update(schema.AttrsUserValuesTable).Set(goqu.Record{

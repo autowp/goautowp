@@ -291,6 +291,8 @@ func (s *Repository) MoveMessage(
 		return nil
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	_, err = s.db.Update(schema.CommentMessageTable).
 		Set(goqu.Record{
 			schema.CommentMessageTableTypeIDColName:   dstType,
@@ -377,6 +379,8 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType schema.Com
 		return sql.ErrNoRows
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	if st.MessagesCount <= 0 {
 		_, err = s.db.Delete(schema.CommentTopicTable).Where(
 			schema.CommentTopicTableTypeIDCol.Eq(commentType),
@@ -445,6 +449,8 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 	if authorID == userID {
 		return 0, errSelfVote
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	res, err := s.db.Insert(schema.CommentVoteTable).Rows(goqu.Record{
 		schema.CommentVoteTableCommentIDColName: commentID,
@@ -552,6 +558,8 @@ func (s *Repository) Add(
 	if attention {
 		ma = schema.CommentMessageModeratorAttentionRequired
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	res, err := s.db.Insert(schema.CommentMessageTable).
 		Cols(schema.CommentMessageTableDatetimeCol, schema.CommentMessageTableTypeIDCol,
@@ -816,6 +824,8 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 		return nil
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	subscribers, err := s.db.Select(schema.UserTableIDCol, schema.UserTableLanguageCol).
 		From(schema.UserTable).
 		Where(
@@ -1032,6 +1042,8 @@ func (s *Repository) CleanupDeleted(ctx context.Context) (int64, error) {
 	cm2 := schema.CommentMessageTable.As("cm2")
 	cm1ID := cm1.Col(schema.CommentMessageTableIDColName)
 	cm2ParentID := cm2.Col(schema.CommentMessageTableParentIDColName)
+
+	ctx = context.WithoutCancel(ctx)
 
 	rows, err := s.db.Select(
 		cm1ID,
@@ -1285,6 +1297,8 @@ func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error)
 		return 0, nil
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Delete(schema.CommentMessageTable).
 		Where(schema.CommentMessageTableIDCol.Eq(id)).
 		Executor().ExecContext(ctx)
@@ -1306,6 +1320,8 @@ func (s *Repository) deleteMessage(ctx context.Context, id int64) (int64, error)
 }
 
 func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Delete(schema.CommentTopicViewTable).Where(
 		goqu.L(
 			"NOT EXISTS (?)",
@@ -1746,6 +1762,8 @@ func (s *Repository) MoveMessages(
 	ctx context.Context, srcTypeID schema.CommentMessageType, srcItemID int64,
 	dstTypeID schema.CommentMessageType, dstItemID int64,
 ) error {
+	ctx = context.WithoutCancel(ctx)
+
 	_, err := s.db.Update(schema.CommentMessageTable).
 		Set(goqu.Record{
 			schema.CommentMessageTableTypeIDColName: dstTypeID,

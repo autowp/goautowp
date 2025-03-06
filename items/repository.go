@@ -1360,6 +1360,8 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 }
 
 func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
+	ctx = context.WithoutCancel(ctx)
+
 	changed, err := s.setItemVehicleTypeRow(ctx, itemID, vehicleTypeID, false)
 	if err != nil {
 		return err
@@ -1381,12 +1383,14 @@ func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehic
 }
 
 func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.From(schema.VehicleVehicleTypeTable).Delete().
 		Where(
 			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID),
 			schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(vehicleTypeID),
 			schema.VehicleVehicleTypeTableInheritedCol.IsFalse(),
-		).Executor().Exec()
+		).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -1447,6 +1451,8 @@ func (s *Repository) RefreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 	if err != nil {
 		return err
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	if len(typeIDs) > 0 {
 		// do not inherit when own value
@@ -1554,6 +1560,7 @@ func (s *Repository) setItemVehicleTypeRows(
 	inherited bool,
 ) (bool, error) {
 	changed := false
+	ctx = context.WithoutCancel(ctx)
 
 	for _, t := range types {
 		rowChanged, err := s.setItemVehicleTypeRow(ctx, itemID, t, inherited)
@@ -1573,7 +1580,7 @@ func (s *Repository) setItemVehicleTypeRows(
 		sqlDelete = sqlDelete.Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(types))
 	}
 
-	res, err := sqlDelete.Executor().Exec()
+	res, err := sqlDelete.Executor().ExecContext(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -1700,6 +1707,8 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 		}
 		idx++
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	result, err := s.db.Insert(schema.ItemParentCacheTable).
 		Rows(records).
@@ -1865,6 +1874,7 @@ func (s *Repository) UpdateItemLanguage(
 	}
 
 	textChanged := false
+	ctx = context.WithoutCancel(ctx)
 
 	if row.TextID.Valid {
 		oldText, err := s.textStorageRepository.Text(ctx, row.TextID.Int32)
@@ -2415,6 +2425,8 @@ func (s *Repository) collectAncestorsIDs(ctx context.Context, id int64) ([]int64
 func (s *Repository) setItemParentLanguages(
 	ctx context.Context, parentID, itemID int64, values map[string]schema.ItemParentLanguageRow, forceIsAuto bool,
 ) error {
+	ctx = context.WithoutCancel(ctx)
+
 	for _, lang := range s.contentLanguages {
 		name := ""
 		if _, ok := values[lang]; ok {
@@ -2502,6 +2514,8 @@ func (s *Repository) CreateItemParent(
 		return false, nil
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	_, err = s.db.Insert(schema.ItemParentTable).Rows(goqu.Record{
 		schema.ItemParentTableParentIDColName:      parentID,
 		schema.ItemParentTableItemIDColName:        itemID,
@@ -2588,6 +2602,8 @@ func (s *Repository) UpdateItemParent(
 		isAuto = true
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Update(schema.ItemParentTable).Set(goqu.Record{
 		schema.ItemParentTableTypeColName:          typeID,
 		schema.ItemParentTableCatnameColName:       catname,
@@ -2615,6 +2631,8 @@ func (s *Repository) UpdateItemParent(
 }
 
 func (s *Repository) RemoveItemParent(ctx context.Context, itemID, parentID int64) error {
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Delete(schema.ItemParentTable).Where(
 		schema.ItemParentTableItemIDCol.Eq(itemID),
 		schema.ItemParentTableParentIDCol.Eq(parentID),
@@ -2643,6 +2661,19 @@ func (s *Repository) RemoveItemParent(ctx context.Context, itemID, parentID int6
 
 	if affectedItemParentRows > 0 || affectedItemParentLanguageRows > 0 {
 		_, err = s.RebuildCache(ctx, itemID)
+		if err != nil {
+			return err
+		}
+
+		err = s.UpdateInheritance(ctx, itemID)
+		if err != nil {
+			return err
+		}
+
+		err = s.RefreshItemVehicleTypeInheritanceFromParents(ctx, itemID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return err
@@ -2811,6 +2842,8 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 	}
 
 	if somethingChanged || !car.CarTypeInherit {
+		ctx = context.WithoutCancel(ctx)
+
 		if len(set) > 0 {
 			_, err = s.db.Update(schema.ItemTable).Set(set).
 				Where(schema.ItemTableIDCol.Eq(car.ID)).
@@ -2911,6 +2944,8 @@ func (s *Repository) MoveItemParent(ctx context.Context, itemID, parentID, newPa
 	if util.Contains(parentIDs, itemID) {
 		return false, errItemParentCycle
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	res, err := s.db.Update(schema.ItemParentTable).Set(goqu.Record{
 		schema.ItemParentTableParentIDColName: newParentID,
@@ -3301,6 +3336,8 @@ func (s *Repository) SetItemEngine(
 		return false, ErrItemNotFound
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Update(schema.ItemTable).
 		Set(set).
 		Where(schema.ItemTableIDCol.Eq(itemID)).
@@ -3571,6 +3608,8 @@ func (s *Repository) RefreshItemParentLanguage(
 	if err != nil {
 		return err
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	for _, row := range res {
 		err = s.refreshItemParentLanguage(ctx, row.ParentID, row.ItemID)

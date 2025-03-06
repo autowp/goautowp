@@ -114,6 +114,8 @@ func (s *Repository) GetDialogCount(ctx context.Context, userID int64, withUserI
 }
 
 func (s *Repository) DeleteMessage(ctx context.Context, userID int64, messageID int64) error {
+	ctx = context.WithoutCancel(ctx)
+
 	_, err := s.db.Update(schema.PersonalMessagesTable).
 		Set(goqu.Record{schema.PersonalMessagesTableDeletedByFromColName: 1}).
 		Where(
@@ -187,6 +189,8 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 
 	nullableFromUserID := sql.NullInt64{Int64: fromUserID, Valid: fromUserID != 0}
 
+	ctx = context.WithoutCancel(ctx)
+
 	_, err := s.db.Insert(schema.PersonalMessagesTable).Rows(
 		goqu.Record{
 			schema.PersonalMessagesTableFromUserIDColName:  nullableFromUserID,
@@ -208,19 +212,19 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 	return nil
 }
 
-func (s *Repository) markReaden(ids []int64) error {
+func (s *Repository) markReaden(ctx context.Context, ids []int64) error {
 	var err error
 	if len(ids) > 0 {
 		_, err = s.db.Update(schema.PersonalMessagesTable).
 			Set(goqu.Record{schema.PersonalMessagesTableReadenColName: true}).
 			Where(schema.PersonalMessagesTableIDCol.In(ids)).
-			Executor().Exec()
+			Executor().ExecContext(ctx)
 	}
 
 	return err
 }
 
-func (s *Repository) markReadenRows(rows []schema.PersonalMessageRow, userID int64) error {
+func (s *Repository) markReadenRows(ctx context.Context, rows []schema.PersonalMessageRow, userID int64) error {
 	ids := make([]int64, 0)
 
 	for _, msg := range rows {
@@ -229,7 +233,7 @@ func (s *Repository) markReadenRows(rows []schema.PersonalMessageRow, userID int
 		}
 	}
 
-	return s.markReaden(ids)
+	return s.markReaden(ctx, ids)
 }
 
 func (s *Repository) getBox(
@@ -251,7 +255,7 @@ func (s *Repository) getBox(
 	}
 
 	if userID > 0 {
-		err = s.markReadenRows(msgs, userID)
+		err = s.markReadenRows(ctx, msgs, userID)
 		if err != nil {
 			return nil, nil, err
 		}

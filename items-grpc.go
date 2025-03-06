@@ -958,6 +958,8 @@ func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLangua
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	changes, err := s.repository.UpdateItemLanguage(
 		ctx, itemID, in.GetLanguage(), in.GetName(), in.GetText(), in.GetFullText(), userID,
 	)
@@ -1536,6 +1538,8 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	_, err = s.repository.CreateItemParent(
 		ctx, item.ID, parentItem.ID, convertItemParentType(in.GetType()), in.GetCatname(),
 	)
@@ -1652,17 +1656,9 @@ func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemPa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.repository.RemoveItemParent(ctx, item.ID, parent.ID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	err = s.repository.UpdateInheritance(ctx, item.ID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	err = s.repository.RefreshItemVehicleTypeInheritanceFromParents(ctx, item.ID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1765,6 +1761,8 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	success, err := s.repository.MoveItemParent(ctx, in.GetItemId(), in.GetParentId(), in.GetDestParentId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1850,6 +1848,8 @@ func (s *ItemsGRPCServer) RefreshInheritance(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.repository.UpdateInheritance(ctx, in.GetItemId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1909,6 +1909,8 @@ func (s *ItemsGRPCServer) SetItemEngine(ctx context.Context, in *SetItemEngineRe
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	changed, err := s.repository.SetItemEngine(ctx, itemID, in.GetEngineItemId(), in.GetEngineInherited())
 	if err != nil {

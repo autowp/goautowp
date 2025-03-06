@@ -82,7 +82,7 @@ func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, st
 	}
 
 	err = s.repository.RegisterVisit(ctx, id)
-	if role == "" {
+	if err != nil {
 		return 0, "", err
 	}
 

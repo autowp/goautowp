@@ -337,7 +337,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 
 	s3Client := s.s3Client()
 
-	object, err := s3Client.GetObject(&s3.GetObjectInput{
+	object, err := s3Client.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: &bucket,
 		Key:    &iRow.Filepath,
 	})
@@ -363,6 +363,8 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 	if format == nil {
 		return 0, fmt.Errorf("%w: `%s`", errFormatNotFound, formatName)
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	_, err = s.db.Insert(schema.FormattedImageTable).Rows(goqu.Record{
 		schema.FormattedImageTableFormatColName:           formatName,
@@ -557,6 +559,8 @@ func (s *Storage) addImageFromImagick(
 		return 0, err
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	id, err := s.generateLockWrite(
 		ctx,
 		dirName,
@@ -669,6 +673,8 @@ func (s *Storage) generateLockWrite(
 }
 
 func (s *Storage) incDirCounter(ctx context.Context, dirName string) error {
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Update(schema.ImageDirTable).
 		Set(goqu.Record{
 			schema.ImageDirTableCountColName: goqu.L("? + 1", schema.ImageDirTableCountCol),
@@ -775,6 +781,8 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 		return sql.ErrNoRows
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.Flush(ctx, FlushOptions{
 		Image: row.ID,
 	})
@@ -842,6 +850,8 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 
 	defer util.Close(rows)
 
+	ctx = context.WithoutCancel(ctx)
+
 	for rows.Next() {
 		var (
 			iID    int
@@ -902,6 +912,7 @@ func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options Gene
 	var insertAttemptException error
 
 	s3c := s.s3Client()
+	ctx = context.WithoutCancel(ctx)
 
 	for attemptIndex := range maxInsertAttempts {
 		options.Index = indexByAttempt(attemptIndex)
@@ -993,6 +1004,8 @@ func (s *Storage) AddImageFromFile(
 	if dir == nil {
 		return 0, fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	id, err := s.generateLockWrite(
 		ctx,
@@ -1137,7 +1150,9 @@ func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback 
 		return err
 	}
 
-	_, err = s3c.PutObject(&s3.PutObjectInput{
+	ctx = context.WithoutCancel(ctx)
+
+	_, err = s3c.PutObjectWithContext(ctx, &s3.PutObjectInput{
 		Key:         &fpath,
 		Body:        blobBytes,
 		Bucket:      &bucket,
@@ -1196,6 +1211,8 @@ func (s *Storage) SetImageCrop(ctx context.Context, imageID int, crop sampler.Cr
 			crop.Height = 0
 		}
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	_, err := s.db.Update(schema.ImageTable).
 		Set(goqu.Record{
@@ -1417,8 +1434,8 @@ func (s *Storage) isKeyExists(dir *Dir, key string) error {
 	return err
 }
 
-func (s *Storage) getObjectBytes(bucket string, key string) ([]byte, error) {
-	object, err := s.s3Client().GetObject(&s3.GetObjectInput{
+func (s *Storage) getObjectBytes(ctx context.Context, bucket string, key string) ([]byte, error) {
+	object, err := s.s3Client().GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
 	})
@@ -1434,8 +1451,10 @@ func (s *Storage) getObjectBytes(bucket string, key string) ([]byte, error) {
 	return objectBytes, nil
 }
 
-func (s *Storage) isObjectBytesEqual(bucket string, key string, expectedBytes []byte) (bool, error) {
-	actualBytes, err := s.getObjectBytes(bucket, key)
+func (s *Storage) isObjectBytesEqual(
+	ctx context.Context, bucket string, key string, expectedBytes []byte,
+) (bool, error) {
+	actualBytes, err := s.getObjectBytes(ctx, bucket, key)
 	if err != nil {
 		return false, err
 	}
@@ -1519,7 +1538,7 @@ func (s *Storage) ListUnlinkedObjects(
 						lostSameSizeKeys[sameSizeKey] = err.Error()
 					} else {
 						if itemBytes == nil {
-							itemBytes, err = s.getObjectBytes(bucket, *item.Key)
+							itemBytes, err = s.getObjectBytes(ctx, bucket, *item.Key)
 							if err != nil {
 								fmt.Printf("getObjectBytes(%s, %s): %v\n", bucket, *item.Key, err.Error()) //nolint:forbidigo
 
@@ -1527,7 +1546,7 @@ func (s *Storage) ListUnlinkedObjects(
 							}
 						}
 
-						equal, err := s.isObjectBytesEqual(bucket, sameSizeKey, itemBytes)
+						equal, err := s.isObjectBytesEqual(ctx, bucket, sameSizeKey, itemBytes)
 						if err != nil {
 							fmt.Printf("isObjectBytesEqual(%s, %s): %v\n", bucket, sameSizeKey, err.Error()) //nolint:forbidigo
 
@@ -1559,7 +1578,7 @@ func (s *Storage) ListUnlinkedObjects(
 
 						const prefix = "lost-and-has-valid-copy/"
 						if moveToLostAndFound && !strings.HasPrefix(*item.Key, prefix) {
-							err = s.moveWithPrefix(bucket, *item.Key, prefix)
+							err = s.moveWithPrefix(ctx, bucket, *item.Key, prefix)
 							if err != nil {
 								fmt.Printf("moveWithPrefix(%s, %s, %s): %v\n", bucket, *item.Key, prefix, err.Error()) //nolint:forbidigo
 
@@ -1571,7 +1590,7 @@ func (s *Storage) ListUnlinkedObjects(
 						var lostEqual []string
 
 						if itemBytes == nil {
-							itemBytes, err = s.getObjectBytes(bucket, *item.Key)
+							itemBytes, err = s.getObjectBytes(ctx, bucket, *item.Key)
 							if err != nil {
 								fmt.Printf("getObjectBytes(%s, %s): %v\n", bucket, *item.Key, err.Error()) //nolint:forbidigo
 
@@ -1581,7 +1600,7 @@ func (s *Storage) ListUnlinkedObjects(
 
 						for _, key := range foundLostImages[*item.Size] {
 							if key != *item.Key {
-								equal, err := s.isObjectBytesEqual(bucket, key, itemBytes)
+								equal, err := s.isObjectBytesEqual(ctx, bucket, key, itemBytes)
 								if err != nil {
 									fmt.Printf("isObjectBytesEqual(%s, %s): %v\n", bucket, key, err.Error()) //nolint:forbidigo
 
@@ -1604,7 +1623,7 @@ func (s *Storage) ListUnlinkedObjects(
 					default:
 						const prefix = "lost-and-found/"
 						if moveToLostAndFound && !strings.HasPrefix(*item.Key, prefix) {
-							err = s.moveWithPrefix(bucket, *item.Key, prefix)
+							err = s.moveWithPrefix(ctx, bucket, *item.Key, prefix)
 							if err != nil {
 								fmt.Printf("moveWithPrefix(%s, %s, %s): %v\n", bucket, *item.Key, prefix, err.Error()) //nolint:forbidigo
 
@@ -1622,11 +1641,13 @@ func (s *Storage) ListUnlinkedObjects(
 	return err
 }
 
-func (s *Storage) moveWithPrefix(bucket string, key string, prefix string) error {
+func (s *Storage) moveWithPrefix(ctx context.Context, bucket string, key string, prefix string) error {
 	copySource := bucket + "/" + key
 	dest := prefix + key
 
-	_, err := s.s3Client().CopyObject(&s3.CopyObjectInput{
+	ctx = context.WithoutCancel(ctx)
+
+	_, err := s.s3Client().CopyObjectWithContext(ctx, &s3.CopyObjectInput{
 		Bucket:     &bucket,
 		CopySource: &copySource,
 		Key:        &dest,
@@ -1636,7 +1657,7 @@ func (s *Storage) moveWithPrefix(bucket string, key string, prefix string) error
 		return err
 	}
 
-	_, err = s.s3Client().DeleteObject(&s3.DeleteObjectInput{
+	_, err = s.s3Client().DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
 	})

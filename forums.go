@@ -110,6 +110,8 @@ func (s *Forums) AddTopic(
 		return 0, errTopicsInThemeDisabled
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Insert(schema.ForumsTopicsTable).
 		Cols(schema.ForumsTopicsTableThemeIDCol, schema.ForumsTopicsTableNameCol, schema.ForumsTopicsTableAuthorIDCol,
 			schema.ForumsTopicsTableAuthorIPCol, schema.ForumsTopicsTableAddDatetimeCol,
@@ -218,6 +220,8 @@ func (s *Forums) Delete(ctx context.Context, id int64) error {
 		return errCantDeleteTopicWithModeratorAttention
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.setStatus(ctx, id, TopicStatusDeleted)
 	if err != nil {
 		return err
@@ -240,6 +244,8 @@ func (s *Forums) MoveTopic(ctx context.Context, id int64, themeID int64) error {
 	if !success {
 		return sql.ErrNoRows
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	_, err = s.db.Update(schema.ForumsTopicsTable).
 		Set(goqu.Record{

@@ -29,6 +29,8 @@ func NewEvents(db *goqu.Database) *Events {
 }
 
 func (s *Events) Add(ctx context.Context, event Event) error {
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Insert(schema.LogEventsTable).
 		Rows(goqu.Record{
 			schema.LogEventsTableDescriptionColName: event.Message,

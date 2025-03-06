@@ -270,6 +270,8 @@ func (s *PicturesGRPCServer) DeleteModerVote(ctx context.Context, in *DeleteMode
 
 	pictureID := in.GetPictureId()
 
+	ctx = context.WithoutCancel(ctx)
+
 	success, err := s.repository.DeleteModerVote(ctx, pictureID, userID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -315,6 +317,8 @@ func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateMode
 	pictureID := in.GetPictureId()
 	vote := in.GetVote() > 0
 	reason := in.GetReason()
+
+	ctx = context.WithoutCancel(ctx)
 
 	success, err := s.repository.CreateModerVote(ctx, pictureID, userID, vote, reason)
 	if err != nil {
@@ -447,6 +451,8 @@ func (s *PicturesGRPCServer) restoreFromRemoving(ctx context.Context, pictureID 
 		return err
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.repository.SetStatus(ctx, pic.ID, schema.PictureStatusInbox, userID)
 	if err != nil {
 		return err
@@ -482,6 +488,8 @@ func (s *PicturesGRPCServer) unaccept(ctx context.Context, pictureID int64, user
 	if err != nil {
 		return err
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	err = s.repository.SetStatus(ctx, pictureID, schema.PictureStatusInbox, userID)
 	if err != nil {
@@ -635,6 +643,8 @@ func (s *PicturesGRPCServer) Normalize(ctx context.Context, in *PictureIDRequest
 		return nil, err
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.repository.Normalize(ctx, pictureID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -659,6 +669,8 @@ func (s *PicturesGRPCServer) Flop(ctx context.Context, in *PictureIDRequest) (*e
 	if err != nil {
 		return nil, err
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	err = s.repository.Flop(ctx, pictureID)
 	if err != nil {
@@ -690,6 +702,8 @@ func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimila
 	if !s.enforcer.Enforce(role, "global", "moderate") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	if err = s.duplicateFinder.HideSimilar(ctx, in.GetId(), in.GetSimilarPictureId()); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -746,6 +760,7 @@ func (s *PicturesGRPCServer) SetPictureItemArea(
 	}
 
 	pictureItemType := convertPictureItemType(in.GetType())
+	ctx = context.WithoutCancel(ctx)
 
 	err = s.repository.SetPictureItemArea(
 		ctx, in.GetPictureId(), in.GetItemId(), pictureItemType, pictures.PictureItemArea{
@@ -804,6 +819,8 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 
 	pictureItemType := convertPictureItemType(in.GetType())
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.repository.SetPictureItemPerspective(
 		ctx, in.GetPictureId(), in.GetItemId(), pictureItemType, in.GetPerspectiveId(),
 	)
@@ -841,6 +858,7 @@ func (s *PicturesGRPCServer) SetPictureItemItemID(
 	}
 
 	pictureItemType := convertPictureItemType(in.GetType())
+	ctx = context.WithoutCancel(ctx)
 
 	err = s.repository.SetPictureItemItemID(
 		ctx, in.GetPictureId(), in.GetItemId(), pictureItemType, in.GetNewItemId(),
@@ -882,6 +900,7 @@ func (s *PicturesGRPCServer) DeletePictureItem(
 	}
 
 	pictureItemType := convertPictureItemType(in.GetType())
+	ctx = context.WithoutCancel(ctx)
 
 	success, err := s.repository.DeletePictureItem(ctx, in.GetPictureId(), in.GetItemId(), pictureItemType)
 	if err != nil {
@@ -922,6 +941,7 @@ func (s *PicturesGRPCServer) CreatePictureItem(
 	}
 
 	pictureItemType := convertPictureItemType(in.GetType())
+	ctx = context.WithoutCancel(ctx)
 
 	success, err := s.repository.CreatePictureItem(
 		ctx, in.GetPictureId(), in.GetItemId(), pictureItemType, in.GetPerspectiveId(),
@@ -980,6 +1000,8 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 		}
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.repository.SetPictureCrop(
 		ctx, in.GetPictureId(), sampler.Crop{
 			Left:   int(in.GetCropLeft()),
@@ -1017,6 +1039,8 @@ func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *Pictur
 	if !s.enforcer.Enforce(role, "picture", "move") {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	success, err := s.repository.ClearReplacePicture(ctx, in.GetId())
 	if err != nil {
@@ -1077,6 +1101,8 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 	if !s.canReplace(pic, replacePicture, role) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	// statuses
 	if pic.Status != schema.PictureStatusAccepted {
@@ -1188,6 +1214,8 @@ func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicture
 		orbPoint = &orb.Point{point.GetLongitude(), point.GetLatitude()}
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	success, err := s.repository.SetPicturePoint(ctx, in.GetPictureId(), orbPoint)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1222,6 +1250,8 @@ func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictur
 	}
 
 	inDate := in.GetTakenDate()
+
+	ctx = context.WithoutCancel(ctx)
 
 	success, err := s.repository.UpdatePicture(
 		ctx, in.GetId(), in.GetName(),
@@ -1262,6 +1292,7 @@ func (s *PicturesGRPCServer) SetPictureCopyrights(
 	}
 
 	pictureID := in.GetId()
+	ctx = context.WithoutCancel(ctx)
 
 	success, textID, err := s.repository.SetPictureCopyrights(ctx, pictureID, in.GetCopyrights(), userID)
 	if err != nil {
@@ -1397,6 +1428,8 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	switch in.GetStatus() {
 	case PictureStatus_PICTURE_STATUS_ACCEPTED:
 		canAccept, err := s.canAccept(ctx, pic, role)
@@ -1430,9 +1463,9 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 				}
 			}
 
-			err = s.NotifyAccepted(ctx, pic, userID, isFirstTimeAccepted)
+			err = s.notifyAccepted(ctx, pic, userID, isFirstTimeAccepted)
 			if err != nil {
-				return nil, status.Error(codes.Internal, "NotifyAccepted error: "+err.Error())
+				return nil, status.Error(codes.Internal, "notifyAccepted error: "+err.Error())
 			}
 		}
 	case PictureStatus_PICTURE_STATUS_INBOX:
@@ -1553,9 +1586,11 @@ func (s *PicturesGRPCServer) sendLocalizedMessage(
 	return s.messagingRepository.CreateMessageFromTemplate(ctx, 0, receiver.ID, messageID, templateData, receiver.Language)
 }
 
-func (s *PicturesGRPCServer) NotifyAccepted(
+func (s *PicturesGRPCServer) notifyAccepted(
 	ctx context.Context, pic *schema.PictureRow, userID int64, isFirstTimeAccepted bool,
 ) error {
+	ctx = context.WithoutCancel(ctx)
+
 	if isFirstTimeAccepted {
 		err := s.sendLocalizedMessage(
 			ctx, userID, pic.OwnerID, "pm/your-picture-accepted-%s",
@@ -1614,6 +1649,8 @@ func (s *PicturesGRPCServer) NotifyInboxed(ctx context.Context, pic *schema.Pict
 }
 
 func (s *PicturesGRPCServer) notifyRemoving(ctx context.Context, pic *schema.PictureRow, userID int64) error {
+	ctx = context.WithoutCancel(ctx)
+
 	return s.sendLocalizedMessage(
 		ctx, userID, pic.OwnerID, "pm/your-picture-%s-enqueued-to-remove-%s",
 		func(lang string) (map[string]interface{}, error) {

@@ -53,6 +53,8 @@ func (s *ContactsRepository) delete(ctx context.Context, id int64, contactID int
 }
 
 func (s *ContactsRepository) deleteUserEverywhere(ctx context.Context, id int64) error {
+	ctx = context.WithoutCancel(ctx)
+
 	_, err := s.autowpDB.Delete(schema.ContactTable).
 		Where(schema.ContactTableUserIDCol.Eq(id)).
 		Executor().ExecContext(ctx)

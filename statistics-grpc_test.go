@@ -59,7 +59,7 @@ func TestStatisticsPulse(t *testing.T) {
 		Cols("description", "user_id", "add_datetime").
 		Vals(
 			goqu.Vals{"Description", user.GetId(), goqu.Func("NOW")},
-		).Executor().Exec()
+		).Executor().ExecContext(ctx)
 	require.NoError(t, err)
 
 	r1, err := statisticsClient.GetPulse(ctxTimeout, &PulseRequest{})

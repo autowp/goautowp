@@ -146,11 +146,13 @@ func (s *DuplicateFinder) Index(ctx context.Context, id int64, url string) error
 		return err
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	_, err = s.db.Insert(schema.DfHashTable).Rows(goqu.Record{
 		schema.DfHashTablePictureIDColName: id,
 		// can't use uint64 directly because of mysql driver issue
 		schema.DfHashTableHashColName: goqu.L(strconv.FormatUint(hash, 10)),
-	}).Executor().Exec()
+	}).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}

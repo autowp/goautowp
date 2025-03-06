@@ -172,7 +172,7 @@ func createRandomUser(t *testing.T, s *Repository) int64 {
 			schema.UserTableRoleColName:           "user",
 			schema.UserTableUUIDColName:           goqu.Func("UUID_TO_BIN", uuid.New().String()),
 		}).
-		Executor().Exec()
+		Executor().ExecContext(t.Context())
 	require.NoError(t, err)
 
 	id, err := res.LastInsertId()

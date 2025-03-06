@@ -479,6 +479,8 @@ func (s *CommentsGRPCServer) VoteComment(
 		return nil, status.Error(codes.PermissionDenied, "today vote limit reached")
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	votes, err := s.repository.VoteComment(ctx, userID, in.GetCommentId(), in.GetVote())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -588,6 +590,8 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 			}
 		}
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	messageID, err := s.repository.Add(
 		ctx,

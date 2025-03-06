@@ -310,6 +310,8 @@ func (s *Repository) DecVotes(ctx context.Context, userID int64) error {
 }
 
 func (s *Repository) AfterUserCreated(ctx context.Context, userID int64) error {
+	ctx = context.WithoutCancel(ctx)
+
 	err := s.RefreshUserConflicts(ctx, userID)
 	if err != nil {
 		return err
@@ -466,6 +468,8 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 
 	var res sql.Result
 
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.autowpDB.Insert(schema.UserTable).
 		Rows(goqu.Record{
 			schema.UserTableLoginColName:          nil,
@@ -488,7 +492,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 			schema.UserTableNameColName:   goqu.Func("values", goqu.C(schema.UserTableNameColName)),
 			schema.UserTableLastIPColName: goqu.Func("values", goqu.C(schema.UserTableLastIPColName)),
 		})).
-		Executor().Exec()
+		Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, "", err
 	}
@@ -586,12 +590,13 @@ func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID in
 		username = *keyCloakEmail
 	}
 
-	f := false
+	falseRef := false
 	enabled := !st.Deleted
+	ctx = context.WithoutCancel(ctx)
 
 	st.GUID, err = s.keycloak.CreateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		Enabled:       &enabled,
-		Totp:          &f,
+		Totp:          &falseRef,
 		EmailVerified: &emailVerified,
 		Username:      &username,
 		FirstName:     &st.Name,
@@ -645,6 +650,7 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 	}
 
 	f := false
+	ctx = context.WithoutCancel(ctx)
 
 	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		ID:      &userGUID,
@@ -727,6 +733,8 @@ func (s *Repository) RestoreVotes(ctx context.Context) error {
 func (s *Repository) UpdateVotesLimits(ctx context.Context) (int, error) {
 	var ids []int64
 
+	ctx = context.WithoutCancel(ctx)
+
 	err := s.autowpDB.Select(schema.UserTableIDCol).
 		From(schema.UserTable).
 		Where(
@@ -770,6 +778,8 @@ func (s *Repository) UpdateSpecsVolumes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	for _, st := range sts {
 		_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{

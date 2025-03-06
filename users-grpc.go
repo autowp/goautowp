@@ -140,6 +140,8 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 		}
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	success, err := s.userRepository.DeleteUser(ctx, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

@@ -102,6 +102,8 @@ func (s *ForumsGRPCServer) CreateTopic(
 		}
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	topicID, err := s.forums.AddTopic(ctx, in.GetThemeId(), in.GetName(), userID, remoteAddr)
 	if err != nil {
 		return nil, err

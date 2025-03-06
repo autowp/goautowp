@@ -211,7 +211,7 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 	if success {
 		_, err = s.db.Update(schema.OfDayTable).Set(
 			goqu.Record{schema.OfDayTableItemIDColName: itemID, schema.OfDayTableUserIDColName: userIDVal},
-		).Where(dateExpr).Executor().Exec()
+		).Where(dateExpr).Executor().ExecContext(ctx)
 	} else {
 		_, err = s.db.Insert(schema.OfDayTable).Rows(
 			goqu.Record{
@@ -219,7 +219,7 @@ func (s *Repository) SetItemOfDay(ctx context.Context, dateTime time.Time, itemI
 				schema.OfDayTableUserIDColName:  userIDVal,
 				schema.OfDayTableDayDateColName: dateStr,
 			},
-		).Executor().Exec()
+		).Executor().ExecContext(ctx)
 	}
 
 	if err != nil {

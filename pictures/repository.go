@@ -251,6 +251,8 @@ func (s *Repository) Vote(ctx context.Context, id int64, value int32, userID int
 		normalizedValue = -1
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	_, err := s.db.Insert(schema.PictureVoteTable).Rows(goqu.Record{
 		schema.PictureVoteTablePictureIDColName: id,
 		schema.PictureVoteTableUserIDColName:    userID,
@@ -1069,6 +1071,8 @@ func (s *Repository) SetPictureItemItemID(
 		return errCombinationNotAllowed
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Update(schema.PictureItemTable).
 		Set(goqu.Record{
 			schema.PictureItemTableItemIDColName: dstItemID,
@@ -1143,6 +1147,8 @@ func (s *Repository) isAllowedType(itemTypeID schema.ItemTableItemTypeID, pictur
 func (s *Repository) DeletePictureItem(
 	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType,
 ) (bool, error) {
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Delete(schema.PictureItemTable).Where(
 		schema.PictureItemTablePictureIDCol.Eq(pictureID),
 		schema.PictureItemTableItemIDCol.Eq(itemID),
@@ -1178,6 +1184,8 @@ func (s *Repository) CreatePictureItem(
 	if !isAllowed {
 		return false, errCombinationNotAllowed
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	res, err := s.db.Insert(schema.PictureItemTable).Rows(goqu.Record{
 		schema.PictureItemTablePictureIDColName: pictureID,
@@ -1322,6 +1330,8 @@ func (s *Repository) SetPictureCopyrights(
 	if err != nil {
 		return false, 0, err
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	if picture.CopyrightsTextID.Valid {
 		textID := picture.CopyrightsTextID.Int32

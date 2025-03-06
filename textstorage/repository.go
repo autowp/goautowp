@@ -71,6 +71,8 @@ func (s *Repository) FirstText(ctx context.Context, ids []int32) (string, error)
 }
 
 func (s *Repository) CreateText(ctx context.Context, text string, userID int64) (int32, error) {
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Insert(schema.TextstorageTextTable).Rows(goqu.Record{
 		schema.TextstorageTextTableRevisionColName:    0,
 		schema.TextstorageTextTableTextColName:        "",
@@ -92,6 +94,8 @@ func (s *Repository) CreateText(ctx context.Context, text string, userID int64) 
 }
 
 func (s *Repository) SetText(ctx context.Context, textID int32, text string, userID int64) error {
+	ctx = context.WithoutCancel(ctx)
+
 	res, err := s.db.Update(schema.TextstorageTextTable).
 		Set(goqu.Record{
 			schema.TextstorageTextTableRevisionColName:    goqu.L("? + 1", goqu.C(schema.TextstorageTextTableRevisionColName)),

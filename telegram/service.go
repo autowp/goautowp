@@ -80,6 +80,8 @@ func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64,
 		return err
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	for _, chatID := range chatIDs {
 		uri, err := s.getURIByChatID(ctx, chatID)
 		if err != nil {
@@ -141,6 +143,8 @@ func (s *Service) NotifyPicture(
 	if err != nil {
 		return err
 	}
+
+	ctx = context.WithoutCancel(ctx)
 
 	for _, chatID := range chatIDs {
 		uri, err := s.getURIByChatID(ctx, chatID)

@@ -213,6 +213,8 @@ func (s *TrafficGRPCServer) AddToWhitelist(
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	err = s.traffic.Whitelist.Add(ctx, ip, "manual click")
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
