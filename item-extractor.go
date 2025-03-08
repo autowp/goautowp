@@ -243,11 +243,14 @@ func (s *ItemExtractor) ExtractRows(
 			CommentsAttentionsCount:    row.CommentsAttentionsCount,
 			HasChildSpecs:              row.HasChildSpecs,
 			HasSpecs:                   row.HasSpecs,
-			Produced:                   util.NullInt32ToScalar(row.Produced),
 			ProducedExactly:            row.ProducedExactly,
 			IsGroup:                    row.IsGroup,
 			NameOnly:                   row.NameOnly,
 			NameDefault:                row.NameDefault,
+		}
+
+		if row.Produced.Valid {
+			resultRow.Produced = &wrapperspb.Int32Value{Value: row.Produced.Int32}
 		}
 
 		if fields.GetMeta() && isModer {

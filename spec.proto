@@ -1349,7 +1349,7 @@ message APIItem {
   google.type.LatLng location = 26;
   bool has_child_specs = 28;
   bool has_specs = 29;
-  int32 produced = 30;
+  google.protobuf.Int32Value produced = 74;
   bool produced_exactly = 31;
   repeated string other_names = 32;
   Design design = 33;
