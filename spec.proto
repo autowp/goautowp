@@ -71,6 +71,7 @@ service Users {
   rpc GetUsers(APIUsersRequest) returns (APIUsersResponse) {}
   rpc GetAccounts(google.protobuf.Empty) returns (APIAccountsResponse) {}
   rpc DeleteUserAccount(DeleteUserAccountRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteUserPhoto(DeleteUserPhotoRequest) returns (google.protobuf.Empty) {}
 }
 
 service Rating {
@@ -2005,6 +2006,10 @@ message APIAccountsAccount {
 }
 
 message DeleteUserAccountRequest {
+  int64 id = 1;
+}
+
+message DeleteUserPhotoRequest {
   int64 id = 1;
 }
 

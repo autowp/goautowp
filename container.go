@@ -800,6 +800,11 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 
 		cfg := s.Config()
 
+		is, err := s.ImageStorage()
+		if err != nil {
+			return nil, err
+		}
+
 		s.usersRepository = users.NewRepository(
 			db,
 			postgresDB,
@@ -808,6 +813,7 @@ func (s *Container) UsersRepository() (*users.Repository, error) {
 			s.Keycloak(),
 			cfg.Keycloak,
 			cfg.MessageInterval,
+			is,
 		)
 	}
 

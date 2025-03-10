@@ -12,6 +12,7 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/telegram"
@@ -75,6 +76,9 @@ func createRepository(t *testing.T) (*Repository, *goqu.Database) {
 
 	client := gocloak.NewClient(cfg.Keycloak.URL)
 
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
 	usersRepository := users.NewRepository(
 		goquDB,
 		goquPostgresDB,
@@ -83,6 +87,7 @@ func createRepository(t *testing.T) (*Repository, *goqu.Database) {
 		client,
 		cfg.Keycloak,
 		cfg.MessageInterval,
+		imageStorage,
 	)
 
 	hostsManager := hosts.NewManager(cfg.Languages)

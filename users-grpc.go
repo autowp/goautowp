@@ -371,3 +371,36 @@ func (s *UsersGRPCServer) DeleteUserAccount(ctx context.Context, in *DeleteUserA
 
 	return &emptypb.Empty{}, nil
 }
+
+func (s *UsersGRPCServer) DeleteUserPhoto(ctx context.Context, in *DeleteUserPhotoRequest) (*emptypb.Empty, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "user", "ban") {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	if in.GetId() == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "id is zero")
+	}
+
+	success, err := s.userRepository.DeletePhoto(ctx, in.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if success {
+		err = s.events.Add(ctx, Event{
+			UserID:  userID,
+			Message: fmt.Sprintf("Удаление фотографии пользователя №%d", in.GetId()),
+			Users:   []int64{in.GetId()},
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &emptypb.Empty{}, nil
+}

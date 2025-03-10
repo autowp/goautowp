@@ -14,6 +14,7 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/Nerzal/gocloak/v13/pkg/jwx"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -96,6 +97,7 @@ type Repository struct {
 	keycloak        *gocloak.GoCloak
 	keycloakConfig  config.KeycloakConfig
 	messageInterval int64
+	imageStorage    *storage.Storage
 }
 
 // UserPreferences object.
@@ -112,6 +114,7 @@ func NewRepository(
 	keyCloak *gocloak.GoCloak,
 	keyCloakConfig config.KeycloakConfig,
 	messageInterval int64,
+	imageStorage *storage.Storage,
 ) *Repository {
 	return &Repository{
 		autowpDB:        autowpDB,
@@ -121,6 +124,7 @@ func NewRepository(
 		keycloak:        keyCloak,
 		keycloakConfig:  keyCloakConfig,
 		messageInterval: messageInterval,
+		imageStorage:    imageStorage,
 	}
 }
 
@@ -1106,4 +1110,32 @@ func (s *Repository) RemoveUserAccount(ctx context.Context, id int64) error {
 		Executor().ExecContext(ctx)
 
 	return err
+}
+
+func (s *Repository) DeletePhoto(ctx context.Context, userID int64) (bool, error) {
+	row, err := s.User(ctx, &query.UserListOptions{ID: userID}, UserFields{}, OrderByNone)
+	if err != nil {
+		return false, err
+	}
+
+	ctx = context.WithoutCancel(ctx)
+
+	if row.Img != nil {
+		_, err = s.autowpDB.Update(schema.UserTable).
+			Set(goqu.Record{schema.UserTableImgColName: nil}).
+			Where(schema.UserTableIDCol.Eq(userID)).
+			Executor().ExecContext(ctx)
+		if err != nil {
+			return false, err
+		}
+
+		err = s.imageStorage.RemoveImage(ctx, *row.Img)
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
