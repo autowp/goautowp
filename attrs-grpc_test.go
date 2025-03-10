@@ -2321,5 +2321,5 @@ func TestSetUserValuesIsEmpty(t *testing.T) {
 		return value.GetAttributeId() == schema.EngineTypeAttr
 	})
 	require.NotEqualValues(t, -1, index)
-	require.True(t, values.GetItems()[index].Value.IsEmpty)
+	require.True(t, values.GetItems()[index].GetValue().GetIsEmpty())
 }
