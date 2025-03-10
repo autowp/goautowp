@@ -1316,14 +1316,15 @@ message ItemVehicleTypeListOptions {
 }
 
 message GetTreeRequest {
-  string id = 1;
+  int64 id = 1;
+  string language = 2;
 }
 
 message APITreeItem {
-  string id = 1;
-  string name = 2;
+  int64 id = 1;
+  string name_html = 2;
   repeated APITreeItem childs = 3;
-  int32 type = 4;
+  ItemParentType type = 4;
 }
 
 message APIItem {

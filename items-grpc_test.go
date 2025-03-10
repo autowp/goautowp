@@ -3993,3 +3993,33 @@ func TestUpdateBeginOrderCache(t *testing.T) {
 		EndModelYearFraction:   "¼",
 	})
 }
+
+func TestGetTree(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg := config.LoadConfig(".")
+	client := NewItemsClient(conn)
+
+	// admin
+	kc := cnt.Keycloak()
+	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, adminToken)
+
+	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	randomInt := random.Int()
+
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("person-%d", randomInt),
+		ItemTypeId: ItemType_ITEM_TYPE_PERSON,
+		BeginYear:  1999,
+		EndYear:    2000,
+	})
+
+	res, err := client.GetTree(apiCtx, &GetTreeRequest{Id: itemID, Language: "en"})
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
+}

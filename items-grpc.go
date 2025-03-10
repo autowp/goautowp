@@ -1473,14 +1473,8 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 	}, nil
 }
 
-func (s *ItemsGRPCServer) formatItemNameText(row *items.Item, lang string) (string, error) {
-	if row == nil {
-		return "", nil
-	}
-
-	nameFormatter := items.NewItemNameFormatter(s.i18n)
-
-	return nameFormatter.FormatText(items.ItemNameFormatterOptions{
+func (s *ItemsGRPCServer) formatterOptions(row *items.Item) items.ItemNameFormatterOptions {
+	return items.ItemNameFormatterOptions{
 		BeginModelYear:         util.NullInt32ToScalar(row.BeginModelYear),
 		EndModelYear:           util.NullInt32ToScalar(row.EndModelYear),
 		BeginModelYearFraction: util.NullStringToString(row.BeginModelYearFraction),
@@ -1494,7 +1488,27 @@ func (s *ItemsGRPCServer) formatItemNameText(row *items.Item, lang string) (stri
 		Today:                  util.NullBoolToBoolPtr(row.Today),
 		BeginMonth:             util.NullInt16ToScalar(row.BeginMonth),
 		EndMonth:               util.NullInt16ToScalar(row.EndMonth),
-	}, lang)
+	}
+}
+
+func (s *ItemsGRPCServer) formatItemNameText(row *items.Item, lang string) (string, error) {
+	if row == nil {
+		return "", nil
+	}
+
+	nameFormatter := items.NewItemNameFormatter(s.i18n)
+
+	return nameFormatter.FormatText(s.formatterOptions(row), lang)
+}
+
+func (s *ItemsGRPCServer) formatItemNameHTML(row *items.Item, lang string) (string, error) {
+	if row == nil {
+		return "", nil
+	}
+
+	nameFormatter := items.NewItemNameFormatter(s.i18n)
+
+	return nameFormatter.FormatHTML(s.formatterOptions(row), lang)
 }
 
 func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) (*emptypb.Empty, error) {
@@ -3502,4 +3516,76 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 	// "vehicle_type_id": []string{"vehicle_type_id", "moder/vehicle/changes/car-type-%s-%s"},
 
 	return changes, nil
+}
+
+func (s *ItemsGRPCServer) carTreeWalk(
+	ctx context.Context, car *items.Item, lang string, parentType schema.ItemParentType,
+) (*APITreeItem, error) {
+	nameHTML, err := s.formatItemNameHTML(car, lang)
+	if err != nil {
+		return nil, err
+	}
+
+	data := APITreeItem{
+		Id:       car.ID,
+		NameHtml: nameHTML,
+		Childs:   []*APITreeItem{},
+		Type:     extractItemParentType(parentType),
+	}
+
+	itemParentRows, _, err := s.repository.ItemParents(ctx, &query.ItemParentListOptions{
+		ParentID: car.ID,
+	}, items.ItemParentFields{}, items.ItemParentOrderByAuto)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, itemParentRow := range itemParentRows {
+		carRow, err := s.repository.Item(ctx, &query.ItemListOptions{
+			ItemID: itemParentRow.ItemID,
+		}, &items.ListFields{NameHTML: true})
+		if err != nil {
+			return nil, err
+		}
+
+		child, err := s.carTreeWalk(ctx, carRow, lang, itemParentRow.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		data.Childs = append(data.Childs, child)
+	}
+
+	return &data, nil
+}
+
+func (s *ItemsGRPCServer) GetTree(ctx context.Context, in *GetTreeRequest) (*APITreeItem, error) {
+	_, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if !s.enforcer.Enforce(role, "global", "moderate") {
+		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	if in.GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "id is zero")
+	}
+
+	item, err := s.repository.Item(ctx, &query.ItemListOptions{ItemID: in.GetId()}, nil)
+	if err != nil {
+		if errors.Is(err, items.ErrItemNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	res, err := s.carTreeWalk(ctx, item, in.GetLanguage(), schema.ItemParentTypeDefault)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return res, nil
 }
