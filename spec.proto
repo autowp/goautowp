@@ -23,6 +23,7 @@ service Autowp {
   rpc GetReCaptchaConfig(google.protobuf.Empty) returns (ReCaptchaConfig) {}
   rpc GetSpecs(google.protobuf.Empty) returns (SpecsItems) {}
   rpc GetVehicleTypes(google.protobuf.Empty) returns (VehicleTypeItems) {}
+  rpc GetTimezones(google.protobuf.Empty) returns (Timezones) {}
 }
 
 service Forums {
@@ -531,6 +532,10 @@ message VehicleType {
 
 message VehicleTypeItems {
   repeated VehicleType items = 1;
+}
+
+message Timezones {
+  repeated string timezones = 1;
 }
 
 message GetBrandVehicleTypesRequest {

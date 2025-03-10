@@ -30,6 +30,7 @@ const (
 	Autowp_GetReCaptchaConfig_FullMethodName   = "/goautowp.Autowp/GetReCaptchaConfig"
 	Autowp_GetSpecs_FullMethodName             = "/goautowp.Autowp/GetSpecs"
 	Autowp_GetVehicleTypes_FullMethodName      = "/goautowp.Autowp/GetVehicleTypes"
+	Autowp_GetTimezones_FullMethodName         = "/goautowp.Autowp/GetTimezones"
 )
 
 // AutowpClient is the client API for Autowp service.
@@ -46,6 +47,7 @@ type AutowpClient interface {
 	GetReCaptchaConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ReCaptchaConfig, error)
 	GetSpecs(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SpecsItems, error)
 	GetVehicleTypes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VehicleTypeItems, error)
+	GetTimezones(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Timezones, error)
 }
 
 type autowpClient struct {
@@ -156,6 +158,16 @@ func (c *autowpClient) GetVehicleTypes(ctx context.Context, in *emptypb.Empty, o
 	return out, nil
 }
 
+func (c *autowpClient) GetTimezones(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Timezones, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Timezones)
+	err := c.cc.Invoke(ctx, Autowp_GetTimezones_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AutowpServer is the server API for Autowp service.
 // All implementations must embed UnimplementedAutowpServer
 // for forward compatibility.
@@ -170,6 +182,7 @@ type AutowpServer interface {
 	GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCaptchaConfig, error)
 	GetSpecs(context.Context, *emptypb.Empty) (*SpecsItems, error)
 	GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error)
+	GetTimezones(context.Context, *emptypb.Empty) (*Timezones, error)
 	mustEmbedUnimplementedAutowpServer()
 }
 
@@ -209,6 +222,9 @@ func (UnimplementedAutowpServer) GetSpecs(context.Context, *emptypb.Empty) (*Spe
 }
 func (UnimplementedAutowpServer) GetVehicleTypes(context.Context, *emptypb.Empty) (*VehicleTypeItems, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVehicleTypes not implemented")
+}
+func (UnimplementedAutowpServer) GetTimezones(context.Context, *emptypb.Empty) (*Timezones, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTimezones not implemented")
 }
 func (UnimplementedAutowpServer) mustEmbedUnimplementedAutowpServer() {}
 func (UnimplementedAutowpServer) testEmbeddedByValue()                {}
@@ -411,6 +427,24 @@ func _Autowp_GetVehicleTypes_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Autowp_GetTimezones_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AutowpServer).GetTimezones(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Autowp_GetTimezones_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AutowpServer).GetTimezones(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Autowp_ServiceDesc is the grpc.ServiceDesc for Autowp service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -457,6 +491,10 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetVehicleTypes",
 			Handler:    _Autowp_GetVehicleTypes_Handler,
+		},
+		{
+			MethodName: "GetTimezones",
+			Handler:    _Autowp_GetTimezones_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -102,3 +102,13 @@ func TestGetSpecs(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestTimezones(t *testing.T) {
+	t.Parallel()
+
+	grpcClient := NewAutowpClient(conn)
+
+	res, err := grpcClient.GetTimezones(t.Context(), &emptypb.Empty{})
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
+}
