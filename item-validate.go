@@ -21,9 +21,9 @@ func (s *APIItem) Validate( //nolint: maintidx
 	ctx context.Context, repository *items.Repository, maskPaths []string, enforcer *casbin.Enforcer, role string,
 ) ([]*errdetails.BadRequest_FieldViolation, error) {
 	if maskPaths == nil || util.Contains(maskPaths, "is_group") {
-		if s.GetId() > 0 {
-			switch s.GetItemTypeId() {
-			case ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE, ItemType_ITEM_TYPE_UNKNOWN:
+		switch s.GetItemTypeId() {
+		case ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE, ItemType_ITEM_TYPE_UNKNOWN:
+			if s.GetId() > 0 {
 				_, err := repository.ItemParent(ctx, &query.ItemParentListOptions{
 					ParentID: s.GetId(),
 				}, items.ItemParentFields{})
@@ -34,16 +34,16 @@ func (s *APIItem) Validate( //nolint: maintidx
 				if err == nil {
 					s.IsGroup = true
 				}
-
-			case ItemType_ITEM_TYPE_CATEGORY,
-				ItemType_ITEM_TYPE_TWINS,
-				ItemType_ITEM_TYPE_BRAND,
-				ItemType_ITEM_TYPE_FACTORY,
-				ItemType_ITEM_TYPE_MUSEUM,
-				ItemType_ITEM_TYPE_PERSON,
-				ItemType_ITEM_TYPE_COPYRIGHT:
-				s.IsGroup = true
 			}
+
+		case ItemType_ITEM_TYPE_CATEGORY,
+			ItemType_ITEM_TYPE_TWINS,
+			ItemType_ITEM_TYPE_BRAND,
+			ItemType_ITEM_TYPE_FACTORY,
+			ItemType_ITEM_TYPE_MUSEUM,
+			ItemType_ITEM_TYPE_PERSON,
+			ItemType_ITEM_TYPE_COPYRIGHT:
+			s.IsGroup = true
 		}
 	}
 
