@@ -1673,6 +1673,7 @@ const (
 	Users_DeleteUser_FullMethodName                       = "/goautowp.Users/DeleteUser"
 	Users_GetUser_FullMethodName                          = "/goautowp.Users/GetUser"
 	Users_Me_FullMethodName                               = "/goautowp.Users/Me"
+	Users_UpdateUser_FullMethodName                       = "/goautowp.Users/UpdateUser"
 	Users_GetUserPreferences_FullMethodName               = "/goautowp.Users/GetUserPreferences"
 	Users_DisableUserCommentsNotifications_FullMethodName = "/goautowp.Users/DisableUserCommentsNotifications"
 	Users_EnableUserCommentsNotifications_FullMethodName  = "/goautowp.Users/EnableUserCommentsNotifications"
@@ -1689,6 +1690,7 @@ type UsersClient interface {
 	DeleteUser(ctx context.Context, in *APIDeleteUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUser(ctx context.Context, in *APIGetUserRequest, opts ...grpc.CallOption) (*APIUser, error)
 	Me(ctx context.Context, in *APIMeRequest, opts ...grpc.CallOption) (*APIUser, error)
+	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUserPreferences(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*APIUserPreferencesResponse, error)
 	DisableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	EnableUserCommentsNotifications(ctx context.Context, in *APIUserPreferencesRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -1730,6 +1732,16 @@ func (c *usersClient) Me(ctx context.Context, in *APIMeRequest, opts ...grpc.Cal
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(APIUser)
 	err := c.cc.Invoke(ctx, Users_Me_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersClient) UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Users_UpdateUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1813,6 +1825,7 @@ type UsersServer interface {
 	DeleteUser(context.Context, *APIDeleteUserRequest) (*emptypb.Empty, error)
 	GetUser(context.Context, *APIGetUserRequest) (*APIUser, error)
 	Me(context.Context, *APIMeRequest) (*APIUser, error)
+	UpdateUser(context.Context, *UpdateUserRequest) (*emptypb.Empty, error)
 	GetUserPreferences(context.Context, *APIUserPreferencesRequest) (*APIUserPreferencesResponse, error)
 	DisableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
 	EnableUserCommentsNotifications(context.Context, *APIUserPreferencesRequest) (*emptypb.Empty, error)
@@ -1838,6 +1851,9 @@ func (UnimplementedUsersServer) GetUser(context.Context, *APIGetUserRequest) (*A
 }
 func (UnimplementedUsersServer) Me(context.Context, *APIMeRequest) (*APIUser, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Me not implemented")
+}
+func (UnimplementedUsersServer) UpdateUser(context.Context, *UpdateUserRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
 }
 func (UnimplementedUsersServer) GetUserPreferences(context.Context, *APIUserPreferencesRequest) (*APIUserPreferencesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserPreferences not implemented")
@@ -1931,6 +1947,24 @@ func _Users_Me_Handler(srv interface{}, ctx context.Context, dec func(interface{
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UsersServer).Me(ctx, req.(*APIMeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Users_UpdateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServer).UpdateUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Users_UpdateUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServer).UpdateUser(ctx, req.(*UpdateUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2079,6 +2113,10 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Me",
 			Handler:    _Users_Me_Handler,
+		},
+		{
+			MethodName: "UpdateUser",
+			Handler:    _Users_UpdateUser_Handler,
 		},
 		{
 			MethodName: "GetUserPreferences",

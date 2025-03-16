@@ -14,6 +14,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 const TestImageFile = "./image/storage/_files/Towers_Schiphol_small.jpg"
@@ -244,4 +245,51 @@ func TestGetUsersSearch(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, res.GetItems())
 	require.NotEmpty(t, res.GetItems()[0])
+}
+
+func TestUpdateUser(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	cfg := config.LoadConfig(".")
+
+	kc := cnt.Keycloak()
+	client := NewUsersClient(conn)
+
+	// tester
+	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	require.NoError(t, err)
+	require.NotNil(t, testerToken)
+
+	ctx = metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken)
+
+	me, err := client.Me(
+		ctx,
+		&APIMeRequest{},
+	)
+	require.NoError(t, err)
+
+	_, err = client.UpdateUser(
+		ctx,
+		&UpdateUserRequest{
+			User: &APIUser{
+				Id:       me.GetId(),
+				Timezone: "Europe/Dublin",
+				Language: "ru",
+			},
+			UpdateMask: &fieldmaskpb.FieldMask{
+				Paths: []string{"language", "timezone"},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	res, err := client.GetUser(
+		ctx,
+		&APIGetUserRequest{UserId: me.GetId(), Fields: &UserFields{Timezone: true, Language: true}},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "Europe/Dublin", res.GetTimezone())
+	require.Equal(t, "ru", res.GetLanguage())
 }

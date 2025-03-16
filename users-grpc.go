@@ -7,7 +7,9 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/query"
+	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -400,6 +402,57 @@ func (s *UsersGRPCServer) DeleteUserPhoto(ctx context.Context, in *DeleteUserPho
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *UpdateUserRequest) (*emptypb.Empty, error) {
+	userID, _, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	values := in.GetUser()
+
+	if values.GetId() == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "id is zero")
+	}
+
+	if userID != values.GetId() {
+		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
+	}
+
+	maskPaths := in.GetUpdateMask().GetPaths()
+
+	if maskPaths == nil {
+		maskPaths = []string{}
+	}
+
+	InvalidParams, err := values.Validate(s.languages, maskPaths)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if len(InvalidParams) > 0 {
+		return nil, wrapFieldViolations(InvalidParams)
+	}
+
+	set := schema.UsersRow{
+		ID: userID,
+	}
+
+	if util.Contains(maskPaths, "language") {
+		set.Language = values.GetLanguage()
+	}
+
+	if util.Contains(maskPaths, "timezone") {
+		set.Timezone = values.GetTimezone()
+	}
+
+	err = s.userRepository.UpdateUser(ctx, set, maskPaths)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil

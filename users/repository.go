@@ -1139,3 +1139,27 @@ func (s *Repository) DeletePhoto(ctx context.Context, userID int64) (bool, error
 
 	return false, nil
 }
+
+func (s *Repository) UpdateUser(ctx context.Context, row schema.UsersRow, mask []string) error {
+	set := goqu.Record{}
+
+	if util.Contains(mask, "language") {
+		set[schema.UserTableLanguageColName] = row.Language
+	}
+
+	if util.Contains(mask, "timezone") {
+		set[schema.UserTableTimezoneColName] = row.Timezone
+	}
+
+	if len(set) > 0 {
+		_, err := s.autowpDB.Update(schema.UserTable).
+			Set(set).
+			Where(schema.UserTableIDCol.Eq(row.ID)).
+			Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

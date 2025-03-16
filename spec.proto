@@ -66,6 +66,7 @@ service Users {
   rpc DeleteUser(APIDeleteUserRequest) returns (google.protobuf.Empty) {}
   rpc GetUser(APIGetUserRequest) returns (APIUser) {}
   rpc Me(APIMeRequest) returns (APIUser) {}
+  rpc UpdateUser(UpdateUserRequest) returns (google.protobuf.Empty) {}
   rpc GetUserPreferences(APIUserPreferencesRequest) returns (APIUserPreferencesResponse) {}
   rpc DisableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
   rpc EnableUserCommentsNotifications(APIUserPreferencesRequest) returns (google.protobuf.Empty) {}
@@ -796,6 +797,12 @@ message APIMessageSummary {
 message APIDeleteUserRequest {
   int64 user_id = 1;
   string password = 2;
+}
+
+message UpdateUserRequest {
+  APIUser user = 1;
+
+  google.protobuf.FieldMask update_mask = 2;
 }
 
 message APIMeRequest {
