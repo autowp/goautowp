@@ -336,6 +336,36 @@ func mainReturnWithCode() int { //nolint: maintidx
 					)
 				},
 			},
+			{
+				Name: "catalogue-refresh-brand-vehicle",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.RefreshItemParentAllAuto(ctx)
+				},
+			},
+			{
+				Name: "catalogue-rebuild-item-order-cache",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.RebuildItemOrderCache(ctx)
+				},
+			},
+			{
+				Name: "pictures-df-index",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.PicturesDfIndex(ctx)
+				},
+			},
+			{
+				Name: "pictures-fix-filenames",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.PicturesFixFilenames(ctx)
+				},
+			},
+			{
+				Name: "build-brands-sprite",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.BuildBrandsSprite(ctx)
+				},
+			},
 		},
 	}
 

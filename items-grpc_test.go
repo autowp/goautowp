@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
@@ -2550,7 +2549,7 @@ func TestItemOfDayPicture(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	// admin

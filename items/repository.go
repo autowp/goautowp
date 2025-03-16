@@ -519,6 +519,7 @@ func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
 		schema.ItemTableIsGroupColName:          s.isGroupColumn,
 		schema.ItemTableProducedColName:         s.producedColumn,
 		schema.ItemTableProducedExactlyColName:  s.producedExactlyColumn,
+		schema.ItemTableLogoIDColName:           s.logoColumn,
 	}
 
 	if fields == nil {
@@ -3605,6 +3606,26 @@ func (s *Repository) RefreshItemParentLanguage(
 	return nil
 }
 
+func (s *Repository) RefreshItemParentAllAuto(ctx context.Context) error {
+	logrus.Infof("RefreshItemParentAllAuto()")
+
+	itemParentRows, _, err := s.ItemParents(ctx, &query.ItemParentListOptions{
+		NotManualCatname: true,
+	}, ItemParentFields{}, ItemParentOrderByNone)
+	if err != nil {
+		return err
+	}
+
+	for _, itemParentRow := range itemParentRows {
+		_, err = s.refreshAuto(ctx, itemParentRow.ParentID, itemParentRow.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *Repository) Names(ctx context.Context, id int64) (map[string]string, error) {
 	var sts []struct {
 		Language string `db:"language"`
@@ -4237,6 +4258,37 @@ func fractionToMonth(fraction sql.NullString) time.Month {
 	}
 
 	return fractionDefaultMonth
+}
+
+func (s *Repository) RebuildItemOrderCache(ctx context.Context) error {
+	logrus.Infoln("RebuildItemOrderCache()")
+
+	const batchSize = 100
+
+	for page := 1; ; page++ {
+		list, pages, err := s.List(ctx, &query.ItemListOptions{
+			Limit: batchSize,
+			Page:  uint32(page), //nolint: gosec
+		}, nil, OrderByIDAsc, true)
+		if err != nil {
+			return err
+		}
+
+		for _, i := range list {
+			logrus.Infof("UpdateOrderCache(%d)", i.ID)
+
+			_, err = s.UpdateOrderCache(ctx, i.ID)
+			if err != nil {
+				return err
+			}
+		}
+
+		if pages.Last == int32(page) { //nolint: gosec
+			break
+		}
+	}
+
+	return nil
 }
 
 func (s *Repository) UpdateOrderCache(ctx context.Context, itemID int64) (bool, error) {

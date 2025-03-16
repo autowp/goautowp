@@ -19,7 +19,7 @@ duplicate_finder:
 attrs:
   update_values_queue: attrs_update_values
 autowp-dsn: root:password@tcp(127.0.0.1:3306)/autowp?charset=utf8mb4&collation=utf8mb4_0900_ai_ci&parseTime=true&loc=UTC
-file_storage:
+file-storage:
   bucket: files
   srcOverride:
     host: '127.0.0.1'
@@ -28,11 +28,9 @@ file_storage:
     credentials:
       key: AKIAIOSFODNN7EXAMPLE
       secret: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-    region: ''
-    endpoints:
-    - http://minio:19000
-    - http://minio2:19000
-    s3_force_path_style: true
+    region: ""
+    endpoint: http://minio:19000
+    use_path_style_endpoint: true
 
 rabbitmq: amqp://guest:guest@127.0.0.1:5672/
 monitoring_queue: input
@@ -148,7 +146,7 @@ image-storage:
       fit-type: 0
       width: 160
       height: 120
-      background: #fff
+      background: "#fff"
       strip: true
     icon:
       fit-type: 0
@@ -160,7 +158,7 @@ image-storage:
       fit-type: 1
       width: 120
       height: 120
-      background: #F5F5F5
+      background: "#F5F5F5"
       strip: true
     photo:
       fit-type: 2
@@ -179,7 +177,7 @@ image-storage:
       fit-type: 1
       width: 70
       height: 70
-      background: #EDE9DE
+      background: "#EDE9DE"
       strip: true
     brandicon2:
       fit-type: 2
@@ -194,7 +192,7 @@ image-storage:
       strip: true
       format: jpeg
       proportional-crop: true
-      background: #fff
+      background: "#fff"
     picture-thumb-medium:
       fit-type: 0
       width: 350

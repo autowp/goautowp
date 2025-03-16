@@ -46,3 +46,10 @@ image-storage:
 redis: redis://127.0.0.1:6379
 captcha: false
 message-interval: 0
+file-storage:
+  s3:
+    region: "us-east-1"
+    endpoint: http://127.0.0.1:19000
+    credentials:
+      key: "AKIAIOSFODNN7EXAMPLE"
+      secret: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"

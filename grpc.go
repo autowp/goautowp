@@ -3,7 +3,6 @@ package goautowp
 import (
 	"context"
 	"errors"
-	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -24,7 +23,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var errNoEndpointsProvided = errors.New("no endpoints provided")
+var errNoEndpointProvided = errors.New("no endpoints provided")
 
 func APIImageToGRPC(image *storage.Image) *APIImage {
 	if image == nil {
@@ -118,23 +117,19 @@ func (s *GRPCServer) GetReCaptchaConfig(context.Context, *emptypb.Empty) (*ReCap
 }
 
 func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error) {
-	if len(s.fileStorageConfig.S3.Endpoints) == 0 {
-		return nil, errNoEndpointsProvided
+	if len(s.fileStorageConfig.S3.Endpoint) == 0 {
+		return nil, errNoEndpointProvided
 	}
 
-	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
-
-	endpoint := s.fileStorageConfig.S3.Endpoints[random.Intn(len(s.fileStorageConfig.S3.Endpoints))]
-
-	parsedURL, err := url.Parse(endpoint)
+	parsedURL, err := url.Parse(s.fileStorageConfig.S3.Endpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/brands.png"
+	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/" + brandsSpritePNGFilename
 	imageURL := parsedURL.String()
 
-	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/brands.css"
+	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/" + brandsSpriteCSSFilename
 	cssURL := parsedURL.String()
 
 	return &BrandIcons{ //nolint:exhaustruct

@@ -47,10 +47,10 @@ type FileStorageConfig struct {
 
 // S3Config S3Config.
 type S3Config struct {
-	Credentials      S3CredentialsConfig `mapstructure:"credentials"         yaml:"credentials"`
-	Region           string              `mapstructure:"region"              yaml:"region"`
-	Endpoints        []string            `mapstructure:"endpoints"           yaml:"endpoints"`
-	S3ForcePathStyle bool                `mapstructure:"s3_force_path_style" yaml:"s3_force_path_style"`
+	Credentials          S3CredentialsConfig `mapstructure:"credentials"             yaml:"credentials"`
+	Region               string              `mapstructure:"region"                  yaml:"region"`
+	Endpoint             string              `mapstructure:"endpoint"                yaml:"endpoint"`
+	UsePathStyleEndpoint bool                `mapstructure:"use_path_style_endpoint" yaml:"use_path_style_endpoint"`
 }
 
 // S3CredentialsConfig S3CredentialsConfig.
@@ -122,7 +122,7 @@ type Config struct {
 	DuplicateFinder    DuplicateFinderConfig     `mapstructure:"duplicate_finder"     yaml:"duplicate_finder"`
 	AutowpDSN          string                    `mapstructure:"autowp-dsn"           yaml:"autowp-dsn"`
 	AutowpMigrations   MigrationsConfig          `mapstructure:"autowp-migrations"    yaml:"autowp-migrations"`
-	FileStorage        FileStorageConfig         `mapstructure:"file_storage"         yaml:"file_storage"`
+	FileStorage        FileStorageConfig         `mapstructure:"file-storage"         yaml:"file-storage"`
 	RabbitMQ           string                    `mapstructure:"rabbitmq"             yaml:"rabbitmq"`
 	MonitoringQueue    string                    `mapstructure:"monitoring_queue"     yaml:"monitoring_queue"`
 	PrivateRest        RestConfig                `mapstructure:"private-rest"         yaml:"private-rest"`

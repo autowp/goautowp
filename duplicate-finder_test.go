@@ -3,16 +3,12 @@ package goautowp
 import (
 	"testing"
 
-	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDuplicateFinder(t *testing.T) {
 	t.Parallel()
-
-	cfg := config.LoadConfig(".")
 
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
@@ -22,7 +18,7 @@ func TestDuplicateFinder(t *testing.T) {
 
 	ctx := t.Context()
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	id1, _ := addPicture(t, imageStorage, goquDB, "./test/large.jpg", schema.PictureStatusInbox)

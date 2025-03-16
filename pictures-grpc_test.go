@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
@@ -125,7 +124,7 @@ func TestModerVote(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -243,7 +242,7 @@ func TestFlopNormalizeAndRepair(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -310,7 +309,7 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -400,7 +399,7 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -477,7 +476,7 @@ func TestPictureCrop(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -530,7 +529,7 @@ func TestPictureCropByOneAxis(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -591,7 +590,7 @@ func TestInvalidPictureCrop(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -671,7 +670,7 @@ func TestClearReplacePicture(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -715,7 +714,7 @@ func TestSetPicturePoint(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -820,7 +819,7 @@ func TestUpdatePicture(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -903,7 +902,7 @@ func TestSetPictureCopyrights(t *testing.T) {
 
 	textStorageRepository := textstorage.New(goquDB)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -977,7 +976,7 @@ func TestSetPictureStatus(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -1097,7 +1096,7 @@ func TestReplacePicture(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -1241,7 +1240,7 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	itemName := fmt.Sprintf("vehicle-%d", random.Int())
@@ -1339,7 +1338,7 @@ func TestGetPicturePath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	randomInt := random.Int()
@@ -1722,7 +1721,7 @@ func TestCorrectFileNamesVote(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
@@ -1877,7 +1876,7 @@ func TestGetGallery(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
 	kc := cnt.Keycloak()

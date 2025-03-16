@@ -32,6 +32,7 @@ type ItemParentListOptions struct {
 	Limit                             uint32
 	Page                              uint32
 	Catname                           string
+	NotManualCatname                  bool
 }
 
 func (s *ItemParentListOptions) Clone() *ItemParentListOptions {
@@ -146,6 +147,10 @@ func (s *ItemParentListOptions) apply(alias string, sqSelect *goqu.SelectDataset
 
 	if s.Catname != "" {
 		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableCatnameColName).Eq(s.Catname))
+	}
+
+	if s.NotManualCatname {
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableManualCatnameColName).IsFalse())
 	}
 
 	sqSelect, subGroupBy, err = s.ParentItems.JoinToIDAndApply(

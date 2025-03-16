@@ -3,6 +3,7 @@ package pictures
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
@@ -24,6 +26,8 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/paulmach/orb"
+	"github.com/rabbitmq/amqp091-go"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -58,6 +62,12 @@ var (
 	frontPerspectives = []int64{schema.Perspective3Div4Left, schema.Perspective3Div4Right, schema.PerspectiveFront}
 )
 
+// DuplicateFinderInputMessage InputMessage.
+type DuplicateFinderInputMessage struct {
+	PictureID int64  `json:"picture_id"`
+	URL       string `json:"url"`
+}
+
 type VoteSummary struct {
 	Value    int32
 	Positive int32
@@ -81,6 +91,7 @@ type Repository struct {
 	itemsRepository       *items.Repository
 	perspectiveCache      map[int32][]int32
 	perspectiveCacheMutex sync.Mutex
+	dfConfig              config.DuplicateFinderConfig
 }
 
 type PictureFields struct {
@@ -131,7 +142,7 @@ const (
 
 func NewRepository(
 	db *goqu.Database, imageStorage *storage.Storage, textStorageRepository *textstorage.Repository,
-	itemsRepository *items.Repository,
+	itemsRepository *items.Repository, dfConfig config.DuplicateFinderConfig,
 ) *Repository {
 	return &Repository{
 		db:                    db,
@@ -140,6 +151,7 @@ func NewRepository(
 		itemsRepository:       itemsRepository,
 		perspectiveCache:      make(map[int32][]int32),
 		perspectiveCacheMutex: sync.Mutex{},
+		dfConfig:              dfConfig,
 	}
 }
 
@@ -1766,6 +1778,72 @@ func (s *Repository) PerspectivesPairs(ctx context.Context, ids []int64) (map[in
 	return result, nil
 }
 
+func (s *Repository) DfIndex(ctx context.Context) error {
+	var sts []struct {
+		ID      int64 `db:"id"`
+		ImageID int64 `db:"image_id"`
+	}
+
+	err := s.db.Select(schema.PictureTableIDCol, schema.PictureTableImageIDCol).
+		From(schema.PictureTable).
+		LeftJoin(schema.DfHashTable, goqu.On(schema.PictureTableIDCol.Eq(schema.DfHashTablePictureIDCol))).
+		Where(
+			schema.DfHashTablePictureIDCol.IsNull(),
+			schema.PictureTableImageIDCol.IsNotNull(),
+		).
+		ScanStructsContext(ctx, &sts)
+	if err != nil {
+		return err
+	}
+
+	for _, st := range sts {
+		logrus.Infof("%d / %d", st.ID, st.ImageID)
+
+		image, err := s.imageStorage.Image(ctx, int(st.ImageID))
+		if err != nil {
+			return err
+		}
+
+		err = s.queueIndexImage(ctx, st.ID, image.Src())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) queueIndexImage(ctx context.Context, id int64, url string) error {
+	rabbitMQ, err := util.ConnectRabbitMQ(s.dfConfig.RabbitMQ)
+	if err != nil {
+		logrus.Error(err)
+
+		return err
+	}
+
+	ch, err := rabbitMQ.Channel()
+	if err != nil {
+		return err
+	}
+	defer util.Close(ch)
+
+	msg := DuplicateFinderInputMessage{
+		PictureID: id,
+		URL:       url,
+	}
+
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	return ch.PublishWithContext(ctx, s.dfConfig.Queue, "*", false, false, amqp091.Publishing{
+		DeliveryMode: amqp091.Persistent,
+		ContentType:  "application/json",
+		Body:         body,
+	})
+}
+
 func (s *Repository) DfDistanceSelect(options *query.DfDistanceListOptions) (*goqu.SelectDataset, error) {
 	alias := query.DfDistanceAlias
 	aliasTable := goqu.T(alias)
@@ -1849,6 +1927,54 @@ func (s *Repository) PerspectivePageGroupIDs(ctx context.Context, pageID int32) 
 	s.perspectiveCache[pageID] = ids
 
 	return ids, nil
+}
+
+func (s *Repository) CorrectAllFileNames(ctx context.Context) error {
+	const perPage = 100
+
+	for i := 0; ; i++ {
+		logrus.Infof("Page %d", i)
+
+		var sts []struct {
+			ID       int64  `db:"id"`
+			Filepath string `db:"filepath"`
+		}
+
+		err := s.db.Select(schema.PictureTableIDCol, schema.ImageTableFilepathCol).
+			From(schema.PictureTable).
+			Join(schema.ImageTable, goqu.On(schema.PictureTableImageIDCol.Eq(schema.ImageTableIDCol))).
+			Order(schema.PictureTableIDCol.Asc()).
+			Offset(uint(i*perPage)). //nolint: gosec
+			Limit(perPage).ScanStructsContext(ctx, &sts)
+		if err != nil {
+			return err
+		}
+
+		if len(sts) == 0 {
+			break
+		}
+
+		for _, row := range sts {
+			pattern, err := s.FileNamePattern(ctx, row.ID)
+			if err != nil {
+				return err
+			}
+
+			match := strings.Contains(row.Filepath, pattern)
+			if match {
+				logrus.Infof("%d# %s is ok", row.ID, row.Filepath)
+			} else {
+				logrus.Infof("%d# %s not match pattern %s", row.ID, row.Filepath, pattern)
+
+				err = s.CorrectFileNames(ctx, row.ID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *Repository) CorrectFileNames(ctx context.Context, id int64) error {

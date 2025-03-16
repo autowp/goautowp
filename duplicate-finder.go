@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
@@ -29,12 +30,6 @@ const (
 // DuplicateFinder Main Object.
 type DuplicateFinder struct {
 	db *goqu.Database
-}
-
-// DuplicateFinderInputMessage InputMessage.
-type DuplicateFinderInputMessage struct {
-	PictureID int64  `json:"picture_id"`
-	URL       string `json:"url"`
 }
 
 // NewDuplicateFinder constructor.
@@ -102,7 +97,7 @@ func (s *DuplicateFinder) ListenAMQP(ctx context.Context, url string, queue stri
 				continue
 			}
 
-			var message DuplicateFinderInputMessage
+			var message pictures.DuplicateFinderInputMessage
 
 			err := json.Unmarshal(msg.Body, &message)
 			if err != nil {

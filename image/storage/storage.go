@@ -359,7 +359,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 	}
 
 	// format
-	format := s.format(formatName)
+	format := s.Format(formatName)
 	if format == nil {
 		return 0, fmt.Errorf("%w: `%s`", errFormatNotFound, formatName)
 	}
@@ -514,7 +514,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 	return formattedImageID, nil
 }
 
-func (s *Storage) format(name string) *sampler.Format {
+func (s *Storage) Format(name string) *sampler.Format {
 	format, ok := s.formats[name]
 	if ok {
 		return format
@@ -577,7 +577,7 @@ func (s *Storage) addImageFromImagick(
 				return err
 			}
 
-			_, err = s3c.PutObject(&s3.PutObjectInput{
+			_, err = s3c.PutObjectWithContext(ctx, &s3.PutObjectInput{
 				Key:         &fileName,
 				Body:        blobReader,
 				Bucket:      &bucket,
@@ -814,7 +814,7 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 	bucket := dir.Bucket()
 	key := row.Filepath
 
-	_, err = s3c.DeleteObject(&s3.DeleteObjectInput{
+	_, err = s3c.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
 	})
@@ -947,7 +947,7 @@ func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options Gene
 
 			fpath := img.Filepath
 
-			_, err = s3c.DeleteObject(&s3.DeleteObjectInput{
+			_, err = s3c.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 				Bucket: &bucket,
 				Key:    &fpath,
 			})
@@ -1027,7 +1027,7 @@ func (s *Storage) AddImageFromFile(
 			}
 			defer util.Close(handle)
 
-			_, err = s.s3Client().PutObject(&s3.PutObjectInput{
+			_, err = s.s3Client().PutObjectWithContext(ctx, &s3.PutObjectInput{
 				Key:         &fileName,
 				Body:        handle,
 				Bucket:      &bucket,
@@ -1115,7 +1115,7 @@ func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback 
 	bucket := dir.Bucket()
 	fpath := img.Filepath
 
-	object, err := s3c.GetObject(&s3.GetObjectInput{
+	object, err := s3c.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: &bucket,
 		Key:    &fpath,
 	})

@@ -608,6 +608,58 @@ func (s *Application) RefreshItemParentLanguage(
 	return repository.RefreshItemParentLanguage(ctx, parentItemTypeID, limit)
 }
 
+func (s *Application) RefreshItemParentAllAuto(ctx context.Context) error {
+	repository, err := s.container.ItemsRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.RefreshItemParentAllAuto(ctx)
+}
+
+func (s *Application) RebuildItemOrderCache(ctx context.Context) error {
+	repository, err := s.container.ItemsRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.RebuildItemOrderCache(ctx)
+}
+
+func (s *Application) PicturesDfIndex(ctx context.Context) error {
+	repository, err := s.container.PicturesRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.DfIndex(ctx)
+}
+
+func (s *Application) PicturesFixFilenames(ctx context.Context) error {
+	repository, err := s.container.PicturesRepository()
+	if err != nil {
+		return err
+	}
+
+	return repository.CorrectAllFileNames(ctx)
+}
+
+func (s *Application) BuildBrandsSprite(ctx context.Context) error {
+	imageStorage, err := s.container.ImageStorage()
+	if err != nil {
+		return err
+	}
+
+	repository, err := s.container.ItemsRepository()
+	if err != nil {
+		return err
+	}
+
+	cfg := s.container.Config()
+
+	return createIconsSprite(ctx, repository, imageStorage, cfg.FileStorage)
+}
+
 func (s *Application) SpecsRefreshUsersConflicts(ctx context.Context) error {
 	repository, err := s.container.AttrsRepository()
 	if err != nil {

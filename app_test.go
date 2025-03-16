@@ -2,11 +2,15 @@ package goautowp
 
 import (
 	"errors"
+	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
@@ -162,5 +166,82 @@ func TestRefreshItemParentLanguage(t *testing.T) {
 	app := NewApplication(cfg)
 
 	err := app.RefreshItemParentLanguage(t.Context(), schema.ItemTableItemTypeIDBrand, 10)
+	require.NoError(t, err)
+}
+
+func TestRefreshItemParentAllAuto(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+
+	err := app.RefreshItemParentAllAuto(t.Context())
+	require.NoError(t, err)
+}
+
+func TestRebuildItemOrderCache(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+
+	err := app.RebuildItemOrderCache(t.Context())
+	require.NoError(t, err)
+}
+
+func TestPicturesDfIndex(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+
+	err := app.PicturesDfIndex(t.Context())
+	require.NoError(t, err)
+}
+
+func TestPicturesFixFilenames(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+
+	err := app.PicturesFixFilenames(t.Context())
+	require.NoError(t, err)
+}
+
+func TestBuildBrandsSprite(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	imageStorage, err := cnt.ImageStorage()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	for i := range 1 {
+		itemID := createItem(t, conn, cnt, &APIItem{
+			Name:       fmt.Sprintf("brand-%d-%d", random.Int(), i),
+			ItemTypeId: ItemType_ITEM_TYPE_BRAND,
+			Catname:    fmt.Sprintf("brand-%d-%d", random.Int(), i),
+		})
+
+		imageID, err := imageStorage.AddImageFromFile(t.Context(), "./test/png.png", "brand", storage.GenerateOptions{})
+		require.NoError(t, err)
+		require.NotEmpty(t, imageID)
+
+		_, err = goquDB.Update(schema.ItemTable).
+			Set(goqu.Record{
+				schema.ItemTableLogoIDColName: imageID,
+			}).
+			Where(schema.ItemTableIDCol.Eq(itemID)).
+			Executor().ExecContext(t.Context())
+		require.NoError(t, err)
+	}
+
+	err = app.BuildBrandsSprite(t.Context())
 	require.NoError(t, err)
 }
