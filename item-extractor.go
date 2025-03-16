@@ -6,8 +6,8 @@ import (
 	"errors"
 	"maps"
 	"slices"
-	"strconv"
 
+	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
@@ -610,7 +610,7 @@ func (s *ItemExtractor) extractItemOfDayPictures(
 
 			switch carOfDay.ItemTypeID {
 			case schema.ItemTableItemTypeIDTwins:
-				route = []string{"/twins/group", strconv.FormatInt(carOfDay.ID, 10), "pictures", row.Identity}
+				route = frontend.TwinsGroupPictureRoute(carOfDay.ID, row.Identity)
 			case schema.ItemTableItemTypeIDVehicle,
 				schema.ItemTableItemTypeIDEngine,
 				schema.ItemTableItemTypeIDCategory,
@@ -622,17 +622,13 @@ func (s *ItemExtractor) extractItemOfDayPictures(
 				for _, path := range paths {
 					switch path.Type {
 					case items.CataloguePathResultTypeBrand:
-						route = []string{"/picture", row.Identity}
+						route = frontend.PictureRoute(row.Identity)
 					case items.CataloguePathResultTypeBrandItem:
-						route = append(
-							[]string{"/", path.BrandCatname, path.CarCatname},
-							path.Path...,
-						)
-						route = append(route, "pictures", row.Identity)
+						route = frontend.BrandItemPathPicturesPictureRoute(path.BrandCatname, path.CarCatname, path.Path, row.Identity)
 					case items.CataloguePathResultTypeCategory:
-						route = []string{"/category", path.CategoryCatname, "pictures", row.Identity}
+						route = frontend.CategoryPictureRoute(path.CategoryCatname, row.Identity)
 					case items.CataloguePathResultTypePerson:
-						route = []string{"/persons", strconv.FormatInt(path.ID, 10)}
+						route = frontend.PersonPictureRoute(path.ID, row.Identity)
 					}
 				}
 			}
@@ -1244,22 +1240,22 @@ func (s *ItemExtractor) extractRoutes(
 		if extractRoute {
 			switch row.ItemTypeID {
 			case schema.ItemTableItemTypeIDCategory:
-				route = []string{"/category", util.NullStringToString(row.Catname)}
+				route = frontend.CategoryRoute(util.NullStringToString(row.Catname))
 			case schema.ItemTableItemTypeIDTwins:
-				route = []string{"/twins/group", strconv.FormatInt(row.ID, 10)}
+				route = frontend.TwinsGroupRoute(row.ID)
 
 			case schema.ItemTableItemTypeIDBrand:
-				route = []string{"/", util.NullStringToString(row.Catname)}
+				route = frontend.BrandRoute(util.NullStringToString(row.Catname))
 
 			case schema.ItemTableItemTypeIDEngine,
 				schema.ItemTableItemTypeIDVehicle:
 				for _, cPath := range cataloguePaths {
-					route = append([]string{"/", cPath.BrandCatname, cPath.CarCatname}, cPath.Path...)
+					route = frontend.BrandItemPathRoute(cPath.BrandCatname, cPath.CarCatname, cPath.Path)
 
 					break
 				}
 			case schema.ItemTableItemTypeIDPerson:
-				route = []string{"/persons", strconv.FormatInt(row.ID, 10)}
+				route = frontend.PersonRoute(row.ID)
 			case schema.ItemTableItemTypeIDFactory,
 				schema.ItemTableItemTypeIDMuseum,
 				schema.ItemTableItemTypeIDCopyright:
@@ -1268,10 +1264,7 @@ func (s *ItemExtractor) extractRoutes(
 
 		if extractSpecsRoute {
 			for _, path := range cataloguePaths {
-				res := append([]string{"/", path.BrandCatname, path.CarCatname}, path.Path...)
-				res = append(res, "specifications")
-
-				specsRoute = res
+				specsRoute = frontend.BrandItemPathSpecificationsRoute(path.BrandCatname, path.CarCatname, path.Path)
 
 				break
 			}
@@ -1475,25 +1468,25 @@ func (s *ItemExtractor) extractLocation(
 func (s *ItemExtractor) itemPublicRoutes(ctx context.Context, item *items.Item) ([]*PublicRoute, error) {
 	if item.ItemTypeID == schema.ItemTableItemTypeIDFactory {
 		return []*PublicRoute{
-			{Route: []string{"/factories", strconv.FormatInt(item.ID, decimal)}},
+			{Route: frontend.FactoryRoute(item.ID)},
 		}, nil
 	}
 
 	if item.ItemTypeID == schema.ItemTableItemTypeIDCategory {
 		return []*PublicRoute{
-			{Route: []string{"/category", util.NullStringToString(item.Catname)}},
+			{Route: frontend.CategoryRoute(util.NullStringToString(item.Catname))},
 		}, nil
 	}
 
 	if item.ItemTypeID == schema.ItemTableItemTypeIDTwins {
 		return []*PublicRoute{
-			{Route: []string{"/twins", "group", strconv.FormatInt(item.ID, decimal)}},
+			{Route: frontend.TwinsGroupRoute(item.ID)},
 		}, nil
 	}
 
 	if item.ItemTypeID == schema.ItemTableItemTypeIDBrand {
 		return []*PublicRoute{
-			{Route: []string{"/" + util.NullStringToString(item.Catname)}},
+			{Route: frontend.BrandRoute(util.NullStringToString(item.Catname))},
 		}, nil
 	}
 
@@ -1526,7 +1519,7 @@ func (s *ItemExtractor) walkUpUntilBrand(ctx context.Context, id int64, path []s
 
 		if err == nil {
 			routes = append(routes, &PublicRoute{
-				Route: append([]string{"/", util.NullStringToString(brand.Catname), parentRow.Catname}, path...),
+				Route: frontend.BrandItemPathRoute(util.NullStringToString(brand.Catname), parentRow.Catname, path),
 			})
 		}
 

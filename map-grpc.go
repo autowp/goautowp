@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
@@ -183,13 +184,11 @@ func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) 
 				Name: nameText,
 			}
 
-			const decimal = 10
-
 			switch itemTypeID {
 			case schema.ItemTableItemTypeIDFactory:
-				mapPoint.Url = []string{"/factories", strconv.FormatInt(id, decimal)}
+				mapPoint.Url = frontend.FactoryRoute(id)
 			case schema.ItemTableItemTypeIDMuseum:
-				mapPoint.Url = []string{"/museums", strconv.FormatInt(id, decimal)}
+				mapPoint.Url = frontend.MuseumRoute(id)
 			case schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine,
 				schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDTwins,
 				schema.ItemTableItemTypeIDBrand, schema.ItemTableItemTypeIDPerson, schema.ItemTableItemTypeIDCopyright:

@@ -15,6 +15,7 @@ import (
 
 	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/filter"
+	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
@@ -3675,7 +3676,7 @@ func (s *Repository) DesignInfo(ctx context.Context, id int64, lang string) (*De
 	if success {
 		return &DesignInfo{
 			Name:  row.Name,
-			Route: []string{"/", row.Catname, row.BrandItemCatname},
+			Route: frontend.BrandItemRoute(row.Catname, row.BrandItemCatname),
 		}, nil
 	}
 
@@ -3688,7 +3689,7 @@ func (s *Repository) DesignInfo(ctx context.Context, id int64, lang string) (*De
 	if success {
 		return &DesignInfo{
 			Name:  row.Name,
-			Route: []string{"/", row.Catname, row.BrandItemCatname},
+			Route: frontend.BrandItemRoute(row.Catname, row.BrandItemCatname),
 		}, nil
 	}
 
@@ -3705,11 +3706,7 @@ func (s *Repository) SpecsRoute(ctx context.Context, id int64) ([]string, error)
 	}
 
 	for _, path := range cataloguePaths {
-		res := []string{"/", path.BrandCatname, path.CarCatname}
-		res = append(res, path.Path...)
-		res = append(res, "specifications")
-
-		return res, nil
+		return frontend.BrandItemPathSpecificationsRoute(path.BrandCatname, path.CarCatname, path.Path), nil
 	}
 
 	return nil, nil

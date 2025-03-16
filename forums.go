@@ -320,15 +320,15 @@ func (s *Forums) Themes(ctx context.Context, themeID int64, isModerator bool) ([
 
 func (s *Forums) prepareTopic(ctx context.Context, topic *ForumsTopic, userID int64) error {
 	if userID > 0 {
-		messages, newMessages, err := s.commentsRepository.TopicStatForUser(
+		stat, err := s.commentsRepository.TopicStatForUser(
 			ctx, schema.CommentMessageTypeIDForums, topic.ID, userID,
 		)
 		if err != nil {
 			return err
 		}
 
-		topic.Messages = messages
-		topic.NewMessages = newMessages
+		topic.Messages = stat.Messages
+		topic.NewMessages = stat.NewMessages
 
 		topic.Subscription, err = s.commentsRepository.IsSubscribed(ctx, userID, schema.CommentMessageTypeIDForums, topic.ID)
 		if err != nil {

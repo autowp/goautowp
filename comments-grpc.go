@@ -42,6 +42,8 @@ type CommentsGRPCServer struct {
 
 func extractPicturesStatus(status schema.PictureStatus) PictureStatus {
 	switch status {
+	case schema.PictureStatusUnknown:
+		return PictureStatus_PICTURE_STATUS_UNKNOWN
 	case schema.PictureStatusAccepted:
 		return PictureStatus_PICTURE_STATUS_ACCEPTED
 	case schema.PictureStatusRemoving:

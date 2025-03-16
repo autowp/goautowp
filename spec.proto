@@ -192,6 +192,7 @@ service Pictures {
   rpc GetInbox(InboxRequest) returns (Inbox) {}
   rpc GetNewbox(NewboxRequest) returns (Newbox) {}
   rpc GetCanonicalRoute(CanonicalRouteRequest) returns (CanonicalRoute) {}
+  rpc GetGallery(GalleryRequest) returns (GalleryResponse) {}
 }
 
 service Messaging {
@@ -1068,6 +1069,7 @@ message PictureFields {
   PicturePathRequest path = 10;
   PictureItemsRequest picture_item = 11;
   bool image_gallery_full = 12;
+  bool image_gallery = 29;
   DfDistanceRequest df_distance = 13;
   bool accepted_count = 14;
   bool copyrights = 15;
@@ -1234,6 +1236,7 @@ message PictureItemListOptions {
   ItemVehicleTypeListOptions item_vehicle_type = 9;
   bool has_no_perspective_id = 11;
   PictureItemListOptions picture_item_by_picture_id = 12;
+  bool has_area = 13;
 }
 
 message CommentTopicListOptions {
@@ -1657,6 +1660,7 @@ message Picture {
   APIImage thumb = 22;
   repeated PathTreePictureItem path = 23;
   PictureItems picture_items = 24;
+  APIImage image_gallery = 47;
   APIImage image_gallery_full = 25;
   DfDistances df_distances = 26;
   int32 accepted_count = 27;
@@ -1877,6 +1881,26 @@ message CanonicalRouteRequest {
 
 message CanonicalRoute {
   repeated string route = 1;
+}
+
+message GalleryRequest {
+  PicturesRequest request = 1;
+  string picture_identity = 2;
+}
+
+message GalleryResponse {
+  int32 count = 1;
+  repeated Picture items = 2;
+  int32 page = 3;
+  int32 pages = 4;
+  PictureStatus status = 5;
+}
+
+message Rectangle {
+  int32 left = 1;
+  int32 top = 2;
+  int32 width = 3;
+  int32 height = 4;
 }
 
 message DeleteSimilarRequest {

@@ -1867,3 +1867,70 @@ func TestCorrectFileNamesVote(t *testing.T) {
 
 	require.EqualValues(t, 33914, httpResponse.ContentLength)
 }
+
+func TestGetGallery(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	client := NewPicturesClient(conn)
+	cfg := config.LoadConfig(".")
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		IsGroup:    true,
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	_, err = client.CreatePictureItem(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&CreatePictureItemRequest{
+			PictureId: pictureID,
+			ItemId:    itemID,
+			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = client.GetGallery(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&GalleryRequest{
+			Request: &PicturesRequest{
+				Options: &PictureListOptions{
+					PictureItem: &PictureItemListOptions{
+						ItemId: itemID,
+					},
+				},
+				Fields: &PictureFields{
+					NameText:         true,
+					NameHtml:         true,
+					Image:            true,
+					ThumbMedium:      true,
+					Views:            true,
+					Votes:            true,
+					CommentsCount:    true,
+					ModerVote:        true,
+					PictureItem:      &PictureItemsRequest{},
+					DfDistance:       &DfDistanceRequest{},
+					ImageGalleryFull: true,
+					Path:             &PicturePathRequest{},
+					Thumb:            true,
+				},
+				Limit: 100,
+			},
+		},
+	)
+	require.NoError(t, err)
+}

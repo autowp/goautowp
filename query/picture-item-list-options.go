@@ -27,6 +27,7 @@ type PictureItemListOptions struct {
 	PictureItemByItemID         *PictureItemListOptions
 	PictureItemByPictureID      *PictureItemListOptions
 	PerspectiveGroupPerspective *PerspectiveGroupPerspectiveListOptions
+	HasArea                     bool
 }
 
 func AppendPictureItemAlias(alias string, suffix string) string {
@@ -161,6 +162,13 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 				eaosAliasTable.Col(schema.ItemParentCacheTableParentIDColName).Eq(s.ExcludeAncestorOrSelfID),
 			)).
 			Where(eaosAliasTable.Col(schema.ItemParentCacheTableItemIDColName).IsNull())
+	}
+
+	if s.HasArea {
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.PictureItemTableCropWidthColName),
+			aliasTable.Col(schema.PictureItemTableCropHeightColName),
+		)
 	}
 
 	sqSelect, err = s.Pictures.JoinToIDAndApply(

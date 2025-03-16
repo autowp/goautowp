@@ -5,8 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"slices"
-	"strconv"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -40,6 +39,8 @@ const (
 	newboxGroupTypeItem     = "item"
 	newboxGroupTypePicture  = "picture"
 	newboxGroupTypePictures = "pictures"
+
+	galleryItemsPerPage = 10
 )
 
 type PicturesGRPCServer struct {
@@ -2561,35 +2562,27 @@ func (s *PicturesGRPCServer) GetCanonicalRoute(
 			switch path.Type {
 			case items.CataloguePathResultTypeBrand:
 				if len(path.CarCatname) > 0 {
-					route = slices.Concat(
-						[]string{"/", path.BrandCatname, path.CarCatname},
-						path.Path,
-						[]string{"pictures", picture.Identity},
-					)
+					route = frontend.BrandItemPathPicturesPictureRoute(path.BrandCatname, path.CarCatname, path.Path, picture.Identity)
 				} else {
-					action := "other"
+					action := frontend.BrandOther
 
 					if pictureItem.PerspectiveID.Valid {
 						switch pictureItem.PerspectiveID.Int64 {
 						case schema.PerspectiveLogo:
-							action = "logotypes"
+							action = frontend.BrandLogotypes
 						case schema.PerspectiveMixed:
-							action = "mixed"
+							action = frontend.BrandMixed
 						}
 					}
 
-					route = []string{"/", path.BrandCatname, action, picture.Identity}
+					route = frontend.BrandGroupPictureRoute(path.BrandCatname, action, picture.Identity)
 				}
 			case items.CataloguePathResultTypeBrandItem:
-				route = slices.Concat(
-					[]string{"/", path.BrandCatname, path.CarCatname},
-					path.Path,
-					[]string{"pictures", picture.Identity},
-				)
+				route = frontend.BrandItemPathPicturesPictureRoute(path.BrandCatname, path.CarCatname, path.Path, picture.Identity)
 			case items.CataloguePathResultTypeCategory:
-				route = []string{"/category", path.CategoryCatname, "pictures", picture.Identity}
+				route = frontend.CategoryPictureRoute(path.CategoryCatname, picture.Identity)
 			case items.CataloguePathResultTypePerson:
-				route = []string{"/persons", strconv.FormatInt(path.ID, 10), picture.Identity}
+				route = frontend.PersonPictureRoute(path.ID, picture.Identity)
 			}
 		}
 	}
@@ -2620,4 +2613,115 @@ func (s *PicturesGRPCServer) CorrectFileNames(ctx context.Context, in *PictureID
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest) (*GalleryResponse, error) {
+	userID, role, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	pictureIdentity := in.GetPictureIdentity()
+	request := in.GetRequest()
+
+	if len(pictureIdentity) == 0 {
+		err = s.isRestricted(request, isModer, userID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	options := request.GetOptions()
+
+	repoOptions, err := convertPictureListOptions(options)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if repoOptions == nil {
+		repoOptions = &query.PictureListOptions{}
+	}
+
+	repoOptions.Limit = galleryItemsPerPage
+	repoOptions.Page = request.GetPage()
+
+	itemSpecified := options.GetPictureItem().GetItemParentCacheAncestor().GetParentId() != 0 ||
+		options.GetPictureItem().GetItemId() != 0
+
+	if len(pictureIdentity) > 0 {
+		if !itemSpecified {
+			repoOptions.Identity = pictureIdentity
+		}
+
+		// look for page of that picture
+		filterCopy := *repoOptions
+		filterCopy.Status = schema.PictureStatusUnknown
+		filterCopy.Identity = pictureIdentity
+
+		row, err := s.repository.Picture(ctx, &filterCopy, nil, pictures.OrderByNone)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, status.Errorf(codes.NotFound, "NotFound")
+			}
+
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		repoOptions.Status = row.Status
+		request.Page = 0
+
+		if itemSpecified {
+			page, err := s.getPicturePage(ctx, repoOptions, pictureIdentity)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			request.Page = uint32(page) //nolint: gosec
+		}
+	}
+
+	lang := request.GetLanguage()
+	fields := request.GetFields()
+
+	repoFields := convertPictureFields(fields)
+	order := convertPicturesOrder(request.GetOrder())
+
+	rows, pages, err := s.repository.Pictures(ctx, repoOptions, repoFields, order, true)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	gallery, err := s.pictureExtractor.ExtractRows(ctx, rows, fields, lang, isModer, userID, role)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &GalleryResponse{
+		Page:   pages.Current,
+		Pages:  pages.PageCount,
+		Count:  pages.TotalItemCount,
+		Items:  gallery,
+		Status: extractPicturesStatus(repoOptions.Status),
+	}, nil
+}
+
+func (s *PicturesGRPCServer) getPicturePage(
+	ctx context.Context, filter *query.PictureListOptions, identity string,
+) (int32, error) {
+	filterCopy := *filter
+	filterCopy.Identity = ""
+
+	rows, _, err := s.repository.Pictures(ctx, &filterCopy, nil, pictures.OrderByNone, false)
+	if err != nil {
+		return 0, err
+	}
+
+	for index, row := range rows {
+		if row.Identity == identity {
+			return int32(math.Floor(float64(index)/float64(galleryItemsPerPage))) + 1, nil
+		}
+	}
+
+	return 1, nil
 }

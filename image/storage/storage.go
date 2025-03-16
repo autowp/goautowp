@@ -126,13 +126,13 @@ func (s *Storage) Image(ctx context.Context, id int) (*Image, error) {
 		return nil, ErrImageNotFound
 	}
 
-	return imgs[0], nil
+	return imgs[id], nil
 }
 
-func (s *Storage) Images(ctx context.Context, ids []int) ([]*Image, error) {
+func (s *Storage) Images(ctx context.Context, ids []int) (map[int]*Image, error) {
 	var (
 		sts    []schema.ImageRow
-		result = make([]*Image, 0, len(ids))
+		result = make(map[int]*Image, len(ids))
 	)
 
 	if len(ids) == 0 {
@@ -177,7 +177,7 @@ func (s *Storage) Images(ctx context.Context, ids []int) ([]*Image, error) {
 			return nil, err
 		}
 
-		result = append(result, &img)
+		result[st.ID] = &img
 	}
 
 	return result, nil

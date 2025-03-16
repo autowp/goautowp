@@ -11,6 +11,7 @@ import (
 type PictureStatus string
 
 const (
+	PictureStatusUnknown  PictureStatus = ""
 	PictureStatusAccepted PictureStatus = "accepted"
 	PictureStatusRemoving PictureStatus = "removing"
 	PictureStatusRemoved  PictureStatus = "removed"

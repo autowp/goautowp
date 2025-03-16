@@ -5,6 +5,7 @@ import (
 
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/comments"
+	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
@@ -101,7 +102,7 @@ func (s *RatingGRPCServer) GetUserPicturesRatingBrands(
 	for idx, brand := range brands {
 		result[idx] = &APIUsersRatingUserBrand{
 			Name:   brand.NameOnly,
-			Route:  []string{"/", util.NullStringToString(brand.Catname)},
+			Route:  frontend.BrandRoute(util.NullStringToString(brand.Catname)),
 			Volume: int64(brand.DescendantPicturesCount),
 		}
 	}
@@ -236,7 +237,7 @@ func (s *RatingGRPCServer) GetUserSpecsRatingBrands(
 	for idx, brand := range brands {
 		result[idx] = &APIUsersRatingUserBrand{
 			Name:   brand.Name,
-			Route:  []string{"/", brand.Catname},
+			Route:  frontend.BrandRoute(brand.Catname),
 			Volume: brand.Volume,
 		}
 	}

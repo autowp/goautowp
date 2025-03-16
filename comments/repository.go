@@ -999,9 +999,9 @@ func (s *Repository) messageRowRoute(
 
 		switch itemTypeID {
 		case schema.ItemTableItemTypeIDTwins:
-			return []string{"/twins", "group", strconv.FormatInt(itemID, 10)}, nil
+			return frontend.TwinsGroupRoute(itemID), nil
 		case schema.ItemTableItemTypeIDMuseum:
-			return []string{"/museums", strconv.FormatInt(itemID, 10)}, nil
+			return frontend.MuseumRoute(itemID), nil
 		case schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDCategory,
 			schema.ItemTableItemTypeIDBrand, schema.ItemTableItemTypeIDFactory, schema.ItemTableItemTypeIDPerson,
 			schema.ItemTableItemTypeIDCopyright:
@@ -1011,7 +1011,7 @@ func (s *Repository) messageRowRoute(
 		}
 
 	case schema.CommentMessageTypeIDVotings:
-		return []string{"/voting", strconv.FormatInt(itemID, 10)}, nil
+		return frontend.VotingRoute(itemID), nil
 
 	case schema.CommentMessageTypeIDArticles:
 		var catname string
@@ -1028,10 +1028,10 @@ func (s *Repository) messageRowRoute(
 			return nil, sql.ErrNoRows
 		}
 
-		return []string{"/articles", catname}, nil
+		return frontend.ArticleRoute(catname), nil
 
 	case schema.CommentMessageTypeIDForums:
-		return []string{"/forums", "message", strconv.FormatInt(itemID, 10)}, nil
+		return frontend.ForumsMessageRoute(itemID), nil
 	}
 
 	return nil, fmt.Errorf("%w: `%v`", errUnknownTypeID, typeID)
@@ -1406,44 +1406,75 @@ func (s *Repository) MessagesCountFromTimestamp(
 	return int32(cnt), nil //nolint: gosec
 }
 
+type TopicStat struct {
+	Messages    int32
+	NewMessages int32
+}
+
 func (s *Repository) TopicStatForUser(
 	ctx context.Context, typeID schema.CommentMessageType, itemID int64, userID int64,
-) (int32, int32, error) {
-	sqSelect := s.db.Select(schema.CommentTopicTableMessagesCol, schema.CommentTopicViewTableTimestampCol).
+) (TopicStat, error) {
+	res, err := s.TopicsStatForUser(ctx, typeID, []int64{itemID}, userID)
+	if err != nil {
+		return TopicStat{}, err
+	}
+
+	return res[itemID], nil
+}
+
+func (s *Repository) TopicsStatForUser(
+	ctx context.Context, typeID schema.CommentMessageType, itemIDs []int64, userID int64,
+) (map[int64]TopicStat, error) {
+	if len(itemIDs) == 0 {
+		return nil, nil //nolint: nilnil
+	}
+
+	sqSelect := s.db.Select(schema.CommentTopicTableItemIDCol, schema.CommentTopicTableMessagesCol).
 		From(schema.CommentTopicTable).
-		LeftJoin(schema.CommentTopicViewTable, goqu.On(
-			schema.CommentTopicTableTypeIDCol.Eq(schema.CommentTopicViewTableTypeIDCol),
-			schema.CommentTopicTableItemIDCol.Eq(schema.CommentTopicViewTableItemIDCol),
-			schema.CommentTopicViewTableUserIDCol.Eq(userID),
-		)).
 		Where(
 			schema.CommentTopicTableTypeIDCol.Eq(typeID),
-			schema.CommentTopicTableItemIDCol.Eq(itemID),
+			schema.CommentTopicTableItemIDCol.In(itemIDs),
 		)
 
-	var messages struct {
+	if userID > 0 {
+		sqSelect = sqSelect.
+			SelectAppend(schema.CommentTopicViewTableTimestampCol).
+			LeftJoin(schema.CommentTopicViewTable, goqu.On(
+				schema.CommentTopicTableTypeIDCol.Eq(schema.CommentTopicViewTableTypeIDCol),
+				schema.CommentTopicTableItemIDCol.Eq(schema.CommentTopicViewTableItemIDCol),
+				schema.CommentTopicViewTableUserIDCol.Eq(userID),
+			))
+	}
+
+	var messages []struct {
+		ItemID    int64 `db:"item_id"`
 		Messages  int32
 		Timestamp sql.NullTime
 	}
 
-	success, err := sqSelect.ScanStructContext(ctx, &messages)
+	err := sqSelect.ScanStructsContext(ctx, &messages)
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 
-	if !success {
-		return 0, 0, nil
-	}
+	res := make(map[int64]TopicStat, len(messages))
 
-	newMessages := messages.Messages
-	if messages.Timestamp.Valid {
-		newMessages, err = s.MessagesCountFromTimestamp(ctx, typeID, itemID, messages.Timestamp.Time)
-		if err != nil {
-			return 0, 0, err
+	for _, message := range messages {
+		newMessages := message.Messages
+		if userID > 0 && message.Timestamp.Valid {
+			newMessages, err = s.MessagesCountFromTimestamp(ctx, typeID, message.ItemID, message.Timestamp.Time)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		res[message.ItemID] = TopicStat{
+			Messages:    message.Messages,
+			NewMessages: newMessages,
 		}
 	}
 
-	return messages.Messages, newMessages, nil
+	return res, nil
 }
 
 func (s *Repository) Count(ctx context.Context, options query.CommentMessageListOptions) (int32, error) {
@@ -1632,17 +1663,25 @@ func (s *Repository) MessageRowRoute(
 			return nil, fmt.Errorf("%w: `%v`", errItemNotFound, itemID)
 		}
 
-		switch itemTypeID { //nolint:exhaustive
+		switch itemTypeID {
 		case schema.ItemTableItemTypeIDTwins:
-			result = []string{"/twins", "group", strconv.FormatInt(itemID, 10)}
+			result = frontend.TwinsGroupRoute(itemID)
 		case schema.ItemTableItemTypeIDMuseum:
-			result = []string{"/museums", strconv.FormatInt(itemID, 10)}
+			result = frontend.MuseumRoute(itemID)
+		case schema.ItemTableItemTypeIDVehicle,
+			schema.ItemTableItemTypeIDEngine,
+			schema.ItemTableItemTypeIDCategory,
+			schema.ItemTableItemTypeIDBrand,
+			schema.ItemTableItemTypeIDFactory,
+			schema.ItemTableItemTypeIDPerson,
+			schema.ItemTableItemTypeIDCopyright:
+			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
 		default:
 			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
 		}
 
 	case schema.CommentMessageTypeIDVotings:
-		result = []string{"/voting", strconv.FormatInt(itemID, 10)}
+		result = frontend.VotingRoute(itemID)
 
 	case schema.CommentMessageTypeIDArticles:
 		var catname string
@@ -1659,10 +1698,10 @@ func (s *Repository) MessageRowRoute(
 			return nil, fmt.Errorf("%w: `%v`", errArticleNotFound, itemID)
 		}
 
-		result = []string{"/articles", catname}
+		result = frontend.ArticleRoute(catname)
 
 	case schema.CommentMessageTypeIDForums:
-		result = []string{"/forums", "message", strconv.FormatInt(messageID, 10)}
+		result = frontend.ForumsMessageRoute(messageID)
 
 	default:
 		return nil, fmt.Errorf("%w: `%v`", errUnknownTypeID, typeID)

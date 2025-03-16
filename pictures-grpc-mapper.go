@@ -79,6 +79,7 @@ func convertPictureItemListOptions(in *PictureItemListOptions) (*query.PictureIt
 		ExcludeAncestorOrSelfID: in.GetExcludeAncestorOrSelfId(),
 		HasNoPerspectiveID:      in.GetHasNoPerspectiveId(),
 		ItemVehicleType:         convertItemVehicleTypeListOptions(in.GetItemVehicleType()),
+		HasArea:                 in.GetHasArea(),
 	}
 
 	var err error

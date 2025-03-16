@@ -2016,7 +2016,7 @@ func (s *ItemsGRPCServer) otherGroups(
 		}
 
 		groups = append(groups, &APIBrandSection{
-			RouterLink: []string{"/", brandCatname, "concepts"},
+			RouterLink: frontend.BrandConceptsRoute(brandCatname),
 			Name:       translated,
 		})
 	}
@@ -2029,17 +2029,17 @@ func (s *ItemsGRPCServer) otherGroups(
 	}{
 		{
 			PerspectiveID: items.PerspectiveIDLogo,
-			Catname:       "logotypes",
+			Catname:       frontend.BrandLogotypes,
 			Name:          "logotypes",
 		},
 		{
 			PerspectiveID: items.PerspectiveIDMixed,
-			Catname:       "mixed",
+			Catname:       frontend.BrandMixed,
 			Name:          "mixed",
 		},
 		{
 			ExcludePerspectiveID: []int32{items.PerspectiveIDLogo, items.PerspectiveIDMixed},
-			Catname:              "other",
+			Catname:              frontend.BrandOther,
 			Name:                 "unsorted",
 		},
 	}
@@ -2068,7 +2068,7 @@ func (s *ItemsGRPCServer) otherGroups(
 			}
 
 			groups = append(groups, &APIBrandSection{
-				RouterLink: []string{"/", brandCatname, groupType.Catname},
+				RouterLink: frontend.BrandGroupRoute(brandCatname, groupType.Catname),
 				Name:       translated,
 				Count:      int32(picturesCount), //nolint: gosec
 			})
@@ -2115,7 +2115,7 @@ func (s *ItemsGRPCServer) carSections(
 		{
 			Name:       "catalogue/section/engines",
 			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDEngine},
-			RouterLink: []string{"/", brandCatname, "engines"},
+			RouterLink: frontend.BrandEnginesRoute(brandCatname),
 		},
 	}
 
@@ -2208,7 +2208,7 @@ func (s *ItemsGRPCServer) carSectionGroups(
 
 	for _, row := range rows {
 		groups = append(groups, &APIBrandSection{
-			RouterLink: []string{"/", brandCatname, row.Catname},
+			RouterLink: frontend.BrandItemRoute(brandCatname, row.Catname),
 			Name:       row.Name,
 		})
 	}

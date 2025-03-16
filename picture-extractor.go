@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html"
 
+	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/pictures"
@@ -47,6 +48,22 @@ func (s *PictureExtractor) Extract(
 	return result[0], nil
 }
 
+func (s *PictureExtractor) preloadTopicsStat(
+	ctx context.Context, itemIDs []int64, userID int64,
+) (map[int64]comments.TopicStat, error) {
+	commentsRepository, err := s.container.CommentsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	stats, err := commentsRepository.TopicsStatForUser(ctx, schema.CommentMessageTypeIDPictures, itemIDs, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
 func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 	ctx context.Context, rows []*schema.PictureRow, fields *PictureFields, lang string, isModer bool, userID int64,
 	role string,
@@ -77,17 +94,26 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		return nil, err
 	}
 
-	commentsRepository, err := s.container.CommentsRepository()
-	if err != nil {
-		return nil, err
-	}
-
 	textstorageRepository, err := s.container.TextStorageRepository()
 	if err != nil {
 		return nil, err
 	}
 
 	enforcer := s.container.Enforcer()
+
+	var stats map[int64]comments.TopicStat
+
+	if fields.GetCommentsCount() {
+		itemIDs := make([]int64, 0, len(rows))
+		for _, row := range rows {
+			itemIDs = append(itemIDs, row.ID)
+		}
+
+		stats, err = s.preloadTopicsStat(ctx, itemIDs, userID)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if fields.GetNameText() || fields.GetNameHtml() {
 		namesData, err = picturesRepository.NameData(ctx, rows, pictures.NameDataOptions{
@@ -107,13 +133,9 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 		}
 
-		imageRows, err := imageStorage.Images(ctx, ids)
+		images, err = imageStorage.Images(ctx, ids)
 		if err != nil {
 			return nil, err
-		}
-
-		for _, imageRow := range imageRows {
-			images[imageRow.ID()] = imageRow
 		}
 	}
 
@@ -227,6 +249,17 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			resultRow.ImageGalleryFull = APIImageToGRPC(image)
 		}
 
+		if fields.GetImageGallery() && row.ImageID.Valid {
+			if img, ok := images[int(row.ImageID.Int64)]; ok && img.CropHeight() > 0 && img.CropWidth() > 0 {
+				image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-gallery")
+				if err != nil {
+					return nil, err
+				}
+
+				resultRow.ImageGallery = APIImageToGRPC(image)
+			}
+		}
+
 		if fields.GetPreviewLarge() && row.ImageID.Valid {
 			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-preview-large")
 			if err != nil {
@@ -257,23 +290,10 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetCommentsCount() {
-			var count, newCount int32
-			if userID > 0 {
-				count, newCount, err = commentsRepository.TopicStatForUser(
-					ctx, schema.CommentMessageTypeIDPictures, row.ID, userID,
-				)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				count, err = commentsRepository.TopicStat(ctx, schema.CommentMessageTypeIDPictures, row.ID)
-				if err != nil {
-					return nil, err
-				}
-			}
+			stat := stats[row.ID]
 
-			resultRow.CommentsCountTotal = count
-			resultRow.CommentsCountNew = newCount
+			resultRow.CommentsCountTotal = stat.Messages
+			resultRow.CommentsCountNew = stat.NewMessages
 		}
 
 		if fields.GetModerVote() {
