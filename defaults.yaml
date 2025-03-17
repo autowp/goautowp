@@ -243,6 +243,7 @@ image-storage:
   srcOverride: []
 telegram:
   access-token: "example"
+  webhook: "http://localhost/api/telegram/webhook/token/example"
 donations-vod-price: 100
 about:
   developer: "1"

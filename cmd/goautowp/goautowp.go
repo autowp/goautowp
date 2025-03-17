@@ -366,6 +366,12 @@ func mainReturnWithCode() int { //nolint: maintidx
 					return autowpApp.BuildBrandsSprite(ctx)
 				},
 			},
+			{
+				Name: "telegram-register-webhook",
+				Action: func(ctx context.Context, _ *cli.Command) error {
+					return autowpApp.TelegramRegisterWebhook()
+				},
+			},
 		},
 	}
 

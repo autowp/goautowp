@@ -91,6 +91,7 @@ type FeedbackConfig struct {
 
 type TelegramConfig struct {
 	AccessToken string `mapstructure:"access-token" yaml:"access-token"`
+	WebHook     string `mapstructure:"webhook" yaml:"webhook"`
 }
 
 type AboutConfig struct {

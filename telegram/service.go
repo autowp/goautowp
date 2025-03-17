@@ -21,7 +21,7 @@ import (
 var errChatIDNotProvide = errors.New("`chat_id` not provided")
 
 type Service struct {
-	accessToken  string
+	config       config.TelegramConfig
 	db           *goqu.Database
 	hostsManager *hosts.Manager
 	botAPI       *tgbotapi.BotAPI
@@ -31,7 +31,7 @@ func NewService(
 	config config.TelegramConfig, db *goqu.Database, hostsManager *hosts.Manager,
 ) *Service {
 	return &Service{
-		accessToken:  config.AccessToken,
+		config:       config,
 		db:           db,
 		hostsManager: hostsManager,
 	}
@@ -39,7 +39,7 @@ func NewService(
 
 func (s *Service) getBotAPI() (*tgbotapi.BotAPI, error) {
 	if s.botAPI == nil {
-		bot, err := tgbotapi.NewBotAPI(s.accessToken)
+		bot, err := tgbotapi.NewBotAPI(s.config.AccessToken)
 		if err != nil {
 			return nil, err
 		}
@@ -219,6 +219,25 @@ func (s *Service) unsubscribeChat(ctx context.Context, chatID int64) error {
 	_, err = s.db.Delete(schema.TelegramChatTable).
 		Where(schema.TelegramChatTableChatIDCol.Eq(chatID)).
 		Executor().ExecContext(ctx)
+
+	return err
+}
+
+func (s *Service) RegisterWebhook() error {
+	bot, err := s.getBotAPI()
+	if err != nil {
+		return err
+	}
+
+	wh, err := tgbotapi.NewWebhook(s.config.WebHook)
+	if err != nil {
+		return err
+	}
+
+	_, err = bot.Request(wh)
+	if err != nil {
+		return err
+	}
 
 	return err
 }
