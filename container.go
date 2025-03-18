@@ -700,7 +700,7 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
-	logrusLogger := logrus.New()
+	logrusLogger := logrus.StandardLogger()
 	logrusEntry := logrus.NewEntry(logrusLogger)
 
 	grpclogrus.ReplaceGrpcLogger(logrusEntry)

@@ -26,128 +26,20 @@ func TestMain(m *testing.M) {
 	var lis *bufconn.Listener
 
 	cfg := config.LoadConfig(".")
+
+	level, err := logrus.ParseLevel(cfg.LogLevel)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	logrus.SetLevel(level)
+
 	cnt = NewContainer(cfg)
 
-	grpcServer := grpc.NewServer()
-
-	articlesSrv, err := cnt.ArticlesGRPCServer()
+	grpcServer, err := cnt.GRPCServerWithServices()
 	if err != nil {
 		panic(err)
 	}
-
-	RegisterArticlesServer(grpcServer, articlesSrv)
-
-	commentsSrv, err := cnt.CommentsGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterCommentsServer(grpcServer, commentsSrv)
-
-	forumsSrv, err := cnt.ForumsGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterForumsServer(grpcServer, forumsSrv)
-
-	contactsSrv, err := cnt.ContactsGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterContactsServer(grpcServer, contactsSrv)
-
-	donationsSrv, err := cnt.DonationsGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterDonationsServer(grpcServer, donationsSrv)
-
-	textSrv, err := cnt.TextGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterTextServer(grpcServer, textSrv)
-
-	usersSrv, err := cnt.UsersGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterUsersServer(grpcServer, usersSrv)
-
-	itemsSrv, err := cnt.ItemsGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterItemsServer(grpcServer, itemsSrv)
-
-	messagingSrv, err := cnt.MessagingGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterMessagingServer(grpcServer, messagingSrv)
-
-	statsSrv, err := cnt.StatisticsGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterStatisticsServer(grpcServer, statsSrv)
-
-	autowpSrv, err := cnt.GRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterAutowpServer(grpcServer, autowpSrv)
-
-	attrsSrv, err := cnt.AttrsGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterAttrsServer(grpcServer, attrsSrv)
-
-	mapSrv, err := cnt.MapGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterMapServer(grpcServer, mapSrv)
-
-	mostsSrv, err := cnt.MostsGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterMostsServer(grpcServer, mostsSrv)
-
-	logSrv, err := cnt.LogGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterLogServer(grpcServer, logSrv)
-
-	picturesSrv, err := cnt.PicturesGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterPicturesServer(grpcServer, picturesSrv)
-
-	ratingSrv, err := cnt.RatingGRPCServer()
-	if err != nil {
-		panic(err)
-	}
-
-	RegisterRatingServer(grpcServer, ratingSrv)
 
 	lis = bufconn.Listen(bufSize)
 
