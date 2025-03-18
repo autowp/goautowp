@@ -9,7 +9,6 @@ import (
 
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -30,9 +29,9 @@ const (
 )
 
 type Repository struct {
-	db              *goqu.Database
-	telegramService *telegram.Service
-	i18n            *i18nbundle.I18n
+	db                    *goqu.Database
+	createMessageCallback CreateMessageCallback
+	i18n                  *i18nbundle.I18n
 }
 
 type Message struct {
@@ -49,11 +48,13 @@ type Message struct {
 	DialogWithUserID int64
 }
 
-func NewRepository(db *goqu.Database, telegramService *telegram.Service, i18n *i18nbundle.I18n) *Repository {
+type CreateMessageCallback func(ctx context.Context, fromUserID int64, toUserID int64, text string) error
+
+func NewRepository(db *goqu.Database, createMessageCallback CreateMessageCallback, i18n *i18nbundle.I18n) *Repository {
 	return &Repository{
-		db:              db,
-		telegramService: telegramService,
-		i18n:            i18n,
+		db:                    db,
+		createMessageCallback: createMessageCallback,
+		i18n:                  i18n,
 	}
 }
 
@@ -204,12 +205,7 @@ func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUser
 		return err
 	}
 
-	err = s.telegramService.NotifyMessage(ctx, fromUserID, toUserID, text)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.createMessageCallback(ctx, fromUserID, toUserID, text)
 }
 
 func (s *Repository) markReaden(ctx context.Context, ids []int64) error {

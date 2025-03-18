@@ -15,7 +15,6 @@ import (
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/messaging"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/telegram"
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
@@ -92,12 +91,16 @@ func createRepository(t *testing.T) (*Repository, *goqu.Database) {
 
 	hostsManager := hosts.NewManager(cfg.Languages)
 
-	telegramService := telegram.NewService(cfg.Telegram, goquDB, hostsManager)
-
 	i, err := i18nbundle.New()
 	require.NoError(t, err)
 
-	messagingRepository := messaging.NewRepository(goquDB, telegramService, i)
+	messagingRepository := messaging.NewRepository(
+		goquDB,
+		func(_ context.Context, _ int64, _ int64, _ string) error {
+			return nil
+		},
+		i,
+	)
 
 	repo := NewRepository(goquDB, usersRepository, messagingRepository, hostsManager)
 

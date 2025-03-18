@@ -1,16 +1,15 @@
 package messaging
 
 import (
+	"context"
 	"database/sql"
 	"math/rand"
 	"strconv"
 	"testing"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/telegram"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql" // enable mysql dialect
 	_ "github.com/go-sql-driver/mysql"               // enable mysql driver
@@ -27,13 +26,13 @@ func createRepository(t *testing.T) *Repository {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
-	hostsManager := hosts.NewManager(cfg.Languages)
-	tg := telegram.NewService(cfg.Telegram, goquDB, hostsManager)
 
 	i18n, err := i18nbundle.New()
 	require.NoError(t, err)
 
-	s := NewRepository(goquDB, tg, i18n)
+	s := NewRepository(goquDB, func(_ context.Context, _ int64, _ int64, _ string) error {
+		return nil
+	}, i18n)
 
 	return s
 }

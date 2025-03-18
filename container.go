@@ -568,6 +568,11 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 		return nil, err
 	}
 
+	tg, err := s.TelegramService()
+	if err != nil {
+		return nil, err
+	}
+
 	ginEngine := gin.New()
 	ginEngine.Use(gin.Recovery())
 
@@ -579,6 +584,11 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 	}
 
 	yoomoney.SetupRouter(ctx, ginEngine)
+
+	err = tg.SetupRouter(ginEngine) //nolint: contextcheck
+	if err != nil {
+		return nil, err
+	}
 
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsAcceptableGrpcCorsRequest(req) || wrappedGrpc.IsGrpcWebRequest(req) {
@@ -738,7 +748,23 @@ func (s *Container) TelegramService() (*telegram.Service, error) {
 			return nil, err
 		}
 
-		s.telegramService = telegram.NewService(s.Config().Telegram, db, s.HostsManager())
+		userRepository, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		itemRepository, err := s.ItemsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		messagingRepository, err := s.MessagingRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.telegramService = telegram.NewService(s.Config().Telegram, db, s.HostsManager(), userRepository,
+			itemRepository, messagingRepository)
 	}
 
 	return s.telegramService, nil
@@ -1505,17 +1531,23 @@ func (s *Container) MessagingRepository() (*messaging.Repository, error) {
 			return nil, err
 		}
 
-		tg, err := s.TelegramService()
-		if err != nil {
-			return nil, err
-		}
-
 		i18n, err := s.I18n()
 		if err != nil {
 			return nil, err
 		}
 
-		s.messagingRepository = messaging.NewRepository(db, tg, i18n)
+		s.messagingRepository = messaging.NewRepository(
+			db,
+			func(ctx context.Context, fromUserID int64, toUserID int64, text string) error {
+				tg, err := s.TelegramService()
+				if err != nil {
+					return err
+				}
+
+				return tg.NotifyMessage(ctx, fromUserID, toUserID, text)
+			},
+			i18n,
+		)
 	}
 
 	return s.messagingRepository, nil
