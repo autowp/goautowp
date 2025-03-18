@@ -678,7 +678,7 @@ func (s *Service) SetupRouter(router *gin.Engine) error {
 	}
 
 	router.POST("/telegram/webhook/token/:token", func(ctx *gin.Context) {
-		if ctx.Param("token") != s.config.AccessToken {
+		if ctx.Param("token") != s.config.WebhookToken {
 			ctx.Status(http.StatusForbidden)
 
 			return
