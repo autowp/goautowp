@@ -367,9 +367,20 @@ func mainReturnWithCode() int { //nolint: maintidx
 				},
 			},
 			{
-				Name: "telegram-register-webhook",
-				Action: func(_ context.Context, _ *cli.Command) error {
-					return autowpApp.TelegramRegisterWebhook()
+				Name: "telegram",
+				Commands: []*cli.Command{
+					{
+						Name: "webhook-info",
+						Action: func(_ context.Context, _ *cli.Command) error {
+							return autowpApp.TelegramWebhookInfo()
+						},
+					},
+					{
+						Name: "register-webhook",
+						Action: func(_ context.Context, _ *cli.Command) error {
+							return autowpApp.TelegramRegisterWebhook()
+						},
+					},
 				},
 			},
 		},

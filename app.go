@@ -660,6 +660,15 @@ func (s *Application) BuildBrandsSprite(ctx context.Context) error {
 	return createIconsSprite(ctx, repository, imageStorage, cfg.FileStorage)
 }
 
+func (s *Application) TelegramWebhookInfo() error {
+	telegram, err := s.container.TelegramService()
+	if err != nil {
+		return err
+	}
+
+	return telegram.WebhookInfo()
+}
+
 func (s *Application) TelegramRegisterWebhook() error {
 	telegram, err := s.container.TelegramService()
 	if err != nil {

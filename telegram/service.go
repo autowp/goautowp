@@ -24,6 +24,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -254,6 +255,29 @@ func (s *Service) unsubscribeChat(ctx context.Context, chatID int64) error {
 	return err
 }
 
+func (s *Service) WebhookInfo() error {
+	bot, err := s.getBotAPI()
+	if err != nil {
+		return err
+	}
+
+	wh, err := bot.GetWebhookInfo()
+	if err != nil {
+		return err
+	}
+
+	logrus.Info("URL: " + wh.URL)
+	logrus.Info("LastErrorMessage: " + wh.LastErrorMessage)
+	logrus.Infof("LastErrorDate: %d", wh.LastErrorDate)
+	logrus.Info("IPAddress: " + wh.IPAddress)
+	logrus.Infof("AllowedUpdates: %v", wh.AllowedUpdates)
+	logrus.Infof("HasCustomCertificate: %v", wh.HasCustomCertificate)
+	logrus.Infof("PendingUpdateCount: %d", wh.PendingUpdateCount)
+	logrus.Infof("MaxConnections: %d", wh.MaxConnections)
+
+	return nil
+}
+
 func (s *Service) RegisterWebhook() error {
 	bot, err := s.getBotAPI()
 	if err != nil {
@@ -265,12 +289,18 @@ func (s *Service) RegisterWebhook() error {
 		return err
 	}
 
-	_, err = bot.Request(wh)
+	res, err := bot.Request(wh)
 	if err != nil {
 		return err
 	}
 
-	return err
+	if res.Ok {
+		logrus.Infof("Webhook successfully registered: %s", res.Description)
+	} else {
+		logrus.Errorf("Failed to register webhook: %d: %s", res.ErrorCode, res.Description)
+	}
+
+	return nil
 }
 
 func (s *Service) replyWithMessage(update *tgbotapi.Update, text string) error {
