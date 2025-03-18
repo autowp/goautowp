@@ -42,7 +42,7 @@ func captureOsInterrupt() chan bool {
 func main() { os.Exit(mainReturnWithCode()) }
 
 func mainReturnWithCode() int { //nolint: maintidx
-	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(logrus.WarnLevel)
 
 	imagick.Initialize()
 	defer imagick.Terminate()
@@ -50,6 +50,13 @@ func mainReturnWithCode() int { //nolint: maintidx
 	cfg := config.LoadConfig(".")
 
 	config.ValidateConfig(cfg)
+
+	level, err := logrus.ParseLevel(cfg.LogLevel)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	logrus.SetLevel(level)
 
 	autowpApp = goautowp.NewApplication(cfg)
 	defer util.Close(autowpApp)
