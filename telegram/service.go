@@ -43,7 +43,11 @@ const (
 	tokenLength = 20
 )
 
-var errChatIDNotProvide = errors.New("`chat_id` not provided")
+var (
+	errChatIDNotProvide         = errors.New("`chat_id` not provided")
+	errUpdateMessageMissing     = errors.New("update.message is nil")
+	errUpdateMessageChatMissing = errors.New("update.message.chat is nil")
+)
 
 type Service struct {
 	config              config.TelegramConfig
@@ -53,6 +57,7 @@ type Service struct {
 	userRepository      *users.Repository
 	itemRepository      *items.Repository
 	messagingRepository *messaging.Repository
+	mockModeEnabled     bool
 }
 
 func NewService(
@@ -66,7 +71,12 @@ func NewService(
 		userRepository:      userRepository,
 		itemRepository:      itemRepository,
 		messagingRepository: messagingRepository,
+		mockModeEnabled:     false,
 	}
+}
+
+func (s *Service) enableMockMode() {
+	s.mockModeEnabled = true
 }
 
 func (s *Service) getBotAPI() (*tgbotapi.BotAPI, error) {
@@ -304,6 +314,12 @@ func (s *Service) RegisterWebhook() error {
 }
 
 func (s *Service) replyWithMessage(update *tgbotapi.Update, text string) error {
+	if s.mockModeEnabled {
+		logrus.Debugf("Mock reply: `%s`", text)
+
+		return nil
+	}
+
 	bot, err := s.getBotAPI()
 	if err != nil {
 		return err
@@ -330,6 +346,14 @@ func GenerateSecureToken(length int) string {
 }
 
 func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Update) error {
+	if update.Message == nil {
+		return errUpdateMessageMissing
+	}
+
+	if update.Message.Chat == nil {
+		return errUpdateMessageChatMissing
+	}
+
 	chatID := update.Message.Chat.ID
 	args := strings.TrimSpace(update.Message.CommandArguments())
 	cmd := update.Message.Command()
@@ -406,7 +430,7 @@ func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Updat
 		OnConflict(goqu.DoUpdate(
 			schema.TelegramBrandTableItemIDColName+","+schema.TelegramBrandTableChatIDColName,
 			goqu.Record{
-				schema.TelegramBrandTableInboxColName: goqu.Func("VALUES", schema.TelegramBrandTableInboxColName),
+				schema.TelegramBrandTableInboxColName: goqu.Func("VALUES", goqu.C(schema.TelegramBrandTableInboxColName)),
 			},
 		)).
 		Executor().ExecContext(ctx)
@@ -418,6 +442,14 @@ func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Updat
 }
 
 func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update) error {
+	if update.Message == nil {
+		return errUpdateMessageMissing
+	}
+
+	if update.Message.Chat == nil {
+		return errUpdateMessageChatMissing
+	}
+
 	args := strings.TrimSpace(update.Message.CommandArguments())
 	cmd := update.Message.Command()
 	chatID := update.Message.Chat.ID
@@ -476,7 +508,7 @@ func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update)
 		OnConflict(goqu.DoUpdate(
 			schema.TelegramBrandTableItemIDColName+","+schema.TelegramBrandTableChatIDColName,
 			goqu.Record{
-				schema.TelegramBrandTableNewColName: goqu.Func("VALUES", schema.TelegramBrandTableNewColName),
+				schema.TelegramBrandTableNewColName: goqu.Func("VALUES", goqu.C(schema.TelegramBrandTableNewColName)),
 			},
 		)).
 		Executor().ExecContext(ctx)
@@ -488,6 +520,14 @@ func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update)
 }
 
 func (s *Service) handleMessagesCommand(ctx context.Context, update *tgbotapi.Update) error {
+	if update.Message == nil {
+		return errUpdateMessageMissing
+	}
+
+	if update.Message.Chat == nil {
+		return errUpdateMessageChatMissing
+	}
+
 	chatID := update.Message.Chat.ID
 
 	var exists bool
@@ -545,6 +585,14 @@ func (s *Service) handleStartCommand(update *tgbotapi.Update) error {
 }
 
 func (s *Service) handleMeCommand(ctx context.Context, update *tgbotapi.Update) error {
+	if update.Message == nil {
+		return errUpdateMessageMissing
+	}
+
+	if update.Message.Chat == nil {
+		return errUpdateMessageChatMissing
+	}
+
 	spacesRegExp := regexp.MustCompile(`[[:space:]]+`)
 
 	args := spacesRegExp.Split(strings.TrimSpace(update.Message.CommandArguments()), -1)
@@ -615,7 +663,7 @@ func (s *Service) handleMeCommand(ctx context.Context, update *tgbotapi.Update) 
 			OnConflict(goqu.DoUpdate(
 				schema.TelegramChatTableChatIDColName,
 				goqu.Record{
-					schema.TelegramChatTableTokenColName: goqu.Func("VALUES", schema.TelegramChatTableTokenColName),
+					schema.TelegramChatTableTokenColName: goqu.Func("VALUES", goqu.C(schema.TelegramChatTableTokenColName)),
 				},
 			)).
 			Executor().ExecContext(ctx)

@@ -1047,3 +1047,22 @@ func CreateItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 
 	return itemID
 }
+
+func TestNameFilter(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig("../")
+	db, err := sql.Open("mysql", cfg.AutowpDSN)
+	require.NoError(t, err)
+
+	goquDB := goqu.New("mysql", db)
+	ctx := t.Context()
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+
+	// with pagination
+	_, err = repository.Item(ctx, &query.ItemListOptions{
+		Name:   "test",
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+	}, &ListFields{NameOnly: true})
+	require.NoError(t, err)
+}

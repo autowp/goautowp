@@ -29,6 +29,8 @@ func TestMain(m *testing.M) {
 
 	cnt = NewContainer(cfg)
 
+	logrus.SetLevel(logrus.DebugLevel)
+
 	grpcServer, err := cnt.GRPCServerWithServices()
 	if err != nil {
 		panic(err)
