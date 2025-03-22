@@ -1,5 +1,4 @@
 gin-mode: "debug"
-log-level: "info"
 public-rest:
   listen: ":8080"
 private-rest:

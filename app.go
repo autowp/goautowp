@@ -15,8 +15,7 @@ import (
 	"github.com/autowp/goautowp/schema"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
-	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql" // enable mysql driver
+	_ "github.com/go-sql-driver/mysql"                  // enable mysql driver
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"    // enable mysql migrations
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // enable postgres migrations
@@ -46,8 +45,6 @@ func NewApplication(cfg config.Config) *Application {
 	app := &Application{
 		container: NewContainer(cfg),
 	}
-
-	gin.SetMode(cfg.GinMode)
 
 	return app
 }

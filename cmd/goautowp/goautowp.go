@@ -11,6 +11,7 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"gopkg.in/gographics/imagick.v2/imagick"
@@ -51,19 +52,47 @@ func mainReturnWithCode() int { //nolint: maintidx
 
 	config.ValidateConfig(cfg)
 
-	level, err := logrus.ParseLevel(cfg.LogLevel)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	logrus.SetLevel(level)
-
 	autowpApp = goautowp.NewApplication(cfg)
 	defer util.Close(autowpApp)
 
 	app := &cli.Command{
 		Name:        "goautowp",
 		Description: "autowp cli interface",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "loglevel",
+				Value:    "info",
+				Usage:    "trace|debug|info|warn|error|fatal|panic",
+				Required: false,
+				Action: func(_ context.Context, _ *cli.Command, value string) error {
+					level := logrus.InfoLevel
+
+					var err error
+
+					if len(value) > 0 {
+						level, err = logrus.ParseLevel(value)
+						if err != nil {
+							logrus.Fatal(err)
+						}
+					}
+
+					logrus.SetLevel(level)
+
+					return nil
+				},
+			},
+			&cli.StringFlag{
+				Name:     "ginmode",
+				Value:    "release",
+				Usage:    "debug|test|release",
+				Required: false,
+				Action: func(_ context.Context, _ *cli.Command, value string) error {
+					gin.SetMode(value)
+
+					return nil
+				},
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name: "image-storage",

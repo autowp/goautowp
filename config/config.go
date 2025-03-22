@@ -110,9 +110,7 @@ type YoomoneyConfig struct {
 
 // Config Application config definition.
 type Config struct {
-	LogLevel string `mapstructure:"log-level" yaml:"log-level"`
-	GinMode  string `mapstructure:"gin-mode"  yaml:"gin-mode"`
-	GRPC     struct {
+	GRPC struct {
 		Listen string `mapstructure:"listen" yaml:"listen"`
 	} `mapstructure:"grpc" yaml:"grpc"`
 	Metrics struct {

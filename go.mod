@@ -5,7 +5,7 @@ go 1.24
 replace github.com/doug-martin/goqu/v9 v9.19.0 => github.com/autowp/goqu/v9 v9.20.0
 
 require (
-	cloud.google.com/go v0.119.0
+	cloud.google.com/go v0.120.0
 	github.com/Nerzal/gocloak/v13 v13.9.0
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/casbin/casbin v1.9.1
@@ -17,7 +17,7 @@ require (
 	github.com/gin-contrib/cors v1.7.4
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-mysql/errors v0.0.0-20180603193453-03314bea68e0
-	github.com/go-sql-driver/mysql v1.9.0
+	github.com/go-sql-driver/mysql v1.9.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/golang-migrate/migrate/v4 v4.18.2
 	github.com/google/uuid v1.6.0
@@ -31,7 +31,7 @@ require (
 	github.com/paulmach/orb v0.11.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/redis/go-redis/v9 v9.7.1
+	github.com/redis/go-redis/v9 v9.7.3
 	github.com/shopspring/decimal v1.4.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.20.0
@@ -52,7 +52,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bytedance/sonic v1.13.1 // indirect
+	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -69,9 +69,8 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/googleapis/googleapis v0.0.0-20250317144420-2d314e62e3e9 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -92,7 +91,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/prometheus/procfs v0.16.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/sagikazarmark/locafero v0.8.0 // indirect

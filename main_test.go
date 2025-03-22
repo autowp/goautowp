@@ -27,13 +27,6 @@ func TestMain(m *testing.M) {
 
 	cfg := config.LoadConfig(".")
 
-	level, err := logrus.ParseLevel(cfg.LogLevel)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	logrus.SetLevel(level)
-
 	cnt = NewContainer(cfg)
 
 	grpcServer, err := cnt.GRPCServerWithServices()
