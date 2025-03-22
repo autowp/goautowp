@@ -342,7 +342,7 @@ func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Updat
 		Where(
 			schema.UserTableDeletedCol.IsFalse(),
 			schema.TelegramChatTableChatIDCol.Eq(chatID),
-		).ScanStructContext(ctx, &exists)
+		).ScanValContext(ctx, &exists)
 	if err != nil {
 		return err
 	}
@@ -498,7 +498,7 @@ func (s *Service) handleMessagesCommand(ctx context.Context, update *tgbotapi.Up
 		Where(
 			schema.UserTableDeletedCol.IsFalse(),
 			schema.TelegramChatTableChatIDCol.Eq(chatID),
-		).ScanStructContext(ctx, &exists)
+		).ScanValContext(ctx, &exists)
 	if err != nil {
 		return err
 	}
