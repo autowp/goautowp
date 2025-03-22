@@ -705,6 +705,7 @@ func (s *Service) SetupRouter(router *gin.Engine) error {
 
 		err = s.handleUpdate(ctx, update)
 		if err != nil {
+			logrus.Errorf("telegram webhook error: %s", err.Error())
 			ctx.String(http.StatusInternalServerError, err.Error())
 
 			return
