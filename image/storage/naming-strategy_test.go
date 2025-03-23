@@ -30,3 +30,15 @@ func TestPatternStrategy(t *testing.T) {
 		require.EqualValues(t, tc.Result, generated)
 	}
 }
+
+func TestSerialStrategy(t *testing.T) {
+	t.Parallel()
+
+	strategy := NamingStrategySerial{}
+	generated := strategy.Generate(GenerateOptions{
+		Index:     2,
+		Count:     10,
+		Extension: "png",
+	})
+	require.EqualValues(t, "11.png", generated)
+}

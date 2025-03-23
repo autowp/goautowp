@@ -56,14 +56,15 @@ const dirNotDefinedMessage = "dir not defined"
 const listBrokenImagesPerPage = 1000
 
 var (
-	ErrImageNotFound        = errors.New("image not found")
-	errUnsupportedImageType = errors.New("unsupported image type")
-	errDirNotFound          = errors.New(dirNotDefinedMessage)
-	errFormatNotFound       = errors.New("format not found")
-	errFailedToFormatImage  = errors.New("failed to format image")
-	errFailedToGetImageSize = errors.New("failed to get image size")
-	errSelfRename           = errors.New("trying to rename to self")
-	errInvalidImageID       = errors.New("invalid image id provided")
+	ErrImageNotFound           = errors.New("image not found")
+	errUnsupportedImageType    = errors.New("unsupported image type")
+	errDirNotFound             = errors.New(dirNotDefinedMessage)
+	errFormatNotFound          = errors.New("format not found")
+	errFailedToFormatImage     = errors.New("failed to format image")
+	errFailedToGetImageSize    = errors.New("failed to get image size")
+	errSelfRename              = errors.New("trying to rename to self")
+	errInvalidImageID          = errors.New("invalid image id provided")
+	errFileSizeDetectionFailed = errors.New("failed to determine file size")
 )
 
 var publicRead = "public-read"
@@ -962,7 +963,7 @@ func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options Gene
 	return insertAttemptException
 }
 
-func (s *Storage) AddImageFromFile(
+func (s *Storage) AddImageFromFilepath(
 	ctx context.Context,
 	file string,
 	dirName string,
@@ -974,6 +975,15 @@ func (s *Storage) AddImageFromFile(
 	}
 	defer util.Close(handle)
 
+	return s.AddImageFromReader(ctx, handle, dirName, options)
+}
+
+func (s *Storage) AddImageFromReader(
+	ctx context.Context,
+	handle io.ReadSeeker,
+	dirName string,
+	options GenerateOptions,
+) (int, error) {
 	imageInfo, imageType, err := image.DecodeConfig(handle)
 	if err != nil {
 		return 0, err
@@ -1007,6 +1017,8 @@ func (s *Storage) AddImageFromFile(
 
 	ctx = context.WithoutCancel(ctx)
 
+	var filesize int64
+
 	id, err := s.generateLockWrite(
 		ctx,
 		dirName,
@@ -1021,11 +1033,10 @@ func (s *Storage) AddImageFromFile(
 				return err
 			}
 
-			handle, err := os.Open(file)
+			_, err = handle.Seek(0, 0)
 			if err != nil {
 				return err
 			}
-			defer util.Close(handle)
 
 			_, err = s.s3Client().PutObjectWithContext(ctx, &s3.PutObjectInput{
 				Key:         &fileName,
@@ -1037,6 +1048,20 @@ func (s *Storage) AddImageFromFile(
 			if err != nil {
 				return err
 			}
+
+			res, err := s.s3Client().HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+				Key:    &fileName,
+				Bucket: &bucket,
+			})
+			if err != nil {
+				return err
+			}
+
+			if res.ContentLength == nil {
+				return errFileSizeDetectionFailed
+			}
+
+			filesize = *res.ContentLength
 
 			return nil
 		},
@@ -1050,13 +1075,8 @@ func (s *Storage) AddImageFromFile(
 		$exif = json_encode($exif, JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
 	}*/
 
-	fi, err := handle.Stat()
-	if err != nil {
-		return 0, err
-	}
-
 	_, err = s.db.Update(schema.ImageTable).
-		Set(goqu.Record{schema.ImageTableFilesizeColName: fi.Size()}).
+		Set(goqu.Record{schema.ImageTableFilesizeColName: filesize}).
 		Where(schema.ImageTableIDCol.Eq(id)).
 		Executor().ExecContext(ctx)
 	if err != nil {

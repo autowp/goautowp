@@ -229,7 +229,7 @@ func TestBuildBrandsSprite(t *testing.T) {
 			Catname:    fmt.Sprintf("brand-%d-%d", random.Int(), i),
 		})
 
-		imageID, err := imageStorage.AddImageFromFile(t.Context(), "./test/png.png", "brand", storage.GenerateOptions{})
+		imageID, err := imageStorage.AddImageFromFilepath(t.Context(), "./test/png.png", "brand", storage.GenerateOptions{})
 		require.NoError(t, err)
 		require.NotEmpty(t, imageID)
 

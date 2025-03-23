@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
@@ -31,7 +32,10 @@ func TestTopBrandsListRuZh(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	langs := []string{"ru", "zh"}
 
@@ -72,7 +76,10 @@ func TestListFilters(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	options := query.ItemListOptions{
 		Language: "en",
@@ -117,7 +124,10 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 	options := query.ItemListOptions{
 		Language: "en",
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
@@ -174,8 +184,11 @@ func TestGetUserPicturesBrands(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
 
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
 	userID := createRandomUser(ctx, t, goquDB)
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	brandID, err := repository.CreateItem(ctx, schema.ItemRow{
 		ItemTypeID:      schema.ItemTableItemTypeIDBrand,
@@ -255,6 +268,9 @@ func TestPaginator(t *testing.T) {
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
 
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestPaginator" + strconv.Itoa(int(random.Uint32()%100000))
 
@@ -267,7 +283,7 @@ func TestPaginator(t *testing.T) {
 		})
 	}
 
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 	options := query.ItemListOptions{
 		Language: "en",
 		Limit:    2,
@@ -292,7 +308,11 @@ func TestOrderByDescendantsCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByDescendantsCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -399,7 +419,11 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByOrderByDescendantPicturesCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -540,7 +564,11 @@ func TestOrderByAddDatetime(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByAddDatetime" + strconv.Itoa(int(random.Uint32()%100000))
@@ -619,7 +647,11 @@ func TestOrderByName(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByName" + strconv.Itoa(int(random.Uint32()%100000))
@@ -726,7 +758,11 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByDescendantsParentsCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -868,7 +904,11 @@ func TestOrderByStarCount(t *testing.T) {
 
 	goquDB := goqu.New("mysql", db)
 	ctx := t.Context()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByStarCount" + strconv.Itoa(int(random.Uint32()%100000))
@@ -947,8 +987,10 @@ func TestOrderByItemParentParentTimestamp(t *testing.T) {
 	require.NoError(t, err)
 
 	goquDB := goqu.New("mysql", db)
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
 	ctx := t.Context()
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	name := "TestOrderByItemParentParentTimestamp" + strconv.Itoa(int(random.Uint32()%100000))
@@ -1037,7 +1079,10 @@ func CreateItem(t *testing.T, goquDB *goqu.Database, row schema.ItemRow) int64 {
 
 	ctx := t.Context()
 	cfg := config.LoadConfig("../")
-	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB))
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	repository := NewRepository(goquDB, 200, cfg.ContentLanguages, textstorage.New(goquDB), imageStorage)
 
 	itemID, err := repository.CreateItem(ctx, row, 0)
 	require.NoError(t, err)

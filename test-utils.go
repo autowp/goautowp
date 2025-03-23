@@ -24,8 +24,6 @@ const (
 
 const bearerPrefix = "Bearer "
 
-const authorizationHeader = "authorization"
-
 func randomHexString(t *testing.T, length int) string {
 	t.Helper()
 
@@ -43,7 +41,7 @@ func addPicture(
 
 	ctx := t.Context()
 
-	imageID, err := imageStorage.AddImageFromFile(ctx, filepath, "picture", storage.GenerateOptions{})
+	imageID, err := imageStorage.AddImageFromFilepath(ctx, filepath, "picture", storage.GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID)
 

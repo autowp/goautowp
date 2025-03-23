@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -528,7 +529,7 @@ func (s *Container) PublicHTTPServer(ctx context.Context) (*http.Server, error) 
 
 		handler, err := s.PublicRouter(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("PublicRouter(): %w", err)
 		}
 
 		s.publicHTTPServer = &http.Server{
@@ -548,6 +549,60 @@ type TokenForm struct {
 	Password     string `json:"password"`
 }
 
+func (s *Container) ItemsREST() (*ItemsREST, error) {
+	itemsRepo, err := s.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	auth, err := s.Auth()
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := s.Events()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewItemsREST(auth, s.Enforcer(), itemsRepo, events), nil
+}
+
+func (s *Container) PicturesREST() (*PicturesREST, error) {
+	picturesRepo, err := s.PicturesRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	imageStorage, err := s.ImageStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	itemOfDayRepo, err := s.ItemOfDayRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	itemsRepo, err := s.ItemsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	i18nBundle, err := s.I18n()
+	if err != nil {
+		return nil, err
+	}
+
+	pictureNameFormatter := pictures.NewPictureNameFormatter(
+		items.NewItemNameFormatter(i18nBundle),
+		i18nBundle,
+	)
+
+	return NewPicturesREST(picturesRepo, pictureNameFormatter, s.HostsManager(), imageStorage, itemOfDayRepo, itemsRepo),
+		nil
+}
+
 func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) {
 	if s.publicRouter != nil {
 		return s.publicRouter, nil
@@ -555,7 +610,7 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 
 	grpcServer, err := s.GRPCServerWithServices()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GRPCServerWithServices(): %w", err)
 	}
 
 	originFunc := func(origin string) bool {
@@ -570,7 +625,7 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 
 	tg, err := s.TelegramService()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("TelegramService(): %w", err)
 	}
 
 	ginEngine := gin.New()
@@ -585,10 +640,21 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 
 	yoomoney.SetupRouter(ctx, ginEngine)
 
-	err = tg.SetupRouter(ginEngine) //nolint: contextcheck
+	tg.SetupRouter(ginEngine) //nolint: contextcheck
+
+	picturesREST, err := s.PicturesREST()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("PicturesREST(): %w", err)
 	}
+
+	picturesREST.SetupRouter(ginEngine) //nolint: contextcheck
+
+	itemsREST, err := s.ItemsREST()
+	if err != nil {
+		return nil, fmt.Errorf("ItemsREST(): %w", err)
+	}
+
+	itemsREST.SetupRouter(ginEngine) //nolint: contextcheck
 
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsAcceptableGrpcCorsRequest(req) || wrappedGrpc.IsGrpcWebRequest(req) {
@@ -875,8 +941,13 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 			return nil, err
 		}
 
+		imageStorage, err := s.ImageStorage()
+		if err != nil {
+			return nil, err
+		}
+
 		s.itemsRepository = items.NewRepository(
-			db, cfg.MostsMinCarsCount, s.Config().ContentLanguages, textStorageRepository,
+			db, cfg.MostsMinCarsCount, s.Config().ContentLanguages, textStorageRepository, imageStorage,
 		)
 	}
 

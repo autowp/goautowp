@@ -83,7 +83,7 @@ func (s *Service) getBotAPI() (*tgbotapi.BotAPI, error) {
 	if s.botAPI == nil {
 		bot, err := tgbotapi.NewBotAPI(s.config.AccessToken)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("NewBotAPI(): %w", err)
 		}
 
 		s.botAPI = bot
@@ -719,15 +719,17 @@ func (s *Service) handleUpdate(ctx context.Context, update *tgbotapi.Update) err
 	return nil
 }
 
-func (s *Service) SetupRouter(router *gin.Engine) error {
-	bot, err := s.getBotAPI()
-	if err != nil {
-		return err
-	}
-
+func (s *Service) SetupRouter(router *gin.Engine) {
 	router.POST("/telegram/webhook/token/:token", func(ctx *gin.Context) {
 		if ctx.Param("token") != s.config.WebhookToken {
 			ctx.Status(http.StatusForbidden)
+
+			return
+		}
+
+		bot, err := s.getBotAPI()
+		if err != nil {
+			ctx.String(http.StatusInternalServerError, err.Error())
 
 			return
 		}
@@ -761,6 +763,4 @@ func (s *Service) SetupRouter(router *gin.Engine) error {
 
 		ctx.String(http.StatusOK, "success")
 	})
-
-	return nil
 }

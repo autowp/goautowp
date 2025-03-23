@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"slices"
 	"sort"
@@ -16,6 +17,7 @@ import (
 	"cloud.google.com/go/civil"
 	"github.com/autowp/goautowp/filter"
 	"github.com/autowp/goautowp/frontend"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
@@ -53,6 +55,9 @@ const (
 	NewDays                       = 7
 	ItemLanguageTextMaxLength     = 4096
 	ItemLanguageFullTextMaxLength = 65536
+	ItemLogoMaxFileSize           = 10 * 1024 * 1024
+	ItemLogoMinWidth              = 50
+	ItemLogoMinHeight             = 50
 
 	colNameOnly                   = "name_only"
 	colNameDefault                = "name_default"
@@ -267,6 +272,7 @@ type Repository struct {
 	attrsUserValuesUpdateDateColumn  *AttrsUserValuesUpdateDateColumn
 	contentLanguages                 []string
 	textStorageRepository            *textstorage.Repository
+	imageStorage                     *storage.Storage
 }
 
 type ItemParent struct {
@@ -323,6 +329,7 @@ func NewRepository(
 	mostsMinCarsCount int,
 	contentLanguages []string,
 	textStorageRepository *textstorage.Repository,
+	imageStorage *storage.Storage,
 ) *Repository {
 	return &Repository{
 		db:                               db,
@@ -396,6 +403,7 @@ func NewRepository(
 		attrsUserValuesUpdateDateColumn: &AttrsUserValuesUpdateDateColumn{},
 		contentLanguages:                contentLanguages,
 		textStorageRepository:           textStorageRepository,
+		imageStorage:                    imageStorage,
 	}
 }
 
@@ -4640,4 +4648,48 @@ func (s *Repository) Spec(ctx context.Context, id int32) (*schema.SpecRow, error
 	}
 
 	return &st, nil
+}
+
+func (s *Repository) SetItemLogo(ctx context.Context, itemID int64, file io.ReadSeeker) error {
+	if itemID <= 0 {
+		return ErrItemNotFound
+	}
+
+	item, err := s.Item(ctx, &query.ItemListOptions{
+		ItemID: itemID,
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	oldImageID := item.LogoID
+
+	ctx = context.WithoutCancel(ctx)
+
+	imageID, err := s.imageStorage.AddImageFromReader(ctx, file, "brand", storage.GenerateOptions{
+		Pattern: item.Catname.String,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Update(schema.ItemTable).
+		Set(goqu.Record{
+			schema.ItemTableLogoIDColName: imageID,
+		}).
+		Where(schema.ItemTableIDCol.Eq(item.ID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	if oldImageID.Valid {
+		err = s.imageStorage.RemoveImage(ctx, int(oldImageID.Int64))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

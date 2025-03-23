@@ -22,7 +22,7 @@ const (
 	TestImageFile2 = "./_files/mazda3_sedan_us-spec_11.jpg"
 )
 
-func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
+func TestS3AddImageFromFilepathChangeNameAndDelete(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
@@ -36,7 +36,7 @@ func TestS3AddImageFromFileChangeNameAndDelete(t *testing.T) {
 	imageStorage, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := imageStorage.AddImageFromFile(ctx, TestImageFile, "brand", GenerateOptions{
+	imageID, err := imageStorage.AddImageFromFilepath(ctx, TestImageFile, "brand", GenerateOptions{
 		Pattern: "folder/file",
 	})
 	require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestS3AddImageWithPreferredName(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := mw.AddImageFromFile(ctx, TestImageFile, "test", GenerateOptions{
+	imageID, err := mw.AddImageFromFilepath(ctx, TestImageFile, "test", GenerateOptions{
 		PreferredName: "zeliboba",
 	})
 	require.NoError(t, err)
@@ -169,7 +169,7 @@ func TestAddImageAndCrop(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := mw.AddImageFromFile(ctx, TestImageFile2, "brand", GenerateOptions{})
+	imageID, err := mw.AddImageFromFilepath(ctx, TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID)
 
@@ -246,14 +246,14 @@ func TestFlopNormalizeAndMultipleRequest(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID1, err := mw.AddImageFromFile(ctx, TestImageFile, "brand", GenerateOptions{})
+	imageID1, err := mw.AddImageFromFilepath(ctx, TestImageFile, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID1)
 
 	err = mw.Flop(ctx, imageID1)
 	require.NoError(t, err)
 
-	imageID2, err := mw.AddImageFromFile(ctx, TestImageFile2, "brand", GenerateOptions{})
+	imageID2, err := mw.AddImageFromFilepath(ctx, TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID2)
 
@@ -289,7 +289,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 	mw, err := NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageID, err := mw.AddImageFromFile(ctx, TestImageFile2, "brand", GenerateOptions{})
+	imageID, err := mw.AddImageFromFilepath(ctx, TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 	require.NotEmpty(t, imageID)
 
@@ -317,7 +317,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 
 	mw := NewStorage()
 
-	imageId, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
+	imageId, err := mw.AddImageFromFilepath(TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 
 	require.NotEmpty(t, imageId)
@@ -347,7 +347,7 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 	mw, err := NewStorage(db, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	imageId, err := mw.AddImageFromFile(TestImageFile2, "brand", GenerateOptions{})
+	imageId, err := mw.AddImageFromFilepath(TestImageFile2, "brand", GenerateOptions{})
 	require.NoError(t, err)
 
 	require.NotEmpty(t, imageId)

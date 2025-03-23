@@ -54,7 +54,7 @@ func TestInboxCommand(t *testing.T) {
 	usersRepo := users.NewRepository(goquDB, goquPostgresDB, "", cfg.Languages, client, cfg.Keycloak,
 		cfg.MessageInterval, imageStorage)
 	textStorageRepo := textstorage.New(goquDB)
-	itemRepo := items.NewRepository(goquDB, cfg.MostsMinCarsCount, cfg.ContentLanguages, textStorageRepo)
+	itemRepo := items.NewRepository(goquDB, cfg.MostsMinCarsCount, cfg.ContentLanguages, textStorageRepo, imageStorage)
 
 	i18n, err := i18nbundle.New()
 	require.NoError(t, err)

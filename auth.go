@@ -10,6 +10,7 @@ import (
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -18,6 +19,11 @@ import (
 var (
 	errAuthTokenIsInvalid  = errors.New("authorization token is invalid")
 	errFailedRoleDetection = errors.New("failed role detection")
+)
+
+const (
+	authorizationHeader = "authorization"
+	bearerSchema        = "Bearer"
 )
 
 type Auth struct {
@@ -41,15 +47,25 @@ func NewAuth(
 	}
 }
 
-func (s *Auth) ValidateGRPC(ctx context.Context) (int64, string, error) {
-	const bearerSchema = "Bearer"
+func (s *Auth) ValidateREST(ctx *gin.Context) (int64, string, error) {
+	header := ctx.GetHeader(authorizationHeader)
 
+	if len(header) == 0 {
+		return 0, "", nil
+	}
+
+	tokenString := strings.TrimPrefix(header, bearerSchema+" ")
+
+	return s.ValidateToken(ctx, tokenString)
+}
+
+func (s *Auth) ValidateGRPC(ctx context.Context) (int64, string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return 0, "", status.Errorf(codes.InvalidArgument, "missing metadata")
 	}
 
-	lines := md["authorization"]
+	lines := md[authorizationHeader]
 
 	if len(lines) < 1 {
 		return 0, "", nil

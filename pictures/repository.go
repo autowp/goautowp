@@ -131,6 +131,7 @@ const (
 	OrderByPerspectivesGroupPerspectives
 	OrderByVotesAndPerspectivesGroupPerspectives
 	OrderByAncestorStockFrontFirst
+	OrderByRandom
 )
 
 type PictureItemOrderBy = int
@@ -776,6 +777,8 @@ func (s *Repository) orderBy( //nolint: maintidx
 			goqu.L("?", perspectiveIDCol.Eq(schema.Perspective3Div4Left)).Desc(),
 			goqu.L("?", perspectiveIDCol.Eq(schema.Perspective3Div4Right)).Desc(),
 		)
+	case OrderByRandom:
+		sqSelect = sqSelect.Order(goqu.Func("RAND").Asc())
 	case OrderByNone:
 	}
 

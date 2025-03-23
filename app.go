@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -239,7 +240,7 @@ func (s *Application) ServeMetrics(ctx context.Context, quit chan bool) error {
 func (s *Application) ServePublic(ctx context.Context, quit chan bool) error {
 	httpServer, err := s.container.PublicHTTPServer(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("PublicHTTPServer(): %w", err)
 	}
 
 	go func(ctx context.Context) {
