@@ -4,6 +4,8 @@ import "github.com/doug-martin/goqu/v9"
 
 const (
 	PerspectivesGroupsTableName = "perspectives_groups"
+
+	PerspectiveGroupAPI = 31
 )
 
 var (

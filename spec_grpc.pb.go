@@ -7668,3 +7668,181 @@ var Attrs_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "spec.proto",
 }
+
+const (
+	Votings_GetVoting_FullMethodName             = "/goautowp.Votings/GetVoting"
+	Votings_GetVotingVariantVotes_FullMethodName = "/goautowp.Votings/GetVotingVariantVotes"
+	Votings_Vote_FullMethodName                  = "/goautowp.Votings/Vote"
+)
+
+// VotingsClient is the client API for Votings service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type VotingsClient interface {
+	GetVoting(ctx context.Context, in *VotingRequest, opts ...grpc.CallOption) (*Voting, error)
+	GetVotingVariantVotes(ctx context.Context, in *VotingRequest, opts ...grpc.CallOption) (*VotingVariantVotes, error)
+	Vote(ctx context.Context, in *VoteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type votingsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewVotingsClient(cc grpc.ClientConnInterface) VotingsClient {
+	return &votingsClient{cc}
+}
+
+func (c *votingsClient) GetVoting(ctx context.Context, in *VotingRequest, opts ...grpc.CallOption) (*Voting, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Voting)
+	err := c.cc.Invoke(ctx, Votings_GetVoting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *votingsClient) GetVotingVariantVotes(ctx context.Context, in *VotingRequest, opts ...grpc.CallOption) (*VotingVariantVotes, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VotingVariantVotes)
+	err := c.cc.Invoke(ctx, Votings_GetVotingVariantVotes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *votingsClient) Vote(ctx context.Context, in *VoteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Votings_Vote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// VotingsServer is the server API for Votings service.
+// All implementations must embed UnimplementedVotingsServer
+// for forward compatibility.
+type VotingsServer interface {
+	GetVoting(context.Context, *VotingRequest) (*Voting, error)
+	GetVotingVariantVotes(context.Context, *VotingRequest) (*VotingVariantVotes, error)
+	Vote(context.Context, *VoteRequest) (*emptypb.Empty, error)
+	mustEmbedUnimplementedVotingsServer()
+}
+
+// UnimplementedVotingsServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedVotingsServer struct{}
+
+func (UnimplementedVotingsServer) GetVoting(context.Context, *VotingRequest) (*Voting, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVoting not implemented")
+}
+func (UnimplementedVotingsServer) GetVotingVariantVotes(context.Context, *VotingRequest) (*VotingVariantVotes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVotingVariantVotes not implemented")
+}
+func (UnimplementedVotingsServer) Vote(context.Context, *VoteRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Vote not implemented")
+}
+func (UnimplementedVotingsServer) mustEmbedUnimplementedVotingsServer() {}
+func (UnimplementedVotingsServer) testEmbeddedByValue()                 {}
+
+// UnsafeVotingsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to VotingsServer will
+// result in compilation errors.
+type UnsafeVotingsServer interface {
+	mustEmbedUnimplementedVotingsServer()
+}
+
+func RegisterVotingsServer(s grpc.ServiceRegistrar, srv VotingsServer) {
+	// If the following call pancis, it indicates UnimplementedVotingsServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&Votings_ServiceDesc, srv)
+}
+
+func _Votings_GetVoting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VotingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VotingsServer).GetVoting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Votings_GetVoting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VotingsServer).GetVoting(ctx, req.(*VotingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Votings_GetVotingVariantVotes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VotingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VotingsServer).GetVotingVariantVotes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Votings_GetVotingVariantVotes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VotingsServer).GetVotingVariantVotes(ctx, req.(*VotingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Votings_Vote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VotingsServer).Vote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Votings_Vote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VotingsServer).Vote(ctx, req.(*VoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Votings_ServiceDesc is the grpc.ServiceDesc for Votings service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Votings_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "goautowp.Votings",
+	HandlerType: (*VotingsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetVoting",
+			Handler:    _Votings_GetVoting_Handler,
+		},
+		{
+			MethodName: "GetVotingVariantVotes",
+			Handler:    _Votings_GetVotingVariantVotes_Handler,
+		},
+		{
+			MethodName: "Vote",
+			Handler:    _Votings_Vote_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "spec.proto",
+}

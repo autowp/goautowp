@@ -29,6 +29,7 @@ import (
 	"github.com/autowp/goautowp/traffic"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
+	"github.com/autowp/goautowp/votings"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-contrib/cors"
@@ -75,6 +76,7 @@ type Container struct {
 	itemOfDayRepository    *itemofday.Repository
 	itemsGrpcServer        *ItemsGRPCServer
 	ratingGrpcServer       *RatingGRPCServer
+	votingsGrpcServer      *VotingsGRPCServer
 	itemsRepository        *items.Repository
 	keyCloak               *gocloak.GoCloak
 	messagingGrpcServer    *MessagingGRPCServer
@@ -88,6 +90,7 @@ type Container struct {
 	textGrpcServer         *TextGRPCServer
 	traffic                *traffic.Traffic
 	trafficGrpcServer      *TrafficGRPCServer
+	votingsRepository      *votings.Repository
 	usersRepository        *users.Repository
 	usersGrpcServer        *UsersGRPCServer
 	redis                  *redis.Client
@@ -568,6 +571,20 @@ func (s *Container) ItemsREST() (*ItemsREST, error) {
 	return NewItemsREST(auth, s.Enforcer(), itemsRepo, events), nil
 }
 
+func (s *Container) UsersREST() (*UsersREST, error) {
+	usersRepo, err := s.UsersRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	auth, err := s.Auth()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewUsersREST(auth, usersRepo), nil
+}
+
 func (s *Container) PicturesREST() (*PicturesREST, error) {
 	picturesRepo, err := s.PicturesRepository()
 	if err != nil {
@@ -655,6 +672,13 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 	}
 
 	itemsREST.SetupRouter(ginEngine) //nolint: contextcheck
+
+	usersREST, err := s.UsersREST()
+	if err != nil {
+		return nil, fmt.Errorf("UsersREST(): %w", err)
+	}
+
+	usersREST.SetupRouter(ginEngine) //nolint: contextcheck
 
 	s.publicRouter = func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsAcceptableGrpcCorsRequest(req) || wrappedGrpc.IsGrpcWebRequest(req) {
@@ -878,6 +902,19 @@ func (s *Container) UserExtractor() (*UserExtractor, error) {
 	}
 
 	return NewUserExtractor(s.Enforcer(), is, picRepository), nil
+}
+
+func (s *Container) VotingsRepository() (*votings.Repository, error) {
+	if s.votingsRepository == nil {
+		db, err := s.GoquDB()
+		if err != nil {
+			return nil, err
+		}
+
+		s.votingsRepository = votings.NewRepository(db)
+	}
+
+	return s.votingsRepository, nil
 }
 
 func (s *Container) UsersRepository() (*users.Repository, error) {
@@ -1152,6 +1189,24 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 	}
 
 	return s.usersGrpcServer, nil
+}
+
+func (s *Container) VotingsGRPCServer() (*VotingsGRPCServer, error) {
+	if s.votingsGrpcServer == nil {
+		auth, err := s.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		votingsRepo, err := s.VotingsRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		s.votingsGrpcServer = NewVotingsGRPCServer(votingsRepo, auth)
+	}
+
+	return s.votingsGrpcServer, nil
 }
 
 func (s *Container) RatingGRPCServer() (*RatingGRPCServer, error) {

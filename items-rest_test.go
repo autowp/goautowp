@@ -35,7 +35,7 @@ func SetItemLogoRequest(t *testing.T, itemID int64, file string) *http.Request {
 		multipartWriter = multipart.NewWriter(buf)
 	)
 
-	part, err := multipartWriter.CreateFormFile(fileField, filepath.Base(file))
+	part, err := multipartWriter.CreateFormFile(itemLogoFileField, filepath.Base(file))
 	require.NoError(t, err)
 
 	handle, err := os.OpenFile(file, os.O_RDONLY, 0)

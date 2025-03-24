@@ -468,7 +468,7 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 		extension = strings.TrimLeft(filepath.Ext(newPath), ".")
 	}
 
-	formattedImageID, err = s.addImageFromImagick(
+	formattedImageID, err = s.AddImageFromImagick(
 		ctx,
 		mw,
 		s.formattedImageDirName,
@@ -524,7 +524,7 @@ func (s *Storage) Format(name string) *sampler.Format {
 	return nil
 }
 
-func (s *Storage) addImageFromImagick(
+func (s *Storage) AddImageFromImagick(
 	ctx context.Context,
 	mw *imagick.MagickWand,
 	dirName string,
@@ -1099,7 +1099,7 @@ func (s *Storage) AddImageFromBlob(
 		return 0, err
 	}
 
-	id, err := s.addImageFromImagick(ctx, mw, dirName, options)
+	id, err := s.AddImageFromImagick(ctx, mw, dirName, options)
 	if err != nil {
 		return 0, err
 	}
@@ -1719,4 +1719,8 @@ func (s *Storage) ImageEXIF(ctx context.Context, id int) (map[string]map[string]
 	}
 
 	return exif, nil
+}
+
+func (s *Storage) Sampler() *sampler.Sampler {
+	return s.sampler
 }

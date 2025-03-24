@@ -112,7 +112,7 @@ func (s *PicturesREST) handleItemOfDayPicture(ctx *gin.Context) {
 		}
 
 		if err == nil {
-			for _, groupID := range []int32{31, 0} {
+			for _, groupID := range []int32{schema.PerspectiveGroupAPI, 0} {
 				filter := query.PictureListOptions{
 					Status: schema.PictureStatusAccepted,
 					PictureItem: &query.PictureItemListOptions{

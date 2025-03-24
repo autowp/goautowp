@@ -237,6 +237,46 @@ service Attrs {
   rpc GetChildSpecifications(GetSpecificationsRequest) returns (GetSpecificationsResponse) {}
 }
 
+service Votings {
+  rpc GetVoting(VotingRequest) returns (Voting) {}
+  rpc GetVotingVariantVotes(VotingRequest) returns (VotingVariantVotes) {}
+  rpc Vote(VoteRequest) returns (google.protobuf.Empty) {}
+}
+
+message VoteRequest {
+  int32 id = 1;
+  repeated int32 voting_variant_vote_ids = 2;
+}
+
+message VotingRequest {
+  int32 id = 1;
+}
+
+message Voting {
+  int32 id = 1;
+  google.protobuf.Timestamp begin_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  bool can_vote = 4;
+  bool multivariant = 5;
+  string name = 6;
+  string text = 7;
+  repeated VotingVariant variants = 8;
+}
+
+message VotingVariant {
+  int32 id = 1;
+  bool is_max = 2;
+  bool is_min = 3;
+  string name = 4;
+  float percent = 5;
+  string text = 6;
+  int32 votes = 7;
+}
+
+message VotingVariantVotes {
+  repeated int64 user_ids = 1;
+}
+
 message ErrorDetails {
   google.rpc.RetryInfo retryInfo = 1;
   google.rpc.DebugInfo debugInfo = 2;

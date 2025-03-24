@@ -10,67 +10,61 @@ import (
 	"strconv"
 
 	"github.com/autowp/goautowp/items"
-	"github.com/casbin/casbin"
+	"github.com/autowp/goautowp/users"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gin-gonic/gin"
 )
 
-const itemLogoFileField = "file"
+const userPhotoFileField = "photo"
 
-type ItemsREST struct {
+type UsersREST struct {
 	auth       *Auth
-	enforcer   *casbin.Enforcer
-	repository *items.Repository
-	events     *Events
+	repository *users.Repository
 }
 
-func NewItemsREST(
-	auth *Auth, enforcer *casbin.Enforcer, repository *items.Repository, events *Events,
-) *ItemsREST {
-	return &ItemsREST{
+func NewUsersREST(auth *Auth, repository *users.Repository) *UsersREST {
+	return &UsersREST{
 		auth:       auth,
-		enforcer:   enforcer,
 		repository: repository,
-		events:     events,
 	}
 }
 
-func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
-	userID, role, err := s.auth.ValidateREST(ctx)
+func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
+	userID, _, err := s.auth.ValidateREST(ctx)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 
 		return
 	}
 
-	if !s.enforcer.Enforce(role, "brand", "logo") {
-		ctx.Status(http.StatusForbidden)
+	userIDStr := ctx.Param("id")
 
-		return
-	}
-
-	itemIDStr := ctx.Param("id")
-
-	itemID, err := strconv.ParseInt(itemIDStr, 10, 64)
+	updateUserID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
 		ctx.String(http.StatusBadRequest, err.Error())
 
 		return
 	}
 
-	file, err := ctx.FormFile(itemLogoFileField)
+	if updateUserID != userID {
+		ctx.Status(http.StatusForbidden)
+
+		return
+	}
+
+	file, err := ctx.FormFile(userPhotoFileField)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 
 		return
 	}
 
-	if file.Size > items.ItemLogoMaxFileSize {
+	if file.Size > users.UserPhotoMaxFileSize {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"invalid_params": gin.H{itemLogoFileField: map[string]string{
+			"invalid_params": gin.H{userPhotoFileField: map[string]string{
 				"fileFilesSizeTooBig": fmt.Sprintf(
 					"All files in sum should have a maximum size of '%d' but '%d' were detected",
-					items.ItemLogoMaxFileSize, file.Size,
+					users.UserPhotoMaxFileSize, file.Size,
 				),
 			}},
 		})
@@ -92,9 +86,28 @@ func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
 		return
 	}
 
-	if !mime.Is("image/png") {
+	allowedMimes := []string{
+		"image/bmp",
+		"image/gif",
+		"image/jpeg",
+		"image/png",
+		"image/webp",
+		"image/x-png",
+	}
+
+	mimeIsAllowed := false
+
+	for _, allowedMime := range allowedMimes {
+		if mime.Is(allowedMime) {
+			mimeIsAllowed = true
+
+			break
+		}
+	}
+
+	if !mimeIsAllowed {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"invalid_params": gin.H{itemLogoFileField: map[string]string{
+			"invalid_params": gin.H{userPhotoFileField: map[string]string{
 				"fileIsImageFalseType": fmt.Sprintf(
 					"File is no image, '%s' detected",
 					mime.String(),
@@ -119,12 +132,12 @@ func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
 		return
 	}
 
-	if imageConfig.Width < items.ItemLogoMinWidth || imageConfig.Height < items.ItemLogoMinHeight {
+	if imageConfig.Width < users.UserPhotoMinWidth || imageConfig.Height < users.UserPhotoMinHeight {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"invalid_params": gin.H{itemLogoFileField: map[string]string{
+			"invalid_params": gin.H{userPhotoFileField: map[string]string{
 				"fileImageSizeTooSmall": fmt.Sprintf(
 					"Minimum expected size for image should be '%dx%d' but '%dx%d' detected",
-					items.ItemLogoMinWidth, items.ItemLogoMinHeight, imageConfig.Width, imageConfig.Height,
+					users.UserPhotoMinWidth, users.UserPhotoMinHeight, imageConfig.Width, imageConfig.Height,
 				),
 			}},
 		})
@@ -141,7 +154,7 @@ func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
 
 	ctxWithoutCancel := context.WithoutCancel(ctx)
 
-	err = s.repository.SetItemLogo(ctxWithoutCancel, itemID, handle)
+	err = s.repository.SetUserPhoto(ctxWithoutCancel, userID, handle)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			ctx.Status(http.StatusNotFound)
@@ -154,22 +167,11 @@ func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
 		return
 	}
 
-	err = s.events.Add(ctxWithoutCancel, Event{
-		UserID:  userID,
-		Message: "Закачен логотип",
-		Items:   []int64{itemID},
-	})
-	if err != nil {
-		ctx.String(http.StatusInternalServerError, err.Error())
-
-		return
-	}
-
 	ctx.Status(http.StatusOK)
 }
 
-func (s *ItemsREST) SetupRouter(router *gin.Engine) {
-	router.POST("/api/item/:id/logo", func(ctx *gin.Context) {
-		s.postLogoAction(ctx)
+func (s *UsersREST) SetupRouter(router *gin.Engine) {
+	router.POST("/api/user/:id/photo", func(ctx *gin.Context) {
+		s.postPhotoAction(ctx)
 	})
 }

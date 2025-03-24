@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"io"
 	"math"
 	"net"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/Nerzal/gocloak/v13/pkg/jwx"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
@@ -24,16 +26,25 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
-const lastOnlineUpdateThreshold = 5 * time.Second
+const (
+	lastOnlineUpdateThreshold = 5 * time.Second
+	UserPhotoMaxFileSize      = 4194304
+	UserPhotoMinWidth         = 50
+	UserPhotoMinHeight        = 50
+)
 
 const (
 	Decimal   = 10
 	BitSize64 = 64
 )
 
-var ErrUserNotFound = errors.New("user not found")
+var (
+	ErrUserNotFound   = errors.New("user not found")
+	ErrFormatNotFound = errors.New("format not found")
+)
 
 type Claims struct {
 	jwx.Claims
@@ -1156,6 +1167,75 @@ func (s *Repository) UpdateUser(ctx context.Context, row schema.UsersRow, mask [
 			Set(set).
 			Where(schema.UserTableIDCol.Eq(row.ID)).
 			Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) SetUserPhoto(ctx context.Context, userID int64, file io.ReadSeeker) error {
+	if userID <= 0 {
+		return sql.ErrNoRows
+	}
+
+	user, err := s.User(ctx, &query.UserListOptions{
+		ID:      userID,
+		Deleted: util.BoolPtr(false),
+	}, UserFields{}, OrderByNone)
+	if err != nil {
+		return err
+	}
+
+	oldImageID := user.Img
+
+	format := s.imageStorage.Format("photo")
+	if format == nil {
+		return ErrFormatNotFound
+	}
+
+	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+
+	imgBytes, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	err = mw.ReadImageBlob(imgBytes)
+	if err != nil {
+		return err
+	}
+
+	imageSampler := s.imageStorage.Sampler()
+
+	mwConverted, err := imageSampler.ConvertImage(mw, sampler.Crop{}, *format)
+	if err != nil {
+		return err
+	}
+
+	defer mwConverted.Destroy()
+
+	ctx = context.WithoutCancel(ctx)
+
+	imageID, err := s.imageStorage.AddImageFromImagick(ctx, mwConverted, "user", storage.GenerateOptions{})
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Update(schema.UserTable).
+		Set(goqu.Record{
+			schema.UserTableImgColName: imageID,
+		}).
+		Where(schema.ItemTableIDCol.Eq(user.ID)).
+		Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	if oldImageID != nil {
+		err = s.imageStorage.RemoveImage(ctx, *oldImageID)
 		if err != nil {
 			return err
 		}
