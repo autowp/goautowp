@@ -4635,7 +4635,7 @@ func (s *Repository) setItemLanguageName(ctx context.Context, itemID int64, lang
 func (s *Repository) Spec(ctx context.Context, id int32) (*schema.SpecRow, error) {
 	var st schema.SpecRow
 
-	success, err := s.db.Select(schema.SpecTableIDCol, schema.SpecTableShortNameCol).
+	success, err := s.db.Select(schema.SpecTableIDCol, schema.SpecTableNameCol, schema.SpecTableShortNameCol).
 		From(schema.SpecTable).
 		Where(schema.SpecTableIDCol.Eq(id)).
 		ScanStructContext(ctx, &st)

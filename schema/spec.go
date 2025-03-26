@@ -24,4 +24,5 @@ var (
 type SpecRow struct {
 	ID        int32  `db:"id"`
 	ShortName string `db:"short_name"`
+	Name      string `db:"name"`
 }

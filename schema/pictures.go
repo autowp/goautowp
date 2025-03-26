@@ -60,6 +60,7 @@ var (
 	PictureTableCopyrightsTextIDCol   = PictureTable.Col(PictureTableCopyrightsTextIDColName)
 	PictureTableAcceptDatetimeCol     = PictureTable.Col(PictureTableAcceptDatetimeColName)
 	PictureTableContentCountCol       = PictureTable.Col(PictureTableContentCountColName)
+	PictureTableRemovingDateCol       = PictureTable.Col(PictureTableRemovingDateColName)
 )
 
 type PictureRow struct {

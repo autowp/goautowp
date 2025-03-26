@@ -128,7 +128,7 @@ func (s *AttrsGRPCServer) GetAttributes(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.Attributes(ctx, in.GetZoneId(), in.GetParentId())
+	rows, err := s.repository.Attributes(ctx, &query.AttrsListOptions{ZoneID: in.GetZoneId(), ParentID: in.GetParentId()})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -289,19 +289,13 @@ func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) 
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
+		extractedValue := extractAttrValue(value)
+
 		res[idx] = &AttrValue{
 			AttributeId: row.AttributeID,
 			ItemId:      row.ItemID,
-			Value: &AttrValueValue{
-				Valid:       value.Valid,
-				FloatValue:  value.FloatValue,
-				IntValue:    value.IntValue,
-				BoolValue:   value.BoolValue,
-				ListValue:   value.ListValue,
-				StringValue: value.StringValue,
-				IsEmpty:     value.IsEmpty,
-			},
-			ValueText: valueText,
+			Value:       &extractedValue,
+			ValueText:   valueText,
 		}
 	}
 
@@ -356,21 +350,15 @@ func (s *AttrsGRPCServer) GetUserValues(
 			}
 		}
 
+		extractedValue := extractAttrValue(value)
+
 		res[idx] = &AttrUserValue{
 			AttributeId: row.AttributeID,
 			ItemId:      row.ItemID,
 			UserId:      row.UserID,
-			Value: &AttrValueValue{
-				Valid:       value.Valid,
-				FloatValue:  value.FloatValue,
-				IntValue:    value.IntValue,
-				BoolValue:   value.BoolValue,
-				ListValue:   value.ListValue,
-				StringValue: value.StringValue,
-				IsEmpty:     value.IsEmpty,
-			},
-			ValueText:  valueText,
-			UpdateDate: timestamppb.New(row.UpdateDate),
+			Value:       &extractedValue,
+			ValueText:   valueText,
+			UpdateDate:  timestamppb.New(row.UpdateDate),
 		}
 	}
 
@@ -567,5 +555,53 @@ func (s *AttrsGRPCServer) GetChildSpecifications(
 
 	return &GetSpecificationsResponse{
 		Html: html,
+	}, nil
+}
+
+func (s *AttrsGRPCServer) GetChartParameters(ctx context.Context, _ *emptypb.Empty) (*ChartParameters, error) {
+	rows, err := s.repository.Attributes(ctx, &query.AttrsListOptions{
+		IDs: attrs.ChartParameters,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	params := make([]*ChartParameter, 0, len(rows))
+	for _, row := range rows {
+		params = append(params, &ChartParameter{
+			Name: row.Name,
+			Id:   row.ID,
+		})
+	}
+
+	return &ChartParameters{
+		Parameters: params,
+	}, nil
+}
+
+func (s *AttrsGRPCServer) GetChartData(ctx context.Context, in *ChartDataRequest) (*ChartData, error) {
+	datasets, err := s.repository.ChartData(ctx, in.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	result := make([]*ChartDataDataset, 0)
+
+	for _, dataset := range datasets {
+		pairs := make(map[int32]*AttrValueValue, len(dataset.Pairs))
+
+		for year, value := range dataset.Pairs {
+			extractedValue := extractAttrValue(value)
+			pairs[int32(year)] = &extractedValue //nolint: gosec
+		}
+
+		result = append(result, &ChartDataDataset{
+			Name:   dataset.Title,
+			Values: pairs,
+		})
+	}
+
+	return &ChartData{
+		Datasets: result,
 	}, nil
 }

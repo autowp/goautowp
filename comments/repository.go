@@ -1824,3 +1824,41 @@ func (s *Repository) MoveMessages(
 
 	return s.updateTopicStat(ctx, dstTypeID, dstItemID)
 }
+
+func (s *Repository) DeleteTopic(ctx context.Context, typeID schema.CommentMessageType, itemID int64) error {
+	ctx = context.WithoutCancel(ctx)
+
+	_, err := s.db.Delete(schema.CommentMessageTable).Where(
+		schema.CommentMessageTableTypeIDCol.Eq(typeID),
+		schema.CommentMessageTableItemIDCol.Eq(itemID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Delete(schema.CommentTopicTable).Where(
+		schema.CommentTopicTableTypeIDCol.Eq(typeID),
+		schema.CommentTopicTableItemIDCol.Eq(itemID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Delete(schema.CommentTopicViewTable).Where(
+		schema.CommentTopicViewTableTypeIDCol.Eq(typeID),
+		schema.CommentTopicViewTableItemIDCol.Eq(itemID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Delete(schema.CommentTopicSubscribeTable).Where(
+		schema.CommentTopicSubscribeTableTypeIDCol.Eq(typeID),
+		schema.CommentTopicSubscribeTableItemIDCol.Eq(itemID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

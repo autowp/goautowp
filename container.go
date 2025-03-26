@@ -473,9 +473,16 @@ func (s *Container) PicturesRepository() (*pictures.Repository, error) {
 			return nil, err
 		}
 
+		commentsRepository, err := s.CommentsRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		cfg := s.Config()
 
-		s.picturesRepository = pictures.NewRepository(db, is, textStorageRepository, itemsRepository, cfg.DuplicateFinder)
+		s.picturesRepository = pictures.NewRepository(
+			db, is, textStorageRepository, itemsRepository, cfg.DuplicateFinder, commentsRepository,
+		)
 	}
 
 	return s.picturesRepository, nil

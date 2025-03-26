@@ -37,8 +37,9 @@ const (
 )
 
 const (
-	Decimal   = 10
-	BitSize64 = 64
+	Decimal               = 10
+	BitSize64             = 64
+	deleteUnusedBatchSize = 100
 )
 
 var (
@@ -1236,6 +1237,54 @@ func (s *Repository) SetUserPhoto(ctx context.Context, userID int64, file io.Rea
 
 	if oldImageID != nil {
 		err = s.imageStorage.RemoveImage(ctx, *oldImageID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Repository) DeleteUnused(ctx context.Context) error {
+	var ids []int64
+
+	err := s.db.Select(schema.UserTableIDCol).
+		From(schema.UserTable).
+		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.UserTableIDCol.Eq(schema.AttrsUserValuesTableUserIDCol))).
+		LeftJoin(schema.CommentMessageTable, goqu.On(schema.UserTableIDCol.Eq(schema.CommentMessageTableAuthorIDCol))).
+		LeftJoin(schema.ForumsTopicsTable, goqu.On(schema.UserTableIDCol.Eq(schema.ForumsTopicsTableAuthorIDCol))).
+		LeftJoin(schema.PictureTable, goqu.On(schema.UserTableIDCol.Eq(schema.PictureTableOwnerIDCol))).
+		LeftJoin(schema.VotingVariantVoteTable, goqu.On(schema.UserTableIDCol.Eq(schema.VotingVariantVoteTableUserIDCol))).
+		LeftJoin(schema.PersonalMessagesTable.As("pmf"), goqu.On(
+			schema.UserTableIDCol.Eq(goqu.T("pmf").Col(schema.PersonalMessagesTableFromUserIDColName)),
+		)).
+		LeftJoin(schema.PersonalMessagesTable.As("pmt"), goqu.On(
+			schema.UserTableIDCol.Eq(goqu.T("pmt").Col(schema.PersonalMessagesTableToUserIDColName)),
+		)).
+		LeftJoin(schema.LogEventsTable, goqu.On(schema.UserTableIDCol.Eq(schema.LogEventsTableUserIDCol))).
+		Where(
+			schema.UserTableLastOnlineCol.Lt(goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL 2 YEAR"))),
+			schema.UserTableRoleCol.Eq("user"),
+			schema.AttrsUserValuesTableUserIDCol.IsNull(),
+			schema.CommentMessageTableAuthorIDCol.IsNull(),
+			schema.ForumsTopicsTableAuthorIDCol.IsNull(),
+			schema.PictureTableOwnerIDCol.IsNull(),
+			schema.VotingVariantVoteTableUserIDCol.IsNull(),
+			goqu.T("pmf").Col(schema.PersonalMessagesTableFromUserIDColName).IsNull(),
+			goqu.T("pmt").Col(schema.PersonalMessagesTableToUserIDColName).IsNull(),
+			schema.LogEventsTable.IsNull(),
+		).
+		Order(schema.UserTableIDCol.Asc()).
+		Limit(deleteUnusedBatchSize).
+		ScanValsContext(ctx, &ids)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		logrus.Warnf("Delete %d", id)
+
+		_, err = s.DeleteUser(ctx, id)
 		if err != nil {
 			return err
 		}

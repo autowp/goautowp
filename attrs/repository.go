@@ -44,7 +44,24 @@ const (
 	busZoneID     int64 = 3
 )
 
-var busVehicleTypes = []int64{19, 39, 28, 32}
+type ChartDataset struct {
+	Title string
+	Pairs map[int]Value
+}
+
+var (
+	busVehicleTypes = []int64{19, 39, 28, 32}
+	chartSpecs      = []int32{
+		schema.SpecIDNorthAmerica,
+		schema.SpecIDWorldwide,
+	}
+	ChartParameters = []int64{
+		schema.LengthAttr,
+		schema.WidthAttr,
+		schema.HeightAttr,
+		schema.MaxSpeedAttr,
+	}
+)
 
 const (
 	ValuesOrderByNone ValuesOrderBy = iota
@@ -279,20 +296,24 @@ func (s *Repository) attributesRecursive(
 }
 
 func (s *Repository) Attributes(
-	ctx context.Context, zoneID int64, parentID int64,
+	ctx context.Context, options *query.AttrsListOptions,
 ) ([]*schema.AttrsAttributeRow, error) {
+	if options == nil {
+		options = &query.AttrsListOptions{}
+	}
+
 	var rows []*schema.AttrsAttributeRow
 
-	if zoneID > 0 {
-		err := s.loadZoneAttributesTree(ctx, zoneID)
+	if options.ZoneID > 0 {
+		err := s.loadZoneAttributesTree(ctx, options.ZoneID)
 		if err != nil {
 			return nil, err
 		}
 
-		if parentID > 0 {
-			rows = s.zoneAttributesTree[zoneID][parentID]
+		if options.ParentID > 0 {
+			rows = s.zoneAttributesTree[options.ZoneID][options.ParentID]
 		} else {
-			rows = s.zoneAttributes[zoneID]
+			rows = s.zoneAttributes[options.ZoneID]
 		}
 	} else {
 		err := s.loadAttributesTree(ctx)
@@ -300,11 +321,23 @@ func (s *Repository) Attributes(
 			return nil, err
 		}
 
-		if parentID > 0 {
-			rows = s.attributesTree[parentID]
+		if options.ParentID > 0 {
+			rows = s.attributesTree[options.ParentID]
 		} else {
 			rows = slices.Collect(maps.Values(s.attributes))
 		}
+	}
+
+	if len(options.IDs) > 0 {
+		res := make([]*schema.AttrsAttributeRow, 0, len(options.IDs))
+
+		for _, row := range rows {
+			if util.Contains(options.IDs, row.ID) {
+				res = append(res, row)
+			}
+		}
+
+		rows = res
 	}
 
 	return rows, nil
@@ -3419,4 +3452,139 @@ func ValueTableByType(typeID schema.AttrsAttributeTypeID) (ValueTable, error) {
 	}
 
 	return ValueTable{}, fmt.Errorf("%w: '%d'", errAttributeTypeNotSupported, typeID)
+}
+
+func (s *Repository) ChartData(ctx context.Context, attributeID int64) ([]ChartDataset, error) {
+	if !util.Contains(ChartParameters, attributeID) {
+		return nil, errAttributeNotFound
+	}
+
+	attrRow, err := s.Attribute(ctx, attributeID)
+	if err != nil {
+		return nil, err
+	}
+
+	if attrRow == nil {
+		return nil, errAttributeNotFound
+	}
+
+	valueTable, err := ValueTableByType(attrRow.TypeID.AttributeTypeID)
+	if err != nil {
+		return nil, err
+	}
+
+	datasets := make([]ChartDataset, 0)
+
+	for _, specID := range chartSpecs {
+		specRow, err := s.itemsRepository.Spec(ctx, specID)
+		if err != nil {
+			return nil, err
+		}
+
+		specIDs, err := s.specIDs(ctx, specID)
+		if err != nil {
+			return nil, err
+		}
+
+		pairs := make(map[int]Value)
+
+		sqSelect := s.db.Select(
+			goqu.Func("YEAR", schema.ItemTableBeginOrderCacheCol).As("year"),
+			goqu.Func("ROUND", goqu.Func("AVG", valueTable.ValueCol).As("value")),
+		).
+			From(valueTable.Table).
+			Join(schema.ItemTable, goqu.On(valueTable.ItemIDCol.Eq(schema.ItemTableIDCol))).
+			Join(schema.VehicleVehicleTypeTable, goqu.On(
+				schema.ItemTableIDCol.Eq(schema.VehicleVehicleTypeTableVehicleIDCol),
+			)).
+			Join(schema.CarTypesParentsTable, goqu.On(
+				schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol),
+			)).
+			Where(
+				valueTable.AttributeIDCol.Eq(attributeID),
+				schema.CarTypesParentsTableParentIDCol.Eq(schema.CarTypeCarID),
+				schema.ItemTableBeginOrderCacheCol.IsNotNull(),
+				schema.ItemTableBeginOrderCacheCol.Lt("2100-01-01 00:00:00"),
+				schema.ItemTableSpecIDCol.In(specIDs),
+				valueTable.ValueCol.IsNotNull(),
+			).
+			GroupBy(goqu.C("year")).
+			Order(goqu.C("year").Asc())
+
+		switch attrRow.TypeID.AttributeTypeID {
+		case schema.AttrsAttributeTypeIDInteger:
+			var sts []struct {
+				Year  int   `db:"year"`
+				Value int32 `db:"value"`
+			}
+
+			err = sqSelect.ScanStructsContext(ctx, &sts)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, st := range sts {
+				pairs[st.Year] = Value{
+					Valid:    true,
+					IntValue: st.Value,
+					Type:     attrRow.TypeID.AttributeTypeID,
+					IsEmpty:  false,
+				}
+			}
+		case schema.AttrsAttributeTypeIDFloat:
+			var sts []struct {
+				Year  int     `db:"year"`
+				Value float64 `db:"value"`
+			}
+
+			err = sqSelect.ScanStructsContext(ctx, &sts)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, st := range sts {
+				pairs[st.Year] = Value{
+					Valid:      true,
+					FloatValue: st.Value,
+					Type:       attrRow.TypeID.AttributeTypeID,
+					IsEmpty:    false,
+				}
+			}
+		case schema.AttrsAttributeTypeIDString, schema.AttrsAttributeTypeIDText, schema.AttrsAttributeTypeIDBoolean,
+			schema.AttrsAttributeTypeIDList, schema.AttrsAttributeTypeIDTree, schema.AttrsAttributeTypeIDUnknown:
+			return nil, errAttributeTypeNotSupported
+		}
+
+		datasets = append(datasets, ChartDataset{
+			Title: specRow.Name,
+			Pairs: pairs,
+		})
+	}
+
+	return datasets, nil
+}
+
+func (s *Repository) specIDs(ctx context.Context, id int32) ([]int32, error) {
+	var ids []int32
+
+	err := s.db.Select(schema.SpecTableIDCol).
+		From(schema.SpecTable).
+		Where(schema.SpecTableParentIDCol.Eq(id)).
+		ScanValsContext(ctx, &ids)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []int32{id}
+
+	for _, pid := range ids {
+		cids, err := s.specIDs(ctx, pid)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, cids...)
+	}
+
+	return append(ids, result...), nil
 }

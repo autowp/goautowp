@@ -10,6 +10,8 @@ const (
 	CarTypesTableParentIDColName = "parent_id"
 	CarTypesTableNameRpColName   = "name_rp"
 	CarTypesTablePositionColName = "position"
+
+	CarTypeCarID = 29
 )
 
 var (

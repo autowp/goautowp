@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
@@ -92,6 +93,7 @@ type Repository struct {
 	perspectiveCache      map[int32][]int32
 	perspectiveCacheMutex sync.Mutex
 	dfConfig              config.DuplicateFinderConfig
+	commentsRepository    *comments.Repository
 }
 
 type PictureFields struct {
@@ -141,9 +143,14 @@ const (
 	PictureItemOrderByFrontPerspectivesFirst
 )
 
+const (
+	queueLifetimeDays = 7
+	queueBatchSize    = 1000
+)
+
 func NewRepository(
 	db *goqu.Database, imageStorage *storage.Storage, textStorageRepository *textstorage.Repository,
-	itemsRepository *items.Repository, dfConfig config.DuplicateFinderConfig,
+	itemsRepository *items.Repository, dfConfig config.DuplicateFinderConfig, commentsRepository *comments.Repository,
 ) *Repository {
 	return &Repository{
 		db:                    db,
@@ -153,6 +160,7 @@ func NewRepository(
 		perspectiveCache:      make(map[int32][]int32),
 		perspectiveCacheMutex: sync.Mutex{},
 		dfConfig:              dfConfig,
+		commentsRepository:    commentsRepository,
 	}
 }
 
@@ -1157,6 +1165,31 @@ func (s *Repository) isAllowedType(itemTypeID schema.ItemTableItemTypeID, pictur
 	}
 
 	return util.Contains(pictureItemTypes, pictureItemType)
+}
+
+func (s *Repository) DeletePictureItemsByPicture(ctx context.Context, pictureID int64) (bool, error) {
+	ctx = context.WithoutCancel(ctx)
+
+	res, err := s.db.Delete(schema.PictureItemTable).Where(
+		schema.PictureItemTablePictureIDCol.Eq(pictureID),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	if affected > 0 {
+		err = s.updateContentCount(ctx, pictureID)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return affected > 0, nil
 }
 
 func (s *Repository) DeletePictureItem(
@@ -2182,4 +2215,72 @@ func (s *Repository) FileNamePattern(ctx context.Context, pictureID int64) (stri
 	}
 
 	return strings.ReplaceAll(result, "//", "/"), nil
+}
+
+func (s *Repository) ClearQueue(ctx context.Context) error {
+	var pictures []schema.PictureRow
+
+	err := s.db.Select(schema.PictureTableIDCol, schema.PictureTableImageIDCol).
+		From(schema.PictureTable).
+		Where(
+			schema.PictureTableStatusCol.Eq(schema.PictureStatusRemoving),
+			goqu.Or(
+				schema.PictureTableRemovingDateCol.IsNull(),
+				schema.PictureTableRemovingDateCol.Lt(
+					goqu.Func("DATE_SUB", goqu.Func("CURDATE"), goqu.L("INTERVAL ? DAY", queueLifetimeDays)),
+				),
+			),
+		).
+		Limit(queueBatchSize).
+		ScanValsContext(ctx, &pictures)
+	if err != nil {
+		return err
+	}
+
+	count := len(pictures)
+
+	if count == 0 {
+		logrus.Info("Nothing to clear")
+
+		return nil
+	}
+
+	logrus.Warnf("Removing %d pictures", count)
+
+	for _, picture := range pictures {
+		iCtx := context.WithoutCancel(ctx)
+
+		_, err = s.DeletePictureItemsByPicture(ctx, picture.ID)
+		if err != nil {
+			return err
+		}
+
+		err = s.commentsRepository.DeleteTopic(
+			ctx,
+			schema.CommentMessageTypeIDPictures,
+			picture.ID,
+		)
+		if err != nil {
+			return err
+		}
+
+		imageID := picture.ImageID
+		if imageID.Valid {
+			_, err = s.db.Delete(schema.PictureTable).
+				Where(schema.PictureTableIDCol.Eq(picture.ID)).
+				Executor().ExecContext(iCtx)
+			if err != nil {
+				return err
+			}
+
+			err = s.imageStorage.RemoveImage(iCtx, int(imageID.Int64))
+			if err != nil {
+				return err
+			}
+		} else {
+			logrus.Warnf("Broken image `%d`. Skip", picture.ID)
+		}
+	}
+
+	return nil
 }

@@ -235,12 +235,36 @@ service Attrs {
   rpc GetConflicts(AttrConflictsRequest) returns (AttrConflictsResponse) {}
   rpc GetSpecifications(GetSpecificationsRequest) returns (GetSpecificationsResponse) {}
   rpc GetChildSpecifications(GetSpecificationsRequest) returns (GetSpecificationsResponse) {}
+  rpc GetChartParameters(google.protobuf.Empty) returns (ChartParameters) {}
+  rpc GetChartData(ChartDataRequest) returns (ChartData) {}
 }
 
 service Votings {
   rpc GetVoting(VotingRequest) returns (Voting) {}
   rpc GetVotingVariantVotes(VotingRequest) returns (VotingVariantVotes) {}
   rpc Vote(VoteRequest) returns (google.protobuf.Empty) {}
+}
+
+message ChartDataRequest {
+  int64 id = 1;
+}
+
+message ChartDataDataset {
+  string name = 1;
+  map<int32, AttrValueValue> values = 3;
+}
+
+message ChartData {
+  repeated ChartDataDataset datasets = 1;
+}
+
+message ChartParameter {
+  int64 id = 1;
+  string name = 2;
+}
+
+message ChartParameters {
+  repeated ChartParameter parameters = 1;
 }
 
 message VoteRequest {

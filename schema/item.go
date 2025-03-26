@@ -62,7 +62,7 @@ const (
 	ItemYearMax           = 2100
 )
 
-var ( //nolint: dupl
+var (
 	ItemTable                          = goqu.T(ItemTableName)
 	ItemTableIDCol                     = ItemTable.Col(ItemTableIDColName)
 	ItemTableBodyCol                   = ItemTable.Col(ItemTableBodyColName)
@@ -89,6 +89,7 @@ var ( //nolint: dupl
 	ItemTableSpecInheritCol            = ItemTable.Col(ItemTableSpecInheritColName)
 	ItemTableProducedCol               = ItemTable.Col(ItemTableProducedColName)
 	ItemTableProducedExactlyCol        = ItemTable.Col(ItemTableProducedExactlyColName)
+	ItemTableBeginOrderCacheCol        = ItemTable.Col(ItemTableBeginOrderCacheColName)
 )
 
 type ItemRow struct {

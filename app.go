@@ -433,6 +433,25 @@ func (s *Application) SchedulerDaily(ctx context.Context) error {
 
 	logrus.Infof("Comments deleted: %d", affected)
 
+	err = usersRep.DeleteUnused(ctx)
+	if err != nil {
+		logrus.Error(err.Error())
+
+		return err
+	}
+
+	picturesRepo, err := s.container.PicturesRepository()
+	if err != nil {
+		return err
+	}
+
+	err = picturesRepo.ClearQueue(ctx)
+	if err != nil {
+		logrus.Error(err.Error())
+
+		return err
+	}
+
 	// affected, err = commentsRep.RefreshRepliesCount(ctx)
 	// if err != nil {
 	//	logrus.Error(err.Error())

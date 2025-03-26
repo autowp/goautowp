@@ -7051,6 +7051,8 @@ const (
 	Attrs_GetConflicts_FullMethodName           = "/goautowp.Attrs/GetConflicts"
 	Attrs_GetSpecifications_FullMethodName      = "/goautowp.Attrs/GetSpecifications"
 	Attrs_GetChildSpecifications_FullMethodName = "/goautowp.Attrs/GetChildSpecifications"
+	Attrs_GetChartParameters_FullMethodName     = "/goautowp.Attrs/GetChartParameters"
+	Attrs_GetChartData_FullMethodName           = "/goautowp.Attrs/GetChartData"
 )
 
 // AttrsClient is the client API for Attrs service.
@@ -7072,6 +7074,8 @@ type AttrsClient interface {
 	GetConflicts(ctx context.Context, in *AttrConflictsRequest, opts ...grpc.CallOption) (*AttrConflictsResponse, error)
 	GetSpecifications(ctx context.Context, in *GetSpecificationsRequest, opts ...grpc.CallOption) (*GetSpecificationsResponse, error)
 	GetChildSpecifications(ctx context.Context, in *GetSpecificationsRequest, opts ...grpc.CallOption) (*GetSpecificationsResponse, error)
+	GetChartParameters(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ChartParameters, error)
+	GetChartData(ctx context.Context, in *ChartDataRequest, opts ...grpc.CallOption) (*ChartData, error)
 }
 
 type attrsClient struct {
@@ -7232,6 +7236,26 @@ func (c *attrsClient) GetChildSpecifications(ctx context.Context, in *GetSpecifi
 	return out, nil
 }
 
+func (c *attrsClient) GetChartParameters(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ChartParameters, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChartParameters)
+	err := c.cc.Invoke(ctx, Attrs_GetChartParameters_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *attrsClient) GetChartData(ctx context.Context, in *ChartDataRequest, opts ...grpc.CallOption) (*ChartData, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChartData)
+	err := c.cc.Invoke(ctx, Attrs_GetChartData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AttrsServer is the server API for Attrs service.
 // All implementations must embed UnimplementedAttrsServer
 // for forward compatibility.
@@ -7251,6 +7275,8 @@ type AttrsServer interface {
 	GetConflicts(context.Context, *AttrConflictsRequest) (*AttrConflictsResponse, error)
 	GetSpecifications(context.Context, *GetSpecificationsRequest) (*GetSpecificationsResponse, error)
 	GetChildSpecifications(context.Context, *GetSpecificationsRequest) (*GetSpecificationsResponse, error)
+	GetChartParameters(context.Context, *emptypb.Empty) (*ChartParameters, error)
+	GetChartData(context.Context, *ChartDataRequest) (*ChartData, error)
 	mustEmbedUnimplementedAttrsServer()
 }
 
@@ -7305,6 +7331,12 @@ func (UnimplementedAttrsServer) GetSpecifications(context.Context, *GetSpecifica
 }
 func (UnimplementedAttrsServer) GetChildSpecifications(context.Context, *GetSpecificationsRequest) (*GetSpecificationsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChildSpecifications not implemented")
+}
+func (UnimplementedAttrsServer) GetChartParameters(context.Context, *emptypb.Empty) (*ChartParameters, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChartParameters not implemented")
+}
+func (UnimplementedAttrsServer) GetChartData(context.Context, *ChartDataRequest) (*ChartData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChartData not implemented")
 }
 func (UnimplementedAttrsServer) mustEmbedUnimplementedAttrsServer() {}
 func (UnimplementedAttrsServer) testEmbeddedByValue()               {}
@@ -7597,6 +7629,42 @@ func _Attrs_GetChildSpecifications_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Attrs_GetChartParameters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetChartParameters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Attrs_GetChartParameters_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetChartParameters(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Attrs_GetChartData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChartDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AttrsServer).GetChartData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Attrs_GetChartData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AttrsServer).GetChartData(ctx, req.(*ChartDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Attrs_ServiceDesc is the grpc.ServiceDesc for Attrs service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -7663,6 +7731,14 @@ var Attrs_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetChildSpecifications",
 			Handler:    _Attrs_GetChildSpecifications_Handler,
+		},
+		{
+			MethodName: "GetChartParameters",
+			Handler:    _Attrs_GetChartParameters_Handler,
+		},
+		{
+			MethodName: "GetChartData",
+			Handler:    _Attrs_GetChartData_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
