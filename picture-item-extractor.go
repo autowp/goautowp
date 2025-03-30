@@ -225,11 +225,11 @@ func (s *PictureItemExtractor) ExtractRows(
 			PictureId:     row.PictureID,
 			ItemId:        row.ItemID,
 			Type:          extractPictureItemType(row.Type),
-			CropLeft:      uint32(util.NullInt32ToScalar(row.CropLeft)),     //nolint:gosec
-			CropTop:       uint32(util.NullInt32ToScalar(row.CropTop)),      //nolint:gosec
-			CropWidth:     uint32(util.NullInt32ToScalar(row.CropWidth)),    //nolint:gosec
-			CropHeight:    uint32(util.NullInt32ToScalar(row.CropHeight)),   //nolint:gosec
-			PerspectiveId: int32(util.NullInt64ToScalar(row.PerspectiveID)), //nolint:gosec
+			CropLeft:      uint32(util.NullInt32ToScalar(row.CropLeft)),   //nolint:gosec
+			CropTop:       uint32(util.NullInt32ToScalar(row.CropTop)),    //nolint:gosec
+			CropWidth:     uint32(util.NullInt32ToScalar(row.CropWidth)),  //nolint:gosec
+			CropHeight:    uint32(util.NullInt32ToScalar(row.CropHeight)), //nolint:gosec
+			PerspectiveId: util.NullInt32ToScalar(row.PerspectiveID),
 		}
 
 		if itemRequest != nil {

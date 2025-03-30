@@ -10,12 +10,14 @@ import (
 	"time"
 
 	"github.com/Nerzal/gocloak/v13"
+	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/i18nbundle"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/users"
@@ -55,17 +57,21 @@ func TestInboxCommand(t *testing.T) {
 		cfg.MessageInterval, imageStorage)
 	textStorageRepo := textstorage.New(goquDB)
 	itemRepo := items.NewRepository(goquDB, cfg.MostsMinCarsCount, cfg.ContentLanguages, textStorageRepo, imageStorage)
-
 	i18n, err := i18nbundle.New()
 	require.NoError(t, err)
 
 	messagingRepo := messaging.NewRepository(goquDB, func(_ context.Context, _ int64, _ int64, _ string) error {
 		return nil
 	}, i18n)
+	hostManager := hosts.NewManager(cfg.Languages)
+	commentsRepo := comments.NewRepository(goquDB, usersRepo, messagingRepo, hostManager)
+	picturesRepo := pictures.NewRepository(goquDB, imageStorage, textStorageRepo, itemRepo, cfg.DuplicateFinder,
+		commentsRepo)
 
 	userID := createRandomUser(ctx, t, goquDB)
 
-	repository := NewService(cfg.Telegram, goquDB, hosts.NewManager(cfg.Languages), usersRepo, itemRepo, messagingRepo)
+	repository := NewService(cfg.Telegram, goquDB, hosts.NewManager(cfg.Languages), usersRepo, itemRepo, messagingRepo,
+		picturesRepo)
 	repository.enableMockMode()
 
 	err = repository.handleMeCommand(ctx, &tgbotapi.Update{

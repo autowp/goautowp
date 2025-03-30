@@ -160,18 +160,18 @@ func (s *Storage) Images(ctx context.Context, ids []int) (map[int]*Image, error)
 	}
 
 	for _, st := range sts {
-		var img Image
-
-		img.id = st.ID
-		img.width = st.Width
-		img.height = st.Height
-		img.filepath = st.Filepath
-		img.filesize = st.Filesize
-		img.dir = st.Dir
-		img.cropLeft = st.CropLeft
-		img.cropTop = st.CropTop
-		img.cropWidth = st.CropWidth
-		img.cropHeight = st.CropHeight
+		img := Image{
+			id:         st.ID,
+			width:      st.Width,
+			height:     st.Height,
+			filepath:   st.Filepath,
+			filesize:   st.Filesize,
+			dir:        st.Dir,
+			cropLeft:   st.CropLeft,
+			cropTop:    st.CropTop,
+			cropWidth:  st.CropWidth,
+			cropHeight: st.CropHeight,
+		}
 
 		err = s.populateSrc(&img)
 		if err != nil {

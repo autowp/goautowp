@@ -423,3 +423,32 @@ func (s *Repository) prepareList(
 
 	return messages, nil
 }
+
+func (s *Repository) Recycle(ctx context.Context) (int64, error) {
+	res, err := s.db.Delete(schema.PersonalMessagesTable).Where(
+		schema.PersonalMessagesTableDeletedByToCol.IsTrue(),
+		goqu.Or(
+			schema.PersonalMessagesTableDeletedByFromCol.IsTrue(),
+			schema.PersonalMessagesTableFromUserIDCol.IsNull(),
+		),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.RowsAffected()
+}
+
+func (s *Repository) RecycleSystem(ctx context.Context) (int64, error) {
+	res, err := s.db.Delete(schema.PersonalMessagesTable).Where(
+		schema.PersonalMessagesTableFromUserIDCol.IsNull(),
+		schema.PersonalMessagesTableAddDatetimeCol.Lt(
+			goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL 6 MONTH")),
+		),
+	).Executor().ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.RowsAffected()
+}

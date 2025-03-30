@@ -7,8 +7,6 @@ import (
 	"io"
 	"math"
 	"net"
-	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,7 +19,6 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
@@ -875,33 +872,6 @@ func (s *Repository) UserPreferences(ctx context.Context, userID int64, toUserID
 	return &row, err
 }
 
-func (s *Repository) SetupPrivateRouter(_ context.Context, r *gin.Engine) {
-	r.GET("/user-user-preferences/:user_id/:to_user_id", func(ctx *gin.Context) { //nolint: contextcheck
-		userID, err := strconv.ParseInt(ctx.Param("user_id"), Decimal, BitSize64)
-		if err != nil {
-			ctx.String(http.StatusBadRequest, "Invalid user_id")
-
-			return
-		}
-
-		toUserID, err := strconv.ParseInt(ctx.Param("to_user_id"), Decimal, BitSize64)
-		if err != nil {
-			ctx.String(http.StatusBadRequest, "Invalid to_user_id")
-
-			return
-		}
-
-		prefs, err := s.UserPreferences(ctx, userID, toUserID)
-		if err != nil {
-			ctx.String(http.StatusInternalServerError, "InternalServerError")
-
-			return
-		}
-
-		ctx.JSON(http.StatusOK, prefs)
-	})
-}
-
 func (s *Repository) incForumTopicsRecord() goqu.Record {
 	r := s.incForumMessagesRecord()
 	r[schema.UserTableForumsTopicsColName] = goqu.L(schema.UserTableForumsTopicsColName + " + 1")
@@ -1248,7 +1218,7 @@ func (s *Repository) SetUserPhoto(ctx context.Context, userID int64, file io.Rea
 func (s *Repository) DeleteUnused(ctx context.Context) error {
 	var ids []int64
 
-	err := s.db.Select(schema.UserTableIDCol).
+	err := s.autowpDB.Select(schema.UserTableIDCol).
 		From(schema.UserTable).
 		LeftJoin(schema.AttrsUserValuesTable, goqu.On(schema.UserTableIDCol.Eq(schema.AttrsUserValuesTableUserIDCol))).
 		LeftJoin(schema.CommentMessageTable, goqu.On(schema.UserTableIDCol.Eq(schema.CommentMessageTableAuthorIDCol))).
@@ -1272,7 +1242,7 @@ func (s *Repository) DeleteUnused(ctx context.Context) error {
 			schema.VotingVariantVoteTableUserIDCol.IsNull(),
 			goqu.T("pmf").Col(schema.PersonalMessagesTableFromUserIDColName).IsNull(),
 			goqu.T("pmt").Col(schema.PersonalMessagesTableToUserIDColName).IsNull(),
-			schema.LogEventsTable.IsNull(),
+			schema.LogEventsTableUserIDCol.IsNull(),
 		).
 		Order(schema.UserTableIDCol.Asc()).
 		Limit(deleteUnusedBatchSize).
@@ -1291,4 +1261,15 @@ func (s *Repository) DeleteUnused(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Repository) IncrementUploads(ctx context.Context, id int64) error {
+	_, err := s.autowpDB.Update(schema.UserTable).
+		Set(goqu.Record{
+			schema.UserTablePicturesAddedColName: goqu.L("? + 1", schema.UserTablePicturesAddedCol),
+		}).
+		Where(schema.UserTableIDCol.Eq(id)).
+		Executor().ExecContext(ctx)
+
+	return err
 }

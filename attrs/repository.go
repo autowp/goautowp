@@ -3490,7 +3490,7 @@ func (s *Repository) ChartData(ctx context.Context, attributeID int64) ([]ChartD
 
 		sqSelect := s.db.Select(
 			goqu.Func("YEAR", schema.ItemTableBeginOrderCacheCol).As("year"),
-			goqu.Func("ROUND", goqu.Func("AVG", valueTable.ValueCol).As("value")),
+			goqu.Func("ROUND", goqu.Func("AVG", valueTable.ValueCol)).As("value"),
 		).
 			From(valueTable.Table).
 			Join(schema.ItemTable, goqu.On(valueTable.ItemIDCol.Eq(schema.ItemTableIDCol))).

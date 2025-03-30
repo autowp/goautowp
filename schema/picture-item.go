@@ -44,5 +44,5 @@ type PictureItemRow struct {
 	CropTop       sql.NullInt32   `db:"crop_top"`
 	CropWidth     sql.NullInt32   `db:"crop_width"`
 	CropHeight    sql.NullInt32   `db:"crop_height"`
-	PerspectiveID sql.NullInt64   `db:"perspective_id"`
+	PerspectiveID sql.NullInt32   `db:"perspective_id"`
 }

@@ -3,7 +3,6 @@ package goautowp
 import (
 	"fmt"
 	"math/rand"
-	"net"
 	"slices"
 	"strconv"
 	"testing"
@@ -13,7 +12,6 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
-	"github.com/autowp/goautowp/util"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -711,10 +709,6 @@ func TestInboxPicturesCount(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	ctx := t.Context()
 	kc := cnt.Keycloak()
 
@@ -755,33 +749,20 @@ func TestInboxPicturesCount(t *testing.T) {
 
 	// create inbox pictures
 	for i := range 10 {
-		identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
+		pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{
+			ItemID: childID,
+		}, adminToken.AccessToken)
 
-		status := schema.PictureStatusInbox
 		if i >= 5 {
-			status = schema.PictureStatusAccepted
+			_, err = picturesClient.SetPictureStatus(
+				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+				&SetPictureStatusRequest{
+					Id:     pictureID,
+					Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
+				},
+			)
+			require.NoError(t, err)
 		}
-
-		res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
-			Identity: identity,
-			Status:   status,
-			IP:       util.IP(net.IPv4zero),
-			AddDate:  time.Now(),
-		}).Executor().ExecContext(ctx)
-		require.NoError(t, err)
-
-		pictureID, err := res.LastInsertId()
-		require.NoError(t, err)
-
-		_, err = picturesClient.CreatePictureItem(
-			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-			&CreatePictureItemRequest{
-				PictureId: pictureID,
-				ItemId:    childID,
-				Type:      PictureItemType_PICTURE_ITEM_CONTENT,
-			},
-		)
-		require.NoError(t, err)
 	}
 
 	_, err = client.List(ctx, &ItemsRequest{
@@ -2298,25 +2279,15 @@ func TestTwinsGroupPictures(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	identity := "t" + strconv.Itoa(randomInt%100000)
+	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{
+		ItemID: vehicleID,
+	}, adminToken)
 
-	res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
-		Identity: identity,
-		Status:   schema.PictureStatusAccepted,
-		IP:       util.IP(net.IPv4zero),
-		AddDate:  time.Now(),
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	pictureID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	_, err = picturesClient.CreatePictureItem(
+	_, err = picturesClient.SetPictureStatus(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
-		&CreatePictureItemRequest{
-			PictureId: pictureID,
-			ItemId:    vehicleID,
-			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
 		},
 	)
 	require.NoError(t, err)
@@ -2369,25 +2340,15 @@ func TestPersonPreviewPictures(t *testing.T) {
 		ItemTypeId: ItemType_ITEM_TYPE_PERSON,
 	})
 
-	identity := "t" + strconv.Itoa(randomInt%100000)
+	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{
+		ItemID: personID,
+	}, adminToken)
 
-	res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
-		Identity: identity,
-		Status:   schema.PictureStatusAccepted,
-		IP:       util.IP(net.IPv4zero),
-		AddDate:  time.Now(),
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	pictureID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	_, err = picturesClient.CreatePictureItem(
+	_, err = picturesClient.SetPictureStatus(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
-		&CreatePictureItemRequest{
-			PictureId: pictureID,
-			ItemId:    personID,
-			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
 		},
 	)
 	require.NoError(t, err)
@@ -2463,26 +2424,16 @@ func TestCutawayAuthorsWithPreviewPictures(t *testing.T) {
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	identity := "t" + strconv.Itoa(randomInt%100000)
+	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{
+		ItemID:        vehicleID,
+		PerspectiveID: schema.PerspectiveCutaway,
+	}, adminToken)
 
-	res, err := goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
-		Identity: identity,
-		Status:   schema.PictureStatusAccepted,
-		IP:       util.IP(net.IPv4zero),
-		AddDate:  time.Now(),
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	pictureID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	_, err = picturesClient.CreatePictureItem(
+	_, err = picturesClient.SetPictureStatus(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
-		&CreatePictureItemRequest{
-			PictureId:     pictureID,
-			ItemId:        vehicleID,
-			Type:          PictureItemType_PICTURE_ITEM_CONTENT,
-			PerspectiveId: schema.PerspectiveCutaway,
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
 		},
 	)
 	require.NoError(t, err)
@@ -2546,12 +2497,6 @@ func TestItemOfDayPicture(t *testing.T) {
 	kc := cnt.Keycloak()
 	cfg := config.LoadConfig(".")
 
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
 	// admin
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -2563,24 +2508,12 @@ func TestItemOfDayPicture(t *testing.T) {
 	vehicleName := fmt.Sprintf("Vehicle-%d", randomInt)
 	vehicleID := createItem(t, conn, cnt, &APIItem{
 		Name:       vehicleName,
-		IsGroup:    false,
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusAccepted)
-
-	picturesClient := NewPicturesClient(conn)
-
-	_, err = picturesClient.CreatePictureItem(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
-		&CreatePictureItemRequest{
-			PictureId:     pictureID,
-			ItemId:        vehicleID,
-			Type:          PictureItemType_PICTURE_ITEM_CONTENT,
-			PerspectiveId: schema.PerspectiveFrontStrict,
-		},
-	)
-	require.NoError(t, err)
+	addPicture(t, cnt, conn, "./test/test.jpg",
+		PicturePostForm{ItemID: vehicleID, PerspectiveID: schema.PerspectiveFrontStrict},
+		PictureStatus_PICTURE_STATUS_ACCEPTED, adminToken.AccessToken)
 
 	res, err := client.Item(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),

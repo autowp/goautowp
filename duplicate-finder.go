@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
@@ -29,21 +30,23 @@ const (
 
 // DuplicateFinder Main Object.
 type DuplicateFinder struct {
-	db *goqu.Database
+	db     *goqu.Database
+	config config.DuplicateFinderConfig
 }
 
 // NewDuplicateFinder constructor.
-func NewDuplicateFinder(db *goqu.Database) (*DuplicateFinder, error) {
+func NewDuplicateFinder(db *goqu.Database, config config.DuplicateFinderConfig) (*DuplicateFinder, error) {
 	s := &DuplicateFinder{
-		db: db,
+		db:     db,
+		config: config,
 	}
 
 	return s, nil
 }
 
 // ListenAMQP for incoming messages.
-func (s *DuplicateFinder) ListenAMQP(ctx context.Context, url string, queue string, quitChan chan bool) error {
-	rabbitMQ, err := util.ConnectRabbitMQ(url)
+func (s *DuplicateFinder) ListenAMQP(ctx context.Context, quitChan chan bool) error {
+	rabbitMQ, err := util.ConnectRabbitMQ(s.config.RabbitMQ)
 	if err != nil {
 		logrus.Error(err)
 
@@ -57,12 +60,12 @@ func (s *DuplicateFinder) ListenAMQP(ctx context.Context, url string, queue stri
 	defer util.Close(ch)
 
 	inQ, err := ch.QueueDeclare(
-		queue, // name
-		false, // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
+		s.config.Queue, // name
+		false,          // durable
+		false,          // delete when unused
+		false,          // exclusive
+		false,          // no-wait
+		nil,            // arguments
 	)
 	if err != nil {
 		return err

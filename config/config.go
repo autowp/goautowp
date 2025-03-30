@@ -126,7 +126,6 @@ type Config struct {
 	FileStorage        FileStorageConfig         `mapstructure:"file-storage"         yaml:"file-storage"`
 	RabbitMQ           string                    `mapstructure:"rabbitmq"             yaml:"rabbitmq"`
 	MonitoringQueue    string                    `mapstructure:"monitoring_queue"     yaml:"monitoring_queue"`
-	PrivateRest        RestConfig                `mapstructure:"private-rest"         yaml:"private-rest"`
 	Telegram           TelegramConfig            `mapstructure:"telegram"             yaml:"telegram"`
 	PostgresDSN        string                    `mapstructure:"postgres-dsn"         yaml:"postgres-dsn"`
 	PostgresMigrations MigrationsConfig          `mapstructure:"postgres-migrations"  yaml:"postgres-migrations"`

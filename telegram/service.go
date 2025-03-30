@@ -18,6 +18,7 @@ import (
 	"github.com/autowp/goautowp/hosts"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/messaging"
+	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
@@ -56,13 +57,14 @@ type Service struct {
 	botAPI              *tgbotapi.BotAPI
 	userRepository      *users.Repository
 	itemRepository      *items.Repository
+	picturesRepository  *pictures.Repository
 	messagingRepository *messaging.Repository
 	mockModeEnabled     bool
 }
 
 func NewService(
 	config config.TelegramConfig, db *goqu.Database, hostsManager *hosts.Manager, userRepository *users.Repository,
-	itemRepository *items.Repository, messagingRepository *messaging.Repository,
+	itemRepository *items.Repository, messagingRepository *messaging.Repository, picturesRepository *pictures.Repository,
 ) *Service {
 	return &Service{
 		config:              config,
@@ -72,6 +74,7 @@ func NewService(
 		itemRepository:      itemRepository,
 		messagingRepository: messagingRepository,
 		mockModeEnabled:     false,
+		picturesRepository:  picturesRepository,
 	}
 }
 
@@ -763,4 +766,63 @@ func (s *Service) SetupRouter(router *gin.Engine) {
 
 		ctx.String(http.StatusOK, "success")
 	})
+}
+
+func (s *Service) NotifyInbox(ctx context.Context, pictureID int64) error {
+	if pictureID == 0 {
+		return nil
+	}
+
+	brandIDs, err := s.itemRepository.IDs(ctx, query.ItemListOptions{
+		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
+		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
+			PictureItemsByItemID: &query.PictureItemListOptions{
+				PictureID: pictureID,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(brandIDs) > 0 {
+		picture, err := s.picturesRepository.Picture(ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone)
+		if err != nil {
+			return err
+		}
+
+		var chatIDs []int64
+
+		sqSelect := s.db.Select(schema.TelegramBrandTableChatIDCol).
+			From(schema.TelegramBrandTable).
+			Join(schema.TelegramChatTable, goqu.On(schema.TelegramBrandTableChatIDCol.Eq(schema.TelegramChatTableChatIDCol))).
+			Join(schema.UserTable, goqu.On(schema.TelegramChatTableUserIDCol.Eq(schema.UserTableIDCol))).
+			Where(
+				schema.TelegramBrandTableItemIDCol.In(brandIDs),
+				schema.TelegramBrandTableInboxCol.IsTrue(),
+				schema.UserTableDeletedCol.IsFalse(),
+			)
+		if picture.OwnerID.Valid {
+			sqSelect = sqSelect.Where(schema.UserTableIDCol.Neq(picture.OwnerID.Int64))
+		}
+
+		err = sqSelect.ScanValsContext(ctx, &chatIDs)
+		if err != nil {
+			return err
+		}
+
+		for _, chatID := range chatIDs {
+			uri, err := s.getURIByChatID(ctx, chatID)
+			if err != nil {
+				return err
+			}
+
+			err = s.sendMessage(ctx, frontend.PictureURL(uri, picture.Identity), chatID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

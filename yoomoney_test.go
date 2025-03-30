@@ -3,16 +3,13 @@ package goautowp
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/schema"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/metadata"
 )
 
 func TestYoomoneyWebhookInvalidLabel(t *testing.T) {
@@ -82,30 +79,9 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 		ProducedExactly: false,
 	})
 
-	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
-
-	res, err := goquDB.Insert(schema.PictureTable).Rows(goqu.Record{
-		schema.PictureTableIdentityColName: identity,
-		schema.PictureTableStatusColName:   schema.PictureStatusAccepted,
-		schema.PictureTableIPColName:       "",
-		schema.PictureTableOwnerIDColName:  nil,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	pictureID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	picturesClient := NewPicturesClient(conn)
-
-	_, err = picturesClient.CreatePictureItem(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&CreatePictureItemRequest{
-			PictureId: pictureID,
-			ItemId:    itemID,
-			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
-		},
-	)
-	require.NoError(t, err)
+	addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{
+		ItemID: itemID,
+	}, PictureStatus_PICTURE_STATUS_ACCEPTED, token.AccessToken)
 
 	// check prepared item passes candidate checks
 	r := itemofday.CandidateRecord{}

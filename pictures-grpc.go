@@ -2567,7 +2567,7 @@ func (s *PicturesGRPCServer) GetCanonicalRoute(
 					action := frontend.BrandOther
 
 					if pictureItem.PerspectiveID.Valid {
-						switch pictureItem.PerspectiveID.Int64 {
+						switch pictureItem.PerspectiveID.Int32 {
 						case schema.PerspectiveLogo:
 							action = frontend.BrandLogotypes
 						case schema.PerspectiveMixed:

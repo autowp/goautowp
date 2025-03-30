@@ -81,8 +81,6 @@ type Container struct {
 	keyCloak               *gocloak.GoCloak
 	messagingGrpcServer    *MessagingGRPCServer
 	messagingRepository    *messaging.Repository
-	privateHTTPServer      *http.Server
-	privateRouter          *gin.Engine
 	publicHTTPServer       *http.Server
 	publicRouter           http.HandlerFunc
 	grpcServerWithServices *grpc.Server
@@ -382,7 +380,7 @@ func (s *Container) DuplicateFinder() (*DuplicateFinder, error) {
 			return nil, err
 		}
 
-		s.duplicateFinder, err = NewDuplicateFinder(db)
+		s.duplicateFinder, err = NewDuplicateFinder(db, s.Config().DuplicateFinder)
 		if err != nil {
 			return nil, err
 		}
@@ -488,51 +486,6 @@ func (s *Container) PicturesRepository() (*pictures.Repository, error) {
 	return s.picturesRepository, nil
 }
 
-func (s *Container) PrivateHTTPServer(ctx context.Context) (*http.Server, error) {
-	if s.privateHTTPServer == nil {
-		cfg := s.Config()
-
-		router, err := s.PrivateRouter(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		s.privateHTTPServer = &http.Server{
-			Addr:              cfg.PrivateRest.Listen,
-			Handler:           router,
-			ReadHeaderTimeout: readHeaderTimeout,
-		}
-	}
-
-	return s.privateHTTPServer, nil
-}
-
-func (s *Container) PrivateRouter(ctx context.Context) (*gin.Engine, error) {
-	if s.privateRouter != nil {
-		return s.privateRouter, nil
-	}
-
-	trafficRepo, err := s.Traffic()
-	if err != nil {
-		return nil, err
-	}
-
-	usersRepo, err := s.UsersRepository()
-	if err != nil {
-		return nil, err
-	}
-
-	ginEngine := gin.New()
-	ginEngine.Use(gin.Recovery())
-
-	trafficRepo.SetupPrivateRouter(ctx, ginEngine)
-	usersRepo.SetupPrivateRouter(ctx, ginEngine)
-
-	s.privateRouter = ginEngine
-
-	return s.privateRouter, nil
-}
-
 func (s *Container) PublicHTTPServer(ctx context.Context) (*http.Server, error) {
 	if s.publicHTTPServer == nil {
 		cfg := s.Config()
@@ -593,6 +546,11 @@ func (s *Container) UsersREST() (*UsersREST, error) {
 }
 
 func (s *Container) PicturesREST() (*PicturesREST, error) {
+	auth, err := s.Auth()
+	if err != nil {
+		return nil, err
+	}
+
 	picturesRepo, err := s.PicturesRepository()
 	if err != nil {
 		return nil, err
@@ -618,13 +576,33 @@ func (s *Container) PicturesREST() (*PicturesREST, error) {
 		return nil, err
 	}
 
+	usersRepo, err := s.UsersRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	commentsRepo, err := s.CommentsRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	df, err := s.DuplicateFinder()
+	if err != nil {
+		return nil, err
+	}
+
+	ts, err := s.TelegramService()
+	if err != nil {
+		return nil, err
+	}
+
 	pictureNameFormatter := pictures.NewPictureNameFormatter(
 		items.NewItemNameFormatter(i18nBundle),
 		i18nBundle,
 	)
 
-	return NewPicturesREST(picturesRepo, pictureNameFormatter, s.HostsManager(), imageStorage, itemOfDayRepo, itemsRepo),
-		nil
+	return NewPicturesREST(auth, picturesRepo, pictureNameFormatter, s.HostsManager(), imageStorage, itemOfDayRepo,
+		itemsRepo, usersRepo, commentsRepo, df, ts), nil
 }
 
 func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) {
@@ -860,8 +838,13 @@ func (s *Container) TelegramService() (*telegram.Service, error) {
 			return nil, err
 		}
 
+		picturesRepository, err := s.PicturesRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		s.telegramService = telegram.NewService(s.Config().Telegram, db, s.HostsManager(), userRepository,
-			itemRepository, messagingRepository)
+			itemRepository, messagingRepository, picturesRepository)
 	}
 
 	return s.telegramService, nil

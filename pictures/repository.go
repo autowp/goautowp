@@ -6,8 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/jpeg" // support JPEG decoding.
+	_ "image/png"  // support PNG decoding.
 	"maps"
-	"math/rand"
+	"math/rand/v2"
+	"mime/multipart"
 	"slices"
 	"strconv"
 	"strings"
@@ -42,10 +46,12 @@ var (
 	)
 	errCombinationNotAllowed = errors.New("combination not allowed")
 	errImageIDIsNil          = errors.New("image_id is null")
+	ErrInvalidImage          = errors.New("invalid image")
+	errUnsupportedImageType  = errors.New("unsupported image type")
 )
 
 var (
-	prefixedPerspectives = []int64{
+	prefixedPerspectives = []int32{
 		schema.PerspectiveInterior, schema.PerspectiveFrontPanel, schema.PerspectiveIDUnderTheHood,
 		schema.PerspectiveDashboard, schema.PerspectiveBoot, schema.PerspectiveLogo, schema.PerspectiveMascot,
 		schema.PerspectiveSketch, schema.PerspectiveChassis,
@@ -146,6 +152,12 @@ const (
 const (
 	queueLifetimeDays = 7
 	queueBatchSize    = 1000
+
+	ImageMaxFileSize = 1024 * 1024 * 100
+	ImageMinWidth    = 640
+	ImageMinHeight   = 360
+	ImageMaxWidth    = 10000
+	ImageMaxHeight   = 10000
 )
 
 func NewRepository(
@@ -1649,7 +1661,7 @@ func (s *Repository) NameData(
 		result = make(map[int64]PictureNameFormatterOptions, len(rows))
 		// prefetch
 		itemIDs        = make(map[int64]int32)
-		perspectiveIDs = make(map[int64]bool)
+		perspectiveIDs = make(map[int32]bool)
 	)
 
 	for _, row := range rows {
@@ -1672,8 +1684,8 @@ func (s *Repository) NameData(
 		for _, pictureItemRow := range pictureItemRows {
 			itemIDs[pictureItemRow.ItemID] = util.NullInt32ToScalar(pictureItemRow.CropLeft)
 
-			if pictureItemRow.PerspectiveID.Valid && util.Contains(prefixedPerspectives, pictureItemRow.PerspectiveID.Int64) {
-				perspectiveIDs[pictureItemRow.PerspectiveID.Int64] = true
+			if pictureItemRow.PerspectiveID.Valid && util.Contains(prefixedPerspectives, pictureItemRow.PerspectiveID.Int32) {
+				perspectiveIDs[pictureItemRow.PerspectiveID.Int32] = true
 			}
 		}
 	}
@@ -1770,7 +1782,7 @@ func (s *Repository) NameData(
 			perspective := ""
 
 			if perspectiveID.Valid {
-				if val, ok := perspectives[perspectiveID.Int64]; ok {
+				if val, ok := perspectives[perspectiveID.Int32]; ok {
 					perspective = val
 				}
 			}
@@ -1789,8 +1801,8 @@ func (s *Repository) NameData(
 	return result, nil
 }
 
-func (s *Repository) PerspectivesPairs(ctx context.Context, ids []int64) (map[int64]string, error) {
-	result := make(map[int64]string, len(ids))
+func (s *Repository) PerspectivesPairs(ctx context.Context, ids []int32) (map[int32]string, error) {
+	result := make(map[int32]string, len(ids))
 
 	if len(ids) == 0 {
 		return result, nil
@@ -1835,12 +1847,12 @@ func (s *Repository) DfIndex(ctx context.Context) error {
 	for _, st := range sts {
 		logrus.Infof("%d / %d", st.ID, st.ImageID)
 
-		image, err := s.imageStorage.Image(ctx, int(st.ImageID))
+		img, err := s.imageStorage.Image(ctx, int(st.ImageID))
 		if err != nil {
 			return err
 		}
 
-		err = s.queueIndexImage(ctx, st.ID, image.Src())
+		err = s.queueIndexImage(ctx, st.ID, img.Src())
 		if err != nil {
 			return err
 		}
@@ -1873,7 +1885,7 @@ func (s *Repository) queueIndexImage(ctx context.Context, id int64, url string) 
 		return err
 	}
 
-	return ch.PublishWithContext(ctx, s.dfConfig.Queue, "*", false, false, amqp091.Publishing{
+	return ch.PublishWithContext(ctx, "", s.dfConfig.Queue, false, false, amqp091.Publishing{
 		DeliveryMode: amqp091.Persistent,
 		ContentType:  "application/json",
 		Body:         body,
@@ -2044,7 +2056,7 @@ func (s *Repository) FileNamePattern(ctx context.Context, pictureID int64) (stri
 		maxPictureItems   = 3
 	)
 
-	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	random := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), uint64(time.Now().UnixNano()))) //nolint: gosec
 	result := strconv.FormatInt(int64((random.Uint32()%maxFilenameNumber)+1), 10)
 
 	filenameFilter := validation.StringSanitizeFilename{}
@@ -2232,7 +2244,7 @@ func (s *Repository) ClearQueue(ctx context.Context) error {
 			),
 		).
 		Limit(queueBatchSize).
-		ScanValsContext(ctx, &pictures)
+		ScanStructsContext(ctx, &pictures)
 	if err != nil {
 		return err
 	}
@@ -2273,14 +2285,236 @@ func (s *Repository) ClearQueue(ctx context.Context) error {
 				return err
 			}
 
+			logrus.Warnf("Picture %d removed", picture.ID)
+
 			err = s.imageStorage.RemoveImage(iCtx, int(imageID.Int64))
 			if err != nil {
 				return err
 			}
+
+			logrus.Warnf("Image %d removed", imageID.Int64)
 		} else {
-			logrus.Warnf("Broken image `%d`. Skip", picture.ID)
+			logrus.Warnf("Broken picture `%d`. Skip", picture.ID)
 		}
 	}
 
 	return nil
+}
+
+func (s *Repository) AddPictureFromReader(
+	ctx context.Context, handle multipart.File, userID int64, remoteAddr string, itemID int64, perspectiveID int32,
+	replacePictureID int64,
+) (int64, error) {
+	imageConfig, imageType, err := image.DecodeConfig(handle)
+	if err != nil {
+		if errors.Is(err, image.ErrFormat) {
+			return 0, fmt.Errorf("%w: %w", ErrInvalidImage, err)
+		}
+
+		return 0, err
+	}
+
+	if imageConfig.Width < ImageMinWidth || imageConfig.Height < ImageMinHeight {
+		return 0, fmt.Errorf("%w: minimum expected size for image should be '%dx%d' but '%dx%d' detected",
+			ErrInvalidImage, ImageMinWidth, ImageMinHeight, imageConfig.Width, imageConfig.Height)
+	}
+
+	if imageConfig.Width > ImageMaxWidth || imageConfig.Height > ImageMaxHeight {
+		return 0, fmt.Errorf(
+			"%w: maximum expected size for image should be '%dx%d' but '%dx%d' detected",
+			ErrInvalidImage, ImageMaxWidth, ImageMaxHeight, imageConfig.Width, imageConfig.Height,
+		)
+	}
+
+	_, err = handle.Seek(0, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	// generate filename
+	var ext string
+
+	switch imageType {
+	case "jpeg", "png":
+		ext = imageType
+	default:
+		return 0, errUnsupportedImageType
+	}
+
+	ctx = context.WithoutCancel(ctx)
+
+	imageID, err := s.imageStorage.AddImageFromReader(ctx, handle, "picture", storage.GenerateOptions{
+		Extension: ext,
+		Pattern:   fmt.Sprintf("autowp_%d", rand.Int()), //nolint: gosec
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	img, err := s.imageStorage.Image(ctx, imageID)
+	if err != nil {
+		return 0, err
+	}
+
+	fileSize := img.FileSize()
+
+	identity, err := s.generateIdentity(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	// add record to db
+	res, err := s.db.Insert(schema.PictureTable).Rows(goqu.Record{
+		schema.PictureTableImageIDColName:          imageID,
+		schema.PictureTableWidthColName:            imageConfig.Width,
+		schema.PictureTableHeightColName:           imageConfig.Height,
+		schema.PictureTableOwnerIDColName:          userID,
+		schema.PictureTableAddDateColName:          goqu.Func("NOW"),
+		schema.PictureTableFilesizeColName:         fileSize,
+		schema.PictureTableStatusColName:           schema.PictureStatusInbox,
+		schema.PictureTableRemovingDateColName:     nil,
+		schema.PictureTableIPColName:               goqu.Func("INET6_ATON", remoteAddr),
+		schema.PictureTableIdentityColName:         identity,
+		schema.PictureTableReplacePictureIDColName: sql.NullInt64{Int64: replacePictureID, Valid: replacePictureID > 0},
+	}).Executor().ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	pictureID, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	if itemID > 0 {
+		_, err = s.CreatePictureItem(ctx, pictureID, itemID, schema.PictureItemTypeContent, perspectiveID)
+		if err != nil {
+			return 0, err
+		}
+	} else if replacePictureID > 0 {
+		itemsData, err := s.PictureItems(ctx, &query.PictureItemListOptions{
+			PictureID: replacePictureID,
+		}, PictureItemOrderByNone, 0)
+		if err != nil {
+			return 0, err
+		}
+
+		for _, item := range itemsData {
+			perspectiveID = 0
+			if item.PerspectiveID.Valid {
+				perspectiveID = item.PerspectiveID.Int32
+			}
+
+			_, err = s.CreatePictureItem(ctx, pictureID, item.ItemID, item.Type, perspectiveID)
+			if err != nil {
+				return 0, err
+			}
+		}
+	}
+
+	// rename file to new
+	pattern, err := s.FileNamePattern(ctx, pictureID)
+	if err != nil {
+		return 0, err
+	}
+
+	err = s.imageStorage.ChangeImageName(ctx, imageID, storage.GenerateOptions{
+		Pattern: pattern,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	// exif := s.imageStorage.getImageEXIF(imageId)
+	// if exif && isset(exif.COMPUTED.Copyright) {
+	//	copyrights := strip_tags(trim(exif.COMPUTED.Copyright))
+	//
+	//	if copyrights {
+	//		textId := s.textStorage.createText(copyrights, userID)
+	//		s.picture.getTable().update(x{
+	//			copyrights_text_id: textId,
+	//		}, x{
+	//			id: pictureID,
+	//		})
+	//	}
+	// }
+
+	// read gps
+	// exif2 := s.imageStorage.getImageEXIF(imageId)
+	// extractor := ExifGPSExtractor()
+	// gps := extractor.extract(exif2)
+	// if gps {
+	//	s.picture.getTable().update(x{
+	//		point: SqlExpression("Point(?, ?)", gps.lng, gps.lat),
+	//	}, x{
+	//		id: pictureID,
+	//	})
+	// }
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb")
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-medium")
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-medium")
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-large")
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-gallery-full")
+	if err != nil {
+		return 0, err
+	}
+
+	err = s.queueIndexImage(ctx, pictureID, img.Src())
+	if err != nil {
+		return 0, err
+	}
+
+	return pictureID, nil
+}
+
+func (s *Repository) randomIdentity() string {
+	alpha := []rune("abcdefghijklmnopqrstuvwxyz")
+	alphaNum := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+
+	res := make([]rune, schema.PicturesTableIdentityLength)
+	res[0] = alpha[rand.IntN(len(alpha))] //nolint: gosec
+
+	for i := 1; i < schema.PicturesTableIdentityLength; i++ {
+		res[i] = alphaNum[rand.IntN(len(alphaNum))] //nolint: gosec
+	}
+
+	return string(res)
+}
+
+func (s *Repository) generateIdentity(ctx context.Context) (string, error) {
+	var (
+		exists   = true
+		identity string
+		err      error
+	)
+
+	for exists {
+		identity = s.randomIdentity()
+
+		exists, err = s.Exists(ctx, &query.PictureListOptions{
+			Identity: identity,
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return identity, nil
 }

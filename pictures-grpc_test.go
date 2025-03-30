@@ -1,7 +1,6 @@
 package goautowp
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"math/rand"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
 	"github.com/autowp/goautowp/util"
@@ -24,37 +24,27 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func getPictureID(ctx context.Context, t *testing.T, db *goqu.Database) int64 {
-	t.Helper()
-
-	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint: gosec
-	identity := "p" + strconv.Itoa(random.Int())[:6]
-
-	res, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
-		schema.PictureTableIdentityColName: identity,
-		schema.PictureTableStatusColName:   schema.PictureStatusAccepted,
-		schema.PictureTableIPColName:       "",
-		schema.PictureTableOwnerIDColName:  1,
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
-	pictureID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	return pictureID
-}
-
 func TestView(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	client := NewPicturesClient(conn)
+	cfg := config.LoadConfig(".")
 
-	_, err = client.View(ctx, &PicturesViewRequest{PictureId: getPictureID(ctx, t, goquDB)})
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{ItemID: itemID}, token.AccessToken)
+
+	_, err = client.View(ctx, &PicturesViewRequest{PictureId: pictureID})
 	require.NoError(t, err)
 }
 
@@ -64,9 +54,6 @@ func TestVote(t *testing.T) {
 	ctx := t.Context()
 	cfg := config.LoadConfig(".")
 
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -74,9 +61,17 @@ func TestVote(t *testing.T) {
 
 	client := NewPicturesClient(conn)
 
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{ItemID: itemID}, token.AccessToken)
+
 	_, err = client.Vote(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&PicturesVoteRequest{PictureId: getPictureID(ctx, t, goquDB), Value: 1},
+		&PicturesVoteRequest{PictureId: pictureID, Value: 1},
 	)
 	require.NoError(t, err)
 }
@@ -124,15 +119,19 @@ func TestModerVote(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -242,20 +241,24 @@ func TestFlopNormalizeAndRepair(t *testing.T) {
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
-	imageStorage, err := cnt.ImageStorage()
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
 		schema.PictureTableStatusColName: schema.PictureStatusInbox,
 	}).Where(schema.PictureTableIDCol.Eq(pictureID)).Executor().ExecContext(ctx)
 	require.NoError(t, err)
-
-	kc := cnt.Keycloak()
-	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, token)
 
 	client := NewPicturesClient(conn)
 
@@ -306,37 +309,22 @@ func TestPictureItemAreaAndPerspective(t *testing.T) {
 
 	cfg := config.LoadConfig(".")
 
-	goquDB, err := cnt.GoquDB()
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
-
 	itemID := createItem(t, conn, cnt, &APIItem{
 		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
 		IsGroup:    true,
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	kc := cnt.Keycloak()
-	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, token)
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
-
-	_, err = client.CreatePictureItem(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&CreatePictureItemRequest{
-			PictureId: pictureID,
-			ItemId:    itemID,
-			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
-		},
-	)
-	require.NoError(t, err)
 
 	_, err = client.SetPictureItemArea(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -395,14 +383,11 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	itemID1 := createItem(t, conn, cnt, &APIItem{
@@ -417,22 +402,10 @@ func TestPictureItemSetPictureItemItemID(t *testing.T) {
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	kc := cnt.Keycloak()
-	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, token)
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID1},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
-
-	_, err = client.CreatePictureItem(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&CreatePictureItemRequest{
-			PictureId: pictureID,
-			ItemId:    itemID1,
-			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
-		},
-	)
-	require.NoError(t, err)
 
 	_, err = client.SetPictureItemItemID(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -470,21 +443,20 @@ func TestPictureCrop(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -512,11 +484,14 @@ func TestPictureCrop(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	fmtImg, err := imageStorage.FormattedImage(ctx, imageID, "picture-gallery")
+	res, err := client.GetPicture(ctx, &PicturesRequest{
+		Options: &PictureListOptions{Id: pictureID},
+		Fields:  &PictureFields{ImageGallery: true},
+	})
 	require.NoError(t, err)
-
-	require.Equal(t, 10, fmtImg.Width())
-	require.Equal(t, 10, fmtImg.Height())
+	require.NotEmpty(t, res.GetImageGallery())
+	require.EqualValues(t, 10, res.GetImageGallery().GetWidth())
+	require.EqualValues(t, 10, res.GetImageGallery().GetHeight())
 }
 
 func TestPictureCropByOneAxis(t *testing.T) {
@@ -525,19 +500,22 @@ func TestPictureCropByOneAxis(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	imageStorage, err := cnt.ImageStorage()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -553,7 +531,13 @@ func TestPictureCropByOneAxis(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	crop, err := imageStorage.ImageCrop(ctx, imageID)
+	res, err := client.GetPicture(ctx, &PicturesRequest{
+		Options: &PictureListOptions{Id: pictureID},
+		Fields:  &PictureFields{Image: true},
+	})
+	require.NoError(t, err)
+
+	crop, err := imageStorage.ImageCrop(ctx, int(res.GetImage().GetId()))
 	require.NoError(t, err)
 	require.Equal(t, 0, crop.Left)
 	require.Equal(t, 0, crop.Top)
@@ -572,7 +556,7 @@ func TestPictureCropByOneAxis(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	crop, err = imageStorage.ImageCrop(ctx, imageID)
+	crop, err = imageStorage.ImageCrop(ctx, int(res.GetImage().GetId()))
 	require.NoError(t, err)
 	require.Equal(t, 0, crop.Left)
 	require.Equal(t, 0, crop.Top)
@@ -586,19 +570,22 @@ func TestInvalidPictureCrop(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, imageID := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	imageStorage, err := cnt.ImageStorage()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -608,17 +595,23 @@ func TestInvalidPictureCrop(t *testing.T) {
 			PictureId:  pictureID,
 			CropLeft:   0,
 			CropTop:    0,
-			CropWidth:  202,
+			CropWidth:  1002,
 			CropHeight: 140,
 		},
 	)
 	require.NoError(t, err)
 
-	crop, err := imageStorage.ImageCrop(ctx, imageID)
+	res, err := client.GetPicture(ctx, &PicturesRequest{
+		Options: &PictureListOptions{Id: pictureID},
+		Fields:  &PictureFields{Image: true},
+	})
+	require.NoError(t, err)
+
+	crop, err := imageStorage.ImageCrop(ctx, int(res.GetImage().GetId()))
 	require.NoError(t, err)
 	require.Equal(t, 0, crop.Left)
 	require.Equal(t, 0, crop.Top)
-	require.Equal(t, 200, crop.Width)
+	require.Equal(t, 1000, crop.Width)
 	require.Equal(t, 140, crop.Height)
 
 	_, err = client.SetPictureCrop(
@@ -628,17 +621,17 @@ func TestInvalidPictureCrop(t *testing.T) {
 			CropLeft:   0,
 			CropTop:    0,
 			CropWidth:  190,
-			CropHeight: 145,
+			CropHeight: 565,
 		},
 	)
 	require.NoError(t, err)
 
-	crop, err = imageStorage.ImageCrop(ctx, imageID)
+	crop, err = imageStorage.ImageCrop(ctx, int(res.GetImage().GetId()))
 	require.NoError(t, err)
 	require.Equal(t, 0, crop.Left)
 	require.Equal(t, 0, crop.Top)
 	require.Equal(t, 190, crop.Width)
-	require.Equal(t, 143, crop.Height)
+	require.Equal(t, 563, crop.Height)
 
 	_, err = client.SetPictureCrop(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -646,17 +639,17 @@ func TestInvalidPictureCrop(t *testing.T) {
 			PictureId:  pictureID,
 			CropLeft:   30,
 			CropTop:    0,
-			CropWidth:  190,
+			CropWidth:  990,
 			CropHeight: 143,
 		},
 	)
 	require.NoError(t, err)
 
-	crop, err = imageStorage.ImageCrop(ctx, imageID)
+	crop, err = imageStorage.ImageCrop(ctx, int(res.GetImage().GetId()))
 	require.NoError(t, err)
 	require.Equal(t, 30, crop.Left)
 	require.Equal(t, 0, crop.Top)
-	require.Equal(t, 170, crop.Width)
+	require.Equal(t, 970, crop.Width)
 	require.Equal(t, 143, crop.Height)
 }
 
@@ -664,27 +657,25 @@ func TestClearReplacePicture(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-	replacePictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
-	_, err = goquDB.Update(schema.PictureTable).Set(goqu.Record{
-		schema.PictureTableReplacePictureIDColName: replacePictureID,
-	}).Where(schema.PictureTableIDCol.Eq(pictureID)).Executor().ExecContext(ctx)
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	replacePictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ReplacePictureID: replacePictureID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -696,7 +687,8 @@ func TestClearReplacePicture(t *testing.T) {
 
 	var value sql.NullInt64
 
-	success, err := goquDB.Select(schema.PictureTableReplacePictureIDCol).From(schema.PictureTable).
+	success, err := goquDB.Select(schema.PictureTableReplacePictureIDCol).
+		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).
 		ScanValContext(ctx, &value)
 	require.NoError(t, err)
@@ -710,19 +702,19 @@ func TestSetPicturePoint(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -813,21 +805,23 @@ func TestUpdatePicture(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -894,24 +888,27 @@ func TestSetPictureCopyrights(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
+	kc := cnt.Keycloak()
+	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
 	goquDB, err := cnt.GoquDB()
 	require.NoError(t, err)
 
 	textStorageRepository := textstorage.New(goquDB)
 
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
-	kc := cnt.Keycloak()
-	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
-	require.NoError(t, err)
-	require.NotNil(t, token)
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
+	pictureID2 := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -970,21 +967,23 @@ func TestSetPictureStatus(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	client := NewPicturesClient(conn)
 
@@ -1090,22 +1089,25 @@ func TestReplacePicture(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-	pictureID2, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
+
+	goquDB, err := cnt.GoquDB()
+	require.NoError(t, err)
+
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
+	pictureID2 := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	// tester
 	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
@@ -1230,18 +1232,12 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 	itemsClient := NewItemsClient(conn)
 	cfg := config.LoadConfig(".")
 
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
 
 	itemName := fmt.Sprintf("vehicle-%d", random.Int())
 
@@ -1258,18 +1254,10 @@ func TestGetPictureWithPerspectivePrefix(t *testing.T) {
 		SpecId:          schema.SpecIDWorldwide,
 	})
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
-	_, err = client.CreatePictureItem(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&CreatePictureItemRequest{
-			PictureId:     pictureID,
-			ItemId:        itemID,
-			Type:          PictureItemType_PICTURE_ITEM_CONTENT,
-			PerspectiveId: schema.PerspectiveIDUnderTheHood,
-		},
-	)
-	require.NoError(t, err)
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{
+		ItemID:        itemID,
+		PerspectiveID: schema.PerspectiveIDUnderTheHood,
+	}, PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	picture, err := client.GetPicture(
 		ctx,
@@ -1327,19 +1315,12 @@ func TestGetPicturePath(t *testing.T) {
 	client := NewPicturesClient(conn)
 	itemsClient := NewItemsClient(conn)
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
 
 	randomInt := random.Int()
 
@@ -1383,17 +1364,8 @@ func TestGetPicturePath(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
-	_, err = client.CreatePictureItem(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&CreatePictureItemRequest{
-			PictureId: pictureID,
-			ItemId:    childID,
-			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
-		},
-	)
-	require.NoError(t, err)
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: childID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	picture, err := client.GetPicture(
 		ctx,
@@ -1647,33 +1619,30 @@ func TestNewbox(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
 	ctx := t.Context()
 	kc := cnt.Keycloak()
-
-	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
-	identity := "t" + strconv.Itoa(int(random.Uint32()%100000))
-
-	_, err = goquDB.Insert(schema.PictureTable).Rows(schema.PictureRow{
-		Identity: identity,
-		Status:   schema.PictureStatusAccepted,
-		IP:       util.IP(net.IPv4allrouter),
-		AddDate:  time.Now(),
-		AcceptDatetime: sql.NullTime{
-			Valid: true,
-			Time:  time.Now().AddDate(-1, 0, 0),
-		},
-	}).Executor().ExecContext(ctx)
-	require.NoError(t, err)
+	client := NewPicturesClient(conn)
 
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	client := NewPicturesClient(conn)
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{ItemID: itemID}, token.AccessToken)
+
+	_, err = client.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
+		},
+	)
+	require.NoError(t, err)
 
 	_, err = client.GetNewbox(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -1715,17 +1684,7 @@ func TestCorrectFileNamesVote(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
 	cfg := config.LoadConfig(".")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
@@ -1744,12 +1703,16 @@ func TestCorrectFileNamesVote(t *testing.T) {
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	_, err = client.CreatePictureItem(
+	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: vehicleID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
+
+	newName := fmt.Sprintf("Toyota %d Corolla New", randomInt)
+	_, err = itemsClient.UpdateItemLanguage(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&CreatePictureItemRequest{
-			PictureId: pictureID,
-			ItemId:    vehicleID,
-			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
+		&ItemLanguage{
+			Language: items.DefaultLanguageCode,
+			Name:     newName,
+			ItemId:   vehicleID,
 		},
 	)
 	require.NoError(t, err)
@@ -1760,14 +1723,17 @@ func TestCorrectFileNamesVote(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	picture, err := client.GetPicture(ctx, &PicturesRequest{
-		Options: &PictureListOptions{Id: pictureID},
-		Fields:  &PictureFields{Image: true},
-	})
+	picture, err := client.GetPicture(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+		&PicturesRequest{
+			Options: &PictureListOptions{Id: pictureID},
+			Fields:  &PictureFields{Image: true},
+		},
+	)
 	require.NoError(t, err)
 	require.Contains(t,
 		picture.GetImage().GetSrc(),
-		fmt.Sprintf("t/toyota_%d_corolla/toyota_%d_corolla", randomInt, randomInt),
+		fmt.Sprintf("t/toyota_%d_corolla_new/toyota_%d_corolla_new", randomInt, randomInt),
 	)
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
@@ -1778,7 +1744,7 @@ func TestCorrectFileNamesVote(t *testing.T) {
 
 	defer util.Close(httpResponse.Body)
 
-	require.EqualValues(t, 33914, httpResponse.ContentLength)
+	require.EqualValues(t, 203718, httpResponse.ContentLength)
 
 	// add brand
 	brandName := fmt.Sprintf("Toyota %d", randomInt)
@@ -1810,7 +1776,7 @@ func TestCorrectFileNamesVote(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t,
 		picture.GetImage().GetSrc(),
-		fmt.Sprintf("t/toyota-%d/corolla/toyota_%d_corolla", randomInt, randomInt),
+		fmt.Sprintf("t/toyota-%d/corolla_new/toyota_%d_corolla_new", randomInt, randomInt),
 	)
 
 	request, err = http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
@@ -1821,7 +1787,7 @@ func TestCorrectFileNamesVote(t *testing.T) {
 
 	defer util.Close(httpResponse.Body)
 
-	require.EqualValues(t, 33914, httpResponse.ContentLength)
+	require.EqualValues(t, 203718, httpResponse.ContentLength)
 
 	// add second brand
 	brand2Name := fmt.Sprintf("Peugeot %d", randomInt)
@@ -1853,7 +1819,7 @@ func TestCorrectFileNamesVote(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t,
 		picture.GetImage().GetSrc(),
-		fmt.Sprintf("p/peugeot-%d/toyota-%d/corolla/toyota_%d_corolla", randomInt, randomInt, randomInt),
+		fmt.Sprintf("p/peugeot-%d/toyota-%d/corolla_new/toyota_%d_corolla_new", randomInt, randomInt, randomInt),
 	)
 
 	request, err = http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
@@ -1864,7 +1830,7 @@ func TestCorrectFileNamesVote(t *testing.T) {
 
 	defer util.Close(httpResponse.Body)
 
-	require.EqualValues(t, 33914, httpResponse.ContentLength)
+	require.EqualValues(t, 203718, httpResponse.ContentLength)
 }
 
 func TestGetGallery(t *testing.T) {
@@ -1873,35 +1839,20 @@ func TestGetGallery(t *testing.T) {
 	ctx := t.Context()
 	client := NewPicturesClient(conn)
 	cfg := config.LoadConfig(".")
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
-	imageStorage, err := cnt.ImageStorage()
-	require.NoError(t, err)
-
 	kc := cnt.Keycloak()
 	token, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
-	pictureID, _ := addPicture(t, imageStorage, goquDB, "./test/small.jpg", schema.PictureStatusInbox)
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
-
 	itemID := createItem(t, conn, cnt, &APIItem{
 		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
 		IsGroup:    true,
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	_, err = client.CreatePictureItem(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&CreatePictureItemRequest{
-			PictureId: pictureID,
-			ItemId:    itemID,
-			Type:      PictureItemType_PICTURE_ITEM_CONTENT,
-		},
-	)
-	require.NoError(t, err)
+	addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID}, PictureStatus_PICTURE_STATUS_INBOX,
+		token.AccessToken)
 
 	_, err = client.GetGallery(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),

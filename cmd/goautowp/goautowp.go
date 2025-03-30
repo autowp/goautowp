@@ -223,10 +223,6 @@ func mainReturnWithCode() int { //nolint: maintidx
 						Required: false,
 					},
 					&cli.BoolFlag{
-						Name:     "private",
-						Required: false,
-					},
-					&cli.BoolFlag{
 						Name:     "autoban",
 						Required: false,
 					},
@@ -253,7 +249,6 @@ func mainReturnWithCode() int { //nolint: maintidx
 						MonitoringAMQP:        cli.Bool("monitoring-amqp"),
 						GRPC:                  cli.Bool("grpc"),
 						Public:                cli.Bool("public"),
-						Private:               cli.Bool("private"),
 						Autoban:               cli.Bool("autoban"),
 						AttrsUpdateValuesAMQP: cli.Bool(attrsUpdateValuesAMQPFlag),
 					}, quit)
@@ -385,15 +380,26 @@ func mainReturnWithCode() int { //nolint: maintidx
 				},
 			},
 			{
-				Name: "pictures-df-index",
-				Action: func(ctx context.Context, _ *cli.Command) error {
-					return autowpApp.PicturesDfIndex(ctx)
-				},
-			},
-			{
-				Name: "pictures-fix-filenames",
-				Action: func(ctx context.Context, _ *cli.Command) error {
-					return autowpApp.PicturesFixFilenames(ctx)
+				Name: "pictures",
+				Commands: []*cli.Command{
+					{
+						Name: "df-index",
+						Action: func(ctx context.Context, _ *cli.Command) error {
+							return autowpApp.PicturesDfIndex(ctx)
+						},
+					},
+					{
+						Name: "fix-filenames",
+						Action: func(ctx context.Context, _ *cli.Command) error {
+							return autowpApp.PicturesFixFilenames(ctx)
+						},
+					},
+					{
+						Name: "clear-queue",
+						Action: func(ctx context.Context, _ *cli.Command) error {
+							return autowpApp.PicturesClearQueue(ctx)
+						},
+					},
 				},
 			},
 			{

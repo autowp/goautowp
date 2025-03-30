@@ -60,8 +60,8 @@ func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
 	}
 
 	if file.Size > users.UserPhotoMaxFileSize {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"invalid_params": gin.H{userPhotoFileField: map[string]string{
+		ctx.JSON(http.StatusBadRequest, BadRequestResponse{
+			InvalidParams: map[string]map[string]string{userPhotoFileField: {
 				"fileFilesSizeTooBig": fmt.Sprintf(
 					"All files in sum should have a maximum size of '%d' but '%d' were detected",
 					users.UserPhotoMaxFileSize, file.Size,
@@ -106,8 +106,8 @@ func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
 	}
 
 	if !mimeIsAllowed {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"invalid_params": gin.H{userPhotoFileField: map[string]string{
+		ctx.JSON(http.StatusBadRequest, BadRequestResponse{
+			InvalidParams: map[string]map[string]string{userPhotoFileField: {
 				"fileIsImageFalseType": fmt.Sprintf(
 					"File is no image, '%s' detected",
 					mime.String(),
@@ -133,8 +133,8 @@ func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
 	}
 
 	if imageConfig.Width < users.UserPhotoMinWidth || imageConfig.Height < users.UserPhotoMinHeight {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"invalid_params": gin.H{userPhotoFileField: map[string]string{
+		ctx.JSON(http.StatusBadRequest, BadRequestResponse{
+			InvalidParams: map[string]map[string]string{userPhotoFileField: {
 				"fileImageSizeTooSmall": fmt.Sprintf(
 					"Minimum expected size for image should be '%dx%d' but '%dx%d' detected",
 					users.UserPhotoMinWidth, users.UserPhotoMinHeight, imageConfig.Width, imageConfig.Height,

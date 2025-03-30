@@ -2,16 +2,13 @@ package traffic
 
 import (
 	"context"
-	"errors"
 	"net"
-	"net/http"
 	"time"
 
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/schema"
 	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -204,31 +201,4 @@ func (s *Traffic) AutoWhitelistIP(ctx context.Context, ip net.IP) error {
 	logrus.Info(ipText + ": whitelisted")
 
 	return nil
-}
-
-func (s *Traffic) SetupPrivateRouter(_ context.Context, r *gin.Engine) {
-	r.GET("/ban/:ip", func(ctx *gin.Context) { //nolint:contextcheck
-		ip := net.ParseIP(ctx.Param("ip"))
-		if ip == nil {
-			ctx.String(http.StatusBadRequest, "Invalid IP")
-
-			return
-		}
-
-		itm, err := s.Ban.Get(ctx, ip)
-		if err != nil {
-			if errors.Is(err, ban.ErrBanItemNotFound) {
-				ctx.Status(http.StatusNotFound)
-
-				return
-			}
-
-			logrus.Error(err.Error())
-			ctx.String(http.StatusInternalServerError, err.Error())
-
-			return
-		}
-
-		ctx.JSON(http.StatusOK, itm)
-	})
 }

@@ -1,14 +1,12 @@
 package goautowp
 
 import (
+	"fmt"
 	"math/rand"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/schema"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -34,47 +32,36 @@ func TestPictureLikesRating(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-
-	cfg := config.LoadConfig("..")
-
-	goquDB, err := cnt.GoquDB()
-	require.NoError(t, err)
-
+	cfg := config.LoadConfig(".")
 	kc := cnt.Keycloak()
-	usersClient := NewUsersClient(conn)
+	picturesClient := NewPicturesClient(conn)
 
 	// tester
 	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
-	// tester (me)
-	tester, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
-		&APIMeRequest{},
-	)
-	require.NoError(t, err)
-
 	// admin
 	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint: gosec
-	identity := "p" + strconv.Itoa(random.Int())[:6]
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
 
-	res, err := goquDB.Insert(schema.PictureTable).Rows(goqu.Record{
-		schema.PictureTableIdentityColName: identity,
-		schema.PictureTableStatusColName:   schema.PictureStatusAccepted,
-		schema.PictureTableIPColName:       "",
-		schema.PictureTableOwnerIDColName:  tester.GetId(),
-	}).Executor().ExecContext(ctx)
+	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{ItemID: itemID}, testerToken.AccessToken)
+
+	_, err = picturesClient.SetPictureStatus(
+		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
+		},
+	)
 	require.NoError(t, err)
-
-	pictureID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	picturesClient := NewPicturesClient(conn)
 
 	_, err = picturesClient.Vote(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),

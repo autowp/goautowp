@@ -1,15 +1,23 @@
 package goautowp
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"bytes"
+	"encoding/json"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/autowp/goautowp/config"
-	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -24,48 +32,27 @@ const (
 
 const bearerPrefix = "Bearer "
 
-func randomHexString(t *testing.T, length int) string {
-	t.Helper()
-
-	randBytes := make([]byte, length)
-	_, err := rand.Read(randBytes)
-	require.NoError(t, err)
-
-	return hex.EncodeToString(randBytes)
-}
-
 func addPicture(
-	t *testing.T, imageStorage *storage.Storage, db *goqu.Database, filepath string, status schema.PictureStatus,
-) (int64, int) {
+	//nolint: unparam
+	t *testing.T, cnt *Container, conn *grpc.ClientConn, filepath string, data PicturePostForm, status PictureStatus,
+	token string,
+) int64 {
 	t.Helper()
 
-	ctx := t.Context()
+	pictureID := CreatePicture(t, cnt, filepath, data, token)
 
-	imageID, err := imageStorage.AddImageFromFilepath(ctx, filepath, "picture", storage.GenerateOptions{})
-	require.NoError(t, err)
-	require.NotEmpty(t, imageID)
+	picturesClient := NewPicturesClient(conn)
 
-	img, err := imageStorage.Image(ctx, imageID)
-	require.NoError(t, err)
-	require.NotNil(t, img)
-
-	identity := randomHexString(t, schema.PicturesTableIdentityLength/2)
-
-	res, err := db.Insert(schema.PictureTable).Rows(goqu.Record{
-		schema.PictureTableImageIDColName:  imageID,
-		schema.PictureTableIdentityColName: identity,
-		schema.PictureTableIPColName:       goqu.Func("INET6_ATON", "127.0.0.1"),
-		schema.PictureTableOwnerIDColName:  nil,
-		schema.PictureTableWidthColName:    img.Width(),
-		schema.PictureTableHeightColName:   img.Height(),
-		schema.PictureTableStatusColName:   status,
-	}).Executor().ExecContext(ctx)
+	_, err := picturesClient.SetPictureStatus(
+		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token),
+		&SetPictureStatusRequest{
+			Id:     pictureID,
+			Status: status,
+		},
+	)
 	require.NoError(t, err)
 
-	pictureID, err := res.LastInsertId()
-	require.NoError(t, err)
-
-	return pictureID, imageID
+	return pictureID
 }
 
 //nolint:unparam
@@ -128,15 +115,89 @@ func createItem(t *testing.T, conn *grpc.ClientConn, cnt *Container, row *APIIte
 	itemID := res.GetId()
 	require.NotEmpty(t, itemID)
 
-	/*_, err = itemsClient.UpdateItemLanguage(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&ItemLanguage{
-			Language: "en",
-			ItemId:   itemID,
-			Name:     row.GetName(),
-		},
-	)
-	require.NoError(t, err)*/
-
 	return itemID
+}
+
+func CreatePicture(t *testing.T, cnt *Container, file string, data PicturePostForm, token string) int64 {
+	t.Helper()
+
+	req := CreatePictureRequest(t, file, data, token)
+
+	resRecorder := httptest.NewRecorder()
+	router := gin.New()
+	picturesREST, err := cnt.PicturesREST()
+	require.NoError(t, err)
+	picturesREST.SetupRouter(router)
+	router.ServeHTTP(resRecorder, req)
+
+	body, err := io.ReadAll(resRecorder.Result().Body)
+	require.NoError(t, err)
+
+	require.Equal(t, http.StatusCreated, resRecorder.Code, "201 expected `%d` given. body: `%s`",
+		resRecorder.Code, string(body))
+
+	st := struct {
+		ID int64 `json:"id"`
+	}{}
+
+	err = json.Unmarshal(body, &st)
+	require.NoError(t, err, "failed to decode json. `%s` given", string(body))
+
+	require.NotEmpty(t, st.ID, "json not contains picture.id. `%s` given", string(body))
+
+	return st.ID
+}
+
+func CreatePictureRequest(t *testing.T, file string, data PicturePostForm, token string) *http.Request {
+	t.Helper()
+
+	var (
+		buf             = new(bytes.Buffer)
+		multipartWriter = multipart.NewWriter(buf)
+	)
+
+	part, err := multipartWriter.CreateFormFile(pictureFileField, filepath.Base(file))
+	require.NoError(t, err)
+
+	handle, err := os.OpenFile(file, os.O_RDONLY, 0)
+	require.NoError(t, err)
+	defer util.Close(handle)
+
+	fileBytes, err := io.ReadAll(handle)
+	require.NoError(t, err)
+
+	_, err = part.Write(fileBytes)
+	require.NoError(t, err)
+
+	part, err = multipartWriter.CreateFormField(pictureCommentField)
+	require.NoError(t, err)
+	_, err = part.Write([]byte(data.Comment))
+	require.NoError(t, err)
+
+	part, err = multipartWriter.CreateFormField(pictureItemIDField)
+	require.NoError(t, err)
+	_, err = part.Write([]byte(strconv.FormatInt(data.ItemID, 10)))
+	require.NoError(t, err)
+
+	part, err = multipartWriter.CreateFormField(pictureReplacePictureIDField)
+	require.NoError(t, err)
+	_, err = part.Write([]byte(strconv.FormatInt(data.ReplacePictureID, 10)))
+	require.NoError(t, err)
+
+	part, err = multipartWriter.CreateFormField(picturePerspectiveID)
+	require.NoError(t, err)
+	_, err = part.Write([]byte(strconv.FormatInt(int64(data.PerspectiveID), 10)))
+	require.NoError(t, err)
+
+	err = multipartWriter.Close()
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/picture", buf)
+	require.NoError(t, err)
+
+	req.Header.Add("Content-Type", multipartWriter.FormDataContentType())
+	req.Header.Add(authorizationHeader, bearerPrefix+token) //nolint:canonicalheader
+	req.RemoteAddr = "127.0.0.1:1234"
+
+	return req
 }

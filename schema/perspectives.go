@@ -36,6 +36,6 @@ var (
 )
 
 type PerspectiveRow struct {
-	ID   int64  `db:"id"`
+	ID   int32  `db:"id"`
 	Name string `db:"name"`
 }

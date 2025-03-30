@@ -31,7 +31,6 @@ type ServeOptions struct {
 	MonitoringAMQP        bool
 	GRPC                  bool
 	Public                bool
-	Private               bool
 	Autoban               bool
 	AttrsUpdateValuesAMQP bool
 }
@@ -151,19 +150,6 @@ func (s *Application) Serve(ctx context.Context, options ServeOptions, quit chan
 		}()
 	}
 
-	if options.Private {
-		wg.Add(1)
-
-		go func() {
-			err := s.ServePrivate(ctx, quit)
-			if err != nil {
-				logrus.Errorln(err.Error())
-			}
-
-			wg.Done()
-		}()
-	}
-
 	if options.Autoban {
 		wg.Add(1)
 
@@ -271,11 +257,9 @@ func (s *Application) ListenDuplicateFinderAMQP(ctx context.Context, quit chan b
 		return err
 	}
 
-	cfg := s.container.Config()
-
 	logrus.Println("DuplicateFinder listener started")
 
-	err = df.ListenAMQP(ctx, cfg.DuplicateFinder.RabbitMQ, cfg.DuplicateFinder.Queue, quit)
+	err = df.ListenAMQP(ctx, quit)
 	if err != nil {
 		logrus.Error(err.Error())
 
@@ -341,33 +325,6 @@ func (s *Application) MigratePostgres(_ context.Context) error {
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
-
-	return nil
-}
-
-func (s *Application) ServePrivate(ctx context.Context, quit chan bool) error {
-	httpServer, err := s.container.PrivateHTTPServer(ctx)
-	if err != nil {
-		return err
-	}
-
-	go func(ctx context.Context) {
-		<-quit
-
-		if err := httpServer.Shutdown(ctx); err != nil {
-			logrus.Error(err.Error())
-		}
-	}(ctx)
-
-	logrus.Info("HTTP server started")
-
-	if err = httpServer.ListenAndServe(); err != nil {
-		if !errors.Is(err, http.ErrServerClosed) {
-			return err
-		}
-	}
-
-	logrus.Info("HTTP server stopped")
 
 	return nil
 }
@@ -440,17 +397,28 @@ func (s *Application) SchedulerDaily(ctx context.Context) error {
 		return err
 	}
 
-	picturesRepo, err := s.container.PicturesRepository()
+	messRepo, err := s.container.MessagingRepository()
 	if err != nil {
 		return err
 	}
 
-	err = picturesRepo.ClearQueue(ctx)
+	deleted, err := messRepo.Recycle(ctx)
 	if err != nil {
 		logrus.Error(err.Error())
 
 		return err
 	}
+
+	logrus.Infof("%d messages was deleted", deleted)
+
+	deleted, err = messRepo.RecycleSystem(ctx)
+	if err != nil {
+		logrus.Error(err.Error())
+
+		return err
+	}
+
+	logrus.Infof("%d messages was deleted", deleted)
 
 	// affected, err = commentsRep.RefreshRepliesCount(ctx)
 	// if err != nil {
@@ -659,6 +627,15 @@ func (s *Application) PicturesFixFilenames(ctx context.Context) error {
 	}
 
 	return repository.CorrectAllFileNames(ctx)
+}
+
+func (s *Application) PicturesClearQueue(ctx context.Context) error {
+	picturesRepo, err := s.container.PicturesRepository()
+	if err != nil {
+		return err
+	}
+
+	return picturesRepo.ClearQueue(ctx)
 }
 
 func (s *Application) BuildBrandsSprite(ctx context.Context) error {

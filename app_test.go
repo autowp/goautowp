@@ -56,7 +56,6 @@ func TestServe(t *testing.T) {
 		MonitoringAMQP:        true,
 		GRPC:                  true,
 		Public:                true,
-		Private:               true,
 		Autoban:               true,
 		AttrsUpdateValuesAMQP: true,
 	}, done)
@@ -243,5 +242,15 @@ func TestBuildBrandsSprite(t *testing.T) {
 	}
 
 	err = app.BuildBrandsSprite(t.Context())
+	require.NoError(t, err)
+}
+
+func TestDaily(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.LoadConfig(".")
+	app := NewApplication(cfg)
+
+	err := app.SchedulerDaily(t.Context())
 	require.NoError(t, err)
 }

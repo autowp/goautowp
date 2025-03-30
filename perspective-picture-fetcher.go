@@ -162,7 +162,7 @@ func (s *PerspectivePictureFetcher) Fetch(
 		extraPicIdx := 0
 
 		for idx, picture := range result {
-			if picture == nil {
+			if picture != nil {
 				continue
 			}
 

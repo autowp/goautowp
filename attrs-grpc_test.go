@@ -2323,3 +2323,22 @@ func TestSetUserValuesIsEmpty(t *testing.T) {
 	require.NotEqualValues(t, -1, index)
 	require.True(t, values.GetItems()[index].GetValue().GetIsEmpty())
 }
+
+func TestChart(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	client := NewAttrsClient(conn)
+
+	_, err := client.GetChartParameters(
+		ctx,
+		&emptypb.Empty{},
+	)
+	require.NoError(t, err)
+
+	_, err = client.GetChartData(
+		ctx,
+		&ChartDataRequest{Id: schema.LengthAttr},
+	)
+	require.NoError(t, err)
+}

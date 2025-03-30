@@ -124,7 +124,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 	}
 
-	if fields.GetImage() || isModer {
+	if fields.GetImage() || fields.GetImageGallery() || isModer {
 		ids := make([]int, 0, len(rows))
 
 		for _, row := range rows {
@@ -744,7 +744,7 @@ func (s *PictureExtractor) path(
 
 		if item != nil {
 			result = append(result, &PathTreePictureItem{
-				PerspectiveId: int32(util.NullInt64ToScalar(piRow.PerspectiveID)), //nolint: gosec
+				PerspectiveId: util.NullInt32ToScalar(piRow.PerspectiveID),
 				Item:          item,
 			})
 		}
