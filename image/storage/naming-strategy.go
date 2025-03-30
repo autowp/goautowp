@@ -85,7 +85,7 @@ func (s NamingStrategySerial) Generate(options GenerateOptions) string {
 
 	suffix := ""
 	if options.Index > 0 {
-		suffix = "_" + strconv.Itoa(fileIndex)
+		suffix = "_" + strconv.Itoa(options.Index)
 	}
 
 	result := fileBasename + suffix

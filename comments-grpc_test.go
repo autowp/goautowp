@@ -163,7 +163,7 @@ func TestCommentReplyNotificationShouldBeDelivered(t *testing.T) { //nolint:para
 		},
 	)
 	require.NoError(t, err)
-	require.Contains(t, messages.GetItems()[0].GetText(), "ответил на ваше сообщение")
+	require.Contains(t, messages.GetItems()[0].GetText(), "replies to you")
 }
 
 func TestSubscribeComment(t *testing.T) {
