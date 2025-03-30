@@ -33,11 +33,7 @@ const (
 	UserPhotoMinHeight        = 50
 )
 
-const (
-	Decimal               = 10
-	BitSize64             = 64
-	deleteUnusedBatchSize = 100
-)
+const deleteUnusedBatchSize = 100
 
 var (
 	ErrUserNotFound   = errors.New("user not found")
@@ -1195,7 +1191,7 @@ func (s *Repository) SetUserPhoto(ctx context.Context, userID int64, file io.Rea
 		return err
 	}
 
-	_, err = s.db.Update(schema.UserTable).
+	_, err = s.autowpDB.Update(schema.UserTable).
 		Set(goqu.Record{
 			schema.UserTableImgColName: imageID,
 		}).
