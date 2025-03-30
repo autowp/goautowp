@@ -2645,6 +2645,7 @@ func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest)
 
 	repoOptions.Limit = galleryItemsPerPage
 	repoOptions.Page = request.GetPage()
+	order := convertPicturesOrder(request.GetOrder())
 
 	itemSpecified := options.GetPictureItem().GetItemParentCacheAncestor().GetParentId() != 0 ||
 		options.GetPictureItem().GetItemId() != 0
@@ -2669,14 +2670,15 @@ func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest)
 		}
 
 		repoOptions.Status = row.Status
-		request.Page = 0
+		repoOptions.Page = 0
 
 		if itemSpecified {
-			page, err := s.getPicturePage(ctx, repoOptions, pictureIdentity)
+			page, err := s.getPicturePage(ctx, repoOptions, pictureIdentity, order)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
+			repoOptions.Page = uint32(page)
 			request.Page = uint32(page) //nolint: gosec
 		}
 	}
@@ -2685,7 +2687,6 @@ func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest)
 	fields := request.GetFields()
 
 	repoFields := convertPictureFields(fields)
-	order := convertPicturesOrder(request.GetOrder())
 
 	rows, pages, err := s.repository.Pictures(ctx, repoOptions, repoFields, order, true)
 	if err != nil {
@@ -2707,12 +2708,14 @@ func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest)
 }
 
 func (s *PicturesGRPCServer) getPicturePage(
-	ctx context.Context, filter *query.PictureListOptions, identity string,
+	ctx context.Context, filter *query.PictureListOptions, identity string, order pictures.OrderBy,
 ) (int32, error) {
 	filterCopy := *filter
 	filterCopy.Identity = ""
+	filterCopy.Limit = 0
+	filterCopy.Page = 0
 
-	rows, _, err := s.repository.Pictures(ctx, &filterCopy, nil, pictures.OrderByNone, false)
+	rows, _, err := s.repository.Pictures(ctx, &filterCopy, nil, order, false)
 	if err != nil {
 		return 0, err
 	}
