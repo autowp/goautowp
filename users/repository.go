@@ -1195,7 +1195,7 @@ func (s *Repository) SetUserPhoto(ctx context.Context, userID int64, file io.Rea
 		Set(goqu.Record{
 			schema.UserTableImgColName: imageID,
 		}).
-		Where(schema.ItemTableIDCol.Eq(user.ID)).
+		Where(schema.UserTableIDCol.Eq(user.ID)).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
