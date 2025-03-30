@@ -90,7 +90,7 @@ func TestUploadPicture(t *testing.T) {
 	require.NoError(t, err)
 
 	st := struct {
-		ID int64 `json:"id"`
+		ID string `json:"id"`
 	}{}
 
 	err = json.Unmarshal(body, &st)
