@@ -33,9 +33,8 @@ const (
 const bearerPrefix = "Bearer "
 
 func addPicture(
-	//nolint: unparam
-	t *testing.T, cnt *Container, conn *grpc.ClientConn, filepath string, data PicturePostForm, status PictureStatus,
-	token string,
+	t *testing.T, cnt *Container, conn *grpc.ClientConn, filepath string, data PicturePostForm, //nolint: unparam
+	status PictureStatus, token string,
 ) int64 {
 	t.Helper()
 
@@ -137,7 +136,7 @@ func CreatePicture(t *testing.T, cnt *Container, file string, data PicturePostFo
 		resRecorder.Code, string(body))
 
 	st := struct {
-		ID int64 `json:"id"`
+		ID string `json:"id"`
 	}{}
 
 	err = json.Unmarshal(body, &st)
@@ -145,7 +144,10 @@ func CreatePicture(t *testing.T, cnt *Container, file string, data PicturePostFo
 
 	require.NotEmpty(t, st.ID, "json not contains picture.id. `%s` given", string(body))
 
-	return st.ID
+	id, err := strconv.ParseInt(st.ID, 10, 64)
+	require.NoError(t, err)
+
+	return id
 }
 
 func CreatePictureRequest(t *testing.T, file string, data PicturePostForm, token string) *http.Request {
