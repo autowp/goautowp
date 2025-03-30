@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"image"
-	_ "image/jpeg" // support JPEG decoding.
-	_ "image/png"  // support PNG decoding.
+	_ "image/gif"  // GIF support
+	_ "image/jpeg" // JPEG support
+	_ "image/png"  // PNG support
 	"io"
 	"net/http"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 	"github.com/corona10/goimagehash"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
+	_ "golang.org/x/image/webp" // WEBP support
 )
 
 var errInvalidID = errors.New("invalid id provided")

@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/png" // support PNG decoding.
+	_ "image/gif"  // GIF support
+	_ "image/jpeg" // JPEG support
+	_ "image/png"  // PNG support
 	"net/http"
 	"strconv"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/autowp/goautowp/users"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gin-gonic/gin"
+	_ "golang.org/x/image/webp" // WEBP support
 )
 
 const userPhotoFileField = "photo"

@@ -31,6 +31,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	my "github.com/go-mysql/errors"
 	"github.com/sirupsen/logrus"
+	_ "golang.org/x/image/webp" // WEBP support
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
@@ -40,25 +41,17 @@ const (
 	StatusFailed     int = 2
 )
 
-const maxInsertAttempts = 15
-
-const maxSameSizeObjectsToFetch = 10
-
 const (
-	defaultExtension = "jpg"
-	pngExtension     = "png"
-	jpegExtension    = "jpg"
-	gifExtension     = "gif"
+	maxInsertAttempts         = 15
+	maxSameSizeObjectsToFetch = 10
+	defaultExtension          = sampler.JPEGExtension
+	listBrokenImagesPerPage   = 1000
 )
-
-const dirNotDefinedMessage = "dir not defined"
-
-const listBrokenImagesPerPage = 1000
 
 var (
 	ErrImageNotFound           = errors.New("image not found")
 	errUnsupportedImageType    = errors.New("unsupported image type")
-	errDirNotFound             = errors.New(dirNotDefinedMessage)
+	errDirNotFound             = errors.New("dir not defined")
 	errFormatNotFound          = errors.New("format not found")
 	errFailedToFormatImage     = errors.New("failed to format image")
 	errFailedToGetImageSize    = errors.New("failed to get image size")
@@ -74,6 +67,7 @@ var formats2ContentType = map[string]string{
 	"PNG":  "image/png",
 	"JPG":  "image/jpeg",
 	"JPEG": "image/jpeg",
+	"WEBP": "image/webp",
 }
 
 type Storage struct {
@@ -541,11 +535,13 @@ func (s *Storage) AddImageFromImagick(
 
 	switch strings.ToLower(format) {
 	case "gif":
-		options.Extension = gifExtension
+		options.Extension = sampler.GIFExtension
 	case "jpeg":
-		options.Extension = jpegExtension
+		options.Extension = sampler.JPEGExtension
 	case "png":
-		options.Extension = pngExtension
+		options.Extension = sampler.PNGExtension
+	case "webp":
+		options.Extension = sampler.WebpExtension
 	default:
 		return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, format)
 	}
@@ -998,11 +994,13 @@ func (s *Storage) AddImageFromReader(
 
 		switch imageType {
 		case "gif":
-			ext = gifExtension
+			ext = sampler.GIFExtension
 		case "jpeg":
-			ext = jpegExtension
+			ext = sampler.JPEGExtension
 		case "png":
-			ext = pngExtension
+			ext = sampler.PNGExtension
+		case "webp":
+			ext = sampler.WebpExtension
 		default:
 			return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, imageType)
 		}

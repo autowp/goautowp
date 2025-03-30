@@ -7,6 +7,14 @@ import (
 	"github.com/autowp/goautowp/config"
 )
 
+const (
+	PNGExtension  = "png"
+	JPEGExtension = "jpeg"
+	GIFExtension  = "gif"
+	WebpExtension = "webp"
+	BMPExtension  = "bmp"
+)
+
 var errUnsupportedFormat = errors.New("unsupported format")
 
 type Format struct {
@@ -56,11 +64,12 @@ func (f *Format) Width() int {
 }
 
 var formatExt = map[string]string{
-	"jpg":  "jpeg",
-	"jpeg": "jpeg",
-	"png":  "png",
-	"gif":  "gif",
-	"bmp":  "bmp",
+	"jpg":  JPEGExtension,
+	"jpeg": JPEGExtension,
+	"png":  PNGExtension,
+	"gif":  GIFExtension,
+	"bmp":  BMPExtension,
+	"webp": WebpExtension,
 }
 
 func (f Format) FormatExtension() (string, error) {

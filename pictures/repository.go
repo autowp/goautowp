@@ -7,8 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/jpeg" // support JPEG decoding.
-	_ "image/png"  // support PNG decoding.
+	_ "image/gif"  // GIF support
+	_ "image/jpeg" // JPEG support
+	_ "image/png"  // PNG support
 	"maps"
 	"math/rand/v2"
 	"mime/multipart"
@@ -33,6 +34,7 @@ import (
 	"github.com/paulmach/orb"
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
+	_ "golang.org/x/image/webp" // WEBP support
 )
 
 var (
@@ -981,7 +983,24 @@ func (s *Repository) Flop(ctx context.Context, id int64) error {
 }
 
 func (s *Repository) Repair(ctx context.Context, id int64) error {
-	return s.imageStorage.Flush(ctx, storage.FlushOptions{Image: int(id)})
+	var imageID int
+
+	success, err := s.db.Select(schema.PictureTableImageIDCol).
+		From(schema.PictureTable).
+		Where(
+			schema.PictureTableIDCol.Eq(id),
+			schema.PictureTableImageIDCol.IsNotNull(),
+		).
+		ScanValContext(ctx, &imageID)
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return nil
+	}
+
+	return s.imageStorage.Flush(ctx, storage.FlushOptions{Image: imageID})
 }
 
 func (s *Repository) SetPictureItemArea(
