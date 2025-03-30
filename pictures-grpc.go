@@ -2678,8 +2678,7 @@ func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest)
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			repoOptions.Page = uint32(page)
-			request.Page = uint32(page) //nolint: gosec
+			repoOptions.Page = uint32(page) //nolint: gosec
 		}
 	}
 
