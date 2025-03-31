@@ -72,7 +72,7 @@ var formatExt = map[string]string{
 	"webp": WebpExtension,
 }
 
-func (f Format) FormatExtension() (string, error) {
+func (f *Format) FormatExtension() (string, error) {
 	if len(f.format) == 0 {
 		return "", nil
 	}
@@ -86,15 +86,15 @@ func (f Format) FormatExtension() (string, error) {
 	return value, nil
 }
 
-func (f Format) IsIgnoreCrop() bool {
+func (f *Format) IsIgnoreCrop() bool {
 	return f.isIgnoreCrop
 }
 
-func (f Format) Widest() float64 {
+func (f *Format) Widest() float64 {
 	return f.widest
 }
 
-func (f Format) Highest() float64 {
+func (f *Format) Highest() float64 {
 	return f.highest
 }
 

@@ -212,7 +212,7 @@ image-storage:
       format: webp
     picture-preview-large:
       fit-type: 0
-      width: 538
+      width: 635
       strip: true
       format: webp
     picture-gallery:
