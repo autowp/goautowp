@@ -965,14 +965,10 @@ func (s *Storage) AddImageFromReader(
 	}
 
 	if len(options.Extension) == 0 {
-		var ext string
-
 		options.Extension, err = sampler.GoFormat2Extension(imageType)
 		if err != nil {
 			return 0, err
 		}
-
-		options.Extension = ext
 	}
 
 	dir := s.dir(dirName)
