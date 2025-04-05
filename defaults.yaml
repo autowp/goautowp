@@ -200,8 +200,8 @@ image-storage:
       proportional-crop: true
     picture-thumb-large:
       fit-type: 0
-      width: 620
-      height: 464
+      width: 635
+      height: 476
       strip: true
       format: avif
       proportional-crop: true
