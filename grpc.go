@@ -120,7 +120,7 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 		return nil, err
 	}
 
-	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/" + brandsSpritePNGFilename
+	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/" + brandsSpriteImageFilename
 	imageURL := parsedURL.String()
 
 	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/" + brandsSpriteCSSFilename

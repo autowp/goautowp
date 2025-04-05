@@ -12,6 +12,7 @@ import (
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/frontend"
 	"github.com/autowp/goautowp/hosts"
+	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/itemofday"
 	"github.com/autowp/goautowp/items"
@@ -334,8 +335,8 @@ func (s *PicturesREST) handlePicturePOST(ctx *gin.Context) {
 	}
 
 	allowedMimes := []string{
-		"image/jpeg",
-		"image/png",
+		sampler.ContentTypeImageJPEG,
+		sampler.ContentTypeImagePNG,
 	}
 
 	mimeIsAllowed := false

@@ -64,12 +64,12 @@ var (
 var publicRead = "public-read"
 
 var formats2ContentType = map[string]string{
-	"GIF":  "image/gif",
-	"PNG":  "image/png",
-	"JPG":  "image/jpeg",
-	"JPEG": "image/jpeg",
-	"WEBP": "image/webp",
-	"AVIF": "image/avif",
+	sampler.GoFormatGIF:  sampler.ContentTypeImageGIF,
+	sampler.GoFormatPNG:  sampler.ContentTypeImagePNG,
+	sampler.GoFormatJPG:  sampler.ContentTypeImageJPEG,
+	sampler.GoFormatJPEG: sampler.ContentTypeImageJPEG,
+	sampler.GoFormatWebP: sampler.ContentTypeImageWebP,
+	sampler.GoFormatAVIF: sampler.ContentTypeImageAVIF,
 }
 
 type Storage struct {
@@ -536,15 +536,15 @@ func (s *Storage) AddImageFromImagick(
 	format := mw.GetImageFormat()
 
 	switch strings.ToLower(format) {
-	case "gif":
+	case sampler.StorageFormatGIF:
 		options.Extension = sampler.GIFExtension
-	case "jpeg":
+	case sampler.StorageFormatJPG, sampler.StorageFormatJPEG:
 		options.Extension = sampler.JPEGExtension
-	case "png":
+	case sampler.StorageFormatPNG:
 		options.Extension = sampler.PNGExtension
-	case "webp":
+	case sampler.StorageFormatWebP:
 		options.Extension = sampler.WebPExtension
-	case "avif":
+	case sampler.StorageFormatAVIF:
 		options.Extension = sampler.AVIFExtension
 	default:
 		return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, format)
@@ -997,15 +997,15 @@ func (s *Storage) AddImageFromReader(
 		var ext string
 
 		switch imageType {
-		case "gif":
+		case sampler.GoFormatGIF:
 			ext = sampler.GIFExtension
-		case "jpeg":
+		case sampler.StorageFormatJPG, sampler.StorageFormatJPEG:
 			ext = sampler.JPEGExtension
-		case "png":
+		case sampler.StorageFormatPNG:
 			ext = sampler.PNGExtension
-		case "webp":
+		case sampler.StorageFormatWebP:
 			ext = sampler.WebPExtension
-		case "avif":
+		case sampler.StorageFormatAVIF:
 			ext = sampler.AVIFExtension
 		default:
 			return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, imageType)

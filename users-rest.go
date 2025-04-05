@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/users"
 	"github.com/gabriel-vasile/mimetype"
@@ -91,13 +92,13 @@ func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
 	}
 
 	allowedMimes := []string{
-		"image/bmp",
-		"image/gif",
-		"image/jpeg",
-		"image/png",
-		"image/webp",
-		"image/avif",
-		"image/x-png",
+		sampler.ContentTypeImageBMP,
+		sampler.ContentTypeImageGIF,
+		sampler.ContentTypeImageJPEG,
+		sampler.ContentTypeImagePNG,
+		sampler.ContentTypeImageWebP,
+		sampler.ContentTypeImageAVIF,
+		sampler.ContentTypeImageXPNG,
 	}
 
 	mimeIsAllowed := false

@@ -2355,7 +2355,7 @@ func (s *Repository) AddPictureFromReader(
 	var ext string
 
 	switch imageType {
-	case "jpeg", "png":
+	case sampler.GoFormatJPEG, sampler.GoFormatPNG:
 		ext = imageType
 	default:
 		return 0, errUnsupportedImageType

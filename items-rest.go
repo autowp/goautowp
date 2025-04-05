@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/items"
 	"github.com/casbin/casbin"
 	"github.com/gabriel-vasile/mimetype"
@@ -96,7 +97,7 @@ func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
 		return
 	}
 
-	if !mime.Is("image/png") {
+	if !mime.Is(sampler.ContentTypeImagePNG) {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"invalid_params": gin.H{itemLogoFileField: map[string]string{
 				"fileIsImageFalseType": fmt.Sprintf(

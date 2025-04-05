@@ -177,6 +177,7 @@ image-storage:
       height: 70
       background: "#EDE9DE"
       strip: true
+      format: avif
     brandicon2:
       fit-type: 2
       width: 70

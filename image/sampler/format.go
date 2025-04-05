@@ -14,6 +14,29 @@ const (
 	WebPExtension = "webp"
 	BMPExtension  = "bmp"
 	AVIFExtension = "avif"
+
+	StorageFormatGIF  = "gif"
+	StorageFormatPNG  = "png"
+	StorageFormatJPG  = "jpg"
+	StorageFormatJPEG = "jpeg"
+	StorageFormatWebP = "webp"
+	StorageFormatAVIF = "avif"
+	StorageFormatBMP  = "bmp"
+
+	GoFormatGIF  = "GIF"
+	GoFormatPNG  = "PNG"
+	GoFormatJPG  = "JPG"
+	GoFormatJPEG = "JPEG"
+	GoFormatWebP = "WEBP"
+	GoFormatAVIF = "AVIF"
+
+	ContentTypeImagePNG  = "image/png"
+	ContentTypeImageXPNG = "image/x-png"
+	ContentTypeImageJPEG = "image/jpeg"
+	ContentTypeImageGIF  = "image/gif"
+	ContentTypeImageAVIF = "image/avif"
+	ContentTypeImageBMP  = "image/bmp"
+	ContentTypeImageWebP = "image/webp"
 )
 
 var errUnsupportedFormat = errors.New("unsupported format")
@@ -65,13 +88,13 @@ func (f *Format) Width() int {
 }
 
 var formatExt = map[string]string{
-	"jpg":  JPEGExtension,
-	"jpeg": JPEGExtension,
-	"png":  PNGExtension,
-	"gif":  GIFExtension,
-	"bmp":  BMPExtension,
-	"webp": WebPExtension,
-	"avif": AVIFExtension,
+	StorageFormatJPG:  JPEGExtension,
+	StorageFormatJPEG: JPEGExtension,
+	StorageFormatPNG:  PNGExtension,
+	StorageFormatGIF:  GIFExtension,
+	StorageFormatBMP:  BMPExtension,
+	StorageFormatWebP: WebPExtension,
+	StorageFormatAVIF: AVIFExtension,
 }
 
 func (f *Format) FormatExtension() (string, error) {

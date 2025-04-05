@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/query"
@@ -26,9 +27,9 @@ import (
 )
 
 const (
-	iconFormat              = "brandicon"
-	brandsSpritePNGFilename = "brands.png"
-	brandsSpriteCSSFilename = "brands.css"
+	iconFormat                = "brandicon"
+	brandsSpriteImageFilename = "brands.avif"
+	brandsSpriteCSSFilename   = "brands.css"
 )
 
 var (
@@ -168,7 +169,7 @@ func createIconsSprite(
 		index++
 	}
 
-	destImg := tmpDir + "/" + brandsSpritePNGFilename
+	destImg := tmpDir + "/" + brandsSpriteImageFilename
 
 	logrus.Info("Montage ...")
 
@@ -198,11 +199,11 @@ func createIconsSprite(
 	svc := s3.New(sess)
 
 	var (
-		publicRead     = "public-read"
-		pngContentType = "image/png"
-		pngKey         = brandsSpritePNGFilename
-		cssKey         = brandsSpriteCSSFilename
-		cssContentType = "text/css"
+		publicRead       = "public-read"
+		imageContentType = sampler.ContentTypeImagePNG
+		imageKey         = brandsSpriteImageFilename
+		cssKey           = brandsSpriteCSSFilename
+		cssContentType   = "text/css"
 	)
 
 	handle, err := os.Open(destImg)
@@ -213,11 +214,11 @@ func createIconsSprite(
 	defer util.Close(handle)
 
 	_, err = svc.PutObjectWithContext(ctx, &s3.PutObjectInput{
-		Key:         &pngKey,
+		Key:         &imageKey,
 		Body:        handle,
 		Bucket:      &fileStorageConfig.Bucket,
 		ACL:         &publicRead,
-		ContentType: &pngContentType,
+		ContentType: &imageContentType,
 	})
 	if err != nil {
 		return err
