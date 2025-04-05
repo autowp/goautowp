@@ -3,6 +3,8 @@ package sampler
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/autowp/goautowp/config"
 )
@@ -17,18 +19,16 @@ const (
 
 	StorageFormatGIF  = "gif"
 	StorageFormatPNG  = "png"
-	StorageFormatJPG  = "jpg"
 	StorageFormatJPEG = "jpeg"
 	StorageFormatWebP = "webp"
 	StorageFormatAVIF = "avif"
 	StorageFormatBMP  = "bmp"
 
-	GoFormatGIF  = "GIF"
-	GoFormatPNG  = "PNG"
-	GoFormatJPG  = "JPG"
-	GoFormatJPEG = "JPEG"
-	GoFormatWebP = "WEBP"
-	GoFormatAVIF = "AVIF"
+	GoFormatGIF  = "gif"
+	GoFormatPNG  = "png"
+	GoFormatJPEG = "jpeg"
+	GoFormatWebP = "webp"
+	GoFormatAVIF = "avif"
 
 	ContentTypeImagePNG  = "image/png"
 	ContentTypeImageXPNG = "image/x-png"
@@ -37,7 +37,15 @@ const (
 	ContentTypeImageAVIF = "image/avif"
 	ContentTypeImageBMP  = "image/bmp"
 	ContentTypeImageWebP = "image/webp"
+
+	ImagickFormatGIF  = "GIF"
+	ImagickFormatPNG  = "PNG"
+	ImagickFormatJPEG = "JPEG"
+	ImagickFormatWebP = "WEBP"
+	ImagickFormatAVIF = "AVIF"
 )
+
+type ImagickFormat string
 
 var errUnsupportedFormat = errors.New("unsupported format")
 
@@ -53,6 +61,48 @@ type Format struct {
 	fitType            config.FitType
 	isStrip            bool
 	isReduceOnly       bool
+}
+
+var extension2ContentType = map[string]string{
+	GIFExtension:  ContentTypeImageGIF,
+	PNGExtension:  ContentTypeImagePNG,
+	JPEGExtension: ContentTypeImageJPEG,
+	WebPExtension: ContentTypeImageWebP,
+	AVIFExtension: ContentTypeImageAVIF,
+	BMPExtension:  ContentTypeImageBMP,
+}
+
+var imagickFormats2ContentType = map[string]string{
+	ImagickFormatGIF:  ContentTypeImageGIF,
+	ImagickFormatPNG:  ContentTypeImagePNG,
+	ImagickFormatJPEG: ContentTypeImageJPEG,
+	ImagickFormatWebP: ContentTypeImageWebP,
+	ImagickFormatAVIF: ContentTypeImageAVIF,
+}
+
+var imagickFormats2Extension = map[string]string{
+	ImagickFormatGIF:  GIFExtension,
+	ImagickFormatPNG:  PNGExtension,
+	ImagickFormatJPEG: JPEGExtension,
+	ImagickFormatWebP: WebPExtension,
+	ImagickFormatAVIF: AVIFExtension,
+}
+
+var formatExt = map[string]string{
+	StorageFormatJPEG: JPEGExtension,
+	StorageFormatPNG:  PNGExtension,
+	StorageFormatGIF:  GIFExtension,
+	StorageFormatBMP:  BMPExtension,
+	StorageFormatWebP: WebPExtension,
+	StorageFormatAVIF: AVIFExtension,
+}
+
+var goFormat2Extension = map[string]string{
+	GoFormatGIF:  GIFExtension,
+	GoFormatJPEG: JPEGExtension,
+	GoFormatWebP: WebPExtension,
+	GoFormatPNG:  PNGExtension,
+	GoFormatAVIF: AVIFExtension,
 }
 
 func NewFormat(cfg config.ImageStorageSamplerFormatConfig) *Format {
@@ -85,16 +135,6 @@ func (f *Format) Height() int {
 
 func (f *Format) Width() int {
 	return f.width
-}
-
-var formatExt = map[string]string{
-	StorageFormatJPG:  JPEGExtension,
-	StorageFormatJPEG: JPEGExtension,
-	StorageFormatPNG:  PNGExtension,
-	StorageFormatGIF:  GIFExtension,
-	StorageFormatBMP:  BMPExtension,
-	StorageFormatWebP: WebPExtension,
-	StorageFormatAVIF: AVIFExtension,
 }
 
 func (f *Format) FormatExtension() (string, error) {
@@ -137,4 +177,46 @@ func (f *Format) FitType() config.FitType {
 
 func (f *Format) IsReduceOnly() bool {
 	return f.isReduceOnly
+}
+
+func ImagickFormatContentType(format string) (string, error) {
+	result, ok := imagickFormats2ContentType[format]
+	if !ok {
+		return "", fmt.Errorf("%w: `%s`", errUnsupportedFormat, format)
+	}
+
+	return result, nil
+}
+
+func ImagickFormatExtension(format string) (string, error) {
+	result, ok := imagickFormats2Extension[format]
+	if !ok {
+		return "", fmt.Errorf("%w: `%s`", errUnsupportedFormat, format)
+	}
+
+	return result, nil
+}
+
+func ExtensionContentType(ext string) (string, error) {
+	result, ok := extension2ContentType[ext]
+	if !ok {
+		return "", fmt.Errorf("%w: `%s`", errUnsupportedFormat, ext)
+	}
+
+	return result, nil
+}
+
+func GoFormat2Extension(ext string) (string, error) {
+	result, ok := goFormat2Extension[ext]
+	if !ok {
+		return "", fmt.Errorf("%w: `%s`", errUnsupportedFormat, ext)
+	}
+
+	return result, nil
+}
+
+func ContentTypeByFilepath(file string) (string, error) {
+	ext := strings.TrimLeft(filepath.Ext(file), ".")
+
+	return ExtensionContentType(ext)
 }

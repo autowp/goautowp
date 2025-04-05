@@ -199,12 +199,16 @@ func createIconsSprite(
 	svc := s3.New(sess)
 
 	var (
-		publicRead       = "public-read"
-		imageContentType = sampler.ContentTypeImagePNG
-		imageKey         = brandsSpriteImageFilename
-		cssKey           = brandsSpriteCSSFilename
-		cssContentType   = "text/css"
+		publicRead     = "public-read"
+		imageKey       = brandsSpriteImageFilename
+		cssKey         = brandsSpriteCSSFilename
+		cssContentType = "text/css"
 	)
+
+	imageContentType, err := sampler.ContentTypeByFilepath(brandsSpriteImageFilename)
+	if err != nil {
+		return err
+	}
 
 	handle, err := os.Open(destImg)
 	if err != nil {

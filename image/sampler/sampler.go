@@ -35,7 +35,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 	}
 
 	decomposed := mw
-	if mw.GetImageFormat() == GoFormatGIF {
+	if mw.GetImageFormat() == ImagickFormatGIF {
 		decomposed = mw.CoalesceImages()
 		mw.Destroy()
 	}
@@ -134,7 +134,7 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 
 	mw = decomposed
 
-	if decomposed.GetImageFormat() == GoFormatGIF {
+	if decomposed.GetImageFormat() == ImagickFormatGIF {
 		decomposed.OptimizeImageLayers()
 		mw = decomposed.DeconstructImages()
 		decomposed.Destroy()
@@ -760,7 +760,7 @@ func (s Sampler) convertByHeight(mw *imagick.MagickWand, format Format) error {
 }
 
 func (s Sampler) scaleImage(mw *imagick.MagickWand, width int, height int) error {
-	/*if (mw.GetImageFormat() == GoFormatGIF) {
+	/*if (mw.GetImageFormat() == ImagickFormatGIF) {
 		foreach ($imagick as $i) {
 			$i->scaleImage($width, $height, false);
 		}

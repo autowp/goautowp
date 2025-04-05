@@ -51,7 +51,6 @@ const (
 
 var (
 	ErrImageNotFound           = errors.New("image not found")
-	errUnsupportedImageType    = errors.New("unsupported image type")
 	errDirNotFound             = errors.New("dir not defined")
 	errFormatNotFound          = errors.New("format not found")
 	errFailedToFormatImage     = errors.New("failed to format image")
@@ -62,15 +61,6 @@ var (
 )
 
 var publicRead = "public-read"
-
-var formats2ContentType = map[string]string{
-	sampler.GoFormatGIF:  sampler.ContentTypeImageGIF,
-	sampler.GoFormatPNG:  sampler.ContentTypeImagePNG,
-	sampler.GoFormatJPG:  sampler.ContentTypeImageJPEG,
-	sampler.GoFormatJPEG: sampler.ContentTypeImageJPEG,
-	sampler.GoFormatWebP: sampler.ContentTypeImageWebP,
-	sampler.GoFormatAVIF: sampler.ContentTypeImageAVIF,
-}
 
 type Storage struct {
 	config                config.ImageStorageConfig
@@ -526,6 +516,8 @@ func (s *Storage) AddImageFromImagick(
 	dirName string,
 	options GenerateOptions,
 ) (int, error) {
+	var err error
+
 	width := int(mw.GetImageWidth())   //nolint: gosec
 	height := int(mw.GetImageHeight()) //nolint: gosec
 
@@ -535,19 +527,9 @@ func (s *Storage) AddImageFromImagick(
 
 	format := mw.GetImageFormat()
 
-	switch strings.ToLower(format) {
-	case sampler.StorageFormatGIF:
-		options.Extension = sampler.GIFExtension
-	case sampler.StorageFormatJPG, sampler.StorageFormatJPEG:
-		options.Extension = sampler.JPEGExtension
-	case sampler.StorageFormatPNG:
-		options.Extension = sampler.PNGExtension
-	case sampler.StorageFormatWebP:
-		options.Extension = sampler.WebPExtension
-	case sampler.StorageFormatAVIF:
-		options.Extension = sampler.AVIFExtension
-	default:
-		return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, format)
+	options.Extension, err = sampler.ImagickFormatExtension(format)
+	if err != nil {
+		return 0, err
 	}
 
 	dir := s.dir(dirName)
@@ -573,7 +555,7 @@ func (s *Storage) AddImageFromImagick(
 			blobReader := bytes.NewReader(blob)
 			bucket := dir.Bucket()
 
-			contentType, err := imageFormatContentType(mw.GetImageFormat())
+			contentType, err := sampler.ImagickFormatContentType(mw.GetImageFormat())
 			if err != nil {
 				return err
 			}
@@ -754,17 +736,6 @@ func (s *Storage) createImagePath(ctx context.Context, dirName string, options G
 	}
 
 	return namingStrategy.Generate(options), nil
-}
-
-func imageFormatContentType(format string) (string, error) {
-	format = strings.ToUpper(format)
-
-	result, ok := formats2ContentType[format]
-	if !ok {
-		return "", fmt.Errorf("%w: `%s`", errFormatNotFound, format)
-	}
-
-	return result, nil
 }
 
 func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
@@ -996,19 +967,9 @@ func (s *Storage) AddImageFromReader(
 	if len(options.Extension) == 0 {
 		var ext string
 
-		switch imageType {
-		case sampler.GoFormatGIF:
-			ext = sampler.GIFExtension
-		case sampler.StorageFormatJPG, sampler.StorageFormatJPEG:
-			ext = sampler.JPEGExtension
-		case sampler.StorageFormatPNG:
-			ext = sampler.PNGExtension
-		case sampler.StorageFormatWebP:
-			ext = sampler.WebPExtension
-		case sampler.StorageFormatAVIF:
-			ext = sampler.AVIFExtension
-		default:
-			return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, imageType)
+		options.Extension, err = sampler.GoFormat2Extension(imageType)
+		if err != nil {
+			return 0, err
 		}
 
 		options.Extension = ext
@@ -1032,7 +993,7 @@ func (s *Storage) AddImageFromReader(
 		func(fileName string) error {
 			bucket := dir.Bucket()
 
-			contentType, err := imageFormatContentType(options.Extension)
+			contentType, err := sampler.ExtensionContentType(options.Extension)
 			if err != nil {
 				return err
 			}
@@ -1169,7 +1130,7 @@ func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback 
 
 	blobBytes := bytes.NewReader(blob)
 
-	contentType, err := imageFormatContentType(mw.GetImageFormat())
+	contentType, err := sampler.ImagickFormatContentType(mw.GetImageFormat())
 	if err != nil {
 		return err
 	}
