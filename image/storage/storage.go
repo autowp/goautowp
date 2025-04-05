@@ -29,10 +29,11 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/rest"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/doug-martin/goqu/v9"
+	_ "github.com/gen2brain/avif" // AVIF support
 	my "github.com/go-mysql/errors"
 	"github.com/sirupsen/logrus"
 	_ "golang.org/x/image/webp" // WEBP support
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 const (
@@ -68,6 +69,7 @@ var formats2ContentType = map[string]string{
 	"JPG":  "image/jpeg",
 	"JPEG": "image/jpeg",
 	"WEBP": "image/webp",
+	"AVIF": "image/avif",
 }
 
 type Storage struct {
@@ -541,7 +543,9 @@ func (s *Storage) AddImageFromImagick(
 	case "png":
 		options.Extension = sampler.PNGExtension
 	case "webp":
-		options.Extension = sampler.WebpExtension
+		options.Extension = sampler.WebPExtension
+	case "avif":
+		options.Extension = sampler.AVIFExtension
 	default:
 		return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, format)
 	}
@@ -1000,7 +1004,9 @@ func (s *Storage) AddImageFromReader(
 		case "png":
 			ext = sampler.PNGExtension
 		case "webp":
-			ext = sampler.WebpExtension
+			ext = sampler.WebPExtension
+		case "avif":
+			ext = sampler.AVIFExtension
 		default:
 			return 0, fmt.Errorf("%w: `%v`", errUnsupportedImageType, imageType)
 		}

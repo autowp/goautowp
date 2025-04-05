@@ -5,7 +5,7 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 const towerFilePath = "./_files/Towers_Schiphol_small.jpg"

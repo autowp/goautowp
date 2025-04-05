@@ -1,27 +1,23 @@
-FROM docker.io/library/ubuntu:noble AS builder
+FROM docker.io/library/alpine:edge AS builder
 
-ENV DEBIAN_FRONTEND=non-interactive \
-    HOME=/root
+ENV HOME=/root
 ENV PATH=$PATH:/usr/local/go/bin:$HOME/go/bin \
     GOPATH=$HOME/go
 
-RUN apt-get update -qqy && \
-    apt-get install -qqy --no-install-recommends \
+RUN apk --update --no-cache add \
+        aom-libs \
         ca-certificates \
         gcc \
         git \
+        go \
         imagemagick \
+        imagemagick-dev \
+        imagemagick-heic \
+        imagemagick-jpeg \
+        imagemagick-webp \
+        libheif \
         libc-dev \
-        libmagickwand-dev \
-        pkg-config \
-        wget \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists && \
-    update-ca-certificates && \
-    wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz && \
-    rm go1.24.1.linux-amd64.tar.gz
+        wget
 
 WORKDIR $GOPATH/src/github.com/autowp/goautowp/
 
@@ -32,34 +28,33 @@ RUN go mod download && \
 
 COPY . $GOPATH/src/github.com/autowp/goautowp/
 
-RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /app cmd/goautowp/goautowp.go
+RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /goautowp cmd/goautowp/goautowp.go
 
-############################
-FROM docker.io/library/ubuntu:noble
+###########################
+FROM docker.io/library/alpine:edge
 
 LABEL app-name="autowp.goautowp" \
       maintainer="dmitry@pereslegin.ru"
 
-ENV DEBIAN_FRONTEND=non-interactive \
-    USER=appuser \
+ENV USER=appuser \
     UID=10001
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app"]
+ENTRYPOINT ["/goautowp"]
 
 WORKDIR /
 
-RUN apt-get update -qqy && \
-    apt-get install -qqy --no-install-recommends \
-        adduser \
+RUN apk --update --no-cache add \
+        aom-libs \
         ca-certificates \
         imagemagick \
+        imagemagick-heic \
+        imagemagick-jpeg \
+        imagemagick-webp \
+        libheif \
         tzdata \
     && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists && \
-    update-ca-certificates && \
     # See https://stackoverflow.com/a/55757473/12429735RUN
     adduser \
         --disabled-password \
@@ -70,11 +65,11 @@ RUN apt-get update -qqy && \
         --uid "${UID}" \
         "${USER}"
 
-COPY etc/ImageMagick-6/policy.xml /etc/ImageMagick-6/policy.xml
+COPY etc/ImageMagick-7/policy.xml /etc/ImageMagick-7/policy.xml
 
 USER appuser:appuser
 
-COPY --from=builder /app /app
+COPY --from=builder /goautowp /goautowp
 COPY migrations /migrations
 COPY postgres-migrations /postgres-migrations
 COPY defaults.yaml /defaults.yaml

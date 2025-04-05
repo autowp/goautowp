@@ -19,6 +19,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/corona10/goimagehash"
 	"github.com/doug-martin/goqu/v9"
+	_ "github.com/gen2brain/avif" // AVIF support
 	"github.com/sirupsen/logrus"
 	_ "golang.org/x/image/webp" // WEBP support
 )

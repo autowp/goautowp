@@ -11,8 +11,9 @@ const (
 	PNGExtension  = "png"
 	JPEGExtension = "jpeg"
 	GIFExtension  = "gif"
-	WebpExtension = "webp"
+	WebPExtension = "webp"
 	BMPExtension  = "bmp"
+	AVIFExtension = "avif"
 )
 
 var errUnsupportedFormat = errors.New("unsupported format")
@@ -69,7 +70,8 @@ var formatExt = map[string]string{
 	"png":  PNGExtension,
 	"gif":  GIFExtension,
 	"bmp":  BMPExtension,
-	"webp": WebpExtension,
+	"webp": WebPExtension,
+	"avif": AVIFExtension,
 }
 
 func (f *Format) FormatExtension() (string, error) {

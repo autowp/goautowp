@@ -14,6 +14,7 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/users"
 	"github.com/gabriel-vasile/mimetype"
+	_ "github.com/gen2brain/avif" // AVIF support
 	"github.com/gin-gonic/gin"
 	_ "golang.org/x/image/webp" // WEBP support
 )
@@ -95,6 +96,7 @@ func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
 		"image/jpeg",
 		"image/png",
 		"image/webp",
+		"image/avif",
 		"image/x-png",
 	}
 

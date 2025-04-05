@@ -31,6 +31,7 @@ import (
 	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
+	_ "github.com/gen2brain/avif" // AVIF support
 	"github.com/paulmach/orb"
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"

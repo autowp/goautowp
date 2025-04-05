@@ -188,7 +188,7 @@ image-storage:
       width: 155
       height: 116
       strip: true
-      format: webp
+      format: avif
       proportional-crop: true
       background: "#fff"
     picture-thumb-medium:
@@ -196,32 +196,32 @@ image-storage:
       width: 350
       height: 270
       strip: true
-      format: webp
+      format: avif
       proportional-crop: true
     picture-thumb-large:
       fit-type: 0
       width: 620
       height: 464
       strip: true
-      format: webp
+      format: avif
       proportional-crop: true
     picture-medium:
       fit-type: 0
       width: 350
       strip: true
-      format: webp
+      format: avif
     picture-preview-large:
       fit-type: 0
       width: 635
       strip: true
-      format: webp
+      format: avif
     picture-gallery:
       fit-type: 2
       width: 1024
       height: 768
       reduce-only: true
       strip: true
-      format: webp
+      format: avif
     picture-gallery-full:
       fit-type: 2
       width: 1024
@@ -229,7 +229,7 @@ image-storage:
       reduce-only: true
       ignore-crop: true
       strip: true
-      format: webp
+      format: avif
   s3:
     region: ""
     #version: latest
