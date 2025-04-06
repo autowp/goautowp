@@ -39,7 +39,7 @@ const (
 	UserTableImgColName               = "img"
 )
 
-var (
+var ( //nolint: dupl
 	UserTable                     = goqu.T(UserTableName)
 	UserTableIDCol                = UserTable.Col(UserTableIDColName)
 	UserTableRoleCol              = UserTable.Col(UserTableRoleColName)
