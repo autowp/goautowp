@@ -374,10 +374,10 @@ func (s *ItemListOptions) applyJoins(
 	if s.VehicleTypeIsNull {
 		sqSelect = sqSelect.
 			LeftJoin(
-				schema.VehicleVehicleTypeTable,
-				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+				schema.ItemVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.ItemVehicleTypeTableItemIDCol)),
 			).
-			Where(schema.VehicleVehicleTypeTableVehicleIDCol.IsNull())
+			Where(schema.ItemVehicleTypeTableItemIDCol.IsNull())
 	}
 
 	if s.ItemParentChild != nil {
@@ -481,12 +481,12 @@ func (s *ItemListOptions) applyJoins(
 		nvvAliasTable := goqu.T(nvvAlias)
 
 		sqSelect = sqSelect.
-			LeftJoin(schema.VehicleVehicleTypeTable.As(nvvAlias), goqu.On(
+			LeftJoin(schema.ItemVehicleTypeTable.As(nvvAlias), goqu.On(
 				aliasTable.Col(schema.ItemTableIDColName).Eq(
-					nvvAliasTable.Col(schema.VehicleVehicleTypeTableVehicleIDColName),
+					nvvAliasTable.Col(schema.ItemVehicleTypeTableItemIDColName),
 				),
 			)).
-			Where(nvvAliasTable.Col(schema.VehicleVehicleTypeTableVehicleIDColName).IsNull())
+			Where(nvvAliasTable.Col(schema.ItemVehicleTypeTableItemIDColName).IsNull())
 	}
 
 	if s.ItemVehicleType != nil {
@@ -542,12 +542,12 @@ func (s *ItemListOptions) applyVehicleTypeAncestorID(
 		groupBy = true
 		sqSelect = sqSelect.
 			Join(
-				schema.VehicleVehicleTypeTable,
-				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+				schema.ItemVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.ItemVehicleTypeTableItemIDCol)),
 			).
 			Join(
 				schema.VehicleTypeParentTable,
-				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol)),
+				goqu.On(schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol)),
 			).
 			Where(schema.VehicleTypeParentTableParentIDCol.Eq(s.VehicleTypeAncestorID))
 	}
@@ -678,14 +678,14 @@ func (s *ItemListOptions) applyExcludeVehicleTypeAncestorID(
 
 	return sqSelect.
 			Join(
-				schema.VehicleVehicleTypeTable,
-				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
+				schema.ItemVehicleTypeTable,
+				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.ItemVehicleTypeTableItemIDCol)),
 			).
 			Join(
 				schema.VehicleTypeParentTable,
-				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol)),
+				goqu.On(schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol)),
 			).
-			Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(subSelect)),
+			Where(schema.ItemVehicleTypeTableVehicleTypeIDCol.NotIn(subSelect)),
 		true
 }
 

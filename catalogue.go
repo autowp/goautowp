@@ -259,10 +259,10 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 			goqu.COUNT(goqu.DISTINCT(schema.ItemTableIDCol))).
 		From(schema.VehicleTypeTable).
 		Join(
-			schema.VehicleVehicleTypeTable,
-			goqu.On(schema.VehicleTypeTableIDCol.Eq(schema.VehicleVehicleTypeTableVehicleTypeIDCol)),
+			schema.ItemVehicleTypeTable,
+			goqu.On(schema.VehicleTypeTableIDCol.Eq(schema.ItemVehicleTypeTableVehicleTypeIDCol)),
 		).
-		Join(schema.ItemTable, goqu.On(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(schema.ItemTableIDCol))).
+		Join(schema.ItemTable, goqu.On(schema.ItemVehicleTypeTableItemIDCol.Eq(schema.ItemTableIDCol))).
 		Join(schema.ItemParentCacheTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentCacheTableItemIDCol))).
 		Where(
 			schema.ItemParentCacheTableParentIDCol.Eq(brandID),

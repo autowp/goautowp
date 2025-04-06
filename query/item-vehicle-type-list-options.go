@@ -37,9 +37,9 @@ func (s *ItemVehicleTypeListOptions) JoinToVehicleIDAndApply(
 	}
 
 	sqSelect = sqSelect.Join(
-		schema.VehicleVehicleTypeTable.As(alias),
+		schema.ItemVehicleTypeTable.As(alias),
 		goqu.On(
-			srcCol.Eq(goqu.T(alias).Col(schema.VehicleVehicleTypeTableVehicleIDColName)),
+			srcCol.Eq(goqu.T(alias).Col(schema.ItemVehicleTypeTableItemIDColName)),
 		),
 	)
 
@@ -54,9 +54,9 @@ func (s *ItemVehicleTypeListOptions) JoinToVehicleTypeIDAndApply(
 	}
 
 	sqSelect = sqSelect.Join(
-		schema.VehicleVehicleTypeTable.As(alias),
+		schema.ItemVehicleTypeTable.As(alias),
 		goqu.On(
-			srcCol.Eq(goqu.T(alias).Col(schema.VehicleVehicleTypeTableVehicleTypeIDColName)),
+			srcCol.Eq(goqu.T(alias).Col(schema.ItemVehicleTypeTableVehicleTypeIDColName)),
 		),
 	)
 
@@ -69,12 +69,12 @@ func (s *ItemVehicleTypeListOptions) apply(alias string, sqSelect *goqu.SelectDa
 	var err error
 
 	if s.VehicleTypeID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.VehicleVehicleTypeTableVehicleTypeIDColName).Eq(s.VehicleTypeID))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemVehicleTypeTableVehicleTypeIDColName).Eq(s.VehicleTypeID))
 	}
 
 	if s.ItemParentCacheAncestor != nil {
 		sqSelect, err = s.ItemParentCacheAncestor.JoinToItemIDAndApply(
-			aliasTable.Col(schema.VehicleVehicleTypeTableVehicleIDColName),
+			aliasTable.Col(schema.ItemVehicleTypeTableItemIDColName),
 			AppendItemParentCacheAlias(alias, "a"),
 			sqSelect,
 		)

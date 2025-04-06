@@ -733,16 +733,16 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	sqlSelect := s.db.Select(schema.VehicleVehicleTypeTableVehicleIDCol, schema.VehicleVehicleTypeTableVehicleTypeIDCol).
-		From(schema.VehicleVehicleTypeTable).
-		Where(schema.VehicleVehicleTypeTableInheritedCol.IsFalse())
+	sqlSelect := s.db.Select(schema.ItemVehicleTypeTableItemIDCol, schema.ItemVehicleTypeTableVehicleTypeIDCol).
+		From(schema.ItemVehicleTypeTable).
+		Where(schema.ItemVehicleTypeTableInheritedCol.IsFalse())
 
 	if in.GetItemId() != 0 {
-		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(in.GetItemId()))
+		sqlSelect = sqlSelect.Where(schema.ItemVehicleTypeTableItemIDCol.Eq(in.GetItemId()))
 	}
 
 	if in.GetVehicleTypeId() != 0 {
-		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(in.GetVehicleTypeId()))
+		sqlSelect = sqlSelect.Where(schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(in.GetVehicleTypeId()))
 	}
 
 	rows, err := sqlSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
@@ -791,12 +791,12 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	sqlSelect := s.db.Select(schema.VehicleVehicleTypeTableVehicleIDCol, schema.VehicleVehicleTypeTableVehicleTypeIDCol).
-		From(schema.VehicleVehicleTypeTable).
+	sqlSelect := s.db.Select(schema.ItemVehicleTypeTableItemIDCol, schema.ItemVehicleTypeTableVehicleTypeIDCol).
+		From(schema.ItemVehicleTypeTable).
 		Where(
-			schema.VehicleVehicleTypeTableInheritedCol.IsFalse(),
-			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(in.GetItemId()),
-			schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(in.GetVehicleTypeId()),
+			schema.ItemVehicleTypeTableInheritedCol.IsFalse(),
+			schema.ItemVehicleTypeTableItemIDCol.Eq(in.GetItemId()),
+			schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(in.GetVehicleTypeId()),
 		)
 
 	var ivt APIItemVehicleType

@@ -3494,11 +3494,11 @@ func (s *Repository) ChartData(ctx context.Context, attributeID int64) ([]ChartD
 		).
 			From(valueTable.Table).
 			Join(schema.ItemTable, goqu.On(valueTable.ItemIDCol.Eq(schema.ItemTableIDCol))).
-			Join(schema.VehicleVehicleTypeTable, goqu.On(
-				schema.ItemTableIDCol.Eq(schema.VehicleVehicleTypeTableVehicleIDCol),
+			Join(schema.ItemVehicleTypeTable, goqu.On(
+				schema.ItemTableIDCol.Eq(schema.ItemVehicleTypeTableItemIDCol),
 			)).
 			Join(schema.VehicleTypeParentTable, goqu.On(
-				schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol),
+				schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol),
 			)).
 			Where(
 				valueTable.AttributeIDCol.Eq(attributeID),

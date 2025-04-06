@@ -1405,11 +1405,11 @@ func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehic
 func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
 	ctx = context.WithoutCancel(ctx)
 
-	res, err := s.db.From(schema.VehicleVehicleTypeTable).Delete().
+	res, err := s.db.From(schema.ItemVehicleTypeTable).Delete().
 		Where(
-			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID),
-			schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(vehicleTypeID),
-			schema.VehicleVehicleTypeTableInheritedCol.IsFalse(),
+			schema.ItemVehicleTypeTableItemIDCol.Eq(itemID),
+			schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(vehicleTypeID),
+			schema.ItemVehicleTypeTableInheritedCol.IsFalse(),
 		).Executor().ExecContext(ctx)
 	if err != nil {
 		return err
@@ -1441,16 +1441,16 @@ func (s *Repository) setItemVehicleTypeRow(
 	vehicleTypeID int64,
 	inherited bool,
 ) (bool, error) {
-	res, err := s.db.Insert(schema.VehicleVehicleTypeTable).Rows(goqu.Record{
-		schema.VehicleVehicleTypeTableVehicleIDColName:     itemID,
-		schema.VehicleVehicleTypeTableVehicleTypeIDColName: vehicleTypeID,
-		schema.VehicleVehicleTypeTableInheritedColName:     inherited,
+	res, err := s.db.Insert(schema.ItemVehicleTypeTable).Rows(goqu.Record{
+		schema.ItemVehicleTypeTableItemIDColName:        itemID,
+		schema.ItemVehicleTypeTableVehicleTypeIDColName: vehicleTypeID,
+		schema.ItemVehicleTypeTableInheritedColName:     inherited,
 	}).OnConflict(goqu.DoUpdate(
-		schema.VehicleVehicleTypeTableVehicleIDColName+","+schema.VehicleVehicleTypeTableVehicleTypeIDColName,
+		schema.ItemVehicleTypeTableItemIDColName+","+schema.ItemVehicleTypeTableVehicleTypeIDColName,
 		goqu.Record{
-			schema.VehicleVehicleTypeTableInheritedColName: goqu.Func(
+			schema.ItemVehicleTypeTableInheritedColName: goqu.Func(
 				"VALUES",
-				goqu.C(schema.VehicleVehicleTypeTableInheritedColName),
+				goqu.C(schema.ItemVehicleTypeTableInheritedColName),
 			),
 		},
 	)).Executor().ExecContext(ctx)
@@ -1476,9 +1476,9 @@ func (s *Repository) RefreshItemVehicleTypeInheritanceFromParents(ctx context.Co
 
 	if len(typeIDs) > 0 {
 		// do not inherit when own value
-		res, err := s.db.Delete(schema.VehicleVehicleTypeTable).Where(
-			schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID),
-			schema.VehicleVehicleTypeTableInheritedCol.IsTrue(),
+		res, err := s.db.Delete(schema.ItemVehicleTypeTable).Where(
+			schema.ItemVehicleTypeTableItemIDCol.Eq(itemID),
+			schema.ItemVehicleTypeTableInheritedCol.IsTrue(),
 		).Executor().ExecContext(ctx)
 		if err != nil {
 			return err
@@ -1541,13 +1541,13 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 }
 
 func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
-	sqlSelect := s.db.From(schema.VehicleVehicleTypeTable).
-		Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).
-		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID))
+	sqlSelect := s.db.From(schema.ItemVehicleTypeTable).
+		Select(schema.ItemVehicleTypeTableVehicleTypeIDCol).
+		Where(schema.ItemVehicleTypeTableItemIDCol.Eq(itemID))
 	if inherited {
-		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsTrue())
+		sqlSelect = sqlSelect.Where(schema.ItemVehicleTypeTableInheritedCol.IsTrue())
 	} else {
-		sqlSelect = sqlSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsFalse())
+		sqlSelect = sqlSelect.Where(schema.ItemVehicleTypeTableInheritedCol.IsFalse())
 	}
 
 	res := make([]int64, 0)
@@ -1558,11 +1558,11 @@ func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, in
 }
 
 func (s *Repository) getItemVehicleTypeInheritedIDs(ctx context.Context, itemID int64) ([]int64, error) {
-	sqlSelect := s.db.From(schema.VehicleVehicleTypeTable).
-		Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).Distinct().
+	sqlSelect := s.db.From(schema.ItemVehicleTypeTable).
+		Select(schema.ItemVehicleTypeTableVehicleTypeIDCol).Distinct().
 		Join(
 			schema.ItemParentTable,
-			goqu.On(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(schema.ItemParentTableParentIDCol)),
+			goqu.On(schema.ItemVehicleTypeTableItemIDCol.Eq(schema.ItemParentTableParentIDCol)),
 		).
 		Where(schema.ItemParentTableItemIDCol.Eq(itemID))
 
@@ -1593,11 +1593,11 @@ func (s *Repository) setItemVehicleTypeRows(
 		}
 	}
 
-	sqlDelete := s.db.From(schema.VehicleVehicleTypeTable).Delete().
-		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(itemID))
+	sqlDelete := s.db.From(schema.ItemVehicleTypeTable).Delete().
+		Where(schema.ItemVehicleTypeTableItemIDCol.Eq(itemID))
 
 	if len(types) > 0 {
-		sqlDelete = sqlDelete.Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(types))
+		sqlDelete = sqlDelete.Where(schema.ItemVehicleTypeTableVehicleTypeIDCol.NotIn(types))
 	}
 
 	res, err := sqlDelete.Executor().ExecContext(ctx)
@@ -3309,14 +3309,14 @@ func (s *Repository) VehicleTypes(
 }
 
 func (s *Repository) VehicleTypeIDs(ctx context.Context, vehicleID int64, inherited bool) ([]int64, error) {
-	sqSelect := s.db.Select(schema.VehicleVehicleTypeTableVehicleTypeIDCol).
-		From(schema.VehicleVehicleTypeTable).
-		Where(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(vehicleID))
+	sqSelect := s.db.Select(schema.ItemVehicleTypeTableVehicleTypeIDCol).
+		From(schema.ItemVehicleTypeTable).
+		Where(schema.ItemVehicleTypeTableItemIDCol.Eq(vehicleID))
 
 	if inherited {
-		sqSelect = sqSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsTrue())
+		sqSelect = sqSelect.Where(schema.ItemVehicleTypeTableInheritedCol.IsTrue())
 	} else {
-		sqSelect = sqSelect.Where(schema.VehicleVehicleTypeTableInheritedCol.IsFalse())
+		sqSelect = sqSelect.Where(schema.ItemVehicleTypeTableInheritedCol.IsFalse())
 	}
 
 	var res []int64
