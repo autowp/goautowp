@@ -46,7 +46,7 @@ func TestTopBrandsListRuZh(t *testing.T) {
 			Limit:      150,
 			SortByName: true,
 		}
-		res, _, err := repository.List(ctx, &options, &ListFields{
+		res, _, err := repository.List(ctx, &options, &ItemFields{
 			NameOnly:                   true,
 			DescendantsCount:           true,
 			NewDescendantsCount:        true,
@@ -100,7 +100,7 @@ func TestListFilters(t *testing.T) {
 		},
 		Limit: 150,
 	}
-	_, _, err = repository.List(ctx, &options, &ListFields{
+	_, _, err = repository.List(ctx, &options, &ItemFields{
 		NameOnly:                   true,
 		DescendantsCount:           true,
 		NewDescendantsCount:        true,
@@ -133,7 +133,7 @@ func TestGetItemsNameAndCatnameShouldNotBeOmittedWhenDescendantsCountRequested(t
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:    10,
 	}
-	_, _, err = repository.List(ctx, &options, &ListFields{
+	_, _, err = repository.List(ctx, &options, &ItemFields{
 		NameOnly:         true,
 		DescendantsCount: true,
 		ChildsCount:      true,
@@ -245,7 +245,7 @@ func TestGetUserPicturesBrands(t *testing.T) {
 		TypeID:     []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:      10,
 		SortByName: true,
-	}, &ListFields{
+	}, &ItemFields{
 		NameOnly:                true,
 		DescendantPicturesCount: true,
 		ChildsCount:             true,
@@ -359,7 +359,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 		Limit:    1,
 		Page:     1,
 		Name:     name + "%",
-	}, &ListFields{DescendantsCount: true}, OrderByDescendantsCount, true)
+	}, &ItemFields{DescendantsCount: true}, OrderByDescendantsCount, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, list)
 	require.Len(t, list, 1)
@@ -389,7 +389,7 @@ func TestOrderByDescendantsCount(t *testing.T) {
 	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     name + "%",
-	}, &ListFields{DescendantsCount: true}, OrderByDescendantsCount, true)
+	}, &ItemFields{DescendantsCount: true}, OrderByDescendantsCount, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, list)
 	require.Len(t, list, 12)
@@ -495,7 +495,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			PictureItemsByItemID: &query.PictureItemListOptions{},
 		},
-	}, &ListFields{DescendantPicturesCount: true}, OrderByDescendantPicturesCount, true)
+	}, &ItemFields{DescendantPicturesCount: true}, OrderByDescendantPicturesCount, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, list)
 	require.Len(t, list, 1)
@@ -531,7 +531,7 @@ func TestOrderByOrderByDescendantPicturesCount(t *testing.T) {
 		ItemParentCacheDescendant: &query.ItemParentCacheListOptions{
 			PictureItemsByItemID: &query.PictureItemListOptions{},
 		},
-	}, &ListFields{DescendantPicturesCount: true}, OrderByDescendantPicturesCount, true)
+	}, &ItemFields{DescendantPicturesCount: true}, OrderByDescendantPicturesCount, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, list)
 	require.Len(t, list, 12)
@@ -714,7 +714,7 @@ func TestOrderByName(t *testing.T) {
 		Limit:    1,
 		Page:     1,
 		Name:     "%" + name + "%",
-	}, &ListFields{NameOnly: true, NameHTML: true, NameText: true, NameDefault: true}, OrderByName, true)
+	}, &ItemFields{NameOnly: true, NameHTML: true, NameText: true, NameDefault: true}, OrderByName, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, list)
 	require.Len(t, list, 1)
@@ -740,7 +740,7 @@ func TestOrderByName(t *testing.T) {
 	list, pages, err = repository.List(ctx, &query.ItemListOptions{
 		Language: "en",
 		Name:     "%" + name + "%",
-	}, &ListFields{NameOnly: true, NameHTML: true, NameText: true, NameDefault: true}, OrderByName, true)
+	}, &ItemFields{NameOnly: true, NameHTML: true, NameText: true, NameDefault: true}, OrderByName, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, list)
 	require.Len(t, list, 12)
@@ -832,7 +832,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 				ParentItems: &query.ItemListOptions{},
 			},
 		},
-	}, &ListFields{DescendantsParentsCount: true}, OrderByDescendantsParentsCount, true)
+	}, &ItemFields{DescendantsParentsCount: true}, OrderByDescendantsParentsCount, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, list)
 	require.Len(t, list, 1)
@@ -870,7 +870,7 @@ func TestOrderByDescendantsParentsCount(t *testing.T) {
 			ExcludeSelf:        true,
 			ItemParentByItemID: &query.ItemParentListOptions{},
 		},
-	}, &ListFields{DescendantsParentsCount: true}, OrderByDescendantsParentsCount, true)
+	}, &ItemFields{DescendantsParentsCount: true}, OrderByDescendantsParentsCount, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, list)
 	require.Len(t, list, 12)

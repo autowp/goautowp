@@ -2174,7 +2174,7 @@ func (s *PicturesGRPCServer) inboxBrands(ctx context.Context, lang string) ([]*I
 				},
 			},
 		},
-	}, &items.ListFields{NameOnly: true}, items.OrderByName, false)
+	}, &items.ItemFields{NameOnly: true}, items.OrderByName, false)
 	if err != nil {
 		return nil, err
 	}

@@ -2764,7 +2764,7 @@ func (s *Repository) Specifications(
 ) (*CarSpecTable, error) {
 	cars, _, err := s.itemsRepository.List(ctx, &query.ItemListOptions{
 		ItemIDs: itemIDs,
-	}, &items.ListFields{NameText: true}, items.OrderByName, false)
+	}, &items.ItemFields{NameText: true}, items.OrderByName, false)
 	if err != nil {
 		return nil, err
 	}
@@ -2806,7 +2806,7 @@ func (s *Repository) Specifications(
 		if !ok && car.EngineItemID.Valid {
 			engineRow, err := s.itemsRepository.Item(ctx,
 				&query.ItemListOptions{ItemID: car.EngineItemID.Int64, Language: lang},
-				&items.ListFields{NameText: true},
+				&items.ItemFields{NameText: true},
 			)
 			if err != nil && !errors.Is(err, items.ErrItemNotFound) {
 				return nil, fmt.Errorf("Item(): %w", err)
@@ -3497,12 +3497,12 @@ func (s *Repository) ChartData(ctx context.Context, attributeID int64) ([]ChartD
 			Join(schema.VehicleVehicleTypeTable, goqu.On(
 				schema.ItemTableIDCol.Eq(schema.VehicleVehicleTypeTableVehicleIDCol),
 			)).
-			Join(schema.CarTypesParentsTable, goqu.On(
-				schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol),
+			Join(schema.VehicleTypeParentTable, goqu.On(
+				schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol),
 			)).
 			Where(
 				valueTable.AttributeIDCol.Eq(attributeID),
-				schema.CarTypesParentsTableParentIDCol.Eq(schema.CarTypeCarID),
+				schema.VehicleTypeParentTableParentIDCol.Eq(schema.VehicleTypeCarID),
 				schema.ItemTableBeginOrderCacheCol.IsNotNull(),
 				schema.ItemTableBeginOrderCacheCol.Lt("2100-01-01 00:00:00"),
 				schema.ItemTableSpecIDCol.In(specIDs),

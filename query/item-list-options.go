@@ -546,10 +546,10 @@ func (s *ItemListOptions) applyVehicleTypeAncestorID(
 				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
 			).
 			Join(
-				schema.CarTypesParentsTable,
-				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol)),
+				schema.VehicleTypeParentTable,
+				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol)),
 			).
-			Where(schema.CarTypesParentsTableParentIDCol.Eq(s.VehicleTypeAncestorID))
+			Where(schema.VehicleTypeParentTableParentIDCol.Eq(s.VehicleTypeAncestorID))
 	}
 
 	return sqSelect, groupBy
@@ -672,9 +672,9 @@ func (s *ItemListOptions) applyExcludeVehicleTypeAncestorID(
 
 	aliasTable := goqu.T(alias)
 	subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
-	subSelect = subSelect.Select(schema.CarTypesParentsTableIDCol).
-		From(schema.CarTypesParentsTable).
-		Where(schema.CarTypesParentsTableParentIDCol.In(s.ExcludeVehicleTypeAncestorID))
+	subSelect = subSelect.Select(schema.VehicleTypeParentTableIDCol).
+		From(schema.VehicleTypeParentTable).
+		Where(schema.VehicleTypeParentTableParentIDCol.In(s.ExcludeVehicleTypeAncestorID))
 
 	return sqSelect.
 			Join(
@@ -682,8 +682,8 @@ func (s *ItemListOptions) applyExcludeVehicleTypeAncestorID(
 				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.VehicleVehicleTypeTableVehicleIDCol)),
 			).
 			Join(
-				schema.CarTypesParentsTable,
-				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.CarTypesParentsTableIDCol)),
+				schema.VehicleTypeParentTable,
+				goqu.On(schema.VehicleVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol)),
 			).
 			Where(schema.VehicleVehicleTypeTableVehicleTypeIDCol.NotIn(subSelect)),
 		true

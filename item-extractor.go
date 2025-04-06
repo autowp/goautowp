@@ -782,7 +782,7 @@ func (s *ItemExtractor) extractRelatedGroupsPictures(
 		cars, _, err := itemRepository.List(ctx, &query.ItemListOptions{
 			ItemIDs:  slices.Collect(maps.Keys(groups)),
 			Language: lang,
-		}, &items.ListFields{
+		}, &items.ItemFields{
 			NameText: true,
 		}, items.OrderByAge, false)
 		if err != nil {

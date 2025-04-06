@@ -46,8 +46,7 @@ const (
 	ItemTableAddDatetimeColName            = "add_datetime"
 	ItemTableBeginOrderCacheColName        = "begin_order_cache"
 	ItemTableEndOrderCacheColName          = "end_order_cache"
-	ItemTableCarTypeInheritColName         = "car_type_inherit"
-	ItemTableCarTypeIDColName              = "car_type_id"
+	ItemTableVehicleTypeInheritColName     = "vehicle_type_inherit"
 	ItemTableSpecInheritColName            = "spec_inherit"
 	ItemTableProducedColName               = "produced"
 
@@ -62,7 +61,7 @@ const (
 	ItemYearMax           = 2100
 )
 
-var (
+var ( //nolint: dupl
 	ItemTable                          = goqu.T(ItemTableName)
 	ItemTableIDCol                     = ItemTable.Col(ItemTableIDColName)
 	ItemTableBodyCol                   = ItemTable.Col(ItemTableBodyColName)
@@ -84,8 +83,7 @@ var (
 	ItemTableEngineInheritCol          = ItemTable.Col(ItemTableEngineInheritColName)
 	ItemTableIsConceptInheritCol       = ItemTable.Col(ItemTableIsConceptInheritColName)
 	ItemTableIsConceptCol              = ItemTable.Col(ItemTableIsConceptColName)
-	ItemTableCarTypeInheritCol         = ItemTable.Col(ItemTableCarTypeInheritColName)
-	ItemTableCarTypeIDCol              = ItemTable.Col(ItemTableCarTypeIDColName)
+	ItemTableVehicleTypeInheritCol     = ItemTable.Col(ItemTableVehicleTypeInheritColName)
 	ItemTableSpecInheritCol            = ItemTable.Col(ItemTableSpecInheritColName)
 	ItemTableProducedCol               = ItemTable.Col(ItemTableProducedColName)
 	ItemTableProducedExactlyCol        = ItemTable.Col(ItemTableProducedExactlyColName)
@@ -116,8 +114,7 @@ type ItemRow struct {
 	Produced               sql.NullInt32       `db:"produced"`
 	ProducedExactly        bool                `db:"produced_exactly"`
 	IsGroup                bool                `db:"is_group"`
-	CarTypeInherit         bool                `db:"car_type_inherit"`
-	CarTypeID              sql.NullInt64       `db:"car_type_id"`
+	VehicleTypeInherit     bool                `db:"vehicle_type_inherit"`
 	SpecInherit            bool                `db:"spec_inherit"`
 	AddDatetime            sql.NullTime        `db:"add_datetime"`
 	FullName               sql.NullString      `db:"full_name"`

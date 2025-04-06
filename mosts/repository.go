@@ -68,7 +68,7 @@ func NewRepository(
 }
 
 func (s *Repository) Items(
-	ctx context.Context, options ItemsOptions, fields *items.ListFields,
+	ctx context.Context, options ItemsOptions, fields *items.ItemFields,
 ) ([]ResultItem, int64, error) {
 	lang := options.Language
 	if len(lang) == 0 {
@@ -86,7 +86,7 @@ func (s *Repository) Items(
 	rating := ratings[ratingIndex]
 
 	var (
-		carType   *schema.CarTypeRow
+		carType   *schema.VehicleTypeRow
 		cYear     YearsRange
 		carTypeID int64
 		err       error

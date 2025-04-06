@@ -3,27 +3,27 @@ package schema
 import "github.com/doug-martin/goqu/v9"
 
 const (
-	CarTypesTableName = "car_types"
+	VehicleTypeTableName = "vehicle_type"
 
-	CarTypesTableIDColName       = "id"
-	CarTypesTableCatnameColName  = "catname"
-	CarTypesTableParentIDColName = "parent_id"
-	CarTypesTableNameRpColName   = "name_rp"
-	CarTypesTablePositionColName = "position"
+	VehicleTypeTableIDColName       = "id"
+	VehicleTypeTableCatnameColName  = "catname"
+	VehicleTypeTableParentIDColName = "parent_id"
+	VehicleTypeTableNameRpColName   = "name_rp"
+	VehicleTypeTablePositionColName = "position"
 
-	CarTypeCarID = 29
+	VehicleTypeCarID = 29
 )
 
 var (
-	CarTypesTable            = goqu.T(CarTypesTableName)
-	CarTypesTableIDCol       = CarTypesTable.Col(CarTypesTableIDColName)
-	CarTypesTableNameCol     = CarTypesTable.Col("name")
-	CarTypesTableCatnameCol  = CarTypesTable.Col(CarTypesTableCatnameColName)
-	CarTypesTablePositionCol = CarTypesTable.Col(CarTypesTablePositionColName)
-	CarTypesTableParentIDCol = CarTypesTable.Col(CarTypesTableParentIDColName)
+	VehicleTypeTable            = goqu.T(VehicleTypeTableName)
+	VehicleTypeTableIDCol       = VehicleTypeTable.Col(VehicleTypeTableIDColName)
+	VehicleTypeTableNameCol     = VehicleTypeTable.Col("name")
+	VehicleTypeTableCatnameCol  = VehicleTypeTable.Col(VehicleTypeTableCatnameColName)
+	VehicleTypeTablePositionCol = VehicleTypeTable.Col(VehicleTypeTablePositionColName)
+	VehicleTypeTableParentIDCol = VehicleTypeTable.Col(VehicleTypeTableParentIDColName)
 )
 
-type CarTypeRow struct {
+type VehicleTypeRow struct {
 	ID      int64  `db:"id"`
 	Catname string `db:"catname"`
 	NameRp  string `db:"name_rp"`

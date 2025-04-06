@@ -13,7 +13,7 @@ type VehicleTypeParentsListOptions struct {
 }
 
 func (s *VehicleTypeParentsListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
-	return s.apply(alias, db.From(schema.CarTypesParentsTable.As(alias)))
+	return s.apply(alias, db.From(schema.VehicleTypeParentTable.As(alias)))
 }
 
 func (s *VehicleTypeParentsListOptions) JoinToParentIDAndApply(
@@ -24,8 +24,8 @@ func (s *VehicleTypeParentsListOptions) JoinToParentIDAndApply(
 	}
 
 	sqSelect = sqSelect.Join(
-		schema.CarTypesParentsTable.As(alias),
-		goqu.On(srcCol.Eq(goqu.T(alias).Col(schema.CarTypesParentsTableParentIDColName))),
+		schema.VehicleTypeParentTable.As(alias),
+		goqu.On(srcCol.Eq(goqu.T(alias).Col(schema.VehicleTypeParentTableParentIDColName))),
 	)
 
 	return s.apply(alias, sqSelect)
@@ -36,7 +36,7 @@ func (s *VehicleTypeParentsListOptions) apply(alias string, sqSelect *goqu.Selec
 		var err error
 
 		sqSelect, err = s.ItemVehicleTypeByID.JoinToVehicleTypeIDAndApply(
-			goqu.T(alias).Col(schema.CarTypesParentsTableIDColName), AppendItemVehicleTypeAlias(alias), sqSelect,
+			goqu.T(alias).Col(schema.VehicleTypeParentTableIDColName), AppendItemVehicleTypeAlias(alias), sqSelect,
 		)
 		if err != nil {
 			return nil, err

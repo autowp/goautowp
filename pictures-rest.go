@@ -135,7 +135,7 @@ func (s *PicturesREST) handleItemOfDayPicture(ctx *gin.Context) {
 	if itemOfDay.ItemID > 0 {
 		carRow, err := s.itemsRepository.Item(ctx, &query.ItemListOptions{
 			ItemID: itemOfDay.ItemID,
-		}, &items.ListFields{NameText: true})
+		}, &items.ItemFields{NameText: true})
 		if err != nil && !errors.Is(err, items.ErrItemNotFound) {
 			ctx.String(http.StatusInternalServerError, err.Error())
 

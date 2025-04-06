@@ -411,7 +411,7 @@ type ItemParentFields struct {
 	Name bool
 }
 
-type ListFields struct {
+type ItemFields struct {
 	NameOnly                   bool
 	NameHTML                   bool
 	NameDefault                bool
@@ -513,7 +513,7 @@ func (s *Repository) LanguageName(ctx context.Context, itemID int64, lang string
 	return res, nil
 }
 
-func (s *Repository) columnsByFields(fields *ListFields) map[string]Column {
+func (s *Repository) columnsByFields(fields *ItemFields) map[string]Column {
 	columns := map[string]Column{
 		schema.ItemTableIDColName:               s.idColumn,
 		schema.ItemTableCatnameColName:          s.catnameColumn,
@@ -746,7 +746,7 @@ func (s *Repository) CountDistinct(ctx context.Context, options query.ItemListOp
 	return count, nil
 }
 
-func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, fields *ListFields) (*Item, error) {
+func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, fields *ItemFields) (*Item, error) {
 	options.Limit = 1
 
 	res, _, err := s.List(ctx, options, fields, OrderByNone, false)
@@ -761,7 +761,7 @@ func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, f
 	return res[0], nil
 }
 
-func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields *ListFields, orderBy OrderBy) error {
+func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields *ItemFields, orderBy OrderBy) error {
 	if fields == nil {
 		return nil
 	}
@@ -985,7 +985,7 @@ func (s *Repository) wrappedSelectColumns(orderBy OrderBy) map[string]Column {
 }
 
 func (s *Repository) List( //nolint:maintidx
-	ctx context.Context, options *query.ItemListOptions, fields *ListFields, orderBy OrderBy,
+	ctx context.Context, options *query.ItemListOptions, fields *ItemFields, orderBy OrderBy,
 	pagination bool,
 ) ([]*Item, *util.Pages, error) {
 	var err error
@@ -2604,12 +2604,12 @@ func (s *Repository) UpdateItemParent(
 	}
 
 	if len(catname) == 0 || catname == "_" || util.Contains(catnameBlacklist, catname) {
-		parentRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, &ListFields{NameText: true})
+		parentRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, &ItemFields{NameText: true})
 		if err != nil {
 			return false, err
 		}
 
-		itemRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, &ListFields{NameText: true})
+		itemRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, &ItemFields{NameText: true})
 		if err != nil {
 			return false, err
 		}
@@ -2704,8 +2704,8 @@ func (s *Repository) UpdateInheritance(ctx context.Context, itemID int64) error 
 
 	success, err := s.db.Select(
 		schema.ItemTableIDCol, schema.ItemTableIsConceptCol, schema.ItemTableIsConceptInheritCol,
-		schema.ItemTableEngineInheritCol, schema.ItemTableCarTypeInheritCol, schema.ItemTableCarTypeIDCol,
-		schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol, schema.ItemTableEngineItemIDCol,
+		schema.ItemTableEngineInheritCol, schema.ItemTableVehicleTypeInheritCol, schema.ItemTableSpecInheritCol,
+		schema.ItemTableSpecIDCol, schema.ItemTableEngineItemIDCol,
 	).
 		From(schema.ItemTable).
 		Where(schema.ItemTableIDCol.Eq(itemID)).
@@ -2725,8 +2725,7 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 	var parents []schema.ItemRow
 
 	err := s.db.Select(
-		schema.ItemTableIsConceptCol, schema.ItemTableEngineItemIDCol, schema.ItemTableCarTypeIDCol,
-		schema.ItemTableSpecIDCol,
+		schema.ItemTableIsConceptCol, schema.ItemTableEngineItemIDCol, schema.ItemTableSpecIDCol,
 	).
 		From(schema.ItemTable).
 		Join(schema.ItemParentTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentTableParentIDCol))).
@@ -2784,56 +2783,6 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 		}
 	}
 
-	if car.CarTypeInherit {
-		carTypesMap := make(map[int64]int)
-
-		for _, parent := range parents {
-			typeID := parent.CarTypeID
-			if typeID.Valid {
-				carTypesMap[typeID.Int64]++
-			}
-		}
-
-		for id, count := range carTypesMap {
-			otherIDs := make([]int64, 0, len(carTypesMap))
-
-			for i := range carTypesMap {
-				if id != i {
-					otherIDs = append(otherIDs, i)
-				}
-			}
-
-			isParentOf, err := s.getChildVehicleTypesByWhitelist(ctx, id, otherIDs)
-			if err != nil {
-				return err
-			}
-
-			if len(isParentOf) > 0 {
-				for _, childID := range isParentOf {
-					carTypesMap[childID] += count
-				}
-
-				delete(carTypesMap, id)
-			}
-		}
-
-		// select top
-		selectedID := util.KeyOfMapMaxValue(carTypesMap)
-
-		var oldCarTypeID int64
-		if car.CarTypeID.Valid {
-			oldCarTypeID = car.CarTypeID.Int64
-		}
-
-		if oldCarTypeID != selectedID {
-			set[schema.ItemTableCarTypeIDColName] = sql.NullInt64{
-				Int64: selectedID,
-				Valid: selectedID > 0,
-			}
-			somethingChanged = true
-		}
-	}
-
 	if car.SpecInherit {
 		specsMap := make(map[int32]int)
 
@@ -2861,7 +2810,7 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 		}
 	}
 
-	if somethingChanged || !car.CarTypeInherit {
+	if somethingChanged || !car.VehicleTypeInherit {
 		ctx = context.WithoutCancel(ctx)
 
 		if len(set) > 0 {
@@ -2877,8 +2826,8 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 
 		err = s.db.Select(
 			schema.ItemTableIDCol, schema.ItemTableIsConceptCol, schema.ItemTableIsConceptInheritCol,
-			schema.ItemTableEngineInheritCol, schema.ItemTableEngineItemIDCol, schema.ItemTableCarTypeInheritCol,
-			schema.ItemTableCarTypeIDCol, schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol,
+			schema.ItemTableEngineInheritCol, schema.ItemTableEngineItemIDCol, schema.ItemTableVehicleTypeInheritCol,
+			schema.ItemTableSpecInheritCol, schema.ItemTableSpecIDCol,
 		).
 			From(schema.ItemTable).
 			Join(schema.ItemParentTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentTableItemIDCol))).
@@ -2897,31 +2846,6 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 	}
 
 	return nil
-}
-
-func (s *Repository) getChildVehicleTypesByWhitelist(
-	ctx context.Context, parentID int64, whitelist []int64,
-) ([]int64, error) {
-	res := make([]int64, 0)
-
-	if len(whitelist) == 0 {
-		return res, nil
-	}
-
-	var ids []int64
-
-	err := s.db.Select(schema.CarTypesParentsTableIDCol).
-		From(schema.CarTypesParentsTable).
-		Where(
-			schema.CarTypesParentsTableIDCol.In(whitelist),
-			schema.CarTypesParentsTableParentIDCol.Eq(parentID),
-			schema.CarTypesParentsTableIDCol.Neq(schema.CarTypesParentsTableParentIDCol),
-		).ScanValsContext(ctx, &ids)
-	if err != nil {
-		return res, err
-	}
-
-	return ids, nil
 }
 
 func (s *Repository) MoveItemParent(ctx context.Context, itemID, parentID, newParentID int64) (bool, error) {
@@ -3112,12 +3036,12 @@ func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (b
 		return true, nil
 	}
 
-	brandRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, &ListFields{NameText: true})
+	brandRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, &ItemFields{NameText: true})
 	if err != nil {
 		return false, err
 	}
 
-	vehicleRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, &ListFields{NameText: true})
+	vehicleRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, &ItemFields{NameText: true})
 	if err != nil {
 		return false, err
 	}
@@ -3331,8 +3255,8 @@ func (s *Repository) UserItemUnsubscribe(ctx context.Context, itemID, userID int
 
 func (s *Repository) VehicleType(
 	ctx context.Context, options *query.VehicleTypeListOptions,
-) (*schema.CarTypeRow, error) {
-	var st schema.CarTypeRow
+) (*schema.VehicleTypeRow, error) {
+	var st schema.VehicleTypeRow
 
 	aliasTable := goqu.T(query.VehicleTypeTableAlias)
 
@@ -3342,9 +3266,9 @@ func (s *Repository) VehicleType(
 	}
 
 	success, err := sqSelect.Select(
-		aliasTable.Col(schema.CarTypesTableIDColName),
-		aliasTable.Col(schema.CarTypesTableCatnameColName),
-		aliasTable.Col(schema.CarTypesTableNameRpColName),
+		aliasTable.Col(schema.VehicleTypeTableIDColName),
+		aliasTable.Col(schema.VehicleTypeTableCatnameColName),
+		aliasTable.Col(schema.VehicleTypeTableNameRpColName),
 	).Limit(1).ScanStructContext(ctx, &st)
 	if err != nil {
 		return nil, err
@@ -3359,8 +3283,8 @@ func (s *Repository) VehicleType(
 
 func (s *Repository) VehicleTypes(
 	ctx context.Context, options *query.VehicleTypeListOptions,
-) ([]*schema.CarTypeRow, error) {
-	var sts []*schema.CarTypeRow
+) ([]*schema.VehicleTypeRow, error) {
+	var sts []*schema.VehicleTypeRow
 
 	sqSelect, err := options.Select(s.db, query.VehicleTypeTableAlias)
 	if err != nil {
@@ -3371,11 +3295,11 @@ func (s *Repository) VehicleTypes(
 
 	err = sqSelect.
 		Select(
-			aliasTable.Col(schema.CarTypesTableIDColName),
-			aliasTable.Col(schema.CarTypesTableCatnameColName),
-			aliasTable.Col(schema.CarTypesTableNameRpColName),
+			aliasTable.Col(schema.VehicleTypeTableIDColName),
+			aliasTable.Col(schema.VehicleTypeTableCatnameColName),
+			aliasTable.Col(schema.VehicleTypeTableNameRpColName),
 		).
-		Order(aliasTable.Col(schema.CarTypesTablePositionColName).Asc()).
+		Order(aliasTable.Col(schema.VehicleTypeTablePositionColName).Asc()).
 		ScanStructsContext(ctx, &sts)
 	if err != nil {
 		return nil, err
@@ -3451,7 +3375,7 @@ func (s *Repository) Brands(ctx context.Context, lang string) ([]*BrandsListLine
 		SortByName: true,
 	}
 
-	rows, _, err := s.List(ctx, &options, &ListFields{
+	rows, _, err := s.List(ctx, &options, &ItemFields{
 		NameOnly:              true,
 		DescendantsCount:      true,
 		NewDescendantsCount:   true,

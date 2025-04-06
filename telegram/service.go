@@ -386,7 +386,7 @@ func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Updat
 	brandRow, err := s.itemRepository.Item(ctx, &query.ItemListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Name:   args,
-	}, &items.ListFields{NameOnly: true})
+	}, &items.ItemFields{NameOnly: true})
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return s.replyWithMessage(update, fmt.Sprintf(`Brand "%s" not found`, args))
@@ -464,7 +464,7 @@ func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update)
 	brandRow, err := s.itemRepository.Item(ctx, &query.ItemListOptions{
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Name:   args,
-	}, &items.ListFields{NameOnly: true})
+	}, &items.ItemFields{NameOnly: true})
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return s.replyWithMessage(update, fmt.Sprintf(`Brand "%s" not found`, args))

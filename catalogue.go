@@ -29,14 +29,14 @@ func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 }
 
 func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int64) ([]*VehicleType, error) {
-	sqSelect := s.db.Select(schema.CarTypesTableIDCol, schema.CarTypesTableNameCol).
-		From(schema.CarTypesTable).
-		Order(schema.CarTypesTablePositionCol.Asc())
+	sqSelect := s.db.Select(schema.VehicleTypeTableIDCol, schema.VehicleTypeTableNameCol).
+		From(schema.VehicleTypeTable).
+		Order(schema.VehicleTypeTablePositionCol.Asc())
 
 	if parentID != 0 {
-		sqSelect = sqSelect.Where(schema.CarTypesTableParentIDCol.Eq(parentID))
+		sqSelect = sqSelect.Where(schema.VehicleTypeTableParentIDCol.Eq(parentID))
 	} else {
-		sqSelect = sqSelect.Where(schema.CarTypesTableParentIDCol.IsNull())
+		sqSelect = sqSelect.Where(schema.VehicleTypeTableParentIDCol.IsNull())
 	}
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
@@ -255,12 +255,12 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 
 func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]*BrandVehicleType, error) {
 	sqSelect := s.db.
-		Select(schema.CarTypesTableIDCol, schema.CarTypesTableNameCol, schema.CarTypesTableCatnameCol,
+		Select(schema.VehicleTypeTableIDCol, schema.VehicleTypeTableNameCol, schema.VehicleTypeTableCatnameCol,
 			goqu.COUNT(goqu.DISTINCT(schema.ItemTableIDCol))).
-		From(schema.CarTypesTable).
+		From(schema.VehicleTypeTable).
 		Join(
 			schema.VehicleVehicleTypeTable,
-			goqu.On(schema.CarTypesTableIDCol.Eq(schema.VehicleVehicleTypeTableVehicleTypeIDCol)),
+			goqu.On(schema.VehicleTypeTableIDCol.Eq(schema.VehicleVehicleTypeTableVehicleTypeIDCol)),
 		).
 		Join(schema.ItemTable, goqu.On(schema.VehicleVehicleTypeTableVehicleIDCol.Eq(schema.ItemTableIDCol))).
 		Join(schema.ItemParentCacheTable, goqu.On(schema.ItemTableIDCol.Eq(schema.ItemParentCacheTableItemIDCol))).
@@ -269,8 +269,8 @@ func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]
 			goqu.Or(schema.ItemTableBeginYearCol, schema.ItemTableBeginModelYearCol),
 			schema.ItemTableIsGroupCol.IsFalse(),
 		).
-		GroupBy(schema.CarTypesTableIDCol).
-		Order(schema.CarTypesTablePositionCol.Asc())
+		GroupBy(schema.VehicleTypeTableIDCol).
+		Order(schema.VehicleTypeTablePositionCol.Asc())
 
 	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
 	defer util.Close(rows)

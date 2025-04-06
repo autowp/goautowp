@@ -1,5 +1,5 @@
 /*!40000 ALTER TABLE `item` DISABLE KEYS */;
-INSERT INTO `item` (`id`, `name`, `begin_year`, `end_year`, `body`, `spec_id`, `spec_inherit`, `produced`, `produced_exactly`, `is_concept`, `today`, `add_datetime`, `begin_month`, `end_month`, `begin_order_cache`, `end_order_cache`, `begin_model_year`, `end_model_year`, `is_group`, `car_type_inherit`, `is_concept_inherit`, `engine_item_id`, `engine_inherit`, `item_type_id`, `catname`, `full_name`, `position`, `logo_id`)
+INSERT INTO `item` (`id`, `name`, `begin_year`, `end_year`, `body`, `spec_id`, `spec_inherit`, `produced`, `produced_exactly`, `is_concept`, `today`, `add_datetime`, `begin_month`, `end_month`, `begin_order_cache`, `end_order_cache`, `begin_model_year`, `end_model_year`, `is_group`, `vehicle_type_inherit`, `is_concept_inherit`, `engine_item_id`, `engine_inherit`, `item_type_id`, `catname`, `full_name`, `position`, `logo_id`)
 VALUES
 (1,         'test car',1999,NULL,'',NULL,1,  100,1,0,1,'2016-11-25 18:31:47', 2,NULL,NULL,NULL,2000,NULL,0,0,0,   1,1,1,NULL,NULL,0,NULL),
 (2, 'test concept car',1999,2005,'',NULL,1,  233,0,1,0,'2016-11-25 18:31:47', 6,   4,NULL,NULL,1999,2005,0,0,0,NULL,1,1,NULL,NULL,0,NULL),

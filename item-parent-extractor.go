@@ -18,7 +18,7 @@ func NewItemParentExtractor(container *Container) *ItemParentExtractor {
 }
 
 func (s *ItemParentExtractor) prefetchItems(
-	ctx context.Context, ids []int64, lang string, fields *items.ListFields,
+	ctx context.Context, ids []int64, lang string, fields *items.ItemFields,
 ) (map[int64]*items.Item, error) {
 	itemsRepository, err := s.container.ItemsRepository()
 	if err != nil {

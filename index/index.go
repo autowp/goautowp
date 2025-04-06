@@ -90,7 +90,7 @@ func (s *Index) GenerateTopBrandsCache(ctx context.Context, lang string) error {
 		SortByName: true,
 	}
 
-	list, _, err := s.repository.List(ctx, &options, &items.ListFields{
+	list, _, err := s.repository.List(ctx, &options, &items.ItemFields{
 		NameOnly:            true,
 		DescendantsCount:    true,
 		NewDescendantsCount: true,
@@ -147,7 +147,7 @@ func (s *Index) GenerateTwinsCache(ctx context.Context, lang string) error {
 		},
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDBrand},
 		Limit:  topTwinsBrandsCount,
-	}, &items.ListFields{
+	}, &items.ItemFields{
 		NameOnly:                   true,
 		DescendantsParentsCount:    true,
 		NewDescendantsParentsCount: true,
@@ -204,7 +204,7 @@ func (s *Index) GenerateCategoriesCache(ctx context.Context, lang string) error 
 		NoParents: true,
 		TypeID:    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
 		Limit:     topCategoriesCount,
-	}, &items.ListFields{
+	}, &items.ItemFields{
 		NameOnly:            true,
 		DescendantsCount:    true,
 		NewDescendantsCount: true,
@@ -253,7 +253,7 @@ func (s *Index) GeneratePersonsCache(
 			},
 		},
 		Limit: topPersonsCount,
-	}, &items.ListFields{
+	}, &items.ItemFields{
 		NameOnly: true,
 	}, items.OrderByStarCount, false)
 	if err != nil {
@@ -300,7 +300,7 @@ func (s *Index) GenerateFactoriesCache(ctx context.Context, lang string) error {
 			},
 		},
 		Limit: topFactoriesCount,
-	}, &items.ListFields{
+	}, &items.ItemFields{
 		NameOnly:           true,
 		ChildItemsCount:    true,
 		NewChildItemsCount: true,

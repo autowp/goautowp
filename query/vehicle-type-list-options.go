@@ -15,7 +15,7 @@ type VehicleTypeListOptions struct {
 }
 
 func (s *VehicleTypeListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
-	return s.apply(alias, db.From(schema.CarTypesTable.As(alias)))
+	return s.apply(alias, db.From(schema.VehicleTypeTable.As(alias)))
 }
 
 func (s *VehicleTypeListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
@@ -24,20 +24,20 @@ func (s *VehicleTypeListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 	var err error
 
 	if len(s.Catname) > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.CarTypesTableCatnameColName).Eq(s.Catname))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.VehicleTypeTableCatnameColName).Eq(s.Catname))
 	}
 
 	if s.NoParent {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.CarTypesTableParentIDColName).IsNull())
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.VehicleTypeTableParentIDColName).IsNull())
 	}
 
 	if s.ParentID > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.CarTypesTableParentIDColName).Eq(s.ParentID))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.VehicleTypeTableParentIDColName).Eq(s.ParentID))
 	}
 
 	if s.Childs != nil {
 		sqSelect, err = s.Childs.JoinToParentIDAndApply(
-			aliasTable.Col(schema.CarTypesTableIDColName), alias+"_"+VehicleTypeParentTableAlias, sqSelect,
+			aliasTable.Col(schema.VehicleTypeTableIDColName), alias+"_"+VehicleTypeParentTableAlias, sqSelect,
 		)
 		if err != nil {
 			return nil, err

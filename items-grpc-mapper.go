@@ -292,12 +292,12 @@ func convertItemListOptions(in *ItemListOptions) (*query.ItemListOptions, error)
 	return &result, nil
 }
 
-func convertItemFields(fields *ItemFields) *items.ListFields {
+func convertItemFields(fields *ItemFields) *items.ItemFields {
 	if fields == nil {
 		return nil
 	}
 
-	return &items.ListFields{
+	return &items.ItemFields{
 		NameOnly:                   fields.GetNameOnly(),
 		NameHTML:                   fields.GetNameHtml(),
 		NameText:                   fields.GetNameText(),

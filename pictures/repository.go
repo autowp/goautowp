@@ -1716,7 +1716,7 @@ func (s *Repository) NameData(
 		itemRows, _, err := s.itemsRepository.List(ctx, &query.ItemListOptions{
 			ItemIDs:  slices.Collect(maps.Keys(itemIDs)),
 			Language: options.Language,
-		}, &items.ListFields{
+		}, &items.ItemFields{
 			NameOnly: true,
 			NameText: true,
 			NameHTML: true,
