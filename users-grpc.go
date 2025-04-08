@@ -10,21 +10,20 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
-	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func convertUserFields(fields *UserFields, enforcer *casbin.Enforcer, currentUserRole string) users.UserFields {
+func convertUserFields(fields *UserFields, currentUserRoles []string) users.UserFields {
 	lastIP := false
-	if fields.GetLastIp() && len(currentUserRole) > 0 && enforcer.Enforce(currentUserRole, "user", "ip") {
+	if fields.GetLastIp() && util.Contains(currentUserRoles, users.RoleModer) {
 		lastIP = true
 	}
 
 	login := false
-	if fields.GetLogin() && len(currentUserRole) > 0 && enforcer.Enforce(currentUserRole, "global", "moderate") {
+	if fields.GetLogin() && util.Contains(currentUserRoles, users.RoleModer) {
 		login = true
 	}
 
@@ -45,7 +44,6 @@ func convertUserFields(fields *UserFields, enforcer *casbin.Enforcer, currentUse
 type UsersGRPCServer struct {
 	UnimplementedUsersServer
 	auth               *Auth
-	enforcer           *casbin.Enforcer
 	contactsRepository *ContactsRepository
 	userRepository     *users.Repository
 	events             *Events
@@ -56,7 +54,6 @@ type UsersGRPCServer struct {
 
 func NewUsersGRPCServer(
 	auth *Auth,
-	enforcer *casbin.Enforcer,
 	contactsRepository *ContactsRepository,
 	userRepository *users.Repository,
 	events *Events,
@@ -66,7 +63,6 @@ func NewUsersGRPCServer(
 ) *UsersGRPCServer {
 	return &UsersGRPCServer{
 		auth:               auth,
-		enforcer:           enforcer,
 		contactsRepository: contactsRepository,
 		userRepository:     userRepository,
 		events:             events,
@@ -97,7 +93,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 	dbUser, err := s.userRepository.User(ctx, &query.UserListOptions{
 		ID:       in.GetUserId(),
 		Identity: in.GetIdentity(),
-	}, convertUserFields(in.GetFields(), s.enforcer, role), users.OrderByNone)
+	}, convertUserFields(in.GetFields(), role), users.OrderByNone)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -115,7 +111,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 }
 
 func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -124,7 +120,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !s.enforcer.Enforce(role, "user", "delete") {
+	if !util.Contains(roles, users.RoleAdmin) {
 		if userID != in.GetUserId() {
 			return nil, status.Errorf(codes.Internal, "Forbidden")
 		}
@@ -257,7 +253,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 		Page:     in.GetPage(),
 		Search:   in.GetSearch(),
 		IDs:      in.GetId(),
-	}, convertUserFields(in.GetFields(), s.enforcer, role), users.OrderByNone)
+	}, convertUserFields(in.GetFields(), role), users.OrderByNone)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -375,12 +371,12 @@ func (s *UsersGRPCServer) DeleteUserAccount(ctx context.Context, in *DeleteUserA
 }
 
 func (s *UsersGRPCServer) DeleteUserPhoto(ctx context.Context, in *DeleteUserPhotoRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "user", "ban") {
+	if !util.Contains(roles, users.RoleUsersModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 

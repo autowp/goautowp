@@ -13,7 +13,6 @@ import "google/rpc/error_details.proto";
 option go_package = "github.com/autowp/goautowp";
 
 service Autowp {
-  rpc AclEnforce(AclEnforceRequest) returns (AclEnforceResult) {}
   rpc CreateFeedback(APICreateFeedbackRequest) returns (google.protobuf.Empty) {}
   rpc GetBrandIcons(google.protobuf.Empty) returns (BrandIcons) {}
   rpc GetBrandVehicleTypes(GetBrandVehicleTypesRequest) returns (BrandVehicleTypeItems) {}
@@ -581,15 +580,6 @@ message BrandIcons {
   string css = 2;
 }
 
-message AclEnforceRequest {
-  string resource = 1;
-  string privilege = 2;
-}
-
-message AclEnforceResult {
-  bool result = 1;
-}
-
 message VehicleType {
   int64 id = 1;
   string name = 2;
@@ -663,7 +653,6 @@ message APIUser {
   APIImage img = 17;
   string gravatar_large = 18;
   APIImage photo = 19;
-  bool is_moder = 20;
   google.protobuf.Timestamp reg_date = 21;
   int32 pictures_added = 23;
   int32 pictures_accepted_count = 24;
@@ -888,7 +877,6 @@ message UserFields {
   bool img = 7;
   bool gravatar_large = 8;
   bool photo = 9;
-  bool is_moder = 10;
   bool reg_date = 11;
   bool pictures_added = 14;
   bool pictures_accepted_count = 15;

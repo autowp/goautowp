@@ -10,7 +10,6 @@ import (
 
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
-	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -53,10 +52,10 @@ func roundTo(value int32, to int32) int32 {
 
 func unique(intSlice []string) []string {
 	keys := make(map[string]bool)
-	list := []string{}
+	list := make([]string, 0, len(intSlice))
 
 	for _, entry := range intSlice {
-		if _, value := keys[entry]; !value {
+		if _, ok := keys[entry]; !ok {
 			keys[entry] = true
 
 			list = append(list, entry)
@@ -70,7 +69,6 @@ type StatisticsGRPCServer struct {
 	UnimplementedStatisticsServer
 	db          *goqu.Database
 	lastColor   int
-	enforcer    *casbin.Enforcer
 	aboutConfig config.AboutConfig
 }
 
@@ -87,12 +85,10 @@ type picturesStat struct {
 
 func NewStatisticsGRPCServer(
 	db *goqu.Database,
-	enforcer *casbin.Enforcer,
 	aboutConfig config.AboutConfig,
 ) *StatisticsGRPCServer {
 	return &StatisticsGRPCServer{
 		db:          db,
-		enforcer:    enforcer,
 		aboutConfig: aboutConfig,
 	}
 }
@@ -116,49 +112,32 @@ func (s *StatisticsGRPCServer) totalUsers(ctx context.Context) (int32, error) {
 }
 
 func (s *StatisticsGRPCServer) contributors(ctx context.Context) ([]string, error) {
-	greenUserRoles := make([]string, 0)
-
-	toFetch := []string{"green-user"}
-	for len(toFetch) > 0 {
-		ep := len(toFetch) - 1
-		role := toFetch[ep]
-		toFetch = toFetch[:ep]
-
-		roles, err := s.enforcer.GetUsersForRole(role)
-		if err != nil {
-			return nil, err
-		}
-
-		toFetch = append(toFetch, roles...)
-
-		greenUserRoles = append(greenUserRoles, roles...)
-	}
-
-	greenUserRoles = unique(greenUserRoles)
-
 	contributors := make([]string, 0)
 
-	if len(greenUserRoles) > 0 {
-		err := s.db.Select(schema.UserTableIDCol).From(schema.UserTable).Where(
+	err := s.db.Select(schema.UserTableIDCol).
+		From(schema.UserTable).
+		Where(
 			schema.UserTableDeletedCol.IsFalse(),
-			schema.UserTableRoleCol.In(greenUserRoles),
+			schema.UserTableGreenCol.IsTrue(),
 			goqu.Or(
 				schema.UserTableIdentityCol.IsNull(),
-				schema.UserTableIdentityCol.Eq("autowp"),
+				schema.UserTableIdentityCol.Neq("autowp"),
 			),
 			schema.UserTableLastOnlineCol.Gt(goqu.L("DATE_SUB(CURDATE(), INTERVAL 6 MONTH)")),
-		).ScanValsContext(ctx, &contributors)
-		if err != nil {
-			return nil, err
-		}
+		).
+		ScanValsContext(ctx, &contributors)
+	if err != nil {
+		return nil, err
 	}
 
 	picturesUsers := make([]string, 0)
 
-	err := s.db.Select(schema.UserTableIDCol).From(schema.UserTable).
+	err = s.db.Select(schema.UserTableIDCol).
+		From(schema.UserTable).
 		Where(schema.UserTableDeletedCol.IsFalse()).
 		Order(schema.UserTablePicturesTotalCol.Desc()).
-		Limit(numberOfTopUploadersToShowInAboutUs).ScanValsContext(ctx, &picturesUsers)
+		Limit(numberOfTopUploadersToShowInAboutUs).
+		ScanValsContext(ctx, &picturesUsers)
 	if err != nil {
 		return nil, err
 	}

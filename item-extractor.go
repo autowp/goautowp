@@ -44,7 +44,7 @@ func NewItemExtractor(
 }
 
 func (s *ItemExtractor) preloadItemParentChilds(
-	ctx context.Context, request *ItemParentsRequest, ids []int64, lang string, isModer bool, userID int64, role string,
+	ctx context.Context, request *ItemParentsRequest, ids []int64, lang string, isModer bool, userID int64, roles []string,
 ) (map[int64][]*ItemParent, error) {
 	if request == nil {
 		return nil, nil //nolint: nilnil
@@ -89,7 +89,7 @@ func (s *ItemExtractor) preloadItemParentChilds(
 
 	itemParentExtractor := s.container.ItemParentExtractor()
 
-	extractedRows, err := itemParentExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID, role)
+	extractedRows, err := itemParentExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID, roles)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,8 @@ func (s *ItemExtractor) preloadItemParentChilds(
 }
 
 func (s *ItemExtractor) preloadPictureItems(
-	ctx context.Context, request *PictureItemsRequest, ids []int64, lang string, isModer bool, userID int64, role string,
+	ctx context.Context, request *PictureItemsRequest, ids []int64, lang string, isModer bool, userID int64,
+	roles []string,
 ) (map[int64][]*PictureItem, error) {
 	if request == nil {
 		return nil, nil //nolint: nilnil
@@ -163,7 +164,7 @@ func (s *ItemExtractor) preloadPictureItems(
 
 	pictureItemExtractor := s.container.PictureItemExtractor()
 
-	extractedRows, err := pictureItemExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID, role)
+	extractedRows, err := pictureItemExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID, roles)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +182,7 @@ func (s *ItemExtractor) preloadPictureItems(
 }
 
 func (s *ItemExtractor) ExtractRows(
-	ctx context.Context, rows []*items.Item, fields *ItemFields, lang string, isModer bool, userID int64, role string,
+	ctx context.Context, rows []*items.Item, fields *ItemFields, lang string, isModer bool, userID int64, roles []string,
 ) ([]*APIItem, error) {
 	if fields == nil {
 		fields = &ItemFields{}
@@ -200,14 +201,14 @@ func (s *ItemExtractor) ExtractRows(
 
 	pictureItemRequest := fields.GetPictureItems()
 
-	pictureItemRows, err := s.preloadPictureItems(ctx, pictureItemRequest, ids, lang, isModer, userID, role)
+	pictureItemRows, err := s.preloadPictureItems(ctx, pictureItemRequest, ids, lang, isModer, userID, roles)
 	if err != nil {
 		return nil, err
 	}
 
 	itemParentChildsRequest := fields.GetItemParentChilds()
 
-	itemParentChildRows, err := s.preloadItemParentChilds(ctx, itemParentChildsRequest, ids, lang, isModer, userID, role)
+	itemParentChildRows, err := s.preloadItemParentChilds(ctx, itemParentChildsRequest, ids, lang, isModer, userID, roles)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +289,7 @@ func (s *ItemExtractor) ExtractRows(
 			}
 		}
 
-		err = s.extractPlain(ctx, fields, row, resultRow, lang, isModer, userID, role)
+		err = s.extractPlain(ctx, fields, row, resultRow, lang, isModer, userID, roles)
 		if err != nil {
 			return nil, err
 		}
@@ -300,9 +301,9 @@ func (s *ItemExtractor) ExtractRows(
 }
 
 func (s *ItemExtractor) Extract(
-	ctx context.Context, row *items.Item, fields *ItemFields, lang string, isModer bool, userID int64, role string,
+	ctx context.Context, row *items.Item, fields *ItemFields, lang string, isModer bool, userID int64, roles []string,
 ) (*APIItem, error) {
-	result, err := s.ExtractRows(ctx, []*items.Item{row}, fields, lang, isModer, userID, role)
+	result, err := s.ExtractRows(ctx, []*items.Item{row}, fields, lang, isModer, userID, roles)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +317,7 @@ func (s *ItemExtractor) Extract(
 
 func (s *ItemExtractor) extractPlain(
 	ctx context.Context, fields *ItemFields, row *items.Item, resultRow *APIItem, lang string, isModer bool,
-	userID int64, role string,
+	userID int64, roles []string,
 ) error {
 	var err error
 
@@ -414,19 +415,18 @@ func (s *ItemExtractor) extractPlain(
 		}
 	}
 
-	resultRow.Categories, err = s.extractCategories(ctx, fields, row, lang, isModer, userID, role)
+	resultRow.Categories, err = s.extractCategories(ctx, fields, row, lang, isModer, userID, roles)
 	if err != nil {
 		return err
 	}
 
-	resultRow.Twins, err = s.extractTwins(ctx, fields, row, lang, isModer, userID, role)
+	resultRow.Twins, err = s.extractTwins(ctx, fields, row, lang, isModer, userID, roles)
 	if err != nil {
 		return err
 	}
 
 	if fields.GetCanEditSpecs() {
-		resultRow.CanEditSpecs = util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) &&
-			s.container.Enforcer().Enforce(role, "specifications", "edit")
+		resultRow.CanEditSpecs = util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) && userID != 0
 	}
 
 	resultRow.CommentsCount, err = s.extractCommentsCount(ctx, fields, row)
@@ -434,12 +434,12 @@ func (s *ItemExtractor) extractPlain(
 		return err
 	}
 
-	resultRow.PreviewPictures, err = s.extractPreviewPictures(ctx, fields, row, lang, isModer, userID, role)
+	resultRow.PreviewPictures, err = s.extractPreviewPictures(ctx, fields, row, lang, isModer, userID, roles)
 	if err != nil {
 		return err
 	}
 
-	resultRow.EngineVehicles, err = s.extractEngineVehicles(ctx, fields, row, lang, isModer, userID, role)
+	resultRow.EngineVehicles, err = s.extractEngineVehicles(ctx, fields, row, lang, isModer, userID, roles)
 	if err != nil {
 		return err
 	}
@@ -912,7 +912,7 @@ func (s *ItemExtractor) extractChildsCount(
 }
 
 func (s *ItemExtractor) extractEngineVehicles(
-	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, roles []string,
 ) ([]*APIItem, error) {
 	evs := fields.GetEngineVehicles()
 	if evs == nil {
@@ -961,7 +961,7 @@ func (s *ItemExtractor) extractEngineVehicles(
 		return nil, err
 	}
 
-	return itemExtractor.ExtractRows(ctx, rows, itemFields, lang, isModer, userID, role)
+	return itemExtractor.ExtractRows(ctx, rows, itemFields, lang, isModer, userID, roles)
 }
 
 func (s *ItemExtractor) extractEngineVehiclesCount(
@@ -990,7 +990,7 @@ func (s *ItemExtractor) extractEngineVehiclesCount(
 }
 
 func (s *ItemExtractor) extractPreviewPictures(
-	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, roles []string,
 ) (*PreviewPictures, error) {
 	pps := fields.GetPreviewPictures()
 	if pps == nil {
@@ -1056,7 +1056,7 @@ func (s *ItemExtractor) extractPreviewPictures(
 		}
 
 		if pic != nil && pic.Row != nil {
-			extractedPic, err := pictureExtractor.Extract(ctx, pic.Row, pictureFields, lang, isModer, userID, role)
+			extractedPic, err := pictureExtractor.Extract(ctx, pic.Row, pictureFields, lang, isModer, userID, roles)
 			if err != nil {
 				return nil, err
 			}
@@ -1152,7 +1152,7 @@ func (s *ItemExtractor) extractLogos(
 
 func (s *ItemExtractor) extractConnectedItems(
 	ctx context.Context, request *ItemsRequest, opts *query.ItemListOptions, lang string, isModer bool, userID int64,
-	role string,
+	roles []string,
 ) ([]*APIItem, error) {
 	itemRepository, err := s.container.ItemsRepository()
 	if err != nil {
@@ -1170,11 +1170,11 @@ func (s *ItemExtractor) extractConnectedItems(
 		return nil, err
 	}
 
-	return s.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID, role)
+	return s.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID, roles)
 }
 
 func (s *ItemExtractor) extractTwins(
-	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, roles []string,
 ) ([]*APIItem, error) {
 	twinsRequest := fields.GetTwins()
 	if twinsRequest == nil {
@@ -1186,11 +1186,11 @@ func (s *ItemExtractor) extractTwins(
 		TypeID:                    []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
 	}
 
-	return s.extractConnectedItems(ctx, twinsRequest, opts, lang, isModer, userID, role)
+	return s.extractConnectedItems(ctx, twinsRequest, opts, lang, isModer, userID, roles)
 }
 
 func (s *ItemExtractor) extractCategories(
-	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, role string,
+	ctx context.Context, fields *ItemFields, row *items.Item, lang string, isModer bool, userID int64, roles []string,
 ) ([]*APIItem, error) {
 	categoriesRequest := fields.GetCategories()
 	if categoriesRequest == nil {
@@ -1207,7 +1207,7 @@ func (s *ItemExtractor) extractCategories(
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
 	}
 
-	return s.extractConnectedItems(ctx, categoriesRequest, opts, lang, isModer, userID, role)
+	return s.extractConnectedItems(ctx, categoriesRequest, opts, lang, isModer, userID, roles)
 }
 
 func (s *ItemExtractor) extractRoutes(

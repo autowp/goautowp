@@ -37,12 +37,12 @@ const (
 	UserTableForumsTopicsColName      = "forums_topics"
 	UserTablePicturesAddedColName     = "pictures_added"
 	UserTableImgColName               = "img"
+	UserTableGreenColName             = "green"
 )
 
 var ( //nolint: dupl
 	UserTable                     = goqu.T(UserTableName)
 	UserTableIDCol                = UserTable.Col(UserTableIDColName)
-	UserTableRoleCol              = UserTable.Col(UserTableRoleColName)
 	UserTableDeletedCol           = UserTable.Col(UserTableDeletedColName)
 	UserTableNameCol              = UserTable.Col(UserTableNameColName)
 	UserTableIdentityCol          = UserTable.Col(UserTableIdentityColName)
@@ -66,6 +66,7 @@ var ( //nolint: dupl
 	UserTablePasswordCol          = UserTable.Col(UserTablePasswordColName)
 	UserTableTimezoneCol          = UserTable.Col(UserTableTimezoneColName)
 	UserTablePicturesAddedCol     = UserTable.Col(UserTablePicturesAddedColName)
+	UserTableGreenCol             = UserTable.Col(UserTableGreenColName)
 )
 
 type UsersRow struct {
@@ -74,7 +75,6 @@ type UsersRow struct {
 	Deleted       bool       `db:"deleted"`
 	Identity      *string    `db:"identity"`
 	LastOnline    *time.Time `db:"last_online"`
-	Role          string     `db:"role"`
 	EMail         *string    `db:"email"`
 	Img           *int       `db:"img"`
 	SpecsWeight   float64    `db:"specs_weight"`
@@ -88,4 +88,5 @@ type UsersRow struct {
 	PicturesAdded int64      `db:"pictures_added"`
 	LastIP        string     `db:"last_ip"`
 	Login         *string    `db:"login"`
+	Green         bool       `db:"green"`
 }

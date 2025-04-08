@@ -9,7 +9,8 @@ import (
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/image/storage"
-	"github.com/casbin/casbin"
+	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
@@ -43,7 +44,6 @@ type GRPCServer struct {
 	catalogue         *Catalogue
 	reCaptchaConfig   config.RecaptchaConfig
 	fileStorageConfig config.FileStorageConfig
-	enforcer          *casbin.Enforcer
 	comments          *comments.Repository
 	ipExtractor       *IPExtractor
 	feedback          *Feedback
@@ -54,7 +54,6 @@ func NewGRPCServer(
 	catalogue *Catalogue,
 	reCaptchaConfig config.RecaptchaConfig,
 	fileStorageConfig config.FileStorageConfig,
-	enforcer *casbin.Enforcer,
 	comments *comments.Repository,
 	ipExtractor *IPExtractor,
 	feedback *Feedback,
@@ -64,7 +63,6 @@ func NewGRPCServer(
 		catalogue:         catalogue,
 		reCaptchaConfig:   reCaptchaConfig,
 		fileStorageConfig: fileStorageConfig,
-		enforcer:          enforcer,
 		comments:          comments,
 		ipExtractor:       ipExtractor,
 		feedback:          feedback,
@@ -132,27 +130,13 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 	}, nil
 }
 
-func (s *GRPCServer) AclEnforce( //nolint
-	ctx context.Context,
-	in *AclEnforceRequest,
-) (*AclEnforceResult, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	return &AclEnforceResult{
-		Result: s.enforcer.Enforce(role, in.GetResource(), in.GetPrivilege()),
-	}, nil
-}
-
 func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*VehicleTypeItems, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -181,7 +165,7 @@ func (s *GRPCServer) GetBrandVehicleTypes(
 }
 
 func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -196,7 +180,7 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 		m[e] = true
 	}
 
-	result, err := s.ipExtractor.Extract(ctx, ip, m, userID, role)
+	result, err := s.ipExtractor.Extract(ctx, ip, m, userID, roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

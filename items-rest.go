@@ -13,7 +13,8 @@ import (
 
 	"github.com/autowp/goautowp/image/sampler"
 	"github.com/autowp/goautowp/items"
-	"github.com/casbin/casbin"
+	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"github.com/gabriel-vasile/mimetype"
 	_ "github.com/gen2brain/avif" // AVIF support
 	"github.com/gin-gonic/gin"
@@ -24,31 +25,27 @@ const itemLogoFileField = "file"
 
 type ItemsREST struct {
 	auth       *Auth
-	enforcer   *casbin.Enforcer
 	repository *items.Repository
 	events     *Events
 }
 
-func NewItemsREST(
-	auth *Auth, enforcer *casbin.Enforcer, repository *items.Repository, events *Events,
-) *ItemsREST {
+func NewItemsREST(auth *Auth, repository *items.Repository, events *Events) *ItemsREST {
 	return &ItemsREST{
 		auth:       auth,
-		enforcer:   enforcer,
 		repository: repository,
 		events:     events,
 	}
 }
 
 func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
-	userID, role, err := s.auth.ValidateREST(ctx)
+	userID, roles, err := s.auth.ValidateREST(ctx)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 
 		return
 	}
 
-	if !s.enforcer.Enforce(role, "brand", "logo") {
+	if !util.Contains(roles, users.RoleBrandsModer) {
 		ctx.Status(http.StatusForbidden)
 
 		return

@@ -20,7 +20,6 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Autowp_AclEnforce_FullMethodName           = "/goautowp.Autowp/AclEnforce"
 	Autowp_CreateFeedback_FullMethodName       = "/goautowp.Autowp/CreateFeedback"
 	Autowp_GetBrandIcons_FullMethodName        = "/goautowp.Autowp/GetBrandIcons"
 	Autowp_GetBrandVehicleTypes_FullMethodName = "/goautowp.Autowp/GetBrandVehicleTypes"
@@ -37,7 +36,6 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AutowpClient interface {
-	AclEnforce(ctx context.Context, in *AclEnforceRequest, opts ...grpc.CallOption) (*AclEnforceResult, error)
 	CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetBrandIcons(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BrandIcons, error)
 	GetBrandVehicleTypes(ctx context.Context, in *GetBrandVehicleTypesRequest, opts ...grpc.CallOption) (*BrandVehicleTypeItems, error)
@@ -56,16 +54,6 @@ type autowpClient struct {
 
 func NewAutowpClient(cc grpc.ClientConnInterface) AutowpClient {
 	return &autowpClient{cc}
-}
-
-func (c *autowpClient) AclEnforce(ctx context.Context, in *AclEnforceRequest, opts ...grpc.CallOption) (*AclEnforceResult, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AclEnforceResult)
-	err := c.cc.Invoke(ctx, Autowp_AclEnforce_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *autowpClient) CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
@@ -172,7 +160,6 @@ func (c *autowpClient) GetTimezones(ctx context.Context, in *emptypb.Empty, opts
 // All implementations must embed UnimplementedAutowpServer
 // for forward compatibility.
 type AutowpServer interface {
-	AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error)
 	CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error)
 	GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons, error)
 	GetBrandVehicleTypes(context.Context, *GetBrandVehicleTypesRequest) (*BrandVehicleTypeItems, error)
@@ -193,9 +180,6 @@ type AutowpServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAutowpServer struct{}
 
-func (UnimplementedAutowpServer) AclEnforce(context.Context, *AclEnforceRequest) (*AclEnforceResult, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AclEnforce not implemented")
-}
 func (UnimplementedAutowpServer) CreateFeedback(context.Context, *APICreateFeedbackRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFeedback not implemented")
 }
@@ -245,24 +229,6 @@ func RegisterAutowpServer(s grpc.ServiceRegistrar, srv AutowpServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Autowp_ServiceDesc, srv)
-}
-
-func _Autowp_AclEnforce_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AclEnforceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AutowpServer).AclEnforce(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Autowp_AclEnforce_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AutowpServer).AclEnforce(ctx, req.(*AclEnforceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _Autowp_CreateFeedback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -452,10 +418,6 @@ var Autowp_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "goautowp.Autowp",
 	HandlerType: (*AutowpServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "AclEnforce",
-			Handler:    _Autowp_AclEnforce_Handler,
-		},
 		{
 			MethodName: "CreateFeedback",
 			Handler:    _Autowp_CreateFeedback_Handler,

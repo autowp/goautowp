@@ -7,7 +7,6 @@ import (
 
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/schema"
-	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
 )
@@ -31,7 +30,6 @@ type Traffic struct {
 	Whitelist  *Whitelist
 	Ban        *ban.Repository
 	autowpDB   *goqu.Database
-	enforcer   *casbin.Enforcer
 }
 
 // AutobanProfile AutobanProfile.
@@ -86,12 +84,7 @@ type APITrafficWhitelistPostRequestBody struct {
 }
 
 // NewTraffic constructor.
-func NewTraffic(
-	pool *goqu.Database,
-	autowpDB *goqu.Database,
-	enforcer *casbin.Enforcer,
-	ban *ban.Repository,
-) (*Traffic, error) {
+func NewTraffic(pool *goqu.Database, autowpDB *goqu.Database, ban *ban.Repository) (*Traffic, error) {
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
 		logrus.Error(err)
@@ -111,7 +104,6 @@ func NewTraffic(
 		Whitelist:  whitelist,
 		Ban:        ban,
 		autowpDB:   autowpDB,
-		enforcer:   enforcer,
 	}, nil
 }
 

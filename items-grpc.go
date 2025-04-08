@@ -29,7 +29,6 @@ import (
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
-	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	geo "github.com/paulmach/go.geo"
@@ -92,7 +91,6 @@ type ItemsGRPCServer struct {
 	repository            *items.Repository
 	db                    *goqu.Database
 	auth                  *Auth
-	enforcer              *casbin.Enforcer
 	contentLanguages      []string
 	textstorageRepository *textstorage.Repository
 	extractor             *ItemExtractor
@@ -114,7 +112,6 @@ func NewItemsGRPCServer(
 	repository *items.Repository,
 	db *goqu.Database,
 	auth *Auth,
-	enforcer *casbin.Enforcer,
 	contentLanguages []string,
 	textstorageRepository *textstorage.Repository,
 	extractor *ItemExtractor,
@@ -135,7 +132,6 @@ func NewItemsGRPCServer(
 		repository:            repository,
 		db:                    db,
 		auth:                  auth,
-		enforcer:              enforcer,
 		contentLanguages:      contentLanguages,
 		textstorageRepository: textstorageRepository,
 		extractor:             extractor,
@@ -392,17 +388,17 @@ func (s *ItemsGRPCServer) GetTwinsBrandsList(
 }
 
 func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	isModer := util.Contains(roles, users.RoleModer)
 
 	fields := convertItemFields(in.GetFields())
 
 	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) &&
-		!s.enforcer.Enforce(role, "global", "moderate") {
+		!isModer {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -418,27 +414,26 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return s.extractor.Extract(ctx, res, in.GetFields(), in.GetLanguage(), isModer, userID, role)
+	return s.extractor.Extract(ctx, res, in.GetFields(), in.GetLanguage(), isModer, userID, roles)
 }
 
 func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemList, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	isModer := util.Contains(roles, users.RoleModer)
 
 	fields := convertItemFields(in.GetFields())
-	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) &&
-		!s.enforcer.Enforce(role, "global", "moderate") {
+	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) && !isModer {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
 	inOptions := in.GetOptions()
 
 	if (inOptions.GetExcludeSelfAndChilds() > 0 || inOptions.GetAutocomplete() != "" ||
-		inOptions.GetSuggestionsTo() != 0) && !s.enforcer.Enforce(role, "global", "moderate") {
+		inOptions.GetSuggestionsTo() != 0) && !isModer {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -479,7 +474,7 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemL
 
 	is := make([]*APIItem, len(res))
 	for idx, i := range res {
-		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), in.GetLanguage(), isModer, userID, role)
+		is[idx], err = s.extractor.Extract(ctx, i, in.GetFields(), in.GetLanguage(), isModer, userID, roles)
 		if err != nil {
 			return nil, err
 		}
@@ -550,12 +545,12 @@ func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *ItemLinksRequest
 }
 
 func (s *ItemsGRPCServer) DeleteItemLink(ctx context.Context, in *APIItemLinkRequest) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "edit_meta") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -570,12 +565,12 @@ func (s *ItemsGRPCServer) DeleteItemLink(ctx context.Context, in *APIItemLinkReq
 }
 
 func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (*APICreateItemLinkResponse, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "edit_meta") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -609,12 +604,12 @@ func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (
 }
 
 func (s *ItemsGRPCServer) UpdateItemLink(ctx context.Context, in *APIItemLink) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "edit_meta") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -720,12 +715,12 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 	ctx context.Context,
 	in *APIGetItemVehicleTypesRequest,
 ) (*APIGetItemVehicleTypesResponse, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -778,12 +773,12 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 	ctx context.Context,
 	in *APIItemVehicleTypeRequest,
 ) (*APIItemVehicleType, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -823,12 +818,12 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 }
 
 func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItemVehicleType) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "move") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -858,12 +853,12 @@ func (s *ItemsGRPCServer) DeleteItemVehicleType(
 	ctx context.Context,
 	in *APIItemVehicleTypeRequest,
 ) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "move") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -878,12 +873,12 @@ func (s *ItemsGRPCServer) DeleteItemVehicleType(
 func (s *ItemsGRPCServer) GetItemLanguages(
 	ctx context.Context, in *APIGetItemLanguagesRequest,
 ) (*ItemLanguages, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -928,12 +923,12 @@ func (s *ItemsGRPCServer) GetItemLanguages(
 }
 
 func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLanguage) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1059,12 +1054,12 @@ func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLangua
 func (s *ItemsGRPCServer) GetItemParentLanguages(
 	ctx context.Context, in *APIGetItemParentLanguagesRequest,
 ) (*ItemParentLanguages, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1089,12 +1084,12 @@ func (s *ItemsGRPCServer) GetItemParentLanguages(
 }
 
 func (s *ItemsGRPCServer) GetStats(ctx context.Context, _ *emptypb.Empty) (*StatsResponse, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1310,12 +1305,12 @@ func (s *ItemParentLanguage) Validate() ([]*errdetails.BadRequest_FieldViolation
 }
 
 func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemParentLanguage) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1337,12 +1332,12 @@ func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemPar
 }
 
 func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequest) (*NewItemsResponse, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	isModer := util.Contains(roles, users.RoleModer)
 
 	const (
 		newItemsLimit = 30
@@ -1364,7 +1359,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, lang, isModer, userID, role)
+	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, lang, isModer, userID, roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1389,7 +1384,7 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang, isModer, userID, role)
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang, isModer, userID, roles)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1404,12 +1399,12 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 }
 
 func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) (*NewItemsResponse, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	isModer := util.Contains(roles, users.RoleModer)
 
 	const (
 		newItemsLimit = 20
@@ -1431,7 +1426,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractedBrand, err := s.extractor.Extract(ctx, category, nil, lang, isModer, userID, role)
+	extractedBrand, err := s.extractor.Extract(ctx, category, nil, lang, isModer, userID, roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1459,7 +1454,7 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang, isModer, userID, role)
+		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang, isModer, userID, roles)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1512,12 +1507,12 @@ func (s *ItemsGRPCServer) formatItemNameHTML(row *items.Item, lang string) (stri
 }
 
 func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "move") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1610,12 +1605,12 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 }
 
 func (s *ItemsGRPCServer) UpdateItemParent(ctx context.Context, in *ItemParent) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "move") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1639,12 +1634,12 @@ func (s *ItemsGRPCServer) UpdateItemParent(ctx context.Context, in *ItemParent) 
 }
 
 func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "move") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1768,12 +1763,12 @@ func (s *ItemsGRPCServer) notifyItemParentSubscribers(
 }
 
 func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParentRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "move") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1855,12 +1850,12 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 func (s *ItemsGRPCServer) RefreshInheritance(
 	ctx context.Context, in *RefreshInheritanceRequest,
 ) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "admin") {
+	if !util.Contains(roles, users.RoleAdmin) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1882,12 +1877,12 @@ func (s *ItemsGRPCServer) RefreshInheritance(
 func (s *ItemsGRPCServer) SetUserItemSubscription(
 	ctx context.Context, in *SetUserItemSubscriptionRequest,
 ) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "edit_meta") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -2217,12 +2212,12 @@ func (s *ItemsGRPCServer) carSectionGroups(
 }
 
 func (s *ItemsGRPCServer) GetItemParent(ctx context.Context, in *ItemParentsRequest) (*ItemParent, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	isModer := util.Contains(roles, users.RoleModer)
 	if !isModer {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -2252,7 +2247,7 @@ func (s *ItemsGRPCServer) GetItemParent(ctx context.Context, in *ItemParentsRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res, err := s.itemParentExtractor.ExtractRow(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID, role)
+	res, err := s.itemParentExtractor.ExtractRow(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID, roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2263,12 +2258,12 @@ func (s *ItemsGRPCServer) GetItemParent(ctx context.Context, in *ItemParentsRequ
 func (s *ItemsGRPCServer) GetItemParents(
 	ctx context.Context, in *ItemParentsRequest,
 ) (*ItemParents, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	isModer := util.Contains(roles, users.RoleModer)
 
 	inOptions := in.GetOptions()
 
@@ -2305,7 +2300,7 @@ func (s *ItemsGRPCServer) GetItemParents(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res, err := s.itemParentExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID, role)
+	res, err := s.itemParentExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID, roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2398,7 +2393,7 @@ func (s *ItemsGRPCServer) GetItemOfDay(ctx context.Context, in *ItemOfDayRequest
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		extracted, err := s.extractor.Extract(ctx, item, &fields, in.GetLanguage(), false, 0, "")
+		extracted, err := s.extractor.Extract(ctx, item, &fields, in.GetLanguage(), false, 0, nil)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -2486,7 +2481,7 @@ func (s *ItemsGRPCServer) GetTopSpecsContributions(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		extracted, err := s.extractor.ExtractRows(ctx, cars, &fields, lang, false, 0, "")
+		extracted, err := s.extractor.ExtractRows(ctx, cars, &fields, lang, false, 0, nil)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -2510,12 +2505,12 @@ func (s *ItemsGRPCServer) GetTopSpecsContributions(
 }
 
 func (s *ItemsGRPCServer) GetPath(ctx context.Context, in *PathRequest) (*PathResponse, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	isModer := util.Contains(roles, users.RoleModer)
 	lang := in.GetLanguage()
 
 	fields := ItemFields{
@@ -2611,7 +2606,7 @@ func (s *ItemsGRPCServer) GetPath(ctx context.Context, in *PathRequest) (*PathRe
 			fields.Description = true
 		}
 
-		extracted, err := s.extractor.Extract(ctx, item.Item, &fields, lang, isModer, userID, role)
+		extracted, err := s.extractor.Extract(ctx, item.Item, &fields, lang, isModer, userID, roles)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -2630,12 +2625,12 @@ func (s *ItemsGRPCServer) GetPath(ctx context.Context, in *PathRequest) (*PathRe
 }
 
 func (s *ItemsGRPCServer) GetAlpha(ctx context.Context, _ *emptypb.Empty) (*AlphaResponse, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := s.enforcer.Enforce(role, "global", "moderate")
+	isModer := util.Contains(roles, users.RoleModer)
 	if !isModer {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -2677,18 +2672,18 @@ func (s *ItemsGRPCServer) GetAlpha(ctx context.Context, _ *emptypb.Empty) (*Alph
 }
 
 func (s *ItemsGRPCServer) CreateItem(ctx context.Context, in *APIItem) (*ItemID, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "add") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
 	in.Id = 0
 
-	InvalidParams, err := in.Validate(ctx, s.repository, nil, s.enforcer, role)
+	InvalidParams, err := in.Validate(ctx, s.repository, nil, roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2816,12 +2811,12 @@ func (s *ItemsGRPCServer) CreateItem(ctx context.Context, in *APIItem) (*ItemID,
 func (s *ItemsGRPCServer) UpdateItem( //nolint: maintidx
 	ctx context.Context, in *UpdateItemRequest,
 ) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "car", "add") {
+	if !util.Contains(roles, users.RoleCarsModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -2845,7 +2840,7 @@ func (s *ItemsGRPCServer) UpdateItem( //nolint: maintidx
 	values.ItemTypeId = extractItemTypeID(item.ItemTypeID)
 	oldData := item
 
-	InvalidParams, err := values.Validate(ctx, s.repository, mask.GetPaths(), s.enforcer, role)
+	InvalidParams, err := values.Validate(ctx, s.repository, mask.GetPaths(), roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -3560,12 +3555,12 @@ func (s *ItemsGRPCServer) carTreeWalk(
 }
 
 func (s *ItemsGRPCServer) GetTree(ctx context.Context, in *GetTreeRequest) (*APITreeItem, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 

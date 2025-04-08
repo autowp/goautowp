@@ -14,6 +14,7 @@ import (
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/textstorage"
+	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/genproto/googleapis/type/latlng"
@@ -34,9 +35,9 @@ func NewPictureExtractor(container *Container) *PictureExtractor {
 
 func (s *PictureExtractor) Extract(
 	ctx context.Context, row *schema.PictureRow, fields *PictureFields, lang string, isModer bool, userID int64,
-	role string,
+	roles []string,
 ) (*Picture, error) {
-	result, err := s.ExtractRows(ctx, []*schema.PictureRow{row}, fields, lang, isModer, userID, role)
+	result, err := s.ExtractRows(ctx, []*schema.PictureRow{row}, fields, lang, isModer, userID, roles)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +67,7 @@ func (s *PictureExtractor) preloadTopicsStat(
 
 func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 	ctx context.Context, rows []*schema.PictureRow, fields *PictureFields, lang string, isModer bool, userID int64,
-	role string,
+	roles []string,
 ) ([]*Picture, error) {
 	if fields == nil {
 		fields = &PictureFields{}
@@ -98,8 +99,6 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 	if err != nil {
 		return nil, err
 	}
-
-	enforcer := s.container.Enforcer()
 
 	var stats map[int64]comments.TopicStat
 
@@ -336,7 +335,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			extractor := s.container.PictureItemExtractor()
 
-			res, err := extractor.ExtractRows(ctx, piRows, pictureItemRequest.GetFields(), lang, isModer, userID, role)
+			res, err := extractor.ExtractRows(ctx, piRows, pictureItemRequest.GetFields(), lang, isModer, userID, roles)
 			if err != nil {
 				return nil, err
 			}
@@ -366,7 +365,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			dfDistanceExtractor := s.container.DfDistanceExtractor()
 
-			res, err := dfDistanceExtractor.ExtractRows(ctx, ddRows, dfDistanceRequest.GetFields(), lang, isModer, userID, role)
+			res, err := dfDistanceExtractor.ExtractRows(ctx, ddRows, dfDistanceRequest.GetFields(), lang, isModer, userID, roles)
 			if err != nil {
 				return nil, err
 			}
@@ -506,7 +505,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				return nil, err
 			}
 
-			res, err := s.Extract(ctx, pRow, replaceableRequest.GetFields(), lang, isModer, userID, role)
+			res, err := s.Extract(ctx, pRow, replaceableRequest.GetFields(), lang, isModer, userID, roles)
 			if err != nil {
 				return nil, err
 			}
@@ -526,13 +525,13 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			resultRow.Rights = &PictureRights{
-				Move:      enforcer.Enforce(role, "picture", "move"),
-				Unaccept:  (row.Status == schema.PictureStatusAccepted) && enforcer.Enforce(role, "picture", "unaccept"),
-				Accept:    canAccept && enforcer.Enforce(role, "picture", "accept"),
-				Restore:   (row.Status == schema.PictureStatusRemoving) && enforcer.Enforce(role, "picture", "restore"),
-				Normalize: (row.Status == schema.PictureStatusInbox) && enforcer.Enforce(role, "picture", "normalize"),
-				Flop:      (row.Status == schema.PictureStatusInbox) && enforcer.Enforce(role, "picture", "flop"),
-				Crop:      enforcer.Enforce(role, "picture", "crop"),
+				Move:      util.Contains(roles, users.RolePicturesModer),
+				Unaccept:  (row.Status == schema.PictureStatusAccepted) && util.Contains(roles, users.RolePicturesModer),
+				Accept:    canAccept && util.Contains(roles, users.RolePicturesModer),
+				Restore:   (row.Status == schema.PictureStatusRemoving) && util.Contains(roles, users.RoleAdmin),
+				Normalize: (row.Status == schema.PictureStatusInbox) && util.Contains(roles, users.RolePicturesModer),
+				Flop:      (row.Status == schema.PictureStatusInbox) && util.Contains(roles, users.RolePicturesModer),
+				Crop:      util.Contains(roles, users.RolePicturesModer),
 				Delete:    canDelete,
 			}
 		}
@@ -557,7 +556,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.Prev, err = s.Extract(ctx, prevPicture, sFields, lang, isModer, userID, role)
+				resultRow.Siblings.Prev, err = s.Extract(ctx, prevPicture, sFields, lang, isModer, userID, roles)
 				if err != nil {
 					return nil, err
 				}
@@ -571,7 +570,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.Next, err = s.Extract(ctx, nextPicture, sFields, lang, isModer, userID, role)
+				resultRow.Siblings.Next, err = s.Extract(ctx, nextPicture, sFields, lang, isModer, userID, roles)
 				if err != nil {
 					return nil, err
 				}
@@ -586,7 +585,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.PrevNew, err = s.Extract(ctx, prevNewPicture, sFields, lang, isModer, userID, role)
+				resultRow.Siblings.PrevNew, err = s.Extract(ctx, prevNewPicture, sFields, lang, isModer, userID, roles)
 				if err != nil {
 					return nil, err
 				}
@@ -601,14 +600,14 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.NextNew, err = s.Extract(ctx, nextNewPicture, sFields, lang, isModer, userID, role)
+				resultRow.Siblings.NextNew, err = s.Extract(ctx, nextNewPicture, sFields, lang, isModer, userID, roles)
 				if err != nil {
 					return nil, err
 				}
 			}
 		}
 
-		if row.IP != nil && enforcer.Enforce(role, "user", "ip") {
+		if row.IP != nil && util.Contains(roles, users.RoleModer) {
 			resultRow.Ip = row.IP.ToIP().String()
 		}
 

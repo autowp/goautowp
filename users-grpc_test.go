@@ -191,7 +191,6 @@ func TestGetOnlineUsers(t *testing.T) {
 		Img:                   true,
 		GravatarLarge:         true,
 		Photo:                 true,
-		IsModer:               true,
 		RegDate:               true,
 		PicturesAdded:         true,
 		PicturesAcceptedCount: true,

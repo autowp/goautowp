@@ -4,7 +4,8 @@ import (
 	"context"
 
 	"github.com/autowp/goautowp/log"
-	"github.com/casbin/casbin"
+	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -14,24 +15,22 @@ type LogGRPCServer struct {
 	UnimplementedLogServer
 	repository *log.Repository
 	auth       *Auth
-	enforcer   *casbin.Enforcer
 }
 
-func NewLogGRPCServer(repository *log.Repository, auth *Auth, enforcer *casbin.Enforcer) *LogGRPCServer {
+func NewLogGRPCServer(repository *log.Repository, auth *Auth) *LogGRPCServer {
 	return &LogGRPCServer{
 		repository: repository,
 		auth:       auth,
-		enforcer:   enforcer,
 	}
 }
 
 func (s *LogGRPCServer) GetEvents(ctx context.Context, in *LogEventsRequest) (*LogEvents, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "global", "moderate") {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 

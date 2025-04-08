@@ -30,7 +30,6 @@ import (
 	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/votings"
-	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -63,7 +62,6 @@ type Container struct {
 	duplicateFinder        *DuplicateFinder
 	donationsGrpcServer    *DonationsGRPCServer
 	emailSender            email.Sender
-	enforcer               *casbin.Enforcer
 	events                 *Events
 	feedback               *Feedback
 	forums                 *Forums
@@ -389,14 +387,6 @@ func (s *Container) DuplicateFinder() (*DuplicateFinder, error) {
 	return s.duplicateFinder, nil
 }
 
-func (s *Container) Enforcer() *casbin.Enforcer {
-	if s.enforcer == nil {
-		s.enforcer = casbin.NewEnforcer("model.conf", "policy.csv")
-	}
-
-	return s.enforcer
-}
-
 func (s *Container) Feedback() (*Feedback, error) {
 	if s.feedback == nil {
 		cfg := s.Config()
@@ -425,7 +415,7 @@ func (s *Container) IPExtractor() (*IPExtractor, error) {
 		return nil, err
 	}
 
-	return NewIPExtractor(s.Enforcer(), banRepository, userRepository, userExtractor), nil
+	return NewIPExtractor(banRepository, userRepository, userExtractor), nil
 }
 
 func (s *Container) HostsManager() *hosts.Manager {
@@ -528,7 +518,7 @@ func (s *Container) ItemsREST() (*ItemsREST, error) {
 		return nil, err
 	}
 
-	return NewItemsREST(auth, s.Enforcer(), itemsRepo, events), nil
+	return NewItemsREST(auth, itemsRepo, events), nil
 }
 
 func (s *Container) UsersREST() (*UsersREST, error) {
@@ -867,7 +857,7 @@ func (s *Container) Traffic() (*traffic.Traffic, error) {
 			return nil, err
 		}
 
-		traf, err := traffic.NewTraffic(db, autowpDB, s.Enforcer(), banRepository)
+		traf, err := traffic.NewTraffic(db, autowpDB, banRepository)
 		if err != nil {
 			logrus.Error(err.Error())
 
@@ -891,7 +881,7 @@ func (s *Container) UserExtractor() (*UserExtractor, error) {
 		return nil, err
 	}
 
-	return NewUserExtractor(s.Enforcer(), is, picRepository), nil
+	return NewUserExtractor(is, picRepository), nil
 }
 
 func (s *Container) VotingsRepository() (*votings.Repository, error) {
@@ -1063,7 +1053,6 @@ func (s *Container) GRPCServer() (*GRPCServer, error) {
 			catalogue,
 			cfg.Recaptcha,
 			cfg.FileStorage,
-			s.Enforcer(),
 			commentsRepository,
 			ipExtractor,
 			feedback,
@@ -1080,11 +1069,7 @@ func (s *Container) StatisticsGRPCServer() (*StatisticsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.statisticsGrpcServer = NewStatisticsGRPCServer(
-			db,
-			s.Enforcer(),
-			s.Config().About,
-		)
+		s.statisticsGrpcServer = NewStatisticsGRPCServer(db, s.Config().About)
 	}
 
 	return s.statisticsGrpcServer, nil
@@ -1105,11 +1090,6 @@ func (s *Container) TextGRPCServer() (*TextGRPCServer, error) {
 
 func (s *Container) TrafficGRPCServer() (*TrafficGRPCServer, error) {
 	if s.trafficGrpcServer == nil {
-		db, err := s.GoquDB()
-		if err != nil {
-			return nil, err
-		}
-
 		traf, err := s.Traffic()
 		if err != nil {
 			return nil, err
@@ -1120,18 +1100,17 @@ func (s *Container) TrafficGRPCServer() (*TrafficGRPCServer, error) {
 			return nil, err
 		}
 
+		usersRepo, err := s.UsersRepository()
+		if err != nil {
+			return nil, err
+		}
+
 		userExtractor, err := s.UserExtractor()
 		if err != nil {
 			return nil, err
 		}
 
-		s.trafficGrpcServer = NewTrafficGRPCServer(
-			auth,
-			db,
-			s.Enforcer(),
-			userExtractor,
-			traf,
-		)
+		s.trafficGrpcServer = NewTrafficGRPCServer(auth, usersRepo, userExtractor, traf)
 	}
 
 	return s.trafficGrpcServer, nil
@@ -1168,7 +1147,6 @@ func (s *Container) UsersGRPCServer() (*UsersGRPCServer, error) {
 
 		s.usersGrpcServer = NewUsersGRPCServer(
 			auth,
-			s.Enforcer(),
 			contactsRepository,
 			userRepository,
 			events,
@@ -1308,7 +1286,7 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 		}
 
 		s.itemsGrpcServer = NewItemsGRPCServer(
-			repo, db, auth, s.Enforcer(), s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
+			repo, db, auth, s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
 			attrsRepository, picturesRepository, idx, events, usersRepository, messagingRepository, s.HostsManager(),
 			s.ItemParentExtractor(), s.NewLinkExtractor(), itemOfDayRepository, redisClient,
 		)
@@ -1372,7 +1350,6 @@ func (s *Container) CommentsGRPCServer() (*CommentsGRPCServer, error) {
 			usersRepository,
 			picturesRepository,
 			userExtractor,
-			s.Enforcer(),
 		)
 	}
 
@@ -1404,7 +1381,7 @@ func (s *Container) AttrsGRPCServer() (*AttrsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.attrsGRPCServer = NewAttrsGRPCServer(repository, s.Enforcer(), auth)
+		s.attrsGRPCServer = NewAttrsGRPCServer(repository, auth)
 	}
 
 	return s.attrsGRPCServer, nil
@@ -1455,7 +1432,7 @@ func (s *Container) LogGRPCServer() (*LogGRPCServer, error) {
 			return nil, err
 		}
 
-		s.LogGrpcServer = NewLogGRPCServer(repository, auth, s.Enforcer())
+		s.LogGrpcServer = NewLogGRPCServer(repository, auth)
 	}
 
 	return s.LogGrpcServer, nil
@@ -1513,7 +1490,7 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
-		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, s.Enforcer(), events, s.HostsManager(),
+		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, events, s.HostsManager(),
 			messagingRepository, userRepository, duplicateFinder, textStorageRepository, tg, itemRepository,
 			commentsRepository, s.PictureExtractor(), s.PictureItemExtractor(), s.ItemExtractor(),
 		)
@@ -1585,7 +1562,7 @@ func (s *Container) ForumsGRPCServer() (*ForumsGRPCServer, error) {
 			return nil, err
 		}
 
-		s.forumsGrpcServer = NewForumsGRPCServer(auth, forums, commentsRepo, usersRepo, s.Enforcer())
+		s.forumsGrpcServer = NewForumsGRPCServer(auth, forums, commentsRepo, usersRepo)
 	}
 
 	return s.forumsGrpcServer, nil

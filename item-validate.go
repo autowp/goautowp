@@ -10,15 +10,15 @@ import (
 	"github.com/autowp/goautowp/items"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
+	"github.com/autowp/goautowp/users"
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
-	"github.com/casbin/casbin"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func (s *APIItem) Validate( //nolint: maintidx
-	ctx context.Context, repository *items.Repository, maskPaths []string, enforcer *casbin.Enforcer, role string,
+	ctx context.Context, repository *items.Repository, maskPaths []string, roles []string,
 ) ([]*errdetails.BadRequest_FieldViolation, error) {
 	if maskPaths == nil || util.Contains(maskPaths, "is_group") {
 		switch s.GetItemTypeId() {
@@ -72,9 +72,7 @@ func (s *APIItem) Validate( //nolint: maintidx
 		})
 	}
 
-	canEditEngine := enforcer.Enforce(role, "car", "edit_meta") &&
-		enforcer.Enforce(role, "specifications", "edit-engine") &&
-		enforcer.Enforce(role, "specifications", "edit")
+	canEditEngine := util.Contains(roles, users.RoleCarsModer)
 
 	if maskPaths == nil || util.Contains(maskPaths, "engine_inherit") {
 		if s.GetItemTypeId() != ItemType_ITEM_TYPE_VEHICLE {

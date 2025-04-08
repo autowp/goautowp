@@ -8,26 +8,23 @@ import (
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/users"
-	"github.com/casbin/casbin"
+	"github.com/autowp/goautowp/util"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type IPExtractor struct {
-	enforcer       *casbin.Enforcer
 	banRepository  *ban.Repository
 	userRepository *users.Repository
 	userExtractor  *UserExtractor
 }
 
 func NewIPExtractor(
-	enforcer *casbin.Enforcer,
 	banRepository *ban.Repository,
 	userRepository *users.Repository,
 	userExtractor *UserExtractor,
 ) *IPExtractor {
 	return &IPExtractor{
-		enforcer:       enforcer,
 		banRepository:  banRepository,
 		userRepository: userRepository,
 		userExtractor:  userExtractor,
@@ -35,7 +32,7 @@ func NewIPExtractor(
 }
 
 func (s *IPExtractor) Extract(
-	ctx context.Context, ip net.IP, fields map[string]bool, userID int64, role string,
+	ctx context.Context, ip net.IP, fields map[string]bool, userID int64, roles []string,
 ) (*APIIP, error) {
 	result := APIIP{
 		Address: ip.String(),
@@ -56,7 +53,7 @@ func (s *IPExtractor) Extract(
 	_, ok = fields["blacklist"]
 
 	if ok {
-		canView := len(role) > 0 && s.enforcer.Enforce(role, "global", "moderate")
+		canView := len(roles) > 0 && util.Contains(roles, users.RoleModer)
 
 		if canView {
 			result.Blacklist = nil
@@ -82,7 +79,7 @@ func (s *IPExtractor) Extract(
 				}
 
 				if user != nil {
-					apiUser, err := s.userExtractor.Extract(ctx, user, nil, userID, role)
+					apiUser, err := s.userExtractor.Extract(ctx, user, nil, userID, roles)
 					if err != nil {
 						return nil, err
 					}
@@ -95,7 +92,7 @@ func (s *IPExtractor) Extract(
 
 	_, ok = fields["rights"]
 	if ok {
-		canBan := len(role) > 0 && s.enforcer.Enforce(role, "user", "ban")
+		canBan := len(roles) > 0 && util.Contains(roles, users.RoleUsersModer)
 
 		result.Rights = &APIIPRights{
 			AddToBlacklist:      canBan,

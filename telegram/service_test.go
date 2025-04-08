@@ -112,7 +112,6 @@ func createRandomUser(ctx context.Context, t *testing.T, db *goqu.Database) int6
 			schema.UserTableTimezoneColName:       "Europe/Moscow",
 			schema.UserTableLastIPColName:         goqu.Func("INET6_ATON", "127.0.0.1"),
 			schema.UserTableLanguageColName:       "en",
-			schema.UserTableRoleColName:           "user",
 			schema.UserTableUUIDColName:           goqu.Func("UUID_TO_BIN", uuid.New().String()),
 		}).
 		Executor().ExecContext(ctx)

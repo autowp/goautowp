@@ -6,7 +6,8 @@ import (
 	"github.com/autowp/goautowp/attrs"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
-	"github.com/casbin/casbin"
+	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -16,16 +17,12 @@ import (
 type AttrsGRPCServer struct {
 	UnimplementedAttrsServer
 	repository *attrs.Repository
-	enforcer   *casbin.Enforcer
 	auth       *Auth
 }
 
-func NewAttrsGRPCServer(
-	repository *attrs.Repository, enforcer *casbin.Enforcer, auth *Auth,
-) *AttrsGRPCServer {
+func NewAttrsGRPCServer(repository *attrs.Repository, auth *Auth) *AttrsGRPCServer {
 	return &AttrsGRPCServer{
 		repository: repository,
-		enforcer:   enforcer,
 		auth:       auth,
 	}
 }
@@ -95,12 +92,12 @@ func convertAttribute(row *schema.AttrsAttributeRow) *AttrAttribute {
 }
 
 func (s *AttrsGRPCServer) GetAttribute(ctx context.Context, in *AttrAttributeID) (*AttrAttribute, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "edit") {
+	if userID == 0 {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -119,12 +116,12 @@ func (s *AttrsGRPCServer) GetAttribute(ctx context.Context, in *AttrAttributeID)
 func (s *AttrsGRPCServer) GetAttributes(
 	ctx context.Context, in *AttrAttributesRequest,
 ) (*AttrAttributesResponse, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "edit") {
+	if userID == 0 {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -168,12 +165,12 @@ func (s *AttrsGRPCServer) GetAttributeTypes(
 func (s *AttrsGRPCServer) GetListOptions(
 	ctx context.Context, in *AttrListOptionsRequest,
 ) (*AttrListOptionsResponse, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "edit") {
+	if userID == 0 {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -264,12 +261,12 @@ func (s *AttrsGRPCServer) GetZones(ctx context.Context, _ *emptypb.Empty) (*Attr
 }
 
 func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) (*AttrValuesResponse, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "edit") {
+	if userID == 0 {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
 	}
 
@@ -307,12 +304,12 @@ func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) 
 func (s *AttrsGRPCServer) GetUserValues(
 	ctx context.Context, in *AttrUserValuesRequest,
 ) (*AttrUserValuesResponse, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "edit") {
+	if userID == 0 {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
 	}
 
@@ -446,12 +443,12 @@ func (s *AttrsGRPCServer) GetConflicts(ctx context.Context, in *AttrConflictsReq
 func (s *AttrsGRPCServer) DeleteUserValues(
 	ctx context.Context, in *DeleteAttrUserValuesRequest,
 ) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "admin") {
+	if !util.Contains(roles, users.RoleAdmin) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.admin is required")
 	}
 
@@ -464,12 +461,12 @@ func (s *AttrsGRPCServer) DeleteUserValues(
 }
 
 func (s *AttrsGRPCServer) SetUserValues(ctx context.Context, in *AttrSetUserValuesRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, _, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "edit") {
+	if userID == 0 {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
 	}
 
@@ -500,12 +497,12 @@ func (s *AttrsGRPCServer) SetUserValues(ctx context.Context, in *AttrSetUserValu
 }
 
 func (s *AttrsGRPCServer) MoveUserValues(ctx context.Context, in *MoveAttrUserValuesRequest) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.enforcer.Enforce(role, "specifications", "admin") {
+	if !util.Contains(roles, users.RoleAdmin) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.admin is required")
 	}
 

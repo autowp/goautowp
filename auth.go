@@ -3,7 +3,6 @@ package goautowp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -16,10 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var (
-	errAuthTokenIsInvalid  = errors.New("authorization token is invalid")
-	errFailedRoleDetection = errors.New("failed role detection")
-)
+var errAuthTokenIsInvalid = errors.New("authorization token is invalid")
 
 const (
 	authorizationHeader = "authorization"
@@ -47,11 +43,11 @@ func NewAuth(
 	}
 }
 
-func (s *Auth) ValidateREST(ctx *gin.Context) (int64, string, error) {
+func (s *Auth) ValidateREST(ctx *gin.Context) (int64, []string, error) {
 	header := ctx.GetHeader(authorizationHeader)
 
 	if len(header) == 0 {
-		return 0, "", nil
+		return 0, nil, nil
 	}
 
 	tokenString := strings.TrimPrefix(header, bearerSchema+" ")
@@ -59,16 +55,16 @@ func (s *Auth) ValidateREST(ctx *gin.Context) (int64, string, error) {
 	return s.ValidateToken(ctx, tokenString)
 }
 
-func (s *Auth) ValidateGRPC(ctx context.Context) (int64, string, error) {
+func (s *Auth) ValidateGRPC(ctx context.Context) (int64, []string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return 0, "", status.Errorf(codes.InvalidArgument, "missing metadata")
+		return 0, nil, status.Errorf(codes.InvalidArgument, "missing metadata")
 	}
 
 	lines := md[authorizationHeader]
 
 	if len(lines) < 1 {
-		return 0, "", nil
+		return 0, nil, nil
 	}
 
 	tokenString := strings.TrimPrefix(lines[0], bearerSchema+" ")
@@ -76,31 +72,27 @@ func (s *Auth) ValidateGRPC(ctx context.Context) (int64, string, error) {
 	return s.ValidateToken(ctx, tokenString)
 }
 
-func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, string, error) {
+func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, []string, error) {
 	if len(tokenString) == 0 {
-		return 0, "", errAuthTokenIsInvalid
+		return 0, nil, errAuthTokenIsInvalid
 	}
 
 	var claims users.Claims
 
 	_, err := s.keycloak.DecodeAccessTokenCustomClaims(ctx, tokenString, s.keycloakCfg.Realm, &claims)
 	if err != nil {
-		return 0, "", err
+		return 0, nil, err
 	}
 
-	id, role, err := s.repository.EnsureUserImported(ctx, claims)
+	id, err := s.repository.EnsureUserImported(ctx, claims)
 	if err != nil {
-		return 0, "", err
-	}
-
-	if role == "" {
-		return 0, "", fmt.Errorf("%w: subject: `%v`", errFailedRoleDetection, claims.Subject)
+		return 0, nil, err
 	}
 
 	err = s.repository.RegisterVisit(ctx, id)
 	if err != nil {
-		return 0, "", err
+		return 0, nil, err
 	}
 
-	return id, role, nil
+	return id, claims.ResourceAccess.Autowp.Roles, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net"
@@ -20,9 +21,7 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/status"
 	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
@@ -36,8 +35,9 @@ const (
 const deleteUnusedBatchSize = 100
 
 var (
-	ErrUserNotFound   = errors.New("user not found")
-	ErrFormatNotFound = errors.New("format not found")
+	ErrUserNotFound     = errors.New("user not found")
+	ErrFormatNotFound   = errors.New("format not found")
+	ErrLanguageNotFound = errors.New("language is not defined")
 )
 
 type Claims struct {
@@ -174,7 +174,7 @@ func (s *Repository) Users(
 
 	var row schema.UsersRow
 	valuePtrs := []interface{}{
-		&row.ID, &row.Name, &row.Deleted, &row.Identity, &row.LastOnline, &row.Role,
+		&row.ID, &row.Name, &row.Deleted, &row.Identity, &row.LastOnline, &row.Green,
 		&row.SpecsWeight, &row.Img, &row.EMail, &row.PicturesTotal, &row.SpecsVolume, &row.Language,
 	}
 
@@ -184,7 +184,7 @@ func (s *Repository) Users(
 	columns := []interface{}{
 		aliasTable.Col(schema.UserTableIDColName), aliasTable.Col(schema.UserTableNameColName),
 		aliasTable.Col(schema.UserTableDeletedColName), aliasTable.Col(schema.UserTableIdentityColName),
-		aliasTable.Col(schema.UserTableLastOnlineColName), aliasTable.Col(schema.UserTableRoleColName),
+		aliasTable.Col(schema.UserTableLastOnlineColName), aliasTable.Col(schema.UserTableGreenColName),
 		aliasTable.Col(schema.UserTableSpecsWeightColName), aliasTable.Col(schema.UserTableImgColName),
 		aliasTable.Col(schema.UserTableEmailColName), aliasTable.Col(schema.UserTablePicturesTotalColName),
 		aliasTable.Col(schema.UserTableSpecsVolumeColName), aliasTable.Col(schema.UserTableLanguageColName),
@@ -436,7 +436,7 @@ func (s *Repository) RefreshUserConflicts(ctx context.Context, userID int64) err
 	return err
 }
 
-func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int64, string, error) {
+func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int64, error) {
 	remoteAddr := "127.0.0.1"
 	p, ok := peer.FromContext(ctx)
 
@@ -461,17 +461,12 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 	}
 
 	if !ok {
-		return 0, "", status.Errorf(codes.InvalidArgument, "language `%s` is not defined", locale)
+		return 0, fmt.Errorf("%w: `%s`", ErrLanguageNotFound, locale)
 	}
 
 	guid := claims.Subject
 	emailAddr := claims.Email
 	name := fullName(claims.GivenName, claims.FamilyName, claims.PreferredUsername)
-	role := "user"
-
-	if util.Contains(claims.ResourceAccess.Autowp.Roles, "admin") {
-		role = "admin"
-	}
 
 	logrus.Debugf("Ensure user `%s` imported", guid)
 
@@ -493,54 +488,52 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 			schema.UserTableTimezoneColName:       language.Timezone,
 			schema.UserTableLastIPColName:         goqu.Func("INET6_ATON", remoteAddr),
 			schema.UserTableLanguageColName:       locale,
-			schema.UserTableRoleColName:           role,
+			schema.UserTableGreenColName:          util.Contains(claims.ResourceAccess.Autowp.Roles, RoleGreenUser),
 			schema.UserTableUUIDColName:           goqu.Func("UUID_TO_BIN", guid),
 		}).
 		OnConflict(goqu.DoUpdate(schema.UserTableUUIDColName, goqu.Record{
 			schema.UserTableEmailColName:  goqu.Func("values", goqu.C(schema.UserTableEmailColName)),
 			schema.UserTableNameColName:   goqu.Func("values", goqu.C(schema.UserTableNameColName)),
 			schema.UserTableLastIPColName: goqu.Func("values", goqu.C(schema.UserTableLastIPColName)),
+			schema.UserTableGreenColName:  goqu.Func("values", goqu.C(schema.UserTableGreenColName)),
 		})).
 		Executor().ExecContext(ctx)
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
 
 	affected, err := res.RowsAffected()
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
 
 	if affected == 1 { // row just inserted
 		userID, err := res.LastInsertId()
 		if err != nil {
-			return 0, "", err
+			return 0, err
 		}
 
 		err = s.AfterUserCreated(ctx, userID)
 		if err != nil {
-			return 0, "", err
+			return 0, err
 		}
 	}
 
-	row := struct {
-		ID   int64  `db:"id"`
-		Role string `db:"role"`
-	}{}
+	var userID int64
 
-	success, err := s.autowpDB.Select(schema.UserTableIDCol, schema.UserTableRoleCol).
+	success, err := s.autowpDB.Select(schema.UserTableIDCol).
 		From(schema.UserTable).
 		Where(schema.UserTableUUIDCol.Eq(goqu.Func("UUID_TO_BIN", guid))).
-		ScanStructContext(ctx, &row)
+		ScanValContext(ctx, &userID)
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
 
 	if !success {
-		return 0, "", ErrUserNotFound
+		return 0, ErrUserNotFound
 	}
 
-	return row.ID, row.Role, nil
+	return userID, nil
 }
 
 func (s *Repository) ensureUserExportedToKeycloak(ctx context.Context, userID int64) (string, error) {
@@ -1062,7 +1055,7 @@ func (s *Repository) RefreshPicturesCount(ctx context.Context, userID int64) err
 
 func (s *Repository) UserAccounts(ctx context.Context, userID int64) ([]*schema.UserAccountRow, error) {
 	var rows []*schema.UserAccountRow
-	err := s.db.Select(goqu.Star()).From(schema.UserAccountTable).Where(schema.UserAccountTableUserIDCol.Eq(userID)).
+	err := s.autowpDB.Select(goqu.Star()).From(schema.UserAccountTable).Where(schema.UserAccountTableUserIDCol.Eq(userID)).
 		ScanStructsContext(ctx, &rows)
 
 	return rows, err
@@ -1071,7 +1064,7 @@ func (s *Repository) UserAccounts(ctx context.Context, userID int64) ([]*schema.
 func (s *Repository) HaveAccountsForOtherServices(ctx context.Context, userID int64, id int64) (bool, error) {
 	var found bool
 
-	success, err := s.db.Select(goqu.V(true)).
+	success, err := s.autowpDB.Select(goqu.V(true)).
 		From(schema.UserAccountTable).
 		Where(
 			schema.UserAccountTableIDCol.Neq(id),
@@ -1083,7 +1076,7 @@ func (s *Repository) HaveAccountsForOtherServices(ctx context.Context, userID in
 }
 
 func (s *Repository) RemoveUserAccount(ctx context.Context, id int64) error {
-	_, err := s.db.Delete(schema.UserAccountTable).
+	_, err := s.autowpDB.Delete(schema.UserAccountTable).
 		Where(schema.UserAccountTableIDCol.Eq(id)).
 		Executor().ExecContext(ctx)
 
@@ -1230,7 +1223,6 @@ func (s *Repository) DeleteUnused(ctx context.Context) error {
 		LeftJoin(schema.LogEventsTable, goqu.On(schema.UserTableIDCol.Eq(schema.LogEventsTableUserIDCol))).
 		Where(
 			schema.UserTableLastOnlineCol.Lt(goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL 2 YEAR"))),
-			schema.UserTableRoleCol.Eq("user"),
 			schema.AttrsUserValuesTableUserIDCol.IsNull(),
 			schema.CommentMessageTableAuthorIDCol.IsNull(),
 			schema.ForumsTopicsTableAuthorIDCol.IsNull(),

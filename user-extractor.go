@@ -9,7 +9,8 @@ import (
 	"github.com/autowp/goautowp/pictures"
 	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
-	"github.com/casbin/casbin"
+	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"github.com/drexedam/gravatar"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -20,23 +21,19 @@ const (
 )
 
 type UserExtractor struct {
-	enforcer           *casbin.Enforcer
 	imageStorage       *storage.Storage
 	picturesRepository *pictures.Repository
 }
 
-func NewUserExtractor(
-	enforcer *casbin.Enforcer, imageStorage *storage.Storage, picturesRepository *pictures.Repository,
-) *UserExtractor {
+func NewUserExtractor(imageStorage *storage.Storage, picturesRepository *pictures.Repository) *UserExtractor {
 	return &UserExtractor{
-		enforcer:           enforcer,
 		imageStorage:       imageStorage,
 		picturesRepository: picturesRepository,
 	}
 }
 
 func (s *UserExtractor) Extract(
-	ctx context.Context, row *schema.UsersRow, fields *UserFields, currentUserID int64, currentUserRole string,
+	ctx context.Context, row *schema.UsersRow, fields *UserFields, currentUserID int64, currentUserRoles []string,
 ) (*APIUser, error) {
 	longAway := true
 
@@ -44,8 +41,6 @@ func (s *UserExtractor) Extract(
 		date := time.Now().AddDate(0, -6, 0)
 		longAway = date.After(*row.LastOnline)
 	}
-
-	isGreen := row.Role != "" && s.enforcer.Enforce(row.Role, "status", "be-green")
 
 	identity := ""
 	if row.Identity != nil {
@@ -57,7 +52,7 @@ func (s *UserExtractor) Extract(
 		Name:          row.Name,
 		Deleted:       row.Deleted,
 		LongAway:      longAway,
-		Green:         isGreen,
+		Green:         row.Green,
 		Route:         frontend.UserRoute(row.ID, row.Identity),
 		Identity:      identity,
 		SpecsWeight:   row.SpecsWeight,
@@ -102,7 +97,7 @@ func (s *UserExtractor) Extract(
 	isMe := row.ID == currentUserID
 
 	if fields.GetEmail() && row.EMail != nil &&
-		(isMe || len(currentUserRole) > 0 && s.enforcer.Enforce(currentUserRole, "global", "moderate")) {
+		(isMe || util.Contains(currentUserRoles, users.RoleModer)) {
 		user.Email = *row.EMail
 	}
 
@@ -145,15 +140,11 @@ func (s *UserExtractor) Extract(
 		user.PicturesAcceptedCount = int32(count) //nolint:gosec
 	}
 
-	if fields.GetLastIp() && len(currentUserRole) > 0 && s.enforcer.Enforce(currentUserRole, "user", "ip") {
+	if fields.GetLastIp() && util.Contains(currentUserRoles, users.RoleModer) {
 		user.LastIp = row.LastIP
 	}
 
-	if fields.GetIsModer() {
-		user.IsModer = s.enforcer.Enforce(row.Role, "global", "moderate")
-	}
-
-	if fields.GetLogin() && row.Login != nil && s.enforcer.Enforce(currentUserRole, "global", "moderate") {
+	if fields.GetLogin() && row.Login != nil && util.Contains(currentUserRoles, users.RoleModer) {
 		user.Login = *row.Login
 	}
 

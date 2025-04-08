@@ -7,8 +7,8 @@ import (
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
-	"github.com/casbin/casbin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -26,7 +26,6 @@ type ForumsGRPCServer struct {
 	forums             *Forums
 	commentsRepository *comments.Repository
 	usersRepository    *users.Repository
-	enforcer           *casbin.Enforcer
 }
 
 func NewForumsGRPCServer(
@@ -34,14 +33,12 @@ func NewForumsGRPCServer(
 	forums *Forums,
 	commentsRepository *comments.Repository,
 	usersRepository *users.Repository,
-	enforcer *casbin.Enforcer,
 ) *ForumsGRPCServer {
 	return &ForumsGRPCServer{
 		auth:               auth,
 		forums:             forums,
 		commentsRepository: commentsRepository,
 		usersRepository:    usersRepository,
-		enforcer:           enforcer,
 	}
 }
 
@@ -207,7 +204,7 @@ func (s *APICreateTopicRequest) Validate(
 }
 
 func (s *ForumsGRPCServer) CloseTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -216,7 +213,7 @@ func (s *ForumsGRPCServer) CloseTopic(ctx context.Context, in *APISetTopicStatus
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	forumAdmin := s.enforcer.Enforce(role, "forums", "moderate")
+	forumAdmin := util.Contains(roles, users.RoleForumsModer)
 	if !forumAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -230,7 +227,7 @@ func (s *ForumsGRPCServer) CloseTopic(ctx context.Context, in *APISetTopicStatus
 }
 
 func (s *ForumsGRPCServer) OpenTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -239,7 +236,7 @@ func (s *ForumsGRPCServer) OpenTopic(ctx context.Context, in *APISetTopicStatusR
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	forumAdmin := s.enforcer.Enforce(role, "forums", "moderate")
+	forumAdmin := util.Contains(roles, users.RoleForumsModer)
 	if !forumAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -253,7 +250,7 @@ func (s *ForumsGRPCServer) OpenTopic(ctx context.Context, in *APISetTopicStatusR
 }
 
 func (s *ForumsGRPCServer) DeleteTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -262,7 +259,7 @@ func (s *ForumsGRPCServer) DeleteTopic(ctx context.Context, in *APISetTopicStatu
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	forumAdmin := s.enforcer.Enforce(role, "forums", "moderate")
+	forumAdmin := util.Contains(roles, users.RoleForumsModer)
 	if !forumAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -276,7 +273,7 @@ func (s *ForumsGRPCServer) DeleteTopic(ctx context.Context, in *APISetTopicStatu
 }
 
 func (s *ForumsGRPCServer) MoveTopic(ctx context.Context, in *APIMoveTopicRequest) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -285,7 +282,7 @@ func (s *ForumsGRPCServer) MoveTopic(ctx context.Context, in *APIMoveTopicReques
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	forumAdmin := s.enforcer.Enforce(role, "forums", "moderate")
+	forumAdmin := util.Contains(roles, users.RoleForumsModer)
 	if !forumAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -324,12 +321,12 @@ func convertTopic(topic *ForumsTopic) *APIForumsTopic {
 }
 
 func (s *ForumsGRPCServer) GetTheme(ctx context.Context, in *APIGetForumsThemeRequest) (*APIForumsTheme, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+	isModerator := util.Contains(roles, users.RoleForumsModer)
 
 	theme, err := s.forums.Theme(ctx, in.GetId(), isModerator)
 	if err != nil {
@@ -344,12 +341,12 @@ func (s *ForumsGRPCServer) GetTheme(ctx context.Context, in *APIGetForumsThemeRe
 }
 
 func (s *ForumsGRPCServer) GetThemes(ctx context.Context, in *APIGetForumsThemesRequest) (*APIForumsThemes, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+	isModerator := util.Contains(roles, users.RoleForumsModer)
 
 	themes, err := s.forums.Themes(ctx, in.GetThemeId(), isModerator)
 	if err != nil {
@@ -367,12 +364,12 @@ func (s *ForumsGRPCServer) GetThemes(ctx context.Context, in *APIGetForumsThemes
 }
 
 func (s *ForumsGRPCServer) GetLastTopic(ctx context.Context, in *APIGetForumsThemeRequest) (*APIForumsTopic, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+	isModerator := util.Contains(roles, users.RoleForumsModer)
 
 	topic, err := s.forums.LastTopic(ctx, in.GetId(), userID, isModerator)
 	if err != nil {
@@ -390,12 +387,12 @@ func (s *ForumsGRPCServer) GetLastMessage(
 	ctx context.Context,
 	in *APIGetForumsTopicRequest,
 ) (*APICommentMessage, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+	isModerator := util.Contains(roles, users.RoleForumsModer)
 
 	msg, err := s.forums.LastMessage(ctx, in.GetId(), isModerator)
 	if err != nil {
@@ -419,12 +416,12 @@ func (s *ForumsGRPCServer) GetLastMessage(
 }
 
 func (s *ForumsGRPCServer) GetTopics(ctx context.Context, in *APIGetForumsTopicsRequest) (*APIForumsTopics, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+	isModerator := util.Contains(roles, users.RoleForumsModer)
 
 	topics, pages, err := s.forums.Topics(ctx, in.GetThemeId(), userID, isModerator, in.GetSubscription(), in.GetPage())
 	if err != nil {
@@ -454,12 +451,12 @@ func (s *ForumsGRPCServer) GetTopics(ctx context.Context, in *APIGetForumsTopics
 }
 
 func (s *ForumsGRPCServer) GetTopic(ctx context.Context, in *APIGetForumsTopicRequest) (*APIForumsTopic, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModerator := s.enforcer.Enforce(role, "forums", "moderate")
+	isModerator := util.Contains(roles, users.RoleForumsModer)
 
 	topic, err := s.forums.Topic(ctx, in.GetId(), userID, isModerator)
 	if err != nil {

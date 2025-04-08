@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/autowp/goautowp/ban"
+	"github.com/autowp/goautowp/query"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/traffic"
-	"github.com/casbin/casbin"
-	"github.com/doug-martin/goqu/v9"
+	"github.com/autowp/goautowp/users"
+	"github.com/autowp/goautowp/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -20,30 +21,25 @@ import (
 
 const trafficTopLimit = 50
 
-var ErrUserNotFound = errors.New("user not found")
-
 type TrafficGRPCServer struct {
 	UnimplementedTrafficServer
-	auth          *Auth
-	db            *goqu.Database
-	enforcer      *casbin.Enforcer
-	userExtractor *UserExtractor
-	traffic       *traffic.Traffic
+	auth            *Auth
+	usersRepository *users.Repository
+	userExtractor   *UserExtractor
+	traffic         *traffic.Traffic
 }
 
 func NewTrafficGRPCServer(
 	auth *Auth,
-	db *goqu.Database,
-	enforcer *casbin.Enforcer,
+	usersRepository *users.Repository,
 	userExtractor *UserExtractor,
 	traffic *traffic.Traffic,
 ) *TrafficGRPCServer {
 	return &TrafficGRPCServer{
-		auth:          auth,
-		db:            db,
-		enforcer:      enforcer,
-		userExtractor: userExtractor,
-		traffic:       traffic,
+		auth:            auth,
+		usersRepository: usersRepository,
+		userExtractor:   userExtractor,
+		traffic:         traffic,
 	}
 }
 
@@ -74,17 +70,21 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 		)
 
 		if banItem != nil {
-			user, err = s.getUser(ctx, banItem.ByUserID)
-			if err != nil && !errors.Is(err, ErrUserNotFound) {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-
 			var extractedUser *APIUser
 
-			if user != nil {
-				extractedUser, err = s.userExtractor.Extract(ctx, user, nil, userID, role)
-				if err != nil {
+			if banItem.ByUserID > 0 {
+				user, err = s.usersRepository.User(ctx, &query.UserListOptions{
+					ID: banItem.ByUserID,
+				}, users.UserFields{}, users.OrderByNone)
+				if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 					return nil, status.Error(codes.Internal, err.Error())
+				}
+
+				if user != nil {
+					extractedUser, err = s.userExtractor.Extract(ctx, user, nil, userID, role)
+					if err != nil {
+						return nil, status.Error(codes.Internal, err.Error())
+					}
 				}
 			}
 
@@ -119,12 +119,12 @@ func (s *TrafficGRPCServer) DeleteFromBlacklist(
 	ctx context.Context,
 	in *DeleteFromTrafficBlacklistRequest,
 ) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "user", "ban"); !res {
+	if !util.Contains(roles, users.RoleUsersModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -145,12 +145,12 @@ func (s *TrafficGRPCServer) DeleteFromWhitelist(
 	ctx context.Context,
 	in *DeleteFromTrafficWhitelistRequest,
 ) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -171,12 +171,12 @@ func (s *TrafficGRPCServer) AddToBlacklist(
 	ctx context.Context,
 	in *AddToTrafficBlacklistRequest,
 ) (*emptypb.Empty, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userID, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "user", "ban"); !res {
+	if !util.Contains(roles, users.RoleUsersModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -199,12 +199,12 @@ func (s *TrafficGRPCServer) AddToWhitelist(
 	ctx context.Context,
 	in *AddToTrafficWhitelistRequest,
 ) (*emptypb.Empty, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -232,12 +232,12 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 	ctx context.Context,
 	_ *emptypb.Empty,
 ) (*APITrafficWhitelistItems, error) {
-	_, role, err := s.auth.ValidateGRPC(ctx)
+	_, roles, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if res := s.enforcer.Enforce(role, "global", "moderate"); !res {
+	if !util.Contains(roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -257,25 +257,4 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 	return &APITrafficWhitelistItems{
 		Items: result,
 	}, nil
-}
-
-func (s *TrafficGRPCServer) getUser(ctx context.Context, id int64) (*schema.UsersRow, error) {
-	var userRow schema.UsersRow
-
-	success, err := s.db.Select(
-		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
-		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol,
-	).
-		From(schema.UserTable).
-		Where(schema.UserTableIDCol.Eq(id)).
-		ScanStructContext(ctx, &userRow)
-	if err != nil {
-		return nil, err
-	}
-
-	if !success {
-		return nil, ErrUserNotFound
-	}
-
-	return &userRow, nil
 }

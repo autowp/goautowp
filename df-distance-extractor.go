@@ -17,7 +17,7 @@ func NewDfDistanceExtractor(container *Container) *DfDistanceExtractor {
 
 func (s *DfDistanceExtractor) ExtractRows(
 	ctx context.Context, rows []*schema.DfDistanceRow, fields *DfDistanceFields, lang string, isModer bool, userID int64,
-	role string,
+	roles []string,
 ) ([]*DfDistance, error) {
 	result := make([]*DfDistance, 0, len(rows))
 
@@ -56,7 +56,7 @@ func (s *DfDistanceExtractor) ExtractRows(
 				return nil, err
 			}
 
-			dstPicture, err = pictureExtractor.Extract(ctx, picRow, dstPictureFields, lang, isModer, userID, role)
+			dstPicture, err = pictureExtractor.Extract(ctx, picRow, dstPictureFields, lang, isModer, userID, roles)
 			if err != nil {
 				return nil, err
 			}

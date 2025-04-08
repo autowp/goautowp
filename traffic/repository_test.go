@@ -9,7 +9,6 @@ import (
 	"github.com/autowp/goautowp/ban"
 	"github.com/autowp/goautowp/config"
 	"github.com/autowp/goautowp/schema"
-	"github.com/casbin/casbin"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/go-sql-driver/mysql" // enable mysql driver
 	"github.com/stretchr/testify/require"
@@ -33,9 +32,7 @@ func createTrafficService(t *testing.T) *Traffic {
 	banRepository, err := ban.NewRepository(goquPostgresDB)
 	require.NoError(t, err)
 
-	enforcer := casbin.NewEnforcer("../model.conf", "../policy.csv")
-
-	traf, err := NewTraffic(goquPostgresDB, goquDB, enforcer, banRepository)
+	traf, err := NewTraffic(goquPostgresDB, goquDB, banRepository)
 	require.NoError(t, err)
 
 	return traf

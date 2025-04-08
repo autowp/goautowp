@@ -101,7 +101,7 @@ func NewRepository(
 func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, error) {
 	rows, err := s.db.Select(
 		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
-		schema.UserTableLastOnlineCol, schema.UserTableRoleCol, schema.UserTableSpecsWeightCol,
+		schema.UserTableLastOnlineCol, schema.UserTableGreenCol, schema.UserTableSpecsWeightCol,
 		schema.CommentVoteTableVoteCol,
 	).
 		From(schema.CommentVoteTable).
@@ -123,7 +123,7 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 			vote  int
 		)
 
-		err = rows.Scan(&rUser.ID, &rUser.Name, &rUser.Deleted, &rUser.Identity, &rUser.LastOnline, &rUser.Role,
+		err = rows.Scan(&rUser.ID, &rUser.Name, &rUser.Deleted, &rUser.Identity, &rUser.LastOnline, &rUser.Green,
 			&rUser.SpecsWeight, &vote)
 		if err != nil {
 			return nil, err
