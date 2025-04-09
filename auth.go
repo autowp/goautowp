@@ -12,7 +12,6 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/realip"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -63,14 +62,8 @@ func (s *Auth) ValidateREST(ctx *gin.Context) (UserContext, error) {
 	tokenString := strings.TrimPrefix(header, bearerSchema+" ")
 
 	remoteAddr := ctx.ClientIP()
-
-	if remoteAddr != "bufconn" {
-		ip, _, err := net.SplitHostPort(remoteAddr)
-		if err != nil {
-			logrus.Errorf("userip: %q is not IP:port", remoteAddr)
-		} else {
-			remoteAddr = ip
-		}
+	if remoteAddr == "" {
+		remoteAddr = "127.0.0.1"
 	}
 
 	ip := net.ParseIP(remoteAddr)
@@ -92,19 +85,15 @@ func (s *Auth) ValidateGRPC(ctx context.Context) (UserContext, error) {
 
 	tokenString := strings.TrimPrefix(lines[0], bearerSchema+" ")
 
-	remoteAddr := "127.0.0.1"
-	p, ok := realip.FromContext(ctx)
+	var remoteAddr string
 
+	p, ok := realip.FromContext(ctx)
 	if ok {
-		nw := p.String()
-		if nw != "bufconn" {
-			ip, _, err := net.SplitHostPort(nw)
-			if err != nil {
-				logrus.Errorf("userip: %q is not IP:port", nw)
-			} else {
-				remoteAddr = ip
-			}
-		}
+		remoteAddr = p.String()
+	}
+
+	if remoteAddr == "" {
+		remoteAddr = "127.0.0.1"
 	}
 
 	ip := net.ParseIP(remoteAddr)
