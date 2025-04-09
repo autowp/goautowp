@@ -782,7 +782,6 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 	}
 
 	opts := []realip.Option{
-		realip.WithTrustedProxies(trustedPeers),
 		realip.WithTrustedPeers(trustedPeers),
 		realip.WithHeaders([]string{realip.XForwardedFor}),
 		realip.WithTrustedProxiesCount(1),
