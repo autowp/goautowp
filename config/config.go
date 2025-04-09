@@ -146,6 +146,7 @@ type Config struct {
 	MessageInterval    int64                     `mapstructure:"message-interval"     yaml:"message-interval"`
 	MostsMinCarsCount  int                       `mapstructure:"mosts-min-cars-count" yaml:"mosts-min-cars-count"`
 	YoomoneyConfig     YoomoneyConfig            `mapstructure:"yoomoney"             yaml:"yoomoney"`
+	TrustedNetwork     string                    `mapstructure:"trusted-network"      yaml:"trusted-network"`
 }
 
 var configMutex = sync.RWMutex{}

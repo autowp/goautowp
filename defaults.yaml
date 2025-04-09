@@ -268,3 +268,4 @@ mosts-min-cars-count: 200
 yoomoney:
   secret: "secret"
   price: "999"
+trusted-network: "10.244.0.0/16"

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -624,6 +625,11 @@ func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) 
 	ginEngine := gin.New()
 	ginEngine.Use(gin.Recovery())
 
+	err = ginEngine.SetTrustedProxies([]string{s.Config().TrustedNetwork})
+	if err != nil {
+		return nil, fmt.Errorf("SetTrustedProxies(): %w", err)
+	}
+
 	if len(s.config.PublicRest.Cors.Origin) > 0 {
 		corsConfig := cors.DefaultConfig()
 		corsConfig.AllowOrigins = s.config.PublicRest.Cors.Origin
@@ -771,7 +777,13 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 
 	grpclogrus.ReplaceGrpcLogger(logrusEntry)
 
+	trustedPeers := []netip.Prefix{
+		netip.MustParsePrefix(s.Config().TrustedNetwork),
+	}
+
 	opts := []realip.Option{
+		realip.WithTrustedProxies(trustedPeers),
+		realip.WithTrustedPeers(trustedPeers),
 		realip.WithHeaders([]string{realip.XForwardedFor}),
 		realip.WithTrustedProxiesCount(1),
 	}
