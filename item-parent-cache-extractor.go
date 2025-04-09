@@ -17,7 +17,7 @@ func NewItemParentCacheExtractor(container *Container) *ItemParentCacheExtractor
 }
 
 func (s *ItemParentCacheExtractor) preloadItems(
-	ctx context.Context, request *ItemsRequest, ids []int64, lang string, isModer bool, userID int64, roles []string,
+	ctx context.Context, request *ItemsRequest, ids []int64, lang string, userCtx UserContext,
 ) (map[int64]*APIItem, error) {
 	if request == nil {
 		return nil, nil //nolint: nilnil
@@ -62,7 +62,7 @@ func (s *ItemParentCacheExtractor) preloadItems(
 	}
 
 	for _, row := range rows {
-		result[row.ID], err = itemExtractor.Extract(ctx, row, itemFields, lang, isModer, userID, roles)
+		result[row.ID], err = itemExtractor.Extract(ctx, row, itemFields, lang, userCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -72,8 +72,8 @@ func (s *ItemParentCacheExtractor) preloadItems(
 }
 
 func (s *ItemParentCacheExtractor) ExtractRows(
-	ctx context.Context, rows []*schema.ItemParentCacheRow, fields *ItemParentCacheFields, lang string, isModer bool,
-	userID int64, roles []string,
+	ctx context.Context, rows []*schema.ItemParentCacheRow, fields *ItemParentCacheFields, lang string,
+	userCtx UserContext,
 ) ([]*ItemParentCache, error) {
 	parentIDs := make([]int64, 0, len(rows))
 
@@ -85,7 +85,7 @@ func (s *ItemParentCacheExtractor) ExtractRows(
 
 	itemRequest := fields.GetParentItem()
 
-	parentItemRows, err := s.preloadItems(ctx, itemRequest, parentIDs, lang, isModer, userID, roles)
+	parentItemRows, err := s.preloadItems(ctx, itemRequest, parentIDs, lang, userCtx)
 	if err != nil {
 		return nil, err
 	}

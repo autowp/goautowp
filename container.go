@@ -35,6 +35,7 @@ import (
 	"github.com/gin-gonic/gin"
 	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/realip"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
@@ -770,14 +771,21 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 
 	grpclogrus.ReplaceGrpcLogger(logrusEntry)
 
+	opts := []realip.Option{
+		realip.WithHeaders([]string{realip.XForwardedFor}),
+		realip.WithTrustedProxiesCount(1),
+	}
+
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			grpcctxtags.UnaryServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
 			grpclogrus.UnaryServerInterceptor(logrusEntry),
+			realip.UnaryServerInterceptorOpts(opts...),
 		),
 		grpc.ChainStreamInterceptor(
 			grpcctxtags.StreamServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
 			grpclogrus.StreamServerInterceptor(logrusEntry),
+			realip.StreamServerInterceptorOpts(opts...),
 		),
 	)
 	RegisterArticlesServer(grpcServer, articlesSrv)

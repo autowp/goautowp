@@ -27,16 +27,16 @@ func NewMessagingGRPCServer(repository *messaging.Repository, auth *Auth) *Messa
 }
 
 func (s *MessagingGRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) (*APIMessageNewCount, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	count, err := s.repository.GetUserNewMessagesCount(ctx, userID)
+	count, err := s.repository.GetUserNewMessagesCount(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -47,36 +47,36 @@ func (s *MessagingGRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptyp
 }
 
 func (s *MessagingGRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (*APIMessageSummary, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	inbox, err := s.repository.GetInboxCount(ctx, userID)
+	inbox, err := s.repository.GetInboxCount(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	inboxNew, err := s.repository.GetInboxNewCount(ctx, userID)
+	inboxNew, err := s.repository.GetInboxNewCount(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	sent, err := s.repository.GetSentCount(ctx, userID)
+	sent, err := s.repository.GetSentCount(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	system, err := s.repository.GetSystemCount(ctx, userID)
+	system, err := s.repository.GetSystemCount(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	systemNew, err := s.repository.GetSystemNewCount(ctx, userID)
+	systemNew, err := s.repository.GetSystemNewCount(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -91,16 +91,16 @@ func (s *MessagingGRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb
 }
 
 func (s *MessagingGRPCServer) DeleteMessage(ctx context.Context, in *MessagingDeleteMessage) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	err = s.repository.DeleteMessage(ctx, userID, in.GetMessageId())
+	err = s.repository.DeleteMessage(ctx, userCtx.UserID, in.GetMessageId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -109,41 +109,41 @@ func (s *MessagingGRPCServer) DeleteMessage(ctx context.Context, in *MessagingDe
 }
 
 func (s *MessagingGRPCServer) ClearFolder(ctx context.Context, in *MessagingClearFolder) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
 	switch in.GetFolder() {
 	case "sent":
-		err = s.repository.ClearSent(ctx, userID)
+		err = s.repository.ClearSent(ctx, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 	case "system":
-		err = s.repository.ClearSystem(ctx, userID)
+		err = s.repository.ClearSystem(ctx, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	default:
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.InvalidArgument, "InvalidArgument")
 	}
 
 	return &emptypb.Empty{}, nil
 }
 
 func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCreateMessage) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
@@ -175,7 +175,7 @@ func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCr
 		return nil, wrapFieldViolations(fvs)
 	}
 
-	err = s.repository.CreateMessage(ctx, userID, in.GetUserId(), message)
+	err = s.repository.CreateMessage(ctx, userCtx.UserID, in.GetUserId(), message)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -187,12 +187,12 @@ func (s *MessagingGRPCServer) GetMessages(
 	ctx context.Context,
 	in *MessagingGetMessagesRequest,
 ) (*MessagingGetMessagesResponse, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
@@ -203,15 +203,15 @@ func (s *MessagingGRPCServer) GetMessages(
 
 	switch in.GetFolder() {
 	case "inbox":
-		messages, pages, err = s.repository.GetInbox(ctx, userID, in.GetPage())
+		messages, pages, err = s.repository.GetInbox(ctx, userCtx.UserID, in.GetPage())
 	case "sent":
-		messages, pages, err = s.repository.GetSentbox(ctx, userID, in.GetPage())
+		messages, pages, err = s.repository.GetSentbox(ctx, userCtx.UserID, in.GetPage())
 	case "system":
-		messages, pages, err = s.repository.GetSystembox(ctx, userID, in.GetPage())
+		messages, pages, err = s.repository.GetSystembox(ctx, userCtx.UserID, in.GetPage())
 	case "dialog":
 		messages, pages, err = s.repository.GetDialogbox(
 			ctx,
-			userID,
+			userCtx.UserID,
 			in.GetUserId(),
 			in.GetPage(),
 		)

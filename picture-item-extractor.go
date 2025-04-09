@@ -19,7 +19,7 @@ func NewPictureItemExtractor(container *Container) *PictureItemExtractor {
 }
 
 func (s *PictureItemExtractor) preloadPictures(
-	ctx context.Context, request *PicturesRequest, ids []int64, lang string, isModer bool, userID int64, roles []string,
+	ctx context.Context, request *PicturesRequest, ids []int64, lang string, userCtx UserContext,
 ) (map[int64]*Picture, error) {
 	if request == nil {
 		return nil, nil //nolint: nilnil
@@ -63,7 +63,7 @@ func (s *PictureItemExtractor) preloadPictures(
 	extractor := s.container.PictureExtractor()
 
 	for _, row := range rows {
-		result[row.ID], err = extractor.Extract(ctx, row, fields, lang, isModer, userID, roles)
+		result[row.ID], err = extractor.Extract(ctx, row, fields, lang, userCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +73,7 @@ func (s *PictureItemExtractor) preloadPictures(
 }
 
 func (s *PictureItemExtractor) preloadItems(
-	ctx context.Context, request *ItemsRequest, ids []int64, lang string, isModer bool, userID int64, roles []string,
+	ctx context.Context, request *ItemsRequest, ids []int64, lang string, userCtx UserContext,
 ) (map[int64]*APIItem, error) {
 	if request == nil {
 		return nil, nil //nolint: nilnil
@@ -118,7 +118,7 @@ func (s *PictureItemExtractor) preloadItems(
 	itemExtractor := s.container.ItemExtractor()
 
 	for _, row := range rows {
-		result[row.ID], err = itemExtractor.Extract(ctx, row, itemFields, lang, isModer, userID, roles)
+		result[row.ID], err = itemExtractor.Extract(ctx, row, itemFields, lang, userCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -128,8 +128,7 @@ func (s *PictureItemExtractor) preloadItems(
 }
 
 func (s *PictureItemExtractor) preloadItemParentCache(
-	ctx context.Context, request *ItemParentCacheRequest, ids []int64, lang string, isModer bool, userID int64,
-	roles []string,
+	ctx context.Context, request *ItemParentCacheRequest, ids []int64, lang string, userCtx UserContext,
 ) (map[int64][]*ItemParentCache, error) {
 	if request == nil {
 		return nil, nil //nolint: nilnil
@@ -164,8 +163,7 @@ func (s *PictureItemExtractor) preloadItemParentCache(
 
 	itemParentCacheExtractor := s.container.ItemParentCacheExtractor()
 
-	extractedRows, err := itemParentCacheExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, isModer, userID,
-		roles)
+	extractedRows, err := itemParentCacheExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, userCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -183,8 +181,7 @@ func (s *PictureItemExtractor) preloadItemParentCache(
 }
 
 func (s *PictureItemExtractor) ExtractRows(
-	ctx context.Context, rows []*schema.PictureItemRow, fields *PictureItemFields, lang string, isModer bool,
-	userID int64, roles []string,
+	ctx context.Context, rows []*schema.PictureItemRow, fields *PictureItemFields, lang string, userCtx UserContext,
 ) ([]*PictureItem, error) {
 	if fields == nil {
 		fields = &PictureItemFields{}
@@ -198,7 +195,7 @@ func (s *PictureItemExtractor) ExtractRows(
 
 	itemRequest := fields.GetItem()
 
-	itemRows, err := s.preloadItems(ctx, itemRequest, ids, lang, isModer, userID, roles)
+	itemRows, err := s.preloadItems(ctx, itemRequest, ids, lang, userCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +203,7 @@ func (s *PictureItemExtractor) ExtractRows(
 	itemParentCacheAncestorRequest := fields.GetItemParentCacheAncestor()
 
 	itemParentCacheAncestorRows, err := s.preloadItemParentCache(
-		ctx, itemParentCacheAncestorRequest, ids, lang, isModer, userID, roles,
+		ctx, itemParentCacheAncestorRequest, ids, lang, userCtx,
 	)
 	if err != nil {
 		return nil, err
@@ -214,7 +211,7 @@ func (s *PictureItemExtractor) ExtractRows(
 
 	pictureRequest := fields.GetPicture()
 
-	pictureRows, err := s.preloadPictures(ctx, pictureRequest, ids, lang, isModer, userID, roles)
+	pictureRows, err := s.preloadPictures(ctx, pictureRequest, ids, lang, userCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -254,10 +251,9 @@ func (s *PictureItemExtractor) ExtractRows(
 }
 
 func (s *PictureItemExtractor) Extract(
-	ctx context.Context, row *schema.PictureItemRow, fields *PictureItemFields, lang string, isModer bool,
-	userID int64, roles []string,
+	ctx context.Context, row *schema.PictureItemRow, fields *PictureItemFields, lang string, userCtx UserContext,
 ) (*PictureItem, error) {
-	result, err := s.ExtractRows(ctx, []*schema.PictureItemRow{row}, fields, lang, isModer, userID, roles)
+	result, err := s.ExtractRows(ctx, []*schema.PictureItemRow{row}, fields, lang, userCtx)
 
 	return result[0], err
 }

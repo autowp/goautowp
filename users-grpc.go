@@ -73,19 +73,19 @@ func NewUsersGRPCServer(
 }
 
 func (s *UsersGRPCServer) Me(ctx context.Context, in *APIMeRequest) (*APIUser, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return s.GetUser(ctx, &APIGetUserRequest{
-		UserId: userID,
+		UserId: userCtx.UserID,
 		Fields: in.GetFields(),
 	})
 }
 
 func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*APIUser, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -93,7 +93,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 	dbUser, err := s.userRepository.User(ctx, &query.UserListOptions{
 		ID:       in.GetUserId(),
 		Identity: in.GetIdentity(),
-	}, convertUserFields(in.GetFields(), role), users.OrderByNone)
+	}, convertUserFields(in.GetFields(), userCtx.Roles), users.OrderByNone)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -102,7 +102,7 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 		return nil, status.Error(codes.NotFound, "User not found")
 	}
 
-	apiUser, err := s.userExtractor.Extract(ctx, dbUser, in.GetFields(), userID, role)
+	apiUser, err := s.userExtractor.Extract(ctx, dbUser, in.GetFields(), userCtx.UserID, userCtx.Roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -111,17 +111,17 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 }
 
 func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleAdmin) {
-		if userID != in.GetUserId() {
+	if !util.Contains(userCtx.Roles, users.RoleAdmin) {
+		if userCtx.UserID != in.GetUserId() {
 			return nil, status.Errorf(codes.Internal, "Forbidden")
 		}
 
@@ -152,7 +152,7 @@ func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserReque
 		}
 
 		err = s.events.Add(ctx, Event{
-			UserID:  userID,
+			UserID:  userCtx.UserID,
 			Message: fmt.Sprintf("Удаление пользователя №%d", in.GetUserId()),
 			Users:   []int64{in.GetUserId()},
 		})
@@ -168,20 +168,20 @@ func (s *UsersGRPCServer) DisableUserCommentsNotifications(
 	ctx context.Context,
 	in *APIUserPreferencesRequest,
 ) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if in.GetUserId() == userID {
+	if in.GetUserId() == userCtx.UserID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.GetUserId(), true)
+	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userCtx.UserID, in.GetUserId(), true)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -193,20 +193,20 @@ func (s *UsersGRPCServer) EnableUserCommentsNotifications(
 	ctx context.Context,
 	in *APIUserPreferencesRequest,
 ) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if in.GetUserId() == userID {
+	if in.GetUserId() == userCtx.UserID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userID, in.GetUserId(), false)
+	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userCtx.UserID, in.GetUserId(), false)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -218,20 +218,20 @@ func (s *UsersGRPCServer) GetUserPreferences(
 	ctx context.Context,
 	in *APIUserPreferencesRequest,
 ) (*APIUserPreferencesResponse, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if in.GetUserId() == userID {
+	if in.GetUserId() == userCtx.UserID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	prefs, err := s.userRepository.UserPreferences(ctx, userID, in.GetUserId())
+	prefs, err := s.userRepository.UserPreferences(ctx, userCtx.UserID, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -242,7 +242,7 @@ func (s *UsersGRPCServer) GetUserPreferences(
 }
 
 func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*APIUsersResponse, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -253,7 +253,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 		Page:     in.GetPage(),
 		Search:   in.GetSearch(),
 		IDs:      in.GetId(),
-	}, convertUserFields(in.GetFields(), role), users.OrderByNone)
+	}, convertUserFields(in.GetFields(), userCtx.Roles), users.OrderByNone)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -261,7 +261,7 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 	result := make([]*APIUser, 0)
 
 	for idx := range rows {
-		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx], in.GetFields(), userID, role)
+		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx], in.GetFields(), userCtx.UserID, userCtx.Roles)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -292,16 +292,16 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 }
 
 func (s *UsersGRPCServer) GetAccounts(ctx context.Context, _ *emptypb.Empty) (*APIAccountsResponse, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	rows, err := s.userRepository.UserAccounts(ctx, userID)
+	rows, err := s.userRepository.UserAccounts(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -310,7 +310,7 @@ func (s *UsersGRPCServer) GetAccounts(ctx context.Context, _ *emptypb.Empty) (*A
 
 	for _, row := range rows {
 		if row.ServiceID != "keycloak" {
-			canRemove, err := s.canRemoveAccount(ctx, userID, row.ID)
+			canRemove, err := s.canRemoveAccount(ctx, userCtx.UserID, row.ID)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -344,16 +344,16 @@ func (s *UsersGRPCServer) canRemoveAccount(ctx context.Context, userID int64, id
 }
 
 func (s *UsersGRPCServer) DeleteUserAccount(ctx context.Context, in *DeleteUserAccountRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	canRemove, err := s.canRemoveAccount(ctx, userID, in.GetId())
+	canRemove, err := s.canRemoveAccount(ctx, userCtx.UserID, in.GetId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -371,12 +371,12 @@ func (s *UsersGRPCServer) DeleteUserAccount(ctx context.Context, in *DeleteUserA
 }
 
 func (s *UsersGRPCServer) DeleteUserPhoto(ctx context.Context, in *DeleteUserPhotoRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleUsersModer) {
+	if !util.Contains(userCtx.Roles, users.RoleUsersModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -391,7 +391,7 @@ func (s *UsersGRPCServer) DeleteUserPhoto(ctx context.Context, in *DeleteUserPho
 
 	if success {
 		err = s.events.Add(ctx, Event{
-			UserID:  userID,
+			UserID:  userCtx.UserID,
 			Message: fmt.Sprintf("Удаление фотографии пользователя №%d", in.GetId()),
 			Users:   []int64{in.GetId()},
 		})
@@ -404,7 +404,7 @@ func (s *UsersGRPCServer) DeleteUserPhoto(ctx context.Context, in *DeleteUserPho
 }
 
 func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *UpdateUserRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -415,7 +415,7 @@ func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *UpdateUserRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "id is zero")
 	}
 
-	if userID != values.GetId() {
+	if userCtx.UserID != values.GetId() {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -435,7 +435,7 @@ func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *UpdateUserRequest)
 	}
 
 	set := schema.UsersRow{
-		ID: userID,
+		ID: userCtx.UserID,
 	}
 
 	if util.Contains(maskPaths, "language") {

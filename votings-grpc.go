@@ -29,14 +29,14 @@ func NewVotingsGRPCServer(
 }
 
 func (s *VotingsGRPCServer) GetVoting(ctx context.Context, in *VotingRequest) (*Voting, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	id := in.GetId()
 
-	voting, variants, err := s.repository.Voting(ctx, id, userID)
+	voting, variants, err := s.repository.Voting(ctx, id, userCtx.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.NotFound, "Voting not found")
@@ -81,14 +81,14 @@ func (s *VotingsGRPCServer) GetVotingVariantVotes(ctx context.Context, in *Votin
 }
 
 func (s *VotingsGRPCServer) Vote(ctx context.Context, in *VoteRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	id := in.GetId()
 
-	success, err := s.repository.Vote(ctx, id, in.GetVotingVariantVoteIds(), userID)
+	success, err := s.repository.Vote(ctx, id, in.GetVotingVariantVoteIds(), userCtx.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Error(codes.NotFound, "Voting not found")

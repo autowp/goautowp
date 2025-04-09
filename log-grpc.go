@@ -25,12 +25,12 @@ func NewLogGRPCServer(repository *log.Repository, auth *Auth) *LogGRPCServer {
 }
 
 func (s *LogGRPCServer) GetEvents(ctx context.Context, in *LogEventsRequest) (*LogEvents, error) {
-	_, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 

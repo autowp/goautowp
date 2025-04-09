@@ -3,6 +3,7 @@ package goautowp
 import (
 	"context"
 	"errors"
+	"net"
 	"strings"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -10,12 +11,15 @@ import (
 	"github.com/autowp/goautowp/users"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-gonic/gin"
-	"google.golang.org/grpc/codes"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/realip"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
-var errAuthTokenIsInvalid = errors.New("authorization token is invalid")
+var (
+	errAuthTokenIsInvalid = errors.New("authorization token is invalid")
+	errMissingMetadata    = errors.New("missing metadata")
+)
 
 const (
 	authorizationHeader = "authorization"
@@ -27,6 +31,12 @@ type Auth struct {
 	keycloak    *gocloak.GoCloak
 	keycloakCfg config.KeycloakConfig
 	repository  *users.Repository
+}
+
+type UserContext struct {
+	UserID int64
+	Roles  []string
+	IP     net.IP
 }
 
 func NewAuth(
@@ -43,56 +53,92 @@ func NewAuth(
 	}
 }
 
-func (s *Auth) ValidateREST(ctx *gin.Context) (int64, []string, error) {
+func (s *Auth) ValidateREST(ctx *gin.Context) (UserContext, error) {
 	header := ctx.GetHeader(authorizationHeader)
 
 	if len(header) == 0 {
-		return 0, nil, nil
+		return UserContext{}, nil
 	}
 
 	tokenString := strings.TrimPrefix(header, bearerSchema+" ")
 
-	return s.ValidateToken(ctx, tokenString)
+	remoteAddr := ctx.ClientIP()
+
+	if remoteAddr != "bufconn" {
+		ip, _, err := net.SplitHostPort(remoteAddr)
+		if err != nil {
+			logrus.Errorf("userip: %q is not IP:port", remoteAddr)
+		} else {
+			remoteAddr = ip
+		}
+	}
+
+	ip := net.ParseIP(remoteAddr)
+
+	return s.ValidateToken(ctx, tokenString, ip)
 }
 
-func (s *Auth) ValidateGRPC(ctx context.Context) (int64, []string, error) {
+func (s *Auth) ValidateGRPC(ctx context.Context) (UserContext, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return 0, nil, status.Errorf(codes.InvalidArgument, "missing metadata")
+		return UserContext{}, errMissingMetadata
 	}
 
 	lines := md[authorizationHeader]
 
 	if len(lines) < 1 {
-		return 0, nil, nil
+		return UserContext{}, nil
 	}
 
 	tokenString := strings.TrimPrefix(lines[0], bearerSchema+" ")
 
-	return s.ValidateToken(ctx, tokenString)
+	remoteAddr := "127.0.0.1"
+	p, ok := realip.FromContext(ctx)
+
+	if ok {
+		nw := p.String()
+		if nw != "bufconn" {
+			ip, _, err := net.SplitHostPort(nw)
+			if err != nil {
+				logrus.Errorf("userip: %q is not IP:port", nw)
+			} else {
+				remoteAddr = ip
+			}
+		}
+	}
+
+	ip := net.ParseIP(remoteAddr)
+
+	return s.ValidateToken(ctx, tokenString, ip)
 }
 
-func (s *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, []string, error) {
+func (s *Auth) ValidateToken(ctx context.Context, tokenString string, ip net.IP) (UserContext, error) {
+	res := UserContext{}
+
 	if len(tokenString) == 0 {
-		return 0, nil, errAuthTokenIsInvalid
+		return res, errAuthTokenIsInvalid
 	}
 
 	var claims users.Claims
 
 	_, err := s.keycloak.DecodeAccessTokenCustomClaims(ctx, tokenString, s.keycloakCfg.Realm, &claims)
 	if err != nil {
-		return 0, nil, err
+		return res, err
 	}
 
-	id, err := s.repository.EnsureUserImported(ctx, claims)
+	id, err := s.repository.EnsureUserImported(ctx, claims, ip)
 	if err != nil {
-		return 0, nil, err
+		return res, err
 	}
 
-	err = s.repository.RegisterVisit(ctx, id)
+	err = s.repository.RegisterVisit(ctx, id, ip)
 	if err != nil {
-		return 0, nil, err
+		return res, err
 	}
 
-	return id, claims.ResourceAccess.Autowp.Roles, nil
+	return UserContext{
+		UserID: id,
+		Roles:  claims.ResourceAccess.Autowp.Roles,
+		IP:     ip,
+	}, nil
 }

@@ -99,21 +99,21 @@ func (s *PicturesGRPCServer) View(ctx context.Context, in *PicturesViewRequest) 
 }
 
 func (s *PicturesGRPCServer) Vote(ctx context.Context, in *PicturesVoteRequest) (*PicturesVoteSummary, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	err = s.repository.Vote(ctx, in.GetPictureId(), in.GetValue(), userID)
+	err = s.repository.Vote(ctx, in.GetPictureId(), in.GetValue(), userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	vote, err := s.repository.GetVote(ctx, in.GetPictureId(), userID)
+	vote, err := s.repository.GetVote(ctx, in.GetPictureId(), userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -162,21 +162,21 @@ func (s *PicturesGRPCServer) CreateModerVoteTemplate(
 	ctx context.Context,
 	in *ModerVoteTemplate,
 ) (*ModerVoteTemplate, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
 	tpl := schema.PictureModerVoteTemplateRow{
-		UserID:  userID,
+		UserID:  userCtx.UserID,
 		Message: in.GetMessage(),
 		Vote:    int8(in.GetVote()), //nolint: gosec
 	}
@@ -202,20 +202,20 @@ func (s *PicturesGRPCServer) DeleteModerVoteTemplate(
 	ctx context.Context,
 	in *DeleteModerVoteTemplateRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.repository.DeleteModerVoteTemplate(ctx, in.GetId(), userID)
+	err = s.repository.DeleteModerVoteTemplate(ctx, in.GetId(), userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -224,20 +224,20 @@ func (s *PicturesGRPCServer) DeleteModerVoteTemplate(
 }
 
 func (s *PicturesGRPCServer) GetModerVoteTemplates(ctx context.Context, _ *emptypb.Empty) (*ModerVoteTemplates, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.GetModerVoteTemplates(ctx, userID)
+	rows, err := s.repository.GetModerVoteTemplates(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -253,16 +253,16 @@ func (s *PicturesGRPCServer) GetModerVoteTemplates(ctx context.Context, _ *empty
 }
 
 func (s *PicturesGRPCServer) DeleteModerVote(ctx context.Context, in *DeleteModerVoteRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -270,14 +270,14 @@ func (s *PicturesGRPCServer) DeleteModerVote(ctx context.Context, in *DeleteMode
 
 	ctx = context.WithoutCancel(ctx)
 
-	success, err := s.repository.DeleteModerVote(ctx, pictureID, userID)
+	success, err := s.repository.DeleteModerVote(ctx, pictureID, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if success {
 		err = s.events.Add(ctx, Event{
-			UserID:   userID,
+			UserID:   userCtx.UserID,
 			Message:  fmt.Sprintf("Отменена заявка на принятие/удаление картинки %d", pictureID),
 			Pictures: []int64{pictureID},
 		})
@@ -290,16 +290,16 @@ func (s *PicturesGRPCServer) DeleteModerVote(ctx context.Context, in *DeleteMode
 }
 
 func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateModerVoteRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RolePicturesModer) {
+	if !util.Contains(userCtx.Roles, users.RolePicturesModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -318,7 +318,7 @@ func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateMode
 
 	ctx = context.WithoutCancel(ctx)
 
-	success, err := s.repository.CreateModerVote(ctx, pictureID, userID, vote, reason)
+	success, err := s.repository.CreateModerVote(ctx, pictureID, userCtx.UserID, vote, reason)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -333,28 +333,28 @@ func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateMode
 	}
 
 	if vote && currentStatus == schema.PictureStatusRemoving {
-		err = s.restoreFromRemoving(ctx, pictureID, userID)
+		err = s.restoreFromRemoving(ctx, pictureID, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
 	if (!vote) && currentStatus == schema.PictureStatusAccepted {
-		err = s.unaccept(ctx, pictureID, userID)
+		err = s.unaccept(ctx, pictureID, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
 	if in.GetSave() {
-		exists, err := s.repository.IsModerVoteTemplateExists(ctx, userID, reason)
+		exists, err := s.repository.IsModerVoteTemplateExists(ctx, userCtx.UserID, reason)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		if !exists {
 			tpl := schema.PictureModerVoteTemplateRow{
-				UserID:  userID,
+				UserID:  userCtx.UserID,
 				Message: reason,
 				Vote:    int8(in.GetVote()), //nolint: gosec
 			}
@@ -372,7 +372,7 @@ func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateMode
 	}
 
 	err = s.events.Add(ctx, Event{
-		UserID:   userID,
+		UserID:   userCtx.UserID,
 		Message:  fmt.Sprintf(msgTemplate, pictureID),
 		Pictures: []int64{pictureID},
 	})
@@ -380,7 +380,7 @@ func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateMode
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.notifyVote(ctx, pictureID, vote, reason, userID)
+	err = s.notifyVote(ctx, pictureID, vote, reason, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -552,18 +552,18 @@ func (s *PicturesGRPCServer) notifyVote(
 }
 
 func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empty) (*PicturesUserSummary, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
 	acceptedCount, err := s.repository.Count(ctx, &query.PictureListOptions{
 		Status:  schema.PictureStatusAccepted,
-		OwnerID: userID,
+		OwnerID: userCtx.UserID,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -571,7 +571,7 @@ func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empt
 
 	inboxCount, err := s.repository.Count(ctx, &query.PictureListOptions{
 		Status:  schema.PictureStatusInbox,
-		OwnerID: userID,
+		OwnerID: userCtx.UserID,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -588,16 +588,16 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(ctx context.Context, p
 		return 0, status.Error(codes.NotFound, "NotFound")
 	}
 
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return 0, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return 0, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -612,12 +612,12 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(ctx context.Context, p
 		return 0, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	canNormalize := pic.Status == schema.PictureStatusInbox && util.Contains(roles, users.RolePicturesModer)
+	canNormalize := pic.Status == schema.PictureStatusInbox && util.Contains(userCtx.Roles, users.RolePicturesModer)
 	if !canNormalize {
 		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	return userID, nil
+	return userCtx.UserID, nil
 }
 
 func (s *PicturesGRPCServer) Normalize(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
@@ -675,16 +675,16 @@ func (s *PicturesGRPCServer) Flop(ctx context.Context, in *PictureIDRequest) (*e
 }
 
 func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimilarRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -695,7 +695,7 @@ func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimila
 	}
 
 	err = s.events.Add(ctx, Event{
-		UserID:   userID,
+		UserID:   userCtx.UserID,
 		Message:  "Отменёно предупреждение о повторе",
 		Pictures: []int64{in.GetId(), in.GetSimilarPictureId()},
 	})
@@ -707,16 +707,16 @@ func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimila
 }
 
 func (s *PicturesGRPCServer) Repair(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -731,16 +731,16 @@ func (s *PicturesGRPCServer) Repair(ctx context.Context, in *PictureIDRequest) (
 func (s *PicturesGRPCServer) SetPictureItemArea(
 	ctx context.Context, in *SetPictureItemAreaRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -760,7 +760,7 @@ func (s *PicturesGRPCServer) SetPictureItemArea(
 	}
 
 	err = s.events.Add(ctx, Event{
-		UserID:   userID,
+		UserID:   userCtx.UserID,
 		Message:  "Выделение области на картинке",
 		Pictures: []int64{in.GetPictureId()},
 		Items:    []int64{in.GetItemId()},
@@ -775,16 +775,16 @@ func (s *PicturesGRPCServer) SetPictureItemArea(
 func (s *PicturesGRPCServer) SetPictureItemPerspective(
 	ctx context.Context, in *SetPictureItemPerspectiveRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		pictureID := in.GetPictureId()
 		if pictureID == 0 {
 			return nil, status.Error(codes.NotFound, "NotFound")
@@ -797,7 +797,7 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userID || pic.Status != schema.PictureStatusInbox {
+		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userCtx.UserID || pic.Status != schema.PictureStatusInbox {
 			return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 		}
 	}
@@ -814,7 +814,7 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 	}
 
 	err = s.events.Add(ctx, Event{
-		UserID:   userID,
+		UserID:   userCtx.UserID,
 		Message:  "Установка ракурса картинки",
 		Pictures: []int64{in.GetPictureId()},
 		Items:    []int64{in.GetItemId()},
@@ -829,16 +829,16 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 func (s *PicturesGRPCServer) SetPictureItemItemID(
 	ctx context.Context, in *SetPictureItemItemIDRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RolePicturesModer) {
+	if !util.Contains(userCtx.Roles, users.RolePicturesModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -853,7 +853,7 @@ func (s *PicturesGRPCServer) SetPictureItemItemID(
 	}
 
 	err = s.events.Add(ctx, Event{
-		UserID: userID,
+		UserID: userCtx.UserID,
 		Message: fmt.Sprintf(
 			"Картинка %d перемещена из %d в %d",
 			in.GetPictureId(), in.GetItemId(), in.GetNewItemId(),
@@ -871,16 +871,16 @@ func (s *PicturesGRPCServer) SetPictureItemItemID(
 func (s *PicturesGRPCServer) DeletePictureItem(
 	ctx context.Context, in *DeletePictureItemRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RolePicturesModer) {
+	if !util.Contains(userCtx.Roles, users.RolePicturesModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -897,7 +897,7 @@ func (s *PicturesGRPCServer) DeletePictureItem(
 	}
 
 	err = s.events.Add(ctx, Event{
-		UserID:   userID,
+		UserID:   userCtx.UserID,
 		Message:  fmt.Sprintf("Картинка %d отвязана от %d", in.GetPictureId(), in.GetItemId()),
 		Pictures: []int64{in.GetPictureId()},
 		Items:    []int64{in.GetItemId()},
@@ -912,16 +912,16 @@ func (s *PicturesGRPCServer) DeletePictureItem(
 func (s *PicturesGRPCServer) CreatePictureItem(
 	ctx context.Context, in *CreatePictureItemRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RolePicturesModer) {
+	if !util.Contains(userCtx.Roles, users.RolePicturesModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -937,7 +937,7 @@ func (s *PicturesGRPCServer) CreatePictureItem(
 
 	if success {
 		err = s.events.Add(ctx, Event{
-			UserID: userID,
+			UserID: userCtx.UserID,
 			Message: fmt.Sprintf(
 				"Картинка %d связана с %d",
 				in.GetPictureId(), in.GetItemId(),
@@ -954,16 +954,16 @@ func (s *PicturesGRPCServer) CreatePictureItem(
 }
 
 func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureCropRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RolePicturesModer) {
+	if !util.Contains(userCtx.Roles, users.RolePicturesModer) {
 		pictureID := in.GetPictureId()
 		if pictureID == 0 {
 			return nil, status.Error(codes.NotFound, "NotFound")
@@ -980,7 +980,7 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userID || pic.Status != schema.PictureStatusInbox {
+		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userCtx.UserID || pic.Status != schema.PictureStatusInbox {
 			return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 		}
 	}
@@ -1000,7 +1000,7 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 	}
 
 	err = s.events.Add(ctx, Event{
-		UserID:   userID,
+		UserID:   userCtx.UserID,
 		Message:  "Выделение области на картинке",
 		Pictures: []int64{in.GetPictureId()},
 	})
@@ -1012,16 +1012,16 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 }
 
 func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RolePicturesModer) {
+	if !util.Contains(userCtx.Roles, users.RolePicturesModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1034,7 +1034,7 @@ func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *Pictur
 
 	if success {
 		err = s.events.Add(ctx, Event{
-			UserID:   userID,
+			UserID:   userCtx.UserID,
 			Message:  fmt.Sprintf("Замена для %d отклонена", in.GetId()),
 			Pictures: []int64{in.GetId()},
 		})
@@ -1047,16 +1047,16 @@ func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *Pictur
 }
 
 func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1083,7 +1083,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !s.canReplace(pic, replacePicture, roles) {
+	if !s.canReplace(pic, replacePicture, userCtx.Roles) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1091,7 +1091,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 
 	// statuses
 	if pic.Status != schema.PictureStatusAccepted {
-		_, success, err := s.repository.Accept(ctx, pic.ID, userID)
+		_, success, err := s.repository.Accept(ctx, pic.ID, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Accept error: "+err.Error())
 		}
@@ -1105,7 +1105,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 	}
 
 	if replacePicture.Status != schema.PictureStatusRemoving && replacePicture.Status != schema.PictureStatusRemoved {
-		success, err := s.repository.QueueRemove(ctx, replacePicture.ID, userID)
+		success, err := s.repository.QueueRemove(ctx, replacePicture.ID, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "QueueRemove error: "+err.Error())
 		}
@@ -1138,14 +1138,15 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		recipients[replacePicture.OwnerID.Int64] = replacePicture.OwnerID
 	}
 
-	user, err := s.userRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
+	user, err := s.userRepository.User(ctx, &query.UserListOptions{ID: userCtx.UserID}, users.UserFields{},
+		users.OrderByNone)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	for _, recipient := range recipients {
 		err = s.sendLocalizedMessage(
-			ctx, userID, recipient, "pm/user-%s-accept-replace-%s-%s",
+			ctx, userCtx.UserID, recipient, "pm/user-%s-accept-replace-%s-%s",
 			func(lang string) (map[string]interface{}, error) {
 				uri, err := s.hostManager.URIByLanguage(lang)
 				if err != nil {
@@ -1153,7 +1154,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 				}
 
 				return map[string]interface{}{
-					"ModeratorURL":          frontend.UserURL(uri, userID, user.Identity),
+					"ModeratorURL":          frontend.UserURL(uri, userCtx.UserID, user.Identity),
 					"PictureURL":            frontend.PictureURL(uri, replacePicture.Identity),
 					"ReplacementPictureURL": frontend.PictureURL(uri, pic.Identity),
 				}, nil
@@ -1165,7 +1166,7 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 
 	// log
 	err = s.events.Add(ctx, Event{
-		UserID:   userID,
+		UserID:   userCtx.UserID,
 		Message:  fmt.Sprintf("Замена %d на %d", replacePicture.ID, pic.ID),
 		Pictures: []int64{replacePicture.ID, pic.ID},
 	})
@@ -1177,16 +1178,16 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 }
 
 func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicturePointRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1208,7 +1209,7 @@ func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicture
 
 	if success {
 		err = s.events.Add(ctx, Event{
-			UserID:   userID,
+			UserID:   userCtx.UserID,
 			Message:  "Изменена точка для изображения",
 			Pictures: []int64{in.GetPictureId()},
 		})
@@ -1221,16 +1222,16 @@ func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicture
 }
 
 func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictureRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1248,7 +1249,7 @@ func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictur
 
 	if success {
 		err = s.events.Add(ctx, Event{
-			UserID:   userID,
+			UserID:   userCtx.UserID,
 			Message:  "Редактирование изображения (дата, особое название)",
 			Pictures: []int64{in.GetId()},
 		})
@@ -1263,23 +1264,23 @@ func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictur
 func (s *PicturesGRPCServer) SetPictureCopyrights(
 	ctx context.Context, in *SetPictureCopyrightsRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
 	pictureID := in.GetId()
 	ctx = context.WithoutCancel(ctx)
 
-	success, textID, err := s.repository.SetPictureCopyrights(ctx, pictureID, in.GetCopyrights(), userID)
+	success, textID, err := s.repository.SetPictureCopyrights(ctx, pictureID, in.GetCopyrights(), userCtx.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "NotFound")
@@ -1290,7 +1291,7 @@ func (s *PicturesGRPCServer) SetPictureCopyrights(
 
 	if success {
 		err = s.events.Add(ctx, Event{
-			UserID:   userID,
+			UserID:   userCtx.UserID,
 			Message:  "Редактирование текста копирайтов изображения",
 			Pictures: []int64{in.GetId()},
 		})
@@ -1298,7 +1299,7 @@ func (s *PicturesGRPCServer) SetPictureCopyrights(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		err = s.notifyCopyrightsEdited(ctx, pictureID, textID, userID)
+		err = s.notifyCopyrightsEdited(ctx, pictureID, textID, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1388,16 +1389,16 @@ func (s *PicturesGRPCServer) pictureURL(identity string, lang string) (string, e
 func (s *PicturesGRPCServer) SetPictureStatus(
 	ctx context.Context, in *SetPictureStatusRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -1417,7 +1418,7 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 
 	switch in.GetStatus() {
 	case PictureStatus_PICTURE_STATUS_ACCEPTED:
-		canAccept, err := s.canAccept(ctx, pic, roles)
+		canAccept, err := s.canAccept(ctx, pic, userCtx.Roles)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1426,14 +1427,14 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 			return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 		}
 
-		isFirstTimeAccepted, success, err := s.repository.Accept(ctx, pic.ID, userID)
+		isFirstTimeAccepted, success, err := s.repository.Accept(ctx, pic.ID, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Accept error: "+err.Error())
 		}
 
 		if success {
 			err = s.events.Add(ctx, Event{
-				UserID:   userID,
+				UserID:   userCtx.UserID,
 				Message:  fmt.Sprintf("Картинка `%d` принята", pic.ID),
 				Pictures: []int64{pic.ID},
 			})
@@ -1448,35 +1449,35 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 				}
 			}
 
-			err = s.notifyAccepted(ctx, pic, userID, isFirstTimeAccepted)
+			err = s.notifyAccepted(ctx, pic, userCtx.UserID, isFirstTimeAccepted)
 			if err != nil {
 				return nil, status.Error(codes.Internal, "notifyAccepted error: "+err.Error())
 			}
 		}
 	case PictureStatus_PICTURE_STATUS_INBOX:
 		if pic.Status == schema.PictureStatusRemoving {
-			canRestore := util.Contains(roles, users.RoleAdmin)
+			canRestore := util.Contains(userCtx.Roles, users.RoleAdmin)
 			if !canRestore {
 				return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 			}
 
-			err = s.restoreFromRemoving(ctx, pic.ID, userID)
+			err = s.restoreFromRemoving(ctx, pic.ID, userCtx.UserID)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		} else if pic.Status == schema.PictureStatusAccepted {
-			canUnaccept := util.Contains(roles, users.RolePicturesModer)
+			canUnaccept := util.Contains(userCtx.Roles, users.RolePicturesModer)
 			if !canUnaccept {
 				return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 			}
 
-			err = s.unaccept(ctx, pic.ID, userID)
+			err = s.unaccept(ctx, pic.ID, userCtx.UserID)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		}
 	case PictureStatus_PICTURE_STATUS_REMOVING:
-		canDelete, err := s.pictureCanDelete(ctx, pic, roles, userID)
+		canDelete, err := s.pictureCanDelete(ctx, pic, userCtx.Roles, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1485,19 +1486,19 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 			return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 		}
 
-		success, err := s.repository.QueueRemove(ctx, pic.ID, userID)
+		success, err := s.repository.QueueRemove(ctx, pic.ID, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		if success {
-			err = s.notifyRemoving(ctx, pic, userID)
+			err = s.notifyRemoving(ctx, pic, userCtx.UserID)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			err = s.events.Add(ctx, Event{
-				UserID:   userID,
+				UserID:   userCtx.UserID,
 				Message:  fmt.Sprintf("Картинка `%d` поставлена в очередь на удаление", pic.ID),
 				Pictures: []int64{pic.ID},
 			})
@@ -1728,16 +1729,16 @@ func (s *PicturesGRPCServer) canReplace(picture, replacedPicture *schema.Picture
 }
 
 func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *PictureItemsRequest) (*PictureItem, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	isModer := util.Contains(roles, users.RoleModer)
+	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 	if !isModer {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -1752,7 +1753,7 @@ func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *PictureItem
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	result, err := s.pictureItemExtractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID, roles)
+	result, err := s.pictureItemExtractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), userCtx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1761,12 +1762,11 @@ func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *PictureItem
 }
 
 func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureItemsRequest) (*PictureItems, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := util.Contains(roles, users.RoleModer)
 	inOptions := in.GetOptions()
 
 	if inOptions.GetPictureId() == 0 && inOptions.GetItemId() == 0 {
@@ -1785,7 +1785,7 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureIte
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res, err := s.pictureItemExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID, roles)
+	res, err := s.pictureItemExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), userCtx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1796,14 +1796,14 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureIte
 }
 
 func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *PicturesRequest) (*Picture, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := util.Contains(roles, users.RoleModer)
+	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 
-	err = s.isRestricted(in, isModer, userID)
+	err = s.isRestricted(in, isModer, userCtx.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1831,7 +1831,7 @@ func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *PicturesRequest
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return s.pictureExtractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), isModer, userID, roles)
+	return s.pictureExtractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), userCtx)
 }
 
 func (s *PicturesGRPCServer) LoadLocation(timezone string) (*time.Location, error) {
@@ -1926,7 +1926,7 @@ func (s *PicturesGRPCServer) isRestricted(in *PicturesRequest, isModer bool, use
 }
 
 func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesRequest) (*PicturesList, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1934,9 +1934,9 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 	inOptions := in.GetOptions()
 	order := convertPicturesOrder(in.GetOrder())
 
-	isModer := util.Contains(roles, users.RoleModer)
+	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 	// && options.ExactItemID == 0 && options.Status == "" && !options.identity
-	err = s.isRestricted(in, isModer, userID)
+	err = s.isRestricted(in, isModer, userCtx.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1954,7 +1954,7 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 	options.Page = in.GetPage()
 
 	if options.AddDate != nil || options.AcceptDate != nil || options.AddedFrom != nil {
-		options.Timezone, err = s.resolveTimezone(ctx, userID, in.GetLanguage())
+		options.Timezone, err = s.resolveTimezone(ctx, userCtx.UserID, in.GetLanguage())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1967,7 +1967,7 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res, err := s.pictureExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), isModer, userID, roles)
+	res, err := s.pictureExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), userCtx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1995,15 +1995,15 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 }
 
 func (s *PicturesGRPCServer) GetPicturesPaginator(ctx context.Context, in *PicturesRequest) (*Pages, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	inOptions := in.GetOptions()
-	isModer := util.Contains(roles, users.RoleModer)
+	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 
-	err = s.isRestricted(in, isModer, userID)
+	err = s.isRestricted(in, isModer, userCtx.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -2021,7 +2021,7 @@ func (s *PicturesGRPCServer) GetPicturesPaginator(ctx context.Context, in *Pictu
 	options.Page = in.GetPage()
 
 	if options.AddDate != nil || options.AcceptDate != nil || options.AddedFrom != nil {
-		options.Timezone, err = s.resolveTimezone(ctx, userID, in.GetLanguage())
+		options.Timezone, err = s.resolveTimezone(ctx, userCtx.UserID, in.GetLanguage())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -2052,12 +2052,12 @@ func (s *PicturesGRPCServer) GetPicturesPaginator(ctx context.Context, in *Pictu
 }
 
 func (s *PicturesGRPCServer) GetInbox(ctx context.Context, in *InboxRequest) (*Inbox, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "Unauthenticated")
 	}
 
@@ -2073,7 +2073,7 @@ func (s *PicturesGRPCServer) GetInbox(ctx context.Context, in *InboxRequest) (*I
 		}
 	}
 
-	timezone, err := s.resolveTimezone(ctx, userID, in.GetLanguage())
+	timezone, err := s.resolveTimezone(ctx, userCtx.UserID, in.GetLanguage())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2167,7 +2167,7 @@ func (s *PicturesGRPCServer) inboxBrands(ctx context.Context, lang string) ([]*I
 }
 
 func (s *PicturesGRPCServer) GetNewbox(ctx context.Context, in *NewboxRequest) (*Newbox, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2176,7 +2176,7 @@ func (s *PicturesGRPCServer) GetNewbox(ctx context.Context, in *NewboxRequest) (
 		Status: schema.PictureStatusAccepted,
 	}
 
-	timezone, err := s.resolveTimezone(ctx, userID, in.GetLanguage())
+	timezone, err := s.resolveTimezone(ctx, userCtx.UserID, in.GetLanguage())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2225,11 +2225,7 @@ func (s *PicturesGRPCServer) GetNewbox(ctx context.Context, in *NewboxRequest) (
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := util.Contains(roles, users.RoleModer)
-
-	groups, pages, err := s.newboxGroups(
-		ctx, service.CurrentDate(), in.GetPage(), timezone, in.GetLanguage(), isModer, userID, roles,
-	)
+	groups, pages, err := s.newboxGroups(ctx, service.CurrentDate(), in.GetPage(), timezone, in.GetLanguage(), userCtx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2258,8 +2254,7 @@ func (s *PicturesGRPCServer) GetNewbox(ctx context.Context, in *NewboxRequest) (
 }
 
 func (s *PicturesGRPCServer) newboxGroups(
-	ctx context.Context, acceptDate civil.Date, page uint32, timezone *time.Location, lang string, isModer bool,
-	userID int64, roles []string,
+	ctx context.Context, acceptDate civil.Date, page uint32, timezone *time.Location, lang string, userCtx UserContext,
 ) ([]*NewboxGroup, *util.Pages, error) {
 	pictureFields := PictureFields{
 		ThumbMedium:   true,
@@ -2320,7 +2315,7 @@ func (s *PicturesGRPCServer) newboxGroups(
 				return nil, nil, err
 			}
 
-			group.Item, err = s.itemExtractor.Extract(ctx, itemRow, &itemFields, lang, isModer, userID, roles)
+			group.Item, err = s.itemExtractor.Extract(ctx, itemRow, &itemFields, lang, userCtx)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -2342,9 +2337,7 @@ func (s *PicturesGRPCServer) newboxGroups(
 				return nil, nil, err
 			}
 
-			group.Pictures, err = s.pictureExtractor.ExtractRows(
-				ctx, pictureRows, &itemPictureFields, lang, isModer, userID, roles,
-			)
+			group.Pictures, err = s.pictureExtractor.ExtractRows(ctx, pictureRows, &itemPictureFields, lang, userCtx)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -2364,9 +2357,7 @@ func (s *PicturesGRPCServer) newboxGroups(
 
 			group.TotalPictures = int32(totalPictures) //nolint: gosec
 		} else {
-			group.Pictures, err = s.pictureExtractor.ExtractRows(
-				ctx, groupData.Pictures, &pictureFields, lang, isModer, userID, roles,
-			)
+			group.Pictures, err = s.pictureExtractor.ExtractRows(ctx, groupData.Pictures, &pictureFields, lang, userCtx)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -2569,12 +2560,12 @@ func (s *PicturesGRPCServer) GetCanonicalRoute(
 }
 
 func (s *PicturesGRPCServer) CorrectFileNames(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
-	_, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -2592,17 +2583,17 @@ func (s *PicturesGRPCServer) CorrectFileNames(ctx context.Context, in *PictureID
 }
 
 func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest) (*GalleryResponse, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := util.Contains(roles, users.RoleModer)
+	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 	pictureIdentity := in.GetPictureIdentity()
 	request := in.GetRequest()
 
 	if len(pictureIdentity) == 0 {
-		err = s.isRestricted(request, isModer, userID)
+		err = s.isRestricted(request, isModer, userCtx.UserID)
 		if err != nil {
 			return nil, err
 		}
@@ -2668,7 +2659,7 @@ func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	gallery, err := s.pictureExtractor.ExtractRows(ctx, rows, fields, lang, isModer, userID, roles)
+	gallery, err := s.pictureExtractor.ExtractRows(ctx, rows, fields, lang, userCtx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

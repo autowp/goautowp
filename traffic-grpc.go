@@ -46,7 +46,7 @@ func NewTrafficGRPCServer(
 func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
 	var err error
 
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -81,7 +81,7 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 				}
 
 				if user != nil {
-					extractedUser, err = s.userExtractor.Extract(ctx, user, nil, userID, role)
+					extractedUser, err = s.userExtractor.Extract(ctx, user, nil, userCtx.UserID, userCtx.Roles)
 					if err != nil {
 						return nil, status.Error(codes.Internal, err.Error())
 					}
@@ -119,12 +119,12 @@ func (s *TrafficGRPCServer) DeleteFromBlacklist(
 	ctx context.Context,
 	in *DeleteFromTrafficBlacklistRequest,
 ) (*emptypb.Empty, error) {
-	_, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleUsersModer) {
+	if !util.Contains(userCtx.Roles, users.RoleUsersModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -145,12 +145,12 @@ func (s *TrafficGRPCServer) DeleteFromWhitelist(
 	ctx context.Context,
 	in *DeleteFromTrafficWhitelistRequest,
 ) (*emptypb.Empty, error) {
-	_, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -171,12 +171,12 @@ func (s *TrafficGRPCServer) AddToBlacklist(
 	ctx context.Context,
 	in *AddToTrafficBlacklistRequest,
 ) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleUsersModer) {
+	if !util.Contains(userCtx.Roles, users.RoleUsersModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -187,7 +187,7 @@ func (s *TrafficGRPCServer) AddToBlacklist(
 
 	duration := time.Hour * time.Duration(in.GetPeriod())
 
-	err = s.traffic.Ban.Add(ctx, ip, duration, userID, in.GetReason())
+	err = s.traffic.Ban.Add(ctx, ip, duration, userCtx.UserID, in.GetReason())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -199,12 +199,12 @@ func (s *TrafficGRPCServer) AddToWhitelist(
 	ctx context.Context,
 	in *AddToTrafficWhitelistRequest,
 ) (*emptypb.Empty, error) {
-	_, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -232,12 +232,12 @@ func (s *TrafficGRPCServer) GetTrafficWhitelist(
 	ctx context.Context,
 	_ *emptypb.Empty,
 ) (*APITrafficWhitelistItems, error) {
-	_, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 

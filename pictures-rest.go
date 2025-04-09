@@ -266,14 +266,14 @@ func (s *PicturePostForm) Validate() (map[string]map[string]string, error) {
 }
 
 func (s *PicturesREST) handlePicturePOST(ctx *gin.Context) {
-	userID, _, err := s.auth.ValidateREST(ctx)
+	userCtx, err := s.auth.ValidateREST(ctx)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 
 		return
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		ctx.Status(http.StatusForbidden)
 
 		return
@@ -389,7 +389,7 @@ func (s *PicturesREST) handlePicturePOST(ctx *gin.Context) {
 	pictureID, err := s.picturesRepository.AddPictureFromReader(
 		ctxWithoutCancel,
 		handle,
-		userID,
+		userCtx.UserID,
 		ctx.RemoteIP(),
 		values.ItemID,
 		values.PerspectiveID,
@@ -412,7 +412,7 @@ func (s *PicturesREST) handlePicturePOST(ctx *gin.Context) {
 	}
 
 	// increment uploads counter
-	err = s.usersRepository.IncrementUploads(ctxWithoutCancel, userID)
+	err = s.usersRepository.IncrementUploads(ctxWithoutCancel, userCtx.UserID)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 
@@ -426,7 +426,7 @@ func (s *PicturesREST) handlePicturePOST(ctx *gin.Context) {
 			schema.CommentMessageTypeIDPictures,
 			pictureID,
 			0,
-			userID,
+			userCtx.UserID,
 			values.Comment,
 			ctx.RemoteIP(),
 			false,
@@ -438,7 +438,7 @@ func (s *PicturesREST) handlePicturePOST(ctx *gin.Context) {
 		}
 	}
 
-	err = s.commentsRepository.Subscribe(ctx, userID, schema.CommentMessageTypeIDPictures, pictureID)
+	err = s.commentsRepository.Subscribe(ctx, userCtx.UserID, schema.CommentMessageTypeIDPictures, pictureID)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 

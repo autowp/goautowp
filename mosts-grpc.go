@@ -24,7 +24,7 @@ func NewMostsGRPCServer(auth *Auth, extractor *ItemExtractor, repository *mosts.
 }
 
 func (s *MostsGRPCServer) GetItems(ctx context.Context, in *MostsItemsRequest) (*MostsItems, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -72,7 +72,7 @@ func (s *MostsGRPCServer) GetItems(ctx context.Context, in *MostsItemsRequest) (
 	result := make([]*MostsItem, 0)
 
 	for _, car := range list {
-		extracted, err := s.extractor.Extract(ctx, car.Item, &fields, lang, false, userID, role)
+		extracted, err := s.extractor.Extract(ctx, car.Item, &fields, lang, userCtx)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

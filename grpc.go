@@ -13,7 +13,6 @@ import (
 	"github.com/autowp/goautowp/util"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -131,12 +130,12 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 }
 
 func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*VehicleTypeItems, error) {
-	_, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if !util.Contains(roles, users.RoleModer) {
+	if !util.Contains(userCtx.Roles, users.RoleModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -165,7 +164,7 @@ func (s *GRPCServer) GetBrandVehicleTypes(
 }
 
 func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -180,7 +179,7 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 		m[e] = true
 	}
 
-	result, err := s.ipExtractor.Extract(ctx, ip, m, userID, roles)
+	result, err := s.ipExtractor.Extract(ctx, ip, m, userCtx.UserID, userCtx.Roles)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -189,19 +188,17 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 }
 
 func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest) (*emptypb.Empty, error) {
-	p, ok := peer.FromContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "Failed extract peer from context")
+	userCtx, err := s.auth.ValidateGRPC(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-
-	remoteAddr := p.Addr.String()
 
 	fv, err := s.feedback.Create(CreateFeedbackRequest{
 		Name:    in.GetName(),
 		Email:   in.GetEmail(),
 		Message: in.GetMessage(),
 		Captcha: in.GetCaptcha(),
-		IP:      remoteAddr,
+		IP:      userCtx.IP.String(),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

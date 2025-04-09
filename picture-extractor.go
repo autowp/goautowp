@@ -34,10 +34,9 @@ func NewPictureExtractor(container *Container) *PictureExtractor {
 }
 
 func (s *PictureExtractor) Extract(
-	ctx context.Context, row *schema.PictureRow, fields *PictureFields, lang string, isModer bool, userID int64,
-	roles []string,
+	ctx context.Context, row *schema.PictureRow, fields *PictureFields, lang string, userCtx UserContext,
 ) (*Picture, error) {
-	result, err := s.ExtractRows(ctx, []*schema.PictureRow{row}, fields, lang, isModer, userID, roles)
+	result, err := s.ExtractRows(ctx, []*schema.PictureRow{row}, fields, lang, userCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -66,9 +65,10 @@ func (s *PictureExtractor) preloadTopicsStat(
 }
 
 func (s *PictureExtractor) ExtractRows( //nolint: maintidx
-	ctx context.Context, rows []*schema.PictureRow, fields *PictureFields, lang string, isModer bool, userID int64,
-	roles []string,
+	ctx context.Context, rows []*schema.PictureRow, fields *PictureFields, lang string, userCtx UserContext,
 ) ([]*Picture, error) {
+	isModer := util.Contains(userCtx.Roles, users.RoleModer)
+
 	if fields == nil {
 		fields = &PictureFields{}
 	}
@@ -108,7 +108,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			itemIDs = append(itemIDs, row.ID)
 		}
 
-		stats, err = s.preloadTopicsStat(ctx, itemIDs, userID)
+		stats, err = s.preloadTopicsStat(ctx, itemIDs, userCtx.UserID)
 		if err != nil {
 			return nil, err
 		}
@@ -276,7 +276,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetVotes() {
-			vote, err := picturesRepository.GetVote(ctx, row.ID, userID)
+			vote, err := picturesRepository.GetVote(ctx, row.ID, userCtx.UserID)
 			if err != nil {
 				return nil, err
 			}
@@ -335,7 +335,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			extractor := s.container.PictureItemExtractor()
 
-			res, err := extractor.ExtractRows(ctx, piRows, pictureItemRequest.GetFields(), lang, isModer, userID, roles)
+			res, err := extractor.ExtractRows(ctx, piRows, pictureItemRequest.GetFields(), lang, userCtx)
 			if err != nil {
 				return nil, err
 			}
@@ -365,7 +365,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			dfDistanceExtractor := s.container.DfDistanceExtractor()
 
-			res, err := dfDistanceExtractor.ExtractRows(ctx, ddRows, dfDistanceRequest.GetFields(), lang, isModer, userID, roles)
+			res, err := dfDistanceExtractor.ExtractRows(ctx, ddRows, dfDistanceRequest.GetFields(), lang, userCtx)
 			if err != nil {
 				return nil, err
 			}
@@ -452,8 +452,8 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			resultRow.IsLast = isLastPicture
 		}
 
-		if fields.GetModerVoted() && userID != 0 {
-			resultRow.ModerVoted, err = picturesRepository.HasModerVote(ctx, row.ID, userID)
+		if fields.GetModerVoted() && userCtx.UserID != 0 {
+			resultRow.ModerVoted, err = picturesRepository.HasModerVote(ctx, row.ID, userCtx.UserID)
 			if err != nil {
 				return nil, err
 			}
@@ -505,7 +505,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				return nil, err
 			}
 
-			res, err := s.Extract(ctx, pRow, replaceableRequest.GetFields(), lang, isModer, userID, roles)
+			res, err := s.Extract(ctx, pRow, replaceableRequest.GetFields(), lang, userCtx)
 			if err != nil {
 				return nil, err
 			}
@@ -525,13 +525,13 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			resultRow.Rights = &PictureRights{
-				Move:      util.Contains(roles, users.RolePicturesModer),
-				Unaccept:  (row.Status == schema.PictureStatusAccepted) && util.Contains(roles, users.RolePicturesModer),
-				Accept:    canAccept && util.Contains(roles, users.RolePicturesModer),
-				Restore:   (row.Status == schema.PictureStatusRemoving) && util.Contains(roles, users.RoleAdmin),
-				Normalize: (row.Status == schema.PictureStatusInbox) && util.Contains(roles, users.RolePicturesModer),
-				Flop:      (row.Status == schema.PictureStatusInbox) && util.Contains(roles, users.RolePicturesModer),
-				Crop:      util.Contains(roles, users.RolePicturesModer),
+				Move:      util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Unaccept:  (row.Status == schema.PictureStatusAccepted) && util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Accept:    canAccept && util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Restore:   (row.Status == schema.PictureStatusRemoving) && util.Contains(userCtx.Roles, users.RoleAdmin),
+				Normalize: (row.Status == schema.PictureStatusInbox) && util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Flop:      (row.Status == schema.PictureStatusInbox) && util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Crop:      util.Contains(userCtx.Roles, users.RolePicturesModer),
 				Delete:    canDelete,
 			}
 		}
@@ -556,7 +556,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.Prev, err = s.Extract(ctx, prevPicture, sFields, lang, isModer, userID, roles)
+				resultRow.Siblings.Prev, err = s.Extract(ctx, prevPicture, sFields, lang, userCtx)
 				if err != nil {
 					return nil, err
 				}
@@ -570,7 +570,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.Next, err = s.Extract(ctx, nextPicture, sFields, lang, isModer, userID, roles)
+				resultRow.Siblings.Next, err = s.Extract(ctx, nextPicture, sFields, lang, userCtx)
 				if err != nil {
 					return nil, err
 				}
@@ -585,7 +585,7 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.PrevNew, err = s.Extract(ctx, prevNewPicture, sFields, lang, isModer, userID, roles)
+				resultRow.Siblings.PrevNew, err = s.Extract(ctx, prevNewPicture, sFields, lang, userCtx)
 				if err != nil {
 					return nil, err
 				}
@@ -600,24 +600,25 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.NextNew, err = s.Extract(ctx, nextNewPicture, sFields, lang, isModer, userID, roles)
+				resultRow.Siblings.NextNew, err = s.Extract(ctx, nextNewPicture, sFields, lang, userCtx)
 				if err != nil {
 					return nil, err
 				}
 			}
 		}
 
-		if row.IP != nil && util.Contains(roles, users.RoleModer) {
+		if row.IP != nil && util.Contains(userCtx.Roles, users.RoleModer) {
 			resultRow.Ip = row.IP.ToIP().String()
 		}
 
-		if fields.GetSubscribed() && userID > 0 {
+		if fields.GetSubscribed() && userCtx.UserID > 0 {
 			commentsRepo, err := s.container.CommentsRepository()
 			if err != nil {
 				return nil, err
 			}
 
-			resultRow.Subscribed, err = commentsRepo.IsSubscribed(ctx, userID, schema.CommentMessageTypeIDPictures, row.ID)
+			resultRow.Subscribed, err = commentsRepo.IsSubscribed(ctx, userCtx.UserID,
+				schema.CommentMessageTypeIDPictures, row.ID)
 			if err != nil {
 				return nil, err
 			}

@@ -21,7 +21,6 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/peer"
 	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
@@ -436,22 +435,7 @@ func (s *Repository) RefreshUserConflicts(ctx context.Context, userID int64) err
 	return err
 }
 
-func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int64, error) {
-	remoteAddr := "127.0.0.1"
-	p, ok := peer.FromContext(ctx)
-
-	if ok {
-		nw := p.Addr.String()
-		if nw != "bufconn" {
-			ip, _, err := net.SplitHostPort(nw)
-			if err != nil {
-				logrus.Errorf("userip: %q is not IP:port", nw)
-			} else {
-				remoteAddr = ip
-			}
-		}
-	}
-
+func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims, ip net.IP) (int64, error) {
 	locale := strings.ToLower(claims.Locale)
 
 	language, ok := s.languages[locale]
@@ -486,7 +470,7 @@ func (s *Repository) EnsureUserImported(ctx context.Context, claims Claims) (int
 			schema.UserTableRegDateColName:        goqu.Func("NOW"),
 			schema.UserTableLastOnlineColName:     goqu.Func("NOW"),
 			schema.UserTableTimezoneColName:       language.Timezone,
-			schema.UserTableLastIPColName:         goqu.Func("INET6_ATON", remoteAddr),
+			schema.UserTableLastIPColName:         goqu.Func("INET6_ATON", ip.String()),
 			schema.UserTableLanguageColName:       locale,
 			schema.UserTableGreenColName:          util.Contains(claims.ResourceAccess.Autowp.Roles, RoleGreenUser),
 			schema.UserTableUUIDColName:           goqu.Func("UUID_TO_BIN", guid),
@@ -965,7 +949,7 @@ func (s *Repository) NextMessageTime(ctx context.Context, userID int64) (time.Ti
 	return time.Time{}, nil
 }
 
-func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
+func (s *Repository) RegisterVisit(ctx context.Context, userID int64, ip net.IP) error {
 	st := struct {
 		LastOnline sql.NullTime `db:"last_online"`
 		LastIP     *net.IP      `db:"last_ip"`
@@ -989,25 +973,8 @@ func (s *Repository) RegisterVisit(ctx context.Context, userID int64) error {
 		set[schema.UserTableLastOnlineColName] = goqu.Func("NOW")
 	}
 
-	remoteAddr := "127.0.0.1"
-	p, ok := peer.FromContext(ctx)
-
-	if ok {
-		nw := p.Addr.String()
-		if nw != "bufconn" {
-			ip, _, err := net.SplitHostPort(nw)
-			if err != nil {
-				logrus.Errorf("userip: %q is not IP:port", nw)
-			} else {
-				remoteAddr = ip
-			}
-		}
-	}
-
-	ip := net.ParseIP(remoteAddr)
-
 	if ip != nil && (st.LastIP == nil || !st.LastIP.Equal(ip)) {
-		set[schema.UserTableLastIPColName] = goqu.Func("INET6_ATON", remoteAddr)
+		set[schema.UserTableLastIPColName] = goqu.Func("INET6_ATON", ip.String())
 	}
 
 	if len(set) > 0 {

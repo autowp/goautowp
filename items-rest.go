@@ -38,14 +38,14 @@ func NewItemsREST(auth *Auth, repository *items.Repository, events *Events) *Ite
 }
 
 func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
-	userID, roles, err := s.auth.ValidateREST(ctx)
+	userCtx, err := s.auth.ValidateREST(ctx)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 
 		return
 	}
 
-	if !util.Contains(roles, users.RoleBrandsModer) {
+	if !util.Contains(userCtx.Roles, users.RoleBrandsModer) {
 		ctx.Status(http.StatusForbidden)
 
 		return
@@ -157,7 +157,7 @@ func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
 	}
 
 	err = s.events.Add(ctxWithoutCancel, Event{
-		UserID:  userID,
+		UserID:  userCtx.UserID,
 		Message: "Закачен логотип",
 		Items:   []int64{itemID},
 	})

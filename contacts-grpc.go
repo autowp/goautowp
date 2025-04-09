@@ -33,16 +33,16 @@ func NewContactsGRPCServer(
 }
 
 func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if in.GetUserId() == userID {
+	if in.GetUserId() == userCtx.UserID {
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
@@ -58,7 +58,7 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 		return nil, status.Error(codes.NotFound, "NotFound")
 	}
 
-	err = s.contactsRepository.create(ctx, userID, in.GetUserId())
+	err = s.contactsRepository.create(ctx, userCtx.UserID, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -67,16 +67,16 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 }
 
 func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContactRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	err = s.contactsRepository.delete(ctx, userID, in.GetUserId())
+	err = s.contactsRepository.delete(ctx, userCtx.UserID, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -85,20 +85,20 @@ func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContac
 }
 
 func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactRequest) (*Contact, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if in.GetUserId() == userID {
+	if in.GetUserId() == userCtx.UserID {
 		return nil, status.Error(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	exists, err := s.contactsRepository.isExists(ctx, userID, in.GetUserId())
+	exists, err := s.contactsRepository.isExists(ctx, userCtx.UserID, in.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -113,17 +113,17 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 }
 
 func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequest) (*ContactItems, error) {
-	userID, role, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
 	userRows, _, err := s.userRepository.Users(ctx, &query.UserListOptions{
-		InContacts: userID,
+		InContacts: userCtx.UserID,
 	}, users.UserFields{}, users.OrderByDeletedName)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -132,7 +132,7 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 	items := make([]*Contact, len(userRows))
 
 	for idx := range userRows {
-		user, err := s.userExtractor.Extract(ctx, &userRows[idx], nil, userID, role)
+		user, err := s.userExtractor.Extract(ctx, &userRows[idx], nil, userCtx.UserID, userCtx.Roles)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

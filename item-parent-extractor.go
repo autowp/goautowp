@@ -43,17 +43,15 @@ func (s *ItemParentExtractor) prefetchItems(
 }
 
 func (s *ItemParentExtractor) ExtractRow(
-	ctx context.Context, row *items.ItemParent, fields *ItemParentFields, lang string, isModer bool,
-	userID int64, roles []string,
+	ctx context.Context, row *items.ItemParent, fields *ItemParentFields, lang string, userCtx UserContext,
 ) (*ItemParent, error) {
-	res, err := s.ExtractRows(ctx, []*items.ItemParent{row}, fields, lang, isModer, userID, roles)
+	res, err := s.ExtractRows(ctx, []*items.ItemParent{row}, fields, lang, userCtx)
 
 	return res[0], err
 }
 
 func (s *ItemParentExtractor) ExtractRows(
-	ctx context.Context, rows []*items.ItemParent, fields *ItemParentFields, lang string, isModer bool,
-	userID int64, roles []string,
+	ctx context.Context, rows []*items.ItemParent, fields *ItemParentFields, lang string, userCtx UserContext,
 ) ([]*ItemParent, error) {
 	var err error
 
@@ -107,7 +105,7 @@ func (s *ItemParentExtractor) ExtractRows(
 		if itemFields != nil {
 			itemRow, ok := itemsMap[row.ItemID]
 			if ok && itemRow != nil {
-				resRow.Item, err = itemExtractor.Extract(ctx, itemRow, itemFields, lang, isModer, userID, roles)
+				resRow.Item, err = itemExtractor.Extract(ctx, itemRow, itemFields, lang, userCtx)
 				if err != nil {
 					return nil, err
 				}
@@ -117,7 +115,7 @@ func (s *ItemParentExtractor) ExtractRows(
 		if parentFields != nil {
 			itemRow, ok := parentsMap[row.ParentID]
 			if ok && itemRow != nil {
-				resRow.Parent, err = itemExtractor.Extract(ctx, itemRow, parentFields, lang, isModer, userID, roles)
+				resRow.Parent, err = itemExtractor.Extract(ctx, itemRow, parentFields, lang, userCtx)
 				if err != nil {
 					return nil, err
 				}
@@ -143,7 +141,7 @@ func (s *ItemParentExtractor) ExtractRows(
 
 			if err == nil {
 				resRow.DuplicateParent, err = itemExtractor.Extract(
-					ctx, duplicateRow, duplicateParentFields, lang, isModer, userID, roles,
+					ctx, duplicateRow, duplicateParentFields, lang, userCtx,
 				)
 				if err != nil {
 					return nil, err
@@ -169,7 +167,7 @@ func (s *ItemParentExtractor) ExtractRows(
 
 			if err == nil {
 				resRow.DuplicateChild, err = itemExtractor.Extract(
-					ctx, duplicateRow, duplicateChildFields, lang, isModer, userID, roles,
+					ctx, duplicateRow, duplicateChildFields, lang, userCtx,
 				)
 				if err != nil {
 					return nil, err
@@ -177,7 +175,7 @@ func (s *ItemParentExtractor) ExtractRows(
 			}
 		}
 
-		resRow.ChildDescendantPictures, err = s.extractChildDescendantPictures(ctx, row, fields, lang, isModer, userID, roles)
+		resRow.ChildDescendantPictures, err = s.extractChildDescendantPictures(ctx, row, fields, lang, userCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -189,8 +187,7 @@ func (s *ItemParentExtractor) ExtractRows(
 }
 
 func (s *ItemParentExtractor) extractChildDescendantPictures(
-	ctx context.Context, row *items.ItemParent, fields *ItemParentFields, lang string, isModer bool,
-	userID int64, roles []string,
+	ctx context.Context, row *items.ItemParent, fields *ItemParentFields, lang string, userCtx UserContext,
 ) (*PicturesList, error) {
 	request := fields.GetChildDescendantPictures()
 	if request == nil {
@@ -230,7 +227,7 @@ func (s *ItemParentExtractor) extractChildDescendantPictures(
 	}
 
 	extracted, err := s.container.PictureExtractor().ExtractRows(
-		ctx, pictureRows, request.GetFields(), lang, isModer, userID, roles,
+		ctx, pictureRows, request.GetFields(), lang, userCtx,
 	)
 	if err != nil {
 		return nil, err

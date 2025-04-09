@@ -35,7 +35,7 @@ func NewUsersREST(auth *Auth, repository *users.Repository) *UsersREST {
 }
 
 func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
-	userID, _, err := s.auth.ValidateREST(ctx)
+	userCtx, err := s.auth.ValidateREST(ctx)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 
@@ -51,7 +51,7 @@ func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
 		return
 	}
 
-	if updateUserID != userID {
+	if updateUserID != userCtx.UserID {
 		ctx.Status(http.StatusForbidden)
 
 		return
@@ -160,7 +160,7 @@ func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
 
 	ctxWithoutCancel := context.WithoutCancel(ctx)
 
-	err = s.repository.SetUserPhoto(ctxWithoutCancel, userID, handle)
+	err = s.repository.SetUserPhoto(ctxWithoutCancel, userCtx.UserID, handle)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			ctx.Status(http.StatusNotFound)

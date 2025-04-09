@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 
 	"github.com/autowp/goautowp/comments"
 	"github.com/autowp/goautowp/pictures"
@@ -13,10 +12,8 @@ import (
 	"github.com/autowp/goautowp/util"
 	"github.com/autowp/goautowp/validation"
 	"github.com/doug-martin/goqu/v9/exp"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -289,7 +286,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	ctx context.Context,
 	in *GetCommentVotesRequest,
 ) (*CommentVoteItems, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -306,7 +303,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	result := make([]*CommentVote, 0)
 
 	for idx := range votes.PositiveVotes {
-		extracted, err := s.userExtractor.Extract(ctx, &votes.PositiveVotes[idx], nil, userID, roles)
+		extracted, err := s.userExtractor.Extract(ctx, &votes.PositiveVotes[idx], nil, userCtx.UserID, userCtx.Roles)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -318,7 +315,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	}
 
 	for idx := range votes.NegativeVotes {
-		extracted, err := s.userExtractor.Extract(ctx, &votes.NegativeVotes[idx], nil, userID, roles)
+		extracted, err := s.userExtractor.Extract(ctx, &votes.NegativeVotes[idx], nil, userCtx.UserID, userCtx.Roles)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -335,7 +332,7 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 }
 
 func (s *CommentsGRPCServer) Subscribe(ctx context.Context, in *CommentsSubscribeRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -345,7 +342,7 @@ func (s *CommentsGRPCServer) Subscribe(ctx context.Context, in *CommentsSubscrib
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	err = s.repository.Subscribe(ctx, userID, commentsType, in.GetItemId())
+	err = s.repository.Subscribe(ctx, userCtx.UserID, commentsType, in.GetItemId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
@@ -354,7 +351,7 @@ func (s *CommentsGRPCServer) Subscribe(ctx context.Context, in *CommentsSubscrib
 }
 
 func (s *CommentsGRPCServer) UnSubscribe(ctx context.Context, in *CommentsUnSubscribeRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -364,7 +361,7 @@ func (s *CommentsGRPCServer) UnSubscribe(ctx context.Context, in *CommentsUnSubs
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	err = s.repository.UnSubscribe(ctx, userID, commentsType, in.GetItemId())
+	err = s.repository.UnSubscribe(ctx, userCtx.UserID, commentsType, in.GetItemId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
@@ -373,7 +370,7 @@ func (s *CommentsGRPCServer) UnSubscribe(ctx context.Context, in *CommentsUnSubs
 }
 
 func (s *CommentsGRPCServer) View(ctx context.Context, in *CommentsViewRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -383,7 +380,7 @@ func (s *CommentsGRPCServer) View(ctx context.Context, in *CommentsViewRequest) 
 		return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	err = s.repository.View(ctx, userID, commentsType, in.GetItemId())
+	err = s.repository.View(ctx, userCtx.UserID, commentsType, in.GetItemId())
 	if err != nil {
 		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
@@ -392,21 +389,21 @@ func (s *CommentsGRPCServer) View(ctx context.Context, in *CommentsViewRequest) 
 }
 
 func (s *CommentsGRPCServer) SetDeleted(ctx context.Context, in *CommentsSetDeletedRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if !util.Contains(roles, users.RoleCommentsModer) {
+	if !util.Contains(userCtx.Roles, users.RoleCommentsModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
 	if in.GetDeleted() {
-		err = s.repository.QueueDeleteMessage(ctx, in.GetCommentId(), userID)
+		err = s.repository.QueueDeleteMessage(ctx, in.GetCommentId(), userCtx.UserID)
 	} else {
 		err = s.repository.RestoreMessage(ctx, in.GetCommentId())
 	}
@@ -419,16 +416,16 @@ func (s *CommentsGRPCServer) SetDeleted(ctx context.Context, in *CommentsSetDele
 }
 
 func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCommentRequest) (*emptypb.Empty, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	if !util.Contains(roles, users.RoleForumsModer) {
+	if !util.Contains(userCtx.Roles, users.RoleForumsModer) {
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -458,16 +455,16 @@ func (s *CommentsGRPCServer) VoteComment(
 	ctx context.Context,
 	in *CommentsVoteCommentRequest,
 ) (*CommentsVoteCommentResponse, error) {
-	userID, _, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	votesLeft, err := s.usersRepository.GetVotesLeft(ctx, userID)
+	votesLeft, err := s.usersRepository.GetVotesLeft(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -478,12 +475,12 @@ func (s *CommentsGRPCServer) VoteComment(
 
 	ctx = context.WithoutCancel(ctx)
 
-	votes, err := s.repository.VoteComment(ctx, userID, in.GetCommentId(), in.GetVote())
+	votes, err := s.repository.VoteComment(ctx, userCtx.UserID, in.GetCommentId(), in.GetVote())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.usersRepository.DecVotes(ctx, userID)
+	err = s.usersRepository.DecVotes(ctx, userCtx.UserID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -540,16 +537,16 @@ func (s *AddCommentRequest) Validate(
 }
 
 func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*AddCommentResponse, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if userID == 0 {
+	if userCtx.UserID == 0 {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	InvalidParams, err := in.Validate(ctx, s.repository, userID)
+	InvalidParams, err := in.Validate(ctx, s.repository, userCtx.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -570,26 +567,11 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 
 	moderatorAttention := in.GetModeratorAttention()
 
-	remoteAddr := "127.0.0.1"
-	p, ok := peer.FromContext(ctx)
-
-	if ok {
-		nw := p.Addr.String()
-		if nw != "bufconn" {
-			ip, _, err := net.SplitHostPort(nw)
-			if err != nil {
-				logrus.Errorf("userip: %q is not IP:port", nw)
-			} else {
-				remoteAddr = ip
-			}
-		}
-	}
-
 	ctx = context.WithoutCancel(ctx)
 
 	messageID, err := s.repository.Add(
-		ctx,
-		commentsType, in.GetItemId(), in.GetParentId(), userID, in.GetMessage(), remoteAddr, moderatorAttention,
+		ctx, commentsType, in.GetItemId(), in.GetParentId(), userCtx.UserID, in.GetMessage(), userCtx.IP.String(),
+		moderatorAttention,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -599,7 +581,7 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 		return nil, status.Errorf(codes.Internal, "Message add failed")
 	}
 
-	if util.Contains(roles, users.RoleModer) && in.GetParentId() > 0 && in.GetResolve() {
+	if util.Contains(userCtx.Roles, users.RoleModer) && in.GetParentId() > 0 && in.GetResolve() {
 		err = s.repository.CompleteMessage(ctx, in.GetParentId())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -607,9 +589,9 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 	}
 
 	if in.GetTypeId() == CommentsType_FORUMS_TYPE_ID {
-		err = s.usersRepository.IncForumMessages(ctx, userID)
+		err = s.usersRepository.IncForumMessages(ctx, userCtx.UserID)
 	} else {
-		err = s.usersRepository.TouchLastMessage(ctx, userID)
+		err = s.usersRepository.TouchLastMessage(ctx, userCtx.UserID)
 	}
 
 	if err != nil {
@@ -654,12 +636,12 @@ func (s *CommentsGRPCServer) GetMessagePage(
 }
 
 func (s *CommentsGRPCServer) GetMessage(ctx context.Context, in *GetMessageRequest) (*APICommentsMessage, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	canViewIP := util.Contains(roles, users.RoleModer)
+	canViewIP := util.Contains(userCtx.Roles, users.RoleModer)
 
 	fields := in.GetFields()
 	if fields == nil {
@@ -675,16 +657,16 @@ func (s *CommentsGRPCServer) GetMessage(ctx context.Context, in *GetMessageReque
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	return extractMessage(ctx, row, s.repository, s.picturesRepository, userID, roles, canViewIP, fields)
+	return extractMessage(ctx, row, s.repository, s.picturesRepository, userCtx.UserID, userCtx.Roles, canViewIP, fields)
 }
 
 func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesRequest) (*APICommentsMessages, error) {
-	userID, roles, err := s.auth.ValidateGRPC(ctx)
+	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	isModer := util.Contains(roles, users.RoleModer)
+	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 	canViewIP := isModer
 
 	typeID, err := convertCommentsType(in.GetTypeId())
@@ -775,7 +757,8 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 		}
 
 		for _, row := range rows {
-			msg, err := extractMessage(ctx, row, s.repository, s.picturesRepository, userID, roles, canViewIP, fields)
+			msg, err := extractMessage(ctx, row, s.repository, s.picturesRepository, userCtx.UserID, userCtx.Roles,
+				canViewIP, fields)
 			if err != nil {
 				return nil, err
 			}
@@ -783,8 +766,8 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 			msgs = append(msgs, msg)
 		}
 
-		if userID > 0 && in.GetItemId() > 0 && in.GetTypeId() > 0 {
-			err = s.repository.SetSubscriptionSent(ctx, typeID, in.GetItemId(), userID, false)
+		if userCtx.UserID > 0 && in.GetItemId() > 0 && in.GetTypeId() > 0 {
+			err = s.repository.SetSubscriptionSent(ctx, typeID, in.GetItemId(), userCtx.UserID, false)
 			if err != nil {
 				return nil, err
 			}
