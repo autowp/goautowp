@@ -635,14 +635,14 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 		return false, err
 	}
 
-	f := false
+	falseRef := false
 	ctx = context.WithoutCancel(ctx)
 
 	logrus.Infof("attempt to disable user `%s` in keycloak", userGUID)
 
 	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, gocloak.User{
 		ID:      &userGUID,
-		Enabled: &f,
+		Enabled: &falseRef,
 	})
 	if err != nil {
 		return false, err
