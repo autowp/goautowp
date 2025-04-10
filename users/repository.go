@@ -635,52 +635,46 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 		return false, err
 	}
 
-	falseRef := false
 	ctx = context.WithoutCancel(ctx)
 
 	logrus.Infof("attempt to disable user `%s` in keycloak", userGUID)
 
-	keycloakUser, err := s.keycloak.GetUserByID(ctx, token.AccessToken, s.keycloakConfig.Realm, userGUID)
+	err = s.keycloak.DeleteUser(ctx, token.AccessToken, s.keycloakConfig.Realm, userGUID)
 	if err != nil {
 		return false, err
 	}
 
-	keycloakUser.Enabled = &falseRef
+	falseRef := false
 
-	err = s.keycloak.UpdateUser(ctx, token.AccessToken, s.keycloakConfig.Realm, *keycloakUser)
+	user, err := s.User(ctx, &query.UserListOptions{
+		ID:      userID,
+		Deleted: &falseRef,
+	}, UserFields{}, OrderByNone)
 	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			return false, nil
+		}
+
 		return false, err
 	}
 
-	var val int
-
-	success, err := s.autowpDB.Select(goqu.V(1)).
-		From(schema.UserTable).
-		Where(
-			schema.UserTableIDCol.Eq(userID),
-			schema.UserTableDeletedCol.IsFalse(),
-		).ScanValContext(ctx, &val)
-	if err != nil {
-		return false, err
-	}
-
-	if !success {
-		return false, nil
-	}
-
-	// $oldImageId = $row['img'];
+	oldImageID := user.Img
 
 	_, err = s.autowpDB.Update(schema.UserTable).Set(goqu.Record{
-		schema.UserTableDeletedColName: 1,
+		schema.UserTableDeletedColName: true,
+		schema.UserTableUUIDColName:    nil,
+		schema.UserTableImgColName:     nil,
 	}).Where(schema.UserTableIDCol.Eq(userID)).Executor().ExecContext(ctx)
-	// 'img'     => null,
 	if err != nil {
 		return false, err
 	}
 
-	/*if ($oldImageId) {
-		$this->imageStorage->removeImage($oldImageId);
-	}*/
+	if oldImageID != nil {
+		err = s.imageStorage.RemoveImage(ctx, *oldImageID)
+		if err != nil {
+			return false, err
+		}
+	}
 
 	_, err = s.autowpDB.Delete(schema.TelegramChatTable).
 		Where(schema.TelegramChatTableUserIDCol.Eq(userID)).
