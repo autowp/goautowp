@@ -1189,6 +1189,7 @@ func (s *Repository) DeleteUnused(ctx context.Context) error {
 		)).
 		LeftJoin(schema.LogEventsTable, goqu.On(schema.UserTableIDCol.Eq(schema.LogEventsTableUserIDCol))).
 		Where(
+			schema.UserTableDeletedCol.IsFalse(),
 			schema.UserTableLastOnlineCol.Lt(goqu.Func("DATE_SUB", goqu.Func("NOW"), goqu.L("INTERVAL 2 YEAR"))),
 			schema.AttrsUserValuesTableUserIDCol.IsNull(),
 			schema.CommentMessageTableAuthorIDCol.IsNull(),
@@ -1207,7 +1208,7 @@ func (s *Repository) DeleteUnused(ctx context.Context) error {
 	}
 
 	for _, id := range ids {
-		logrus.Warnf("Delete %d", id)
+		logrus.Warnf("Delete user %d", id)
 
 		_, err = s.DeleteUser(ctx, id)
 		if err != nil {
