@@ -85,19 +85,21 @@ func extractFromEXIF(imageType string, handle io.ReadSeeker, size int64) (exifEx
 	if err == nil {
 		for _, tagID := range []uint16{EXIFDateTimeOriginal, EXIFDateTimeDigitized} {
 			tag, err := exifStdIfd.FindTagWithId(tagID)
-			if err != nil {
+			if err != nil && !errors.Is(err, exif.ErrTagNotFound) {
 				return exifExtractedValues{}, err
 			}
 
-			for _, entry := range tag {
-				phrase, err := entry.FormatFirst()
-				if err != nil {
-					return exifExtractedValues{}, err
-				}
+			if err == nil {
+				for _, entry := range tag {
+					phrase, err := entry.FormatFirst()
+					if err != nil {
+						return exifExtractedValues{}, err
+					}
 
-				dateTimeTake, err = time.Parse("2006:01:02 15:04:05", phrase)
-				if err != nil {
-					return exifExtractedValues{}, err
+					dateTimeTake, err = time.Parse("2006:01:02 15:04:05", phrase)
+					if err != nil {
+						return exifExtractedValues{}, err
+					}
 				}
 			}
 
