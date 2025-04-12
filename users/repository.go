@@ -20,6 +20,10 @@ import (
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
+	_ "github.com/go-sql-driver/mysql"                  // enable mysql driver
+	_ "github.com/lib/pq"                               // enable postgres driver
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v3/imagick"
 )

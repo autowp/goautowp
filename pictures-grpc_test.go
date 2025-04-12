@@ -295,9 +295,20 @@ func TestDeleteSimilar(t *testing.T) {
 
 	client := NewPicturesClient(conn)
 
+	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	itemID := createItem(t, conn, cnt, &APIItem{
+		Name:       fmt.Sprintf("vehicle-%d", random.Int()),
+		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
+	})
+
+	picture1ID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
+	picture2ID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
+
 	_, err = client.DeleteSimilar(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
-		&DeleteSimilarRequest{Id: 1, SimilarPictureId: 2},
+		&DeleteSimilarRequest{Id: picture1ID, SimilarPictureId: picture2ID},
 	)
 	require.NoError(t, err)
 }

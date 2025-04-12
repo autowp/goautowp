@@ -10,9 +10,9 @@ import (
 	_ "image/gif"  // GIF support
 	_ "image/jpeg" // JPEG support
 	_ "image/png"  // PNG support
+	"io"
 	"maps"
 	"math/rand/v2"
-	"mime/multipart"
 	"slices"
 	"strconv"
 	"strings"
@@ -2322,7 +2322,7 @@ func (s *Repository) ClearQueue(ctx context.Context) error {
 }
 
 func (s *Repository) AddPictureFromReader(
-	ctx context.Context, handle multipart.File, userID int64, remoteAddr string, itemID int64, perspectiveID int32,
+	ctx context.Context, handle io.ReadSeeker, userID int64, remoteAddr string, itemID int64, perspectiveID int32,
 	replacePictureID int64,
 ) (int64, error) {
 	imageConfig, imageType, err := image.DecodeConfig(handle)
@@ -2355,10 +2355,21 @@ func (s *Repository) AddPictureFromReader(
 	var ext string
 
 	switch imageType {
-	case sampler.GoFormatJPEG, sampler.GoFormatPNG:
+	case sampler.GoFormatJPEG, sampler.GoFormatPNG, sampler.GoFormatAVIF:
 		ext = imageType
 	default:
 		return 0, errUnsupportedImageType
+	}
+
+	// detect size
+	fileSize, err := handle.Seek(0, io.SeekEnd)
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = handle.Seek(0, 0)
+	if err != nil {
+		return 0, err
 	}
 
 	ctx = context.WithoutCancel(ctx)
@@ -2376,8 +2387,6 @@ func (s *Repository) AddPictureFromReader(
 		return 0, err
 	}
 
-	fileSize := img.FileSize()
-
 	identity, err := s.generateIdentity(ctx)
 	if err != nil {
 		return 0, err
@@ -2390,7 +2399,7 @@ func (s *Repository) AddPictureFromReader(
 		schema.PictureTableHeightColName:           imageConfig.Height,
 		schema.PictureTableOwnerIDColName:          userID,
 		schema.PictureTableAddDateColName:          goqu.Func("NOW"),
-		schema.PictureTableFilesizeColName:         fileSize,
+		schema.PictureTableFilesizeColName:         img.FileSize(),
 		schema.PictureTableStatusColName:           schema.PictureStatusInbox,
 		schema.PictureTableRemovingDateColName:     nil,
 		schema.PictureTableIPColName:               goqu.Func("INET6_ATON", remoteAddr),
@@ -2445,31 +2454,15 @@ func (s *Repository) AddPictureFromReader(
 		return 0, err
 	}
 
-	// exif := s.imageStorage.getImageEXIF(imageId)
-	// if exif && isset(exif.COMPUTED.Copyright) {
-	//	copyrights := strip_tags(trim(exif.COMPUTED.Copyright))
-	//
-	//	if copyrights {
-	//		textId := s.textStorage.createText(copyrights, userID)
-	//		s.picture.getTable().update(x{
-	//			copyrights_text_id: textId,
-	//		}, x{
-	//			id: pictureID,
-	//		})
-	//	}
-	// }
+	_, err = handle.Seek(0, 0)
+	if err != nil {
+		return 0, err
+	}
 
-	// read gps
-	// exif2 := s.imageStorage.getImageEXIF(imageId)
-	// extractor := ExifGPSExtractor()
-	// gps := extractor.extract(exif2)
-	// if gps {
-	//	s.picture.getTable().update(x{
-	//		point: SqlExpression("Point(?, ?)", gps.lng, gps.lat),
-	//	}, x{
-	//		id: pictureID,
-	//	})
-	// }
+	err = s.processEXIF(ctx, pictureID, imageType, handle, fileSize, userID)
+	if err != nil {
+		return 0, err
+	}
 
 	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb")
 	if err != nil {
@@ -2502,6 +2495,49 @@ func (s *Repository) AddPictureFromReader(
 	}
 
 	return pictureID, nil
+}
+
+func (s *Repository) processEXIF(
+	ctx context.Context, pictureID int64, imageType string, handle io.ReadSeeker, fileSize int64, userID int64,
+) error {
+	extractedEXIF, err := extractFromEXIF(imageType, handle, fileSize)
+	if err != nil {
+		return err
+	}
+
+	set := goqu.Record{}
+
+	if len(extractedEXIF.copyrights) > 0 {
+		textID, err := s.textStorageRepository.CreateText(ctx, extractedEXIF.copyrights, userID)
+		if err != nil {
+			return err
+		}
+
+		set[schema.PictureTableCopyrightsTextIDColName] = textID
+	}
+
+	if extractedEXIF.gpsInfo != nil {
+		set[schema.PictureTablePointColName] = goqu.Func(
+			"Point", extractedEXIF.gpsInfo.Longitude.Decimal(), extractedEXIF.gpsInfo.Latitude.Decimal(),
+		)
+	}
+
+	if !extractedEXIF.dateTimeTake.IsZero() {
+		set[schema.PictureTableTakenYearColName] = extractedEXIF.dateTimeTake.Year()
+		set[schema.PictureTableTakenMonthColName] = extractedEXIF.dateTimeTake.Month()
+		set[schema.PictureTableTakenDayColName] = extractedEXIF.dateTimeTake.Day()
+	}
+
+	if len(set) > 0 {
+		_, err = s.db.Update(schema.PictureTable).Set(set).
+			Where(schema.PictureTableIDCol.Eq(pictureID)).
+			Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *Repository) randomIdentity() string {

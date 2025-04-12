@@ -688,6 +688,10 @@ func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimila
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
+	if in.GetId() == 0 || in.GetSimilarPictureId() == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
+	}
+
 	ctx = context.WithoutCancel(ctx)
 
 	if err = s.duplicateFinder.HideSimilar(ctx, in.GetId(), in.GetSimilarPictureId()); err != nil {

@@ -34,8 +34,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	grpclogrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/realip"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/redis/go-redis/v9"
@@ -772,11 +771,6 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		return nil, err
 	}
 
-	logrusLogger := logrus.StandardLogger()
-	logrusEntry := logrus.NewEntry(logrusLogger)
-
-	grpclogrus.ReplaceGrpcLogger(logrusEntry)
-
 	trustedPeers := []netip.Prefix{
 		netip.MustParsePrefix(s.Config().TrustedNetwork),
 	}
@@ -786,15 +780,18 @@ func (s *Container) GRPCServerWithServices() (*grpc.Server, error) {
 		realip.WithHeaders([]string{realip.XForwardedFor}),
 	}
 
+	logger := logrus.StandardLogger()
+	loggerOpts := []logging.Option{
+		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
+	}
+
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			grpcctxtags.UnaryServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
-			grpclogrus.UnaryServerInterceptor(logrusEntry),
+			logging.UnaryServerInterceptor(InterceptorLogger(logger), loggerOpts...),
 			realip.UnaryServerInterceptorOpts(opts...),
 		),
 		grpc.ChainStreamInterceptor(
-			grpcctxtags.StreamServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
-			grpclogrus.StreamServerInterceptor(logrusEntry),
+			logging.StreamServerInterceptor(InterceptorLogger(logger), loggerOpts...),
 			realip.StreamServerInterceptorOpts(opts...),
 		),
 	)
