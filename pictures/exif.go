@@ -117,8 +117,12 @@ func extractFromEXIF(imageType string, handle io.ReadSeeker, size int64) (exifEx
 	var gi *exif.GpsInfo
 	if err == nil {
 		gi, err = gpsIfd.GpsInfo()
-		if err != nil {
+		if err != nil && !errors.Is(err, exif.ErrNoGpsTags) {
 			return exifExtractedValues{}, err
+		}
+
+		if err != nil {
+			gi = nil
 		}
 	}
 
