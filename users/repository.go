@@ -178,8 +178,8 @@ func (s *Repository) Users(
 
 	var row schema.UsersRow
 	valuePtrs := []interface{}{
-		&row.ID, &row.Name, &row.Deleted, &row.Identity, &row.LastOnline, &row.Green,
-		&row.SpecsWeight, &row.Img, &row.EMail, &row.PicturesTotal, &row.SpecsVolume, &row.Language,
+		&row.ID, &row.Name, &row.Deleted, &row.Identity, &row.LastOnline, &row.Green, &row.SpecsWeight, &row.Img,
+		&row.EMail, &row.PicturesTotal, &row.SpecsVolume, &row.Language, &row.UUID,
 	}
 
 	alias := query.UserTableAlias
