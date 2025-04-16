@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	PictureModerVoteTableName             = "pictures_moder_votes"
+	PictureModerVoteTableName             = "picture_moder_vote"
 	PictureModerVoteTableUserIDColName    = "user_id"
 	PictureModerVoteTablePictureIDColName = "picture_id"
 	PictureModerVoteTableVoteColName      = "vote"
