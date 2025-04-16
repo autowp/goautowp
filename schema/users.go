@@ -89,4 +89,5 @@ type UsersRow struct {
 	LastIP        string     `db:"last_ip"`
 	Login         *string    `db:"login"`
 	Green         bool       `db:"green"`
+	UUID          *[]byte    `db:"uuid"`
 }

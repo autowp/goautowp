@@ -23,7 +23,8 @@ import (
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
 	_ "github.com/go-sql-driver/mysql"                  // enable mysql driver
-	_ "github.com/lib/pq"                               // enable postgres driver
+	"github.com/google/uuid"
+	_ "github.com/lib/pq" // enable postgres driver
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gographics/imagick.v3/imagick"
 )
@@ -191,6 +192,7 @@ func (s *Repository) Users(
 		aliasTable.Col(schema.UserTableSpecsWeightColName), aliasTable.Col(schema.UserTableImgColName),
 		aliasTable.Col(schema.UserTableEmailColName), aliasTable.Col(schema.UserTablePicturesTotalColName),
 		aliasTable.Col(schema.UserTableSpecsVolumeColName), aliasTable.Col(schema.UserTableLanguageColName),
+		aliasTable.Col(schema.UserTableUUIDColName),
 	}
 
 	if fields.VotesLeft {
@@ -624,28 +626,8 @@ func (s *Repository) PasswordMatch(ctx context.Context, userID int64, password s
 }
 
 func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error) {
-	userGUID, err := s.ensureUserExportedToKeycloak(ctx, userID)
-	if err != nil {
-		return false, err
-	}
-
-	token, err := s.keycloak.LoginClient(
-		ctx,
-		s.keycloakConfig.ClientID,
-		s.keycloakConfig.ClientSecret,
-		s.keycloakConfig.Realm,
-	)
-	if err != nil {
-		return false, err
-	}
-
-	ctx = context.WithoutCancel(ctx)
-
-	logrus.Infof("attempt to disable user `%s` in keycloak", userGUID)
-
-	err = s.keycloak.DeleteUser(ctx, token.AccessToken, s.keycloakConfig.Realm, userGUID)
-	if err != nil {
-		return false, err
+	if userID == 0 {
+		return false, nil
 	}
 
 	falseRef := false
@@ -660,6 +642,32 @@ func (s *Repository) DeleteUser(ctx context.Context, userID int64) (bool, error)
 		}
 
 		return false, err
+	}
+
+	if user.UUID != nil {
+		token, err := s.keycloak.LoginClient(
+			ctx,
+			s.keycloakConfig.ClientID,
+			s.keycloakConfig.ClientSecret,
+			s.keycloakConfig.Realm,
+		)
+		if err != nil {
+			return false, err
+		}
+
+		ctx = context.WithoutCancel(ctx)
+
+		userGUID, err := uuid.FromBytes(*user.UUID)
+		if err != nil {
+			return false, err
+		}
+
+		logrus.Infof("attempt to disable user `%s` in keycloak", userGUID.String())
+
+		err = s.keycloak.DeleteUser(ctx, token.AccessToken, s.keycloakConfig.Realm, userGUID.String())
+		if err != nil {
+			return false, err
+		}
 	}
 
 	oldImageID := user.Img
