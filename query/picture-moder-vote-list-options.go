@@ -33,7 +33,7 @@ func (s *PictureModerVoteListOptions) Clone() *PictureModerVoteListOptions {
 func (s *PictureModerVoteListOptions) Select(db *goqu.Database, alias string) *goqu.SelectDataset {
 	return s.apply(
 		alias,
-		db.Select().From(schema.PicturesModerVotesTable.As(alias)),
+		db.Select().From(schema.PictureModerVoteTable.As(alias)),
 	)
 }
 
@@ -47,9 +47,9 @@ func (s *PictureModerVoteListOptions) JoinToPictureIDAndApply(
 	return s.apply(
 		alias,
 		sqSelect.Join(
-			schema.PicturesModerVotesTable.As(alias),
+			schema.PictureModerVoteTable.As(alias),
 			goqu.On(
-				srcCol.Eq(goqu.T(alias).Col(schema.PicturesModerVotesTablePictureIDColName)),
+				srcCol.Eq(goqu.T(alias).Col(schema.PictureModerVoteTablePictureIDColName)),
 			),
 		),
 	)
@@ -57,15 +57,15 @@ func (s *PictureModerVoteListOptions) JoinToPictureIDAndApply(
 
 func (s *PictureModerVoteListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
 	if s.PictureID != 0 {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PicturesModerVotesTablePictureIDColName).Eq(s.PictureID))
+		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PictureModerVoteTablePictureIDColName).Eq(s.PictureID))
 	}
 
 	if s.VoteGtZero {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PicturesModerVotesTableVoteColName).Gt(0))
+		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PictureModerVoteTableVoteColName).Gt(0))
 	}
 
 	if s.VoteLteZero {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PicturesModerVotesTableVoteColName).Lte(0))
+		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PictureModerVoteTableVoteColName).Lte(0))
 	}
 
 	return sqSelect

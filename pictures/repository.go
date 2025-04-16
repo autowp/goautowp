@@ -445,10 +445,10 @@ func (s *Repository) TopOwnerFans(ctx context.Context, userID int64, limit uint)
 }
 
 func (s *Repository) DeleteModerVote(ctx context.Context, pictureID int64, userID int64) (bool, error) {
-	res, err := s.db.Delete(schema.PicturesModerVotesTable).
+	res, err := s.db.Delete(schema.PictureModerVoteTable).
 		Where(
-			schema.PicturesModerVotesTableUserIDCol.Eq(userID),
-			schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
+			schema.PictureModerVoteTableUserIDCol.Eq(userID),
+			schema.PictureModerVoteTablePictureIDCol.Eq(pictureID),
 		).Executor().ExecContext(ctx)
 	if err != nil {
 		return false, err
@@ -462,22 +462,22 @@ func (s *Repository) DeleteModerVote(ctx context.Context, pictureID int64, userI
 func (s *Repository) CreateModerVote(
 	ctx context.Context, pictureID int64, userID int64, vote bool, reason string,
 ) (bool, error) {
-	res, err := s.db.Insert(schema.PicturesModerVotesTable).Rows(goqu.Record{
-		schema.PicturesModerVotesTablePictureIDColName: pictureID,
-		schema.PicturesModerVotesTableUserIDColName:    userID,
-		schema.PicturesModerVotesTableVoteColName:      vote,
-		schema.PicturesModerVotesTableReasonColName:    reason,
-		schema.PicturesModerVotesTableDayDateColName:   goqu.Func("NOW"),
+	res, err := s.db.Insert(schema.PictureModerVoteTable).Rows(goqu.Record{
+		schema.PictureModerVoteTablePictureIDColName: pictureID,
+		schema.PictureModerVoteTableUserIDColName:    userID,
+		schema.PictureModerVoteTableVoteColName:      vote,
+		schema.PictureModerVoteTableReasonColName:    reason,
+		schema.PictureModerVoteTableDayDateColName:   goqu.Func("NOW"),
 	}).OnConflict(
 		goqu.DoUpdate(
-			schema.PicturesModerVotesTablePictureIDColName+","+schema.PicturesModerVotesTableUserIDColName,
+			schema.PictureModerVoteTablePictureIDColName+","+schema.PictureModerVoteTableUserIDColName,
 			goqu.Record{
-				schema.PicturesModerVotesTableVoteColName: goqu.Func("VALUES",
-					goqu.C(schema.PicturesModerVotesTableVoteColName)),
-				schema.PicturesModerVotesTableReasonColName: goqu.Func("VALUES",
-					goqu.C(schema.PicturesModerVotesTableReasonColName)),
-				schema.PicturesModerVotesTableDayDateColName: goqu.Func("VALUES",
-					goqu.C(schema.PicturesModerVotesTableDayDateColName)),
+				schema.PictureModerVoteTableVoteColName: goqu.Func("VALUES",
+					goqu.C(schema.PictureModerVoteTableVoteColName)),
+				schema.PictureModerVoteTableReasonColName: goqu.Func("VALUES",
+					goqu.C(schema.PictureModerVoteTableReasonColName)),
+				schema.PictureModerVoteTableDayDateColName: goqu.Func("VALUES",
+					goqu.C(schema.PictureModerVoteTableDayDateColName)),
 			},
 		)).Executor().ExecContext(ctx)
 	if err != nil {
@@ -496,11 +496,11 @@ func (s *Repository) ModerVoteCount(ctx context.Context, pictureID int64) (int32
 	}{}
 
 	success, err := s.db.Select(
-		goqu.SUM(goqu.Func("IF", schema.PicturesModerVotesTableVoteCol, goqu.V(1), goqu.V(-1))).As("sum"),
+		goqu.SUM(goqu.Func("IF", schema.PictureModerVoteTableVoteCol, goqu.V(1), goqu.V(-1))).As("sum"),
 		goqu.COUNT(goqu.Star()).As("count"),
 	).
-		From(schema.PicturesModerVotesTable).
-		Where(schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID)).
+		From(schema.PictureModerVoteTable).
+		Where(schema.PictureModerVoteTablePictureIDCol.Eq(pictureID)).
 		GroupBy().
 		ScanStructContext(ctx, &st)
 	if err != nil {
@@ -522,10 +522,10 @@ func (s *Repository) HasModerVote(ctx context.Context, pictureID int64, userID i
 	res := false
 
 	success, err := s.db.Select(goqu.V(true)).
-		From(schema.PicturesModerVotesTable).
+		From(schema.PictureModerVoteTable).
 		Where(
-			schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
-			schema.PicturesModerVotesTableUserIDCol.Eq(userID),
+			schema.PictureModerVoteTablePictureIDCol.Eq(pictureID),
+			schema.PictureModerVoteTableUserIDCol.Eq(userID),
 		).
 		ScanValContext(ctx, &res)
 
@@ -597,7 +597,7 @@ func (s *Repository) orderBy( //nolint: maintidx
 
 		pmvAlias := query.AppendPictureModerVoteAlias(alias)
 		sqSelect = sqSelect.Order(
-			goqu.MAX(goqu.T(pmvAlias).Col(schema.PicturesModerVotesTableDayDateColName)).Asc(),
+			goqu.MAX(goqu.T(pmvAlias).Col(schema.PictureModerVoteTableDayDateColName)).Asc(),
 		)
 	case OrderByRemovingDate:
 		sqSelect = sqSelect.Order(
@@ -1469,29 +1469,29 @@ func (s *Repository) CanDelete(ctx context.Context, row *schema.PictureRow) (boo
 func (s *Repository) NegativeVotes(ctx context.Context, pictureID int64) ([]schema.PictureModerVoteRow, error) {
 	var sts []schema.PictureModerVoteRow
 
-	err := s.db.Select(schema.PicturesModerVotesTableUserIDCol, schema.PicturesModerVotesTableReasonCol).
-		From(schema.PicturesModerVotesTable).
+	err := s.db.Select(schema.PictureModerVoteTableUserIDCol, schema.PictureModerVoteTableReasonCol).
+		From(schema.PictureModerVoteTable).
 		Where(
-			schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
-			schema.PicturesModerVotesTableVoteCol.Eq(0),
+			schema.PictureModerVoteTablePictureIDCol.Eq(pictureID),
+			schema.PictureModerVoteTableVoteCol.Eq(0),
 		).ScanStructsContext(ctx, &sts)
 
 	return sts, err
 }
 
 func (s *Repository) NegativeVotesCount(ctx context.Context, pictureID int64) (int, error) {
-	count, err := s.db.From(schema.PicturesModerVotesTable).Where(
-		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
-		schema.PicturesModerVotesTableVoteCol.Eq(0),
+	count, err := s.db.From(schema.PictureModerVoteTable).Where(
+		schema.PictureModerVoteTablePictureIDCol.Eq(pictureID),
+		schema.PictureModerVoteTableVoteCol.Eq(0),
 	).CountContext(ctx)
 
 	return int(count), err
 }
 
 func (s *Repository) PositiveVotesCount(ctx context.Context, pictureID int64) (int, error) {
-	count, err := s.db.From(schema.PicturesModerVotesTable).Where(
-		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
-		schema.PicturesModerVotesTableVoteCol.Gt(0),
+	count, err := s.db.From(schema.PictureModerVoteTable).Where(
+		schema.PictureModerVoteTablePictureIDCol.Eq(pictureID),
+		schema.PictureModerVoteTableVoteCol.Gt(0),
 	).CountContext(ctx)
 
 	return int(count), err
@@ -1499,9 +1499,9 @@ func (s *Repository) PositiveVotesCount(ctx context.Context, pictureID int64) (i
 
 func (s *Repository) HasVote(ctx context.Context, pictureID int64, userID int64) (bool, error) {
 	var exists bool
-	success, err := s.db.Select(goqu.V(true)).From(schema.PicturesModerVotesTable).Where(
-		schema.PicturesModerVotesTablePictureIDCol.Eq(pictureID),
-		schema.PicturesModerVotesTableUserIDCol.Eq(userID),
+	success, err := s.db.Select(goqu.V(true)).From(schema.PictureModerVoteTable).Where(
+		schema.PictureModerVoteTablePictureIDCol.Eq(pictureID),
+		schema.PictureModerVoteTableUserIDCol.Eq(userID),
 	).ScanValContext(ctx, &exists)
 
 	return success && exists, err
@@ -1948,10 +1948,10 @@ func (s *Repository) PictureModerVoteSelect(options *query.PictureModerVoteListO
 	aliasTable := goqu.T(alias)
 
 	return options.Select(s.db, alias).Select(
-		aliasTable.Col(schema.PicturesModerVotesTablePictureIDColName),
-		aliasTable.Col(schema.PicturesModerVotesTableUserIDColName),
-		aliasTable.Col(schema.PicturesModerVotesTableVoteColName),
-		aliasTable.Col(schema.PicturesModerVotesTableReasonColName),
+		aliasTable.Col(schema.PictureModerVoteTablePictureIDColName),
+		aliasTable.Col(schema.PictureModerVoteTableUserIDColName),
+		aliasTable.Col(schema.PictureModerVoteTableVoteColName),
+		aliasTable.Col(schema.PictureModerVoteTableReasonColName),
 	)
 }
 

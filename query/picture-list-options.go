@@ -250,9 +250,9 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 		pmvAliasTable := goqu.T(pmvAlias)
 
 		sqSelect = sqSelect.LeftJoin(
-			schema.PicturesModerVotesTable.As(pmvAlias),
-			goqu.On(idCol.Eq(pmvAliasTable.Col(schema.PicturesModerVotesTablePictureIDColName))),
-		).Where(pmvAliasTable.Col(schema.PicturesModerVotesTablePictureIDColName).IsNull())
+			schema.PictureModerVoteTable.As(pmvAlias),
+			goqu.On(idCol.Eq(pmvAliasTable.Col(schema.PictureModerVoteTablePictureIDColName))),
+		).Where(pmvAliasTable.Col(schema.PictureModerVoteTablePictureIDColName).IsNull())
 	}
 
 	sqSelect, err = s.DfDistance.JoinToSrcPictureIDAndApply(

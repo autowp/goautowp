@@ -665,8 +665,8 @@ func (s *Repository) AssertItem(ctx context.Context, typeID schema.CommentMessag
 			Where(schema.VotingTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
 	case schema.CommentMessageTypeIDArticles:
-		success, err = s.db.Select(goqu.L("1")).From(schema.ArticlesTable).
-			Where(schema.ArticlesTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
+		success, err = s.db.Select(goqu.L("1")).From(schema.ArticleTable).
+			Where(schema.ArticleTableIDCol.Eq(itemID)).ScanValContext(ctx, &val)
 
 	case schema.CommentMessageTypeIDForums:
 		success, err = s.db.Select(goqu.L("1")).From(schema.ForumsTopicsTable).
@@ -1016,9 +1016,9 @@ func (s *Repository) messageRowRoute(
 	case schema.CommentMessageTypeIDArticles:
 		var catname string
 
-		success, err := s.db.Select(schema.ArticlesTableCatnameCol).
-			From(schema.ArticlesTable).
-			Where(schema.ArticlesTableIDCol.Eq(itemID)).
+		success, err := s.db.Select(schema.ArticleTableCatnameCol).
+			From(schema.ArticleTable).
+			Where(schema.ArticleTableIDCol.Eq(itemID)).
 			ScanValContext(ctx, &catname)
 		if err != nil {
 			return nil, err
@@ -1237,9 +1237,9 @@ func (s *Repository) CleanBrokenMessages(ctx context.Context) (int64, error) {
 	// articles
 	err = s.db.Select(schema.CommentMessageTableIDCol).
 		From(schema.CommentMessageTable).
-		LeftJoin(schema.ArticlesTable, goqu.On(schema.CommentMessageTableItemIDCol.Eq(schema.ArticlesTableIDCol))).
+		LeftJoin(schema.ArticleTable, goqu.On(schema.CommentMessageTableItemIDCol.Eq(schema.ArticleTableIDCol))).
 		Where(
-			schema.ArticlesTableIDCol.IsNull(),
+			schema.ArticleTableIDCol.IsNull(),
 			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDArticles),
 		).ScanValsContext(ctx, &ids)
 	if err != nil {
@@ -1686,9 +1686,9 @@ func (s *Repository) MessageRowRoute(
 	case schema.CommentMessageTypeIDArticles:
 		var catname string
 
-		success, err := s.db.Select(schema.ArticlesTableCatnameCol).
-			From(schema.ArticlesTable).
-			Where(schema.ArticlesTableIDCol.Eq(itemID)).
+		success, err := s.db.Select(schema.ArticleTableCatnameCol).
+			From(schema.ArticleTable).
+			Where(schema.ArticleTableIDCol.Eq(itemID)).
 			ScanValContext(ctx, &catname)
 		if err != nil {
 			return nil, err

@@ -38,12 +38,12 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 	rows := make([]row, 0)
 
 	paginator := util.Paginator{
-		SQLSelect: s.db.Select(schema.ArticlesTableIDCol, schema.ArticlesTableNameCol, schema.ArticlesTableAuthorIDCol,
-			schema.ArticlesTableCatnameCol, schema.ArticlesTableAddDateCol, schema.ArticlesTablePreviewFilenameCol,
-			schema.ArticlesTableDescriptionCol).
-			From(schema.ArticlesTable).
-			Where(schema.ArticlesTableEnabledCol).
-			Order(schema.ArticlesTableAddDateCol.Desc()),
+		SQLSelect: s.db.Select(schema.ArticleTableIDCol, schema.ArticleTableNameCol, schema.ArticleTableAuthorIDCol,
+			schema.ArticleTableCatnameCol, schema.ArticleTableAddDateCol, schema.ArticleTablePreviewFilenameCol,
+			schema.ArticleTableDescriptionCol).
+			From(schema.ArticleTable).
+			Where(schema.ArticleTableEnabledCol).
+			Order(schema.ArticleTableAddDateCol.Desc()),
 		CurrentPageNumber: int32(in.GetPage()), //nolint: gosec
 		ItemCountPerPage:  util.DefaultItemCountPerPage,
 	}
@@ -118,13 +118,13 @@ func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleBy
 	article := row{}
 
 	success, err := s.db.Select(
-		schema.ArticlesTableIDCol, schema.ArticlesTableNameCol, schema.ArticlesTableAuthorIDCol,
-		schema.ArticlesTableCatnameCol, schema.ArticlesTableAddDateCol, schema.ArticlesTablePreviewFilenameCol,
+		schema.ArticleTableIDCol, schema.ArticleTableNameCol, schema.ArticleTableAuthorIDCol,
+		schema.ArticleTableCatnameCol, schema.ArticleTableAddDateCol, schema.ArticleTablePreviewFilenameCol,
 		schema.HtmlsTableHTMLCol,
 	).
-		From(schema.ArticlesTable).
-		LeftJoin(schema.HtmlsTable, goqu.On(schema.ArticlesTableHTMLIDCol.Eq(schema.HtmlsTableIDCol))).
-		Where(schema.ArticlesTableEnabledCol, schema.ArticlesTableCatnameCol.Eq(in.GetCatname())).
+		From(schema.ArticleTable).
+		LeftJoin(schema.HtmlsTable, goqu.On(schema.ArticleTableHTMLIDCol.Eq(schema.HtmlsTableIDCol))).
+		Where(schema.ArticleTableEnabledCol, schema.ArticleTableCatnameCol.Eq(in.GetCatname())).
 		ScanStructContext(ctx, &article)
 	if err != nil {
 		return nil, err
