@@ -3,21 +3,21 @@ package schema
 import "github.com/doug-martin/goqu/v9"
 
 const (
-	LinksTableName          = "links"
-	LinksTableIDColName     = "id"
-	LinksTableNameColName   = "name"
-	LinksTableURLColName    = "url"
-	LinksTableTypeColName   = "type"
-	LinksTableItemIDColName = "item_id"
+	ItemLinkTableName          = "item_link"
+	ItemLinkTableIDColName     = "id"
+	ItemLinkTableNameColName   = "name"
+	ItemLinkTableURLColName    = "url"
+	ItemLinkTableTypeColName   = "type"
+	ItemLinkTableItemIDColName = "item_id"
 )
 
 var (
-	LinksTable          = goqu.T(LinksTableName)
-	LinksTableIDCol     = LinksTable.Col(LinksTableIDColName)
-	LinksTableNameCol   = LinksTable.Col(LinksTableNameColName)
-	LinksTableURLCol    = LinksTable.Col(LinksTableURLColName)
-	LinksTableTypeCol   = LinksTable.Col(LinksTableTypeColName)
-	LinksTableItemIDCol = LinksTable.Col(LinksTableItemIDColName)
+	ItemLinkTable          = goqu.T(ItemLinkTableName)
+	ItemLinkTableIDCol     = ItemLinkTable.Col(ItemLinkTableIDColName)
+	ItemLinkTableNameCol   = ItemLinkTable.Col(ItemLinkTableNameColName)
+	ItemLinkTableURLCol    = ItemLinkTable.Col(ItemLinkTableURLColName)
+	ItemLinkTableTypeCol   = ItemLinkTable.Col(ItemLinkTableTypeColName)
+	ItemLinkTableItemIDCol = ItemLinkTable.Col(ItemLinkTableItemIDColName)
 )
 
 type LinkRow struct {

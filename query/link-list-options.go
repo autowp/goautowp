@@ -23,7 +23,7 @@ func (s *LinkListOptions) IsIDUnique() bool {
 func (s *LinkListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
 	return s.apply(
 		alias,
-		db.Select().From(schema.LinksTable.As(alias)),
+		db.Select().From(schema.ItemLinkTable.As(alias)),
 	)
 }
 
@@ -44,11 +44,11 @@ func (s *LinkListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 	var (
 		aliasTable = goqu.T(alias)
 		err        error
-		itemIDCol  = aliasTable.Col(schema.LinksTableItemIDColName)
+		itemIDCol  = aliasTable.Col(schema.ItemLinkTableItemIDColName)
 	)
 
 	if s.ID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.LinksTableIDColName).Eq(s.ID))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemLinkTableIDColName).Eq(s.ID))
 	}
 
 	if s.ItemID != 0 {
@@ -56,7 +56,7 @@ func (s *LinkListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 	}
 
 	if len(s.Type) > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.LinksTableTypeColName).Eq(s.Type))
+		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemLinkTableTypeColName).Eq(s.Type))
 	}
 
 	sqSelect, err = s.ItemParentCacheDescendant.JoinToParentIDAndApply(

@@ -3893,13 +3893,13 @@ func (s *Repository) LinksSelect(options *query.LinkListOptions) (*goqu.SelectDa
 	}
 
 	sqSelect = sqSelect.Select(
-		aliasTable.Col(schema.LinksTableIDColName), aliasTable.Col(schema.LinksTableNameColName),
-		aliasTable.Col(schema.LinksTableURLColName), aliasTable.Col(schema.LinksTableTypeColName),
-		aliasTable.Col(schema.LinksTableItemIDColName),
+		aliasTable.Col(schema.ItemLinkTableIDColName), aliasTable.Col(schema.ItemLinkTableNameColName),
+		aliasTable.Col(schema.ItemLinkTableURLColName), aliasTable.Col(schema.ItemLinkTableTypeColName),
+		aliasTable.Col(schema.ItemLinkTableItemIDColName),
 	)
 
 	if !options.IsIDUnique() {
-		sqSelect = sqSelect.GroupBy(aliasTable.Col(schema.LinksTableIDColName))
+		sqSelect = sqSelect.GroupBy(aliasTable.Col(schema.ItemLinkTableIDColName))
 	}
 
 	return sqSelect, nil

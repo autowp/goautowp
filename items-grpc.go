@@ -554,8 +554,8 @@ func (s *ItemsGRPCServer) DeleteItemLink(ctx context.Context, in *APIItemLinkReq
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	_, err = s.db.Delete(schema.LinksTable).
-		Where(schema.LinksTableIDCol.Eq(in.GetId())).
+	_, err = s.db.Delete(schema.ItemLinkTable).
+		Where(schema.ItemLinkTableIDCol.Eq(in.GetId())).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -583,11 +583,11 @@ func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (
 		return nil, wrapFieldViolations(InvalidParams)
 	}
 
-	res, err := s.db.Insert(schema.LinksTable).Rows(goqu.Record{
-		schema.LinksTableNameColName:   in.GetName(),
-		schema.LinksTableURLColName:    in.GetUrl(),
-		schema.LinksTableTypeColName:   in.GetType(),
-		schema.LinksTableItemIDColName: in.GetItemId(),
+	res, err := s.db.Insert(schema.ItemLinkTable).Rows(goqu.Record{
+		schema.ItemLinkTableNameColName:   in.GetName(),
+		schema.ItemLinkTableURLColName:    in.GetUrl(),
+		schema.ItemLinkTableTypeColName:   in.GetType(),
+		schema.ItemLinkTableItemIDColName: in.GetItemId(),
 	}).Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -622,14 +622,14 @@ func (s *ItemsGRPCServer) UpdateItemLink(ctx context.Context, in *APIItemLink) (
 		return nil, wrapFieldViolations(InvalidParams)
 	}
 
-	_, err = s.db.Update(schema.LinksTable).
+	_, err = s.db.Update(schema.ItemLinkTable).
 		Set(goqu.Record{
-			schema.LinksTableNameColName:   in.GetName(),
-			schema.LinksTableURLColName:    in.GetUrl(),
-			schema.LinksTableTypeColName:   in.GetType(),
-			schema.LinksTableItemIDColName: in.GetItemId(),
+			schema.ItemLinkTableNameColName:   in.GetName(),
+			schema.ItemLinkTableURLColName:    in.GetUrl(),
+			schema.ItemLinkTableTypeColName:   in.GetType(),
+			schema.ItemLinkTableItemIDColName: in.GetItemId(),
 		}).
-		Where(schema.LinksTableIDCol.Eq(in.GetId())).
+		Where(schema.ItemLinkTableIDCol.Eq(in.GetId())).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
