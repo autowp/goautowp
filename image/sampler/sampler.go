@@ -147,15 +147,20 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 		}
 	}
 
-	if imageFormat := format.Format(); imageFormat != "" {
-		err := mw.SetImageFormat(imageFormat)
+	if quality := format.Quality(); quality > 0 {
+		err := mw.SetImageCompressionQuality(quality)
+		if err != nil {
+			return nil, err
+		}
+
+		err = mw.SetCompressionQuality(quality)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if quality := format.Quality(); quality > 0 {
-		err := mw.SetImageCompressionQuality(quality)
+	if imageFormat := format.Format(); imageFormat != "" {
+		err := mw.SetImageFormat(imageFormat)
 		if err != nil {
 			return nil, err
 		}
