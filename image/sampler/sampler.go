@@ -154,6 +154,13 @@ func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) 
 		}
 	}
 
+	if quality := format.Quality(); quality > 0 {
+		err := mw.SetImageCompressionQuality(quality)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return mw, nil
 }
 

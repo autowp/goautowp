@@ -50,4 +50,5 @@ type ImageStorageSamplerFormatConfig struct {
 	IgnoreCrop       bool    `mapstructure:"ignore-crop"`
 	Widest           float64 `mapstructure:"widest"`
 	Highest          float64 `mapstructure:"highest"`
+	Quality          uint    `mapstructure:"quality"`
 }

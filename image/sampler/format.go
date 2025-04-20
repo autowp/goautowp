@@ -61,6 +61,7 @@ type Format struct {
 	fitType            config.FitType
 	isStrip            bool
 	isReduceOnly       bool
+	quality            uint
 }
 
 var extension2ContentType = map[string]string{
@@ -118,7 +119,12 @@ func NewFormat(cfg config.ImageStorageSamplerFormatConfig) *Format {
 		isReduceOnly:       cfg.ReduceOnly,
 		widest:             cfg.Widest,
 		highest:            cfg.Highest,
+		quality:            cfg.Quality,
 	}
+}
+
+func (f *Format) Quality() uint {
+	return f.quality
 }
 
 func (f *Format) Format() string {

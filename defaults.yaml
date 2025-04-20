@@ -178,6 +178,7 @@ image-storage:
       background: "#EDE9DE"
       strip: true
       format: avif
+      quality: 60
     brandicon2:
       fit-type: 2
       width: 70
@@ -190,6 +191,7 @@ image-storage:
       height: 116
       strip: true
       format: avif
+      quality: 60
       proportional-crop: true
       background: "#fff"
     picture-thumb-medium:
@@ -198,6 +200,7 @@ image-storage:
       height: 270
       strip: true
       format: avif
+      quality: 60
       proportional-crop: true
     picture-thumb-large:
       fit-type: 0
@@ -205,17 +208,20 @@ image-storage:
       height: 476
       strip: true
       format: avif
+      quality: 60
       proportional-crop: true
     picture-medium:
       fit-type: 0
       width: 350
       strip: true
       format: avif
+      quality: 60
     picture-preview-large:
       fit-type: 0
       width: 635
       strip: true
       format: avif
+      quality: 60
     picture-gallery:
       fit-type: 2
       width: 1024
@@ -223,6 +229,7 @@ image-storage:
       reduce-only: true
       strip: true
       format: avif
+      quality: 60
     picture-gallery-full:
       fit-type: 2
       width: 1024
@@ -231,6 +238,7 @@ image-storage:
       ignore-crop: true
       strip: true
       format: avif
+      quality: 60
   s3:
     region: ""
     #version: latest
