@@ -98,6 +98,10 @@ func extractFromEXIF(imageType string, handle io.ReadSeeker, size int64) (exifEx
 
 					dateTimeTake, err = time.Parse("2006:01:02 15:04:05", phrase)
 					if err != nil {
+						dateTimeTake, err = time.Parse("2006:01:02 15:04:05Z", phrase)
+					}
+
+					if err != nil {
 						return exifExtractedValues{}, err
 					}
 				}
