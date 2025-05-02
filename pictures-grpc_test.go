@@ -1276,7 +1276,6 @@ func TestGetPictures(t *testing.T) {
 			DfDistance:       &DfDistanceRequest{},
 			ImageGalleryFull: true,
 			Path:             &PicturePathRequest{},
-			Thumb:            true,
 		}, Limit: 100},
 	)
 	require.NoError(t, err)
@@ -1976,7 +1975,6 @@ func TestGetGallery(t *testing.T) {
 					DfDistance:       &DfDistanceRequest{},
 					ImageGalleryFull: true,
 					Path:             &PicturePathRequest{},
-					Thumb:            true,
 				},
 				Limit: 100,
 			},

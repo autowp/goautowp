@@ -3577,7 +3577,7 @@ func (s *Repository) specPicture(
 	var result *CarSpecTableItemImage
 
 	if row.ImageID.Valid {
-		image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb")
+		image, err := s.imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-medium")
 		if err != nil {
 			return nil, "", fmt.Errorf("FormattedImage(): %w", err)
 		}

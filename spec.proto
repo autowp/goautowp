@@ -1124,7 +1124,6 @@ message PictureFields {
   bool votes = 6;
   bool comments_count = 7;
   bool moder_vote = 8;
-  bool thumb = 9;
   PicturePathRequest path = 10;
   PictureItemsRequest picture_item = 11;
   bool image_gallery_full = 12;
@@ -1716,7 +1715,6 @@ message Picture {
   int32 comments_count_new = 19;
   int32 moder_vote_vote = 20;
   int32 moder_vote_count = 21;
-  APIImage thumb = 22;
   repeated PathTreePictureItem path = 23;
   PictureItems picture_items = 24;
   APIImage image_gallery = 47;

@@ -140,12 +140,6 @@ image-storage:
         strategy: pattern
       bucket: picture
   formats:
-    format9:
-      fit-type: 0
-      width: 160
-      height: 120
-      background: "#fff"
-      strip: true
     icon:
       fit-type: 0
       width: 70

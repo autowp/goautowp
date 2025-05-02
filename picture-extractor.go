@@ -229,15 +229,6 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 		}
 
-		if fields.GetThumb() && row.ImageID.Valid {
-			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb")
-			if err != nil {
-				return nil, err
-			}
-
-			resultRow.Thumb = APIImageToGRPC(image)
-		}
-
 		if fields.GetThumbMedium() && row.ImageID.Valid {
 			image, err := imageStorage.FormattedImage(
 				ctx,
