@@ -2649,16 +2649,6 @@ func (s *Repository) generateDefaultThumbnails(ctx context.Context, imageID int)
 		return err
 	}
 
-	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-large")
-	if err != nil {
-		return err
-	}
-
-	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-gallery-full")
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
