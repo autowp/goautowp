@@ -1954,10 +1954,22 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 		OnConflict(
 			goqu.DoUpdate(schema.ItemParentCacheTableItemIDColName+","+schema.ItemParentCacheTableParentIDColName,
 				goqu.Record{
-					schema.ItemParentCacheTableDiffColName:   goqu.Func("VALUES", goqu.C(schema.ItemParentCacheTableDiffColName)),
-					schema.ItemParentCacheTableTuningColName: goqu.Func("VALUES", goqu.C(schema.ItemParentCacheTableTuningColName)),
-					schema.ItemParentCacheTableSportColName:  goqu.Func("VALUES", goqu.C(schema.ItemParentCacheTableSportColName)),
-					schema.ItemParentCacheTableDesignColName: goqu.Func("VALUES", goqu.C(schema.ItemParentCacheTableDesignColName)),
+					schema.ItemParentCacheTableDiffColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.ItemParentCacheTableDiffColName),
+					),
+					schema.ItemParentCacheTableTuningColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.ItemParentCacheTableTuningColName),
+					),
+					schema.ItemParentCacheTableSportColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.ItemParentCacheTableSportColName),
+					),
+					schema.ItemParentCacheTableDesignColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.ItemParentCacheTableDesignColName),
+					),
 				},
 			),
 		).
