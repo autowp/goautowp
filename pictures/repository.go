@@ -2644,12 +2644,7 @@ func (s *Repository) AddPictureFromReader(
 }
 
 func (s *Repository) generateDefaultThumbnails(ctx context.Context, imageID int) error {
-	_, err := s.imageStorage.FormattedImage(ctx, imageID, "picture-medium")
-	if err != nil {
-		return err
-	}
-
-	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-medium")
+	_, err := s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-medium")
 	if err != nil {
 		return err
 	}
