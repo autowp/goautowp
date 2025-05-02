@@ -216,7 +216,7 @@ func (s *MapGRPCServer) GetPoints(
 			}
 
 			if success && imageID.Valid {
-				image, err := s.imageStorage.FormattedImage(ctx, int(imageID.Int64), "format9")
+				image, err := s.imageStorage.FormattedImage(ctx, int(imageID.Int64), "picture-thumb-medium")
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
 				}
