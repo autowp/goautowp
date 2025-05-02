@@ -72,7 +72,10 @@ func (s *IPExtractor) Extract(
 				}
 
 				user, err := s.userRepository.User(
-					ctx, &query.UserListOptions{ID: banItem.ByUserID}, users.UserFields{}, users.OrderByNone,
+					ctx,
+					&query.UserListOptions{ID: banItem.ByUserID},
+					users.UserFields{},
+					users.OrderByNone,
 				)
 				if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 					return nil, err

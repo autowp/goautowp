@@ -22,13 +22,24 @@ func TestGetText(t *testing.T) {
 	usersClient := NewUsersClient(conn)
 
 	// tester
-	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	testerToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		testUsername,
+		testPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
 	// tester (me)
 	tester, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+testerToken.AccessToken,
+		),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)

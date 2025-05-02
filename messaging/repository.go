@@ -50,7 +50,11 @@ type Message struct {
 
 type CreateMessageCallback func(ctx context.Context, fromUserID int64, toUserID int64, text string) error
 
-func NewRepository(db *goqu.Database, createMessageCallback CreateMessageCallback, i18n *i18nbundle.I18n) *Repository {
+func NewRepository(
+	db *goqu.Database,
+	createMessageCallback CreateMessageCallback,
+	i18n *i18nbundle.I18n,
+) *Repository {
 	return &Repository{
 		db:                    db,
 		createMessageCallback: createMessageCallback,
@@ -60,7 +64,8 @@ func NewRepository(db *goqu.Database, createMessageCallback CreateMessageCallbac
 
 func (s *Repository) GetUserNewMessagesCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getReceivedSelect(userID).Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
+		SQLSelect: s.getReceivedSelect(userID).
+			Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
@@ -76,7 +81,8 @@ func (s *Repository) GetInboxCount(ctx context.Context, userID int64) (int32, er
 
 func (s *Repository) GetInboxNewCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getInboxSelect(userID).Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
+		SQLSelect: s.getInboxSelect(userID).
+			Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
@@ -100,13 +106,18 @@ func (s *Repository) GetSystemCount(ctx context.Context, userID int64) (int32, e
 
 func (s *Repository) GetSystemNewCount(ctx context.Context, userID int64) (int32, error) {
 	paginator := util.Paginator{
-		SQLSelect: s.getSystemSelect(userID).Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
+		SQLSelect: s.getSystemSelect(userID).
+			Where(schema.PersonalMessagesTableReadenCol.IsNotTrue()),
 	}
 
 	return paginator.GetTotalItemCount(ctx)
 }
 
-func (s *Repository) GetDialogCount(ctx context.Context, userID int64, withUserID int64) (int32, error) {
+func (s *Repository) GetDialogCount(
+	ctx context.Context,
+	userID int64,
+	withUserID int64,
+) (int32, error) {
 	paginator := util.Paginator{
 		SQLSelect: s.getDialogSelect(userID, withUserID),
 	}
@@ -160,7 +171,11 @@ func (s *Repository) ClearSystem(ctx context.Context, userID int64) error {
 }
 
 func (s *Repository) CreateMessageFromTemplate(
-	ctx context.Context, fromUserID int64, toUserID int64, messageID string, templateData map[string]interface{},
+	ctx context.Context,
+	fromUserID int64,
+	toUserID int64,
+	messageID string,
+	templateData map[string]interface{},
 	lang string,
 ) error {
 	localizer := s.i18n.Localizer(lang)
@@ -176,7 +191,12 @@ func (s *Repository) CreateMessageFromTemplate(
 	return s.CreateMessage(ctx, fromUserID, toUserID, text)
 }
 
-func (s *Repository) CreateMessage(ctx context.Context, fromUserID int64, toUserID int64, text string) error {
+func (s *Repository) CreateMessage(
+	ctx context.Context,
+	fromUserID int64,
+	toUserID int64,
+	text string,
+) error {
 	text = strings.TrimSpace(text)
 	msgLength := len(text)
 
@@ -220,7 +240,11 @@ func (s *Repository) markReaden(ctx context.Context, ids []int64) error {
 	return err
 }
 
-func (s *Repository) markReadenRows(ctx context.Context, rows []schema.PersonalMessageRow, userID int64) error {
+func (s *Repository) markReadenRows(
+	ctx context.Context,
+	rows []schema.PersonalMessageRow,
+	userID int64,
+) error {
 	ids := make([]int64, 0)
 
 	for _, msg := range rows {
@@ -270,7 +294,11 @@ func (s *Repository) getBox(
 	return list, pages, nil
 }
 
-func (s *Repository) GetInbox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetInbox(
+	ctx context.Context,
+	userID int64,
+	page int32,
+) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
 		SQLSelect:         s.getInboxSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
@@ -280,7 +308,11 @@ func (s *Repository) GetInbox(ctx context.Context, userID int64, page int32) ([]
 	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: true})
 }
 
-func (s *Repository) GetSentbox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetSentbox(
+	ctx context.Context,
+	userID int64,
+	page int32,
+) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
 		SQLSelect:         s.getSentSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
@@ -290,7 +322,11 @@ func (s *Repository) GetSentbox(ctx context.Context, userID int64, page int32) (
 	return s.getBox(ctx, userID, paginator, Options{AllMessagesLink: true})
 }
 
-func (s *Repository) GetSystembox(ctx context.Context, userID int64, page int32) ([]Message, *util.Pages, error) {
+func (s *Repository) GetSystembox(
+	ctx context.Context,
+	userID int64,
+	page int32,
+) ([]Message, *util.Pages, error) {
 	paginator := util.Paginator{
 		SQLSelect:         s.getSystemSelect(userID),
 		ItemCountPerPage:  MessagesPerPage,
@@ -374,7 +410,8 @@ func (s *Repository) prepareList(
 
 	for idx, msg := range rows {
 		isNew := msg.ToUserID == userID && !msg.Readen
-		canDelete := msg.FromUserID.Valid && msg.FromUserID.Int64 == userID || msg.ToUserID == userID
+		canDelete := msg.FromUserID.Valid && msg.FromUserID.Int64 == userID ||
+			msg.ToUserID == userID
 		authorIsMe := msg.FromUserID.Valid && msg.FromUserID.Int64 == userID
 		canReply := msg.FromUserID.Valid && !authorIsMe //  && ! $author['deleted']
 

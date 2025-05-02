@@ -44,7 +44,11 @@ func (s *Whitelist) MatchAuto(ip net.IP) (bool, string) {
 	isIPv6 := len(ip) == net.IPv6len
 	ip16 := ip.To16()
 
-	yandexComIPv6Host := hex.EncodeToString(ip16[12:14]) + "-" + hex.EncodeToString(ip16[14:16]) + ".spider.yandex.com."
+	yandexComIPv6Host := hex.EncodeToString(
+		ip16[12:14],
+	) + "-" + hex.EncodeToString(
+		ip16[14:16],
+	) + ".spider.yandex.com."
 
 	hosts, err := net.LookupAddr(ipText)
 	if err != nil {
@@ -80,7 +84,9 @@ func (s *Whitelist) Add(ctx context.Context, ip net.IP, desc string) error {
 		schema.IPWhitelistTableIPColName:          ip.String(),
 		schema.IPWhitelistTableDescriptionColName: desc,
 	}).OnConflict(goqu.DoUpdate(schema.IPWhitelistTableIPColName, goqu.Record{
-		schema.IPWhitelistTableDescriptionColName: schema.Excluded(schema.IPWhitelistTableDescriptionColName),
+		schema.IPWhitelistTableDescriptionColName: schema.Excluded(
+			schema.IPWhitelistTableDescriptionColName,
+		),
 	})).Executor().ExecContext(ctx)
 
 	return err
@@ -92,7 +98,9 @@ func (s *Whitelist) Get(ctx context.Context, ip net.IP) (*WhitelistItem, error) 
 
 	success, err := s.db.Select(schema.IPWhitelistTableIPCol, schema.IPWhitelistTableDescriptionCol).
 		From(schema.IPWhitelistTable).
-		Where(schema.IPWhitelistTableIPCol.Eq(ip.String())).Executor().ScanStructContext(ctx, &item)
+		Where(schema.IPWhitelistTableIPCol.Eq(ip.String())).
+		Executor().
+		ScanStructContext(ctx, &item)
 	if err != nil {
 		return nil, err
 	}

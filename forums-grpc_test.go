@@ -135,7 +135,14 @@ func TestCloseTopic(t *testing.T) {
 
 	kc := cnt.Keycloak()
 
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
@@ -153,7 +160,11 @@ func TestCloseTopic(t *testing.T) {
 	require.NotEmpty(t, topic)
 
 	_, err = client.CloseTopic(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APISetTopicStatusRequest{
 			Id: topic.GetId(),
 		},
@@ -161,7 +172,11 @@ func TestCloseTopic(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.OpenTopic(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APISetTopicStatusRequest{
 			Id: topic.GetId(),
 		},
@@ -169,7 +184,11 @@ func TestCloseTopic(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.DeleteTopic(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APISetTopicStatusRequest{
 			Id: topic.GetId(),
 		},

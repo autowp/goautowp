@@ -62,7 +62,10 @@ func (s *AttrsUserValueListOptions) JoinToAttributeIDItemIDAndApply(
 	return s.apply(alias, sqSelect)
 }
 
-func (s *AttrsUserValueListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *AttrsUserValueListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	aliasTable := goqu.T(alias)
 
 	if s.ItemID != 0 {

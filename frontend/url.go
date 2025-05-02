@@ -132,7 +132,12 @@ func BrandItemPathSpecificationsRoute(catname string, itemCatname string, path [
 	return append(BrandItemPathRoute(catname, itemCatname, path), "specifications")
 }
 
-func BrandItemPathPicturesPictureRoute(catname string, itemCatname string, path []string, identity string) []string {
+func BrandItemPathPicturesPictureRoute(
+	catname string,
+	itemCatname string,
+	path []string,
+	identity string,
+) []string {
 	return append(BrandItemPathRoute(catname, itemCatname, path), "pictures", identity)
 }
 

@@ -10,6 +10,10 @@ const (
 
 var (
 	LogEventsArticlesTable              = goqu.T(LogEventsArticlesTableName)
-	LogEventsArticlesTableLogEventIDCol = LogEventsArticlesTable.Col(LogEventsArticlesTableLogEventIDColName)
-	LogEventsArticlesTableArticleIDCol  = LogEventsArticlesTable.Col(LogEventsArticlesTableArticleIDColName)
+	LogEventsArticlesTableLogEventIDCol = LogEventsArticlesTable.Col(
+		LogEventsArticlesTableLogEventIDColName,
+	)
+	LogEventsArticlesTableArticleIDCol = LogEventsArticlesTable.Col(
+		LogEventsArticlesTableArticleIDColName,
+	)
 )

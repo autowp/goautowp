@@ -39,7 +39,10 @@ type NewDescendantsCountColumn struct {
 	db *goqu.Database
 }
 
-func (s NewDescendantsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s NewDescendantsCountColumn) SelectExpr(
+	alias string,
+	_ string,
+) (AliaseableExpression, error) {
 	options := query.ItemListOptions{
 		Alias: alias + "product2",
 		ItemParentCacheAncestor: &query.ItemParentCacheListOptions{
@@ -61,7 +64,10 @@ type DescendantTwinsGroupsCountColumn struct {
 	db *goqu.Database
 }
 
-func (s DescendantTwinsGroupsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s DescendantTwinsGroupsCountColumn) SelectExpr(
+	alias string,
+	_ string,
+) (AliaseableExpression, error) {
 	options := query.ItemListOptions{
 		Alias:  alias + "dtgc",
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDTwins},
@@ -84,12 +90,17 @@ func (s DescendantTwinsGroupsCountColumn) SelectExpr(alias string, _ string) (Al
 
 type DescendantPicturesCountColumn struct{}
 
-func (s DescendantPicturesCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s DescendantPicturesCountColumn) SelectExpr(
+	alias string,
+	_ string,
+) (AliaseableExpression, error) {
 	piTableAlias := query.AppendPictureItemAlias(
 		query.AppendItemParentCacheAlias(alias, "d"), "i",
 	)
 
-	return goqu.COUNT(goqu.DISTINCT(goqu.T(piTableAlias).Col(schema.PictureItemTablePictureIDColName))), nil
+	return goqu.COUNT(
+		goqu.DISTINCT(goqu.T(piTableAlias).Col(schema.PictureItemTablePictureIDColName)),
+	), nil
 }
 
 type ChildsCountColumn struct {
@@ -134,7 +145,10 @@ type TextstorageRefColumn struct {
 func (s TextstorageRefColumn) SelectExpr(alias string, lang string) (AliaseableExpression, error) {
 	ilAlias := alias + "_" + s.col
 
-	orderExpr, err := langPriorityOrderExpr(goqu.T(ilAlias).Col(schema.ItemLanguageTableLanguageColName), lang)
+	orderExpr, err := langPriorityOrderExpr(
+		goqu.T(ilAlias).Col(schema.ItemLanguageTableLanguageColName),
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +160,9 @@ func (s TextstorageRefColumn) SelectExpr(alias string, lang string) (AliaseableE
 				goqu.On(goqu.T(ilAlias).Col(s.col).Eq(schema.TextstorageTextTableIDCol)),
 			).
 			Where(
-				goqu.T(ilAlias).Col(schema.ItemLanguageTableItemIDColName).Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
+				goqu.T(ilAlias).
+					Col(schema.ItemLanguageTableItemIDColName).
+					Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
 				goqu.Func("length", schema.TextstorageTextTableTextCol).Gt(0),
 			).
 			Order(orderExpr).
@@ -164,7 +180,10 @@ func (s NameDefaultColumn) SelectExpr(alias string, lang string) (AliaseableExpr
 	il2Alias := alias + "il2"
 	il2AliasTable := goqu.T(il2Alias)
 
-	orderExpr, err := langPriorityOrderExpr(il2AliasTable.Col(schema.ItemLanguageTableLanguageColName), lang)
+	orderExpr, err := langPriorityOrderExpr(
+		il2AliasTable.Col(schema.ItemLanguageTableLanguageColName),
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +191,8 @@ func (s NameDefaultColumn) SelectExpr(alias string, lang string) (AliaseableExpr
 	subQuery := s.db.Select(il2AliasTable.Col(schema.ItemLanguageTableNameColName)).
 		From(schema.ItemLanguageTable.As(il2Alias)).
 		Where(
-			il2AliasTable.Col(schema.ItemLanguageTableItemIDColName).Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
+			il2AliasTable.Col(schema.ItemLanguageTableItemIDColName).
+				Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
 			goqu.Func("LENGTH", il2AliasTable.Col(schema.ItemLanguageTableNameColName)).Gt(0),
 		).
 		Order(orderExpr).
@@ -189,8 +209,10 @@ func (s NameDefaultColumn) SelectExpr(alias string, lang string) (AliaseableExpr
 					),
 				)).
 				Where(
-					il1AliasTable.Col(schema.ItemLanguageTableItemIDColName).Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
-					il1AliasTable.Col(schema.ItemLanguageTableLanguageColName).Eq(DefaultLanguageCode),
+					il1AliasTable.Col(schema.ItemLanguageTableItemIDColName).
+						Eq(goqu.T(alias).Col(schema.ItemTableIDColName)),
+					il1AliasTable.Col(schema.ItemLanguageTableLanguageColName).
+						Eq(DefaultLanguageCode),
 				).
 				Limit(1),
 			goqu.V(""),
@@ -227,7 +249,10 @@ type CommentsAttentionsCountColumn struct {
 	db *goqu.Database
 }
 
-func (s CommentsAttentionsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s CommentsAttentionsCountColumn) SelectExpr(
+	alias string,
+	_ string,
+) (AliaseableExpression, error) {
 	opts := query.CommentMessageListOptions{
 		Attention:   schema.CommentMessageModeratorAttentionRequired,
 		CommentType: schema.CommentMessageTypeIDPictures,
@@ -251,7 +276,10 @@ type StatusPicturesCountColumn struct {
 	db     *goqu.Database
 }
 
-func (s StatusPicturesCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s StatusPicturesCountColumn) SelectExpr(
+	alias string,
+	_ string,
+) (AliaseableExpression, error) {
 	opts := query.PictureListOptions{
 		Status: s.status,
 		PictureItem: &query.PictureItemListOptions{
@@ -310,7 +338,10 @@ func (s MostsActiveColumn) SelectExpr(alias string, _ string) (AliaseableExpress
 
 type DescendantsParentsCountColumn struct{}
 
-func (s DescendantsParentsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s DescendantsParentsCountColumn) SelectExpr(
+	alias string,
+	_ string,
+) (AliaseableExpression, error) {
 	cAlias := query.AppendItemParentAlias(
 		query.AppendItemParentCacheAlias(alias, "d"), "p",
 	)
@@ -320,7 +351,10 @@ func (s DescendantsParentsCountColumn) SelectExpr(alias string, _ string) (Alias
 
 type NewDescendantsParentsCountColumn struct{}
 
-func (s NewDescendantsParentsCountColumn) SelectExpr(alias string, _ string) (AliaseableExpression, error) {
+func (s NewDescendantsParentsCountColumn) SelectExpr(
+	alias string,
+	_ string,
+) (AliaseableExpression, error) {
 	cAlias := query.AppendItemAlias(
 		query.AppendItemParentAlias(
 			query.AppendItemParentCacheAlias(alias, "d"), "p",
@@ -392,18 +426,26 @@ func (s StarCountColumn) SelectExpr(_ string, _ string) (AliaseableExpression, e
 
 type ItemParentParentTimestampColumn struct{}
 
-func (s ItemParentParentTimestampColumn) SelectExpr(_ string, _ string) (AliaseableExpression, error) {
+func (s ItemParentParentTimestampColumn) SelectExpr(
+	_ string,
+	_ string,
+) (AliaseableExpression, error) {
 	return goqu.MAX(
-			goqu.T(query.AppendItemParentAlias(query.ItemAlias, "p")).Col(schema.ItemParentTableTimestampColName),
+			goqu.T(query.AppendItemParentAlias(query.ItemAlias, "p")).
+				Col(schema.ItemParentTableTimestampColName),
 		),
 		nil
 }
 
 type AttrsUserValuesUpdateDateColumn struct{}
 
-func (s AttrsUserValuesUpdateDateColumn) SelectExpr(_ string, _ string) (AliaseableExpression, error) {
+func (s AttrsUserValuesUpdateDateColumn) SelectExpr(
+	_ string,
+	_ string,
+) (AliaseableExpression, error) {
 	return goqu.MAX(
-			goqu.T(query.AppendAttrsUserValuesAlias(query.ItemAlias)).Col(schema.AttrsUserValuesTableUpdateDateColName),
+			goqu.T(query.AppendAttrsUserValuesAlias(query.ItemAlias)).
+				Col(schema.AttrsUserValuesTableUpdateDateColName),
 		),
 		nil
 }

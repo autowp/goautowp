@@ -31,7 +31,10 @@ func (s *DayPictures) HaveCurrentDate() bool {
 }
 
 func NewDayPictures(
-	picturesRepository *pictures.Repository, column string, timezone *time.Location, listOptions *query.PictureListOptions,
+	picturesRepository *pictures.Repository,
+	column string,
+	timezone *time.Location,
+	listOptions *query.PictureListOptions,
 	currentDate civil.Date,
 ) (*DayPictures, error) {
 	return &DayPictures{

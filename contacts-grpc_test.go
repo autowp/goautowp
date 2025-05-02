@@ -21,39 +21,69 @@ func TestCreateDeleteContact(t *testing.T) {
 	usersClient := NewUsersClient(conn)
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	// tester
-	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	testerToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		testUsername,
+		testPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
 	// tester (me)
 	tester, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+testerToken.AccessToken,
+		),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
 
 	// create
 	_, err = client.CreateContact(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&CreateContactRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 
 	// get contact
 	_, err = client.GetContact(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&GetContactRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 
 	// get contacts
 	items, err := client.GetContacts(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&GetContactsRequest{},
 	)
 	require.NoError(t, err)
@@ -74,7 +104,11 @@ func TestCreateDeleteContact(t *testing.T) {
 
 	// delete
 	_, err = client.DeleteContact(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&DeleteContactRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)

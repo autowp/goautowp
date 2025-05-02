@@ -14,11 +14,17 @@ const (
 )
 
 var (
-	PictureModerVoteTable             = goqu.T(PictureModerVoteTableName)
-	PictureModerVoteTableUserIDCol    = PictureModerVoteTable.Col(PictureModerVoteTableUserIDColName)
-	PictureModerVoteTablePictureIDCol = PictureModerVoteTable.Col(PictureModerVoteTablePictureIDColName)
-	PictureModerVoteTableVoteCol      = PictureModerVoteTable.Col(PictureModerVoteTableVoteColName)
-	PictureModerVoteTableReasonCol    = PictureModerVoteTable.Col(PictureModerVoteTableReasonColName)
+	PictureModerVoteTable          = goqu.T(PictureModerVoteTableName)
+	PictureModerVoteTableUserIDCol = PictureModerVoteTable.Col(
+		PictureModerVoteTableUserIDColName,
+	)
+	PictureModerVoteTablePictureIDCol = PictureModerVoteTable.Col(
+		PictureModerVoteTablePictureIDColName,
+	)
+	PictureModerVoteTableVoteCol   = PictureModerVoteTable.Col(PictureModerVoteTableVoteColName)
+	PictureModerVoteTableReasonCol = PictureModerVoteTable.Col(
+		PictureModerVoteTableReasonColName,
+	)
 )
 
 type PictureModerVoteRow struct {

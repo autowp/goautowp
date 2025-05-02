@@ -10,10 +10,16 @@ const (
 )
 
 var (
-	AttrsZoneAttributesTable               = goqu.T(AttrsZoneAttributesTableName)
-	AttrsZoneAttributesTableZoneIDCol      = AttrsZoneAttributesTable.Col(AttrsZoneAttributesTableZoneIDColName)
-	AttrsZoneAttributesTableAttributeIDCol = AttrsZoneAttributesTable.Col(AttrsZoneAttributesTableAttributeIDColName)
-	AttrsZoneAttributesTablePositionCol    = AttrsZoneAttributesTable.Col(AttrsZoneAttributesTablePositionColName)
+	AttrsZoneAttributesTable          = goqu.T(AttrsZoneAttributesTableName)
+	AttrsZoneAttributesTableZoneIDCol = AttrsZoneAttributesTable.Col(
+		AttrsZoneAttributesTableZoneIDColName,
+	)
+	AttrsZoneAttributesTableAttributeIDCol = AttrsZoneAttributesTable.Col(
+		AttrsZoneAttributesTableAttributeIDColName,
+	)
+	AttrsZoneAttributesTablePositionCol = AttrsZoneAttributesTable.Col(
+		AttrsZoneAttributesTablePositionColName,
+	)
 )
 
 type AttrsZoneAttributeRow struct {

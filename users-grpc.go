@@ -17,15 +17,8 @@ import (
 )
 
 func convertUserFields(fields *UserFields, currentUserRoles []string) users.UserFields {
-	lastIP := false
-	if fields.GetLastIp() && util.Contains(currentUserRoles, users.RoleModer) {
-		lastIP = true
-	}
-
-	login := false
-	if fields.GetLogin() && util.Contains(currentUserRoles, users.RoleModer) {
-		login = true
-	}
+	lastIP := fields.GetLastIp() && util.Contains(currentUserRoles, users.RoleModer)
+	login := fields.GetLogin() && util.Contains(currentUserRoles, users.RoleModer)
 
 	return users.UserFields{
 		Email:         fields.GetEmail(),
@@ -102,7 +95,13 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 		return nil, status.Error(codes.NotFound, "User not found")
 	}
 
-	apiUser, err := s.userExtractor.Extract(ctx, dbUser, in.GetFields(), userCtx.UserID, userCtx.Roles)
+	apiUser, err := s.userExtractor.Extract(
+		ctx,
+		dbUser,
+		in.GetFields(),
+		userCtx.UserID,
+		userCtx.Roles,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -110,7 +109,10 @@ func (s *UsersGRPCServer) GetUser(ctx context.Context, in *APIGetUserRequest) (*
 	return apiUser, err
 }
 
-func (s *UsersGRPCServer) DeleteUser(ctx context.Context, in *APIDeleteUserRequest) (*emptypb.Empty, error) {
+func (s *UsersGRPCServer) DeleteUser(
+	ctx context.Context,
+	in *APIDeleteUserRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -181,7 +183,12 @@ func (s *UsersGRPCServer) DisableUserCommentsNotifications(
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userCtx.UserID, in.GetUserId(), true)
+	err = s.userRepository.SetDisableUserCommentsNotifications(
+		ctx,
+		userCtx.UserID,
+		in.GetUserId(),
+		true,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -206,7 +213,12 @@ func (s *UsersGRPCServer) EnableUserCommentsNotifications(
 		return nil, status.Errorf(codes.InvalidArgument, "InvalidArgument")
 	}
 
-	err = s.userRepository.SetDisableUserCommentsNotifications(ctx, userCtx.UserID, in.GetUserId(), false)
+	err = s.userRepository.SetDisableUserCommentsNotifications(
+		ctx,
+		userCtx.UserID,
+		in.GetUserId(),
+		false,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -241,7 +253,10 @@ func (s *UsersGRPCServer) GetUserPreferences(
 	}, nil
 }
 
-func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*APIUsersResponse, error) {
+func (s *UsersGRPCServer) GetUsers(
+	ctx context.Context,
+	in *APIUsersRequest,
+) (*APIUsersResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -261,7 +276,13 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 	result := make([]*APIUser, 0)
 
 	for idx := range rows {
-		apiUser, err := s.userExtractor.Extract(ctx, &rows[idx], in.GetFields(), userCtx.UserID, userCtx.Roles)
+		apiUser, err := s.userExtractor.Extract(
+			ctx,
+			&rows[idx],
+			in.GetFields(),
+			userCtx.UserID,
+			userCtx.Roles,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -291,7 +312,10 @@ func (s *UsersGRPCServer) GetUsers(ctx context.Context, in *APIUsersRequest) (*A
 	}, nil
 }
 
-func (s *UsersGRPCServer) GetAccounts(ctx context.Context, _ *emptypb.Empty) (*APIAccountsResponse, error) {
+func (s *UsersGRPCServer) GetAccounts(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*APIAccountsResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -316,7 +340,11 @@ func (s *UsersGRPCServer) GetAccounts(ctx context.Context, _ *emptypb.Empty) (*A
 			}
 
 			accounts = append(accounts, &APIAccountsAccount{
-				Icon:      "fa fa-" + strings.ReplaceAll(row.ServiceID, "googleplus", "google-plus"),
+				Icon: "fa fa-" + strings.ReplaceAll(
+					row.ServiceID,
+					"googleplus",
+					"google-plus",
+				),
 				Id:        row.ID,
 				Link:      row.Link,
 				Name:      row.Name,
@@ -330,8 +358,17 @@ func (s *UsersGRPCServer) GetAccounts(ctx context.Context, _ *emptypb.Empty) (*A
 	}, nil
 }
 
-func (s *UsersGRPCServer) canRemoveAccount(ctx context.Context, userID int64, id int64) (bool, error) {
-	user, err := s.userRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
+func (s *UsersGRPCServer) canRemoveAccount(
+	ctx context.Context,
+	userID int64,
+	id int64,
+) (bool, error) {
+	user, err := s.userRepository.User(
+		ctx,
+		&query.UserListOptions{ID: userID},
+		users.UserFields{},
+		users.OrderByNone,
+	)
 	if err != nil {
 		return false, err
 	}
@@ -343,7 +380,10 @@ func (s *UsersGRPCServer) canRemoveAccount(ctx context.Context, userID int64, id
 	return s.userRepository.HaveAccountsForOtherServices(ctx, userID, id)
 }
 
-func (s *UsersGRPCServer) DeleteUserAccount(ctx context.Context, in *DeleteUserAccountRequest) (*emptypb.Empty, error) {
+func (s *UsersGRPCServer) DeleteUserAccount(
+	ctx context.Context,
+	in *DeleteUserAccountRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -370,7 +410,10 @@ func (s *UsersGRPCServer) DeleteUserAccount(ctx context.Context, in *DeleteUserA
 	return &emptypb.Empty{}, nil
 }
 
-func (s *UsersGRPCServer) DeleteUserPhoto(ctx context.Context, in *DeleteUserPhotoRequest) (*emptypb.Empty, error) {
+func (s *UsersGRPCServer) DeleteUserPhoto(
+	ctx context.Context,
+	in *DeleteUserPhotoRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -403,7 +446,10 @@ func (s *UsersGRPCServer) DeleteUserPhoto(ctx context.Context, in *DeleteUserPho
 	return &emptypb.Empty{}, nil
 }
 
-func (s *UsersGRPCServer) UpdateUser(ctx context.Context, in *UpdateUserRequest) (*emptypb.Empty, error) {
+func (s *UsersGRPCServer) UpdateUser(
+	ctx context.Context,
+	in *UpdateUserRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

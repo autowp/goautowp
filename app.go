@@ -13,6 +13,7 @@ import (
 
 	"github.com/autowp/goautowp/attrsamqp"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
 	_ "github.com/doug-martin/goqu/v9/dialect/mysql"    // enable mysql dialect
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres" // enable postgres dialect
@@ -786,7 +787,23 @@ func (s *Application) ImageStorageGetFormattedImage(
 	return APIImageToGRPC(img), nil
 }
 
-func (s *Application) ImageStorageListBrokenImages(ctx context.Context, dir string, offset string) error {
+func (s *Application) ImageStorageFlushFormattedImages(
+	ctx context.Context,
+	options storage.FlushOptions,
+) error {
+	is, err := s.container.ImageStorage()
+	if err != nil {
+		return err
+	}
+
+	return is.Flush(ctx, options)
+}
+
+func (s *Application) ImageStorageListBrokenImages(
+	ctx context.Context,
+	dir string,
+	offset string,
+) error {
 	is, err := s.container.ImageStorage()
 	if err != nil {
 		return err

@@ -88,7 +88,9 @@ func extractConvertType(commentsType schema.CommentMessageType) (CommentsType, e
 	return 0, fmt.Errorf("%w: `%v`", errUnknownCommentType, commentsType)
 }
 
-func extractModeratorAttention(value schema.CommentMessageModeratorAttention) (ModeratorAttention, error) {
+func extractModeratorAttention(
+	value schema.CommentMessageModeratorAttention,
+) (ModeratorAttention, error) {
 	switch value {
 	case schema.CommentMessageModeratorAttentionNone:
 		return ModeratorAttention_NONE, nil
@@ -101,7 +103,9 @@ func extractModeratorAttention(value schema.CommentMessageModeratorAttention) (M
 	return 0, fmt.Errorf("%w: `%v`", errUnknownModeratorAttention, value)
 }
 
-func convertModeratorAttention(value ModeratorAttention) (schema.CommentMessageModeratorAttention, error) {
+func convertModeratorAttention(
+	value ModeratorAttention,
+) (schema.CommentMessageModeratorAttention, error) {
 	switch value {
 	case ModeratorAttention_NONE:
 		return schema.CommentMessageModeratorAttentionNone, nil
@@ -219,7 +223,16 @@ func extractMessage(
 			replies = make([]*APICommentsMessage, 0)
 
 			for _, row := range rows {
-				msg, err := extractMessage(ctx, row, repository, picturesRepository, userID, roles, canViewIP, fields)
+				msg, err := extractMessage(
+					ctx,
+					row,
+					repository,
+					picturesRepository,
+					userID,
+					roles,
+					canViewIP,
+					fields,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -303,7 +316,13 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	result := make([]*CommentVote, 0)
 
 	for idx := range votes.PositiveVotes {
-		extracted, err := s.userExtractor.Extract(ctx, &votes.PositiveVotes[idx], nil, userCtx.UserID, userCtx.Roles)
+		extracted, err := s.userExtractor.Extract(
+			ctx,
+			&votes.PositiveVotes[idx],
+			nil,
+			userCtx.UserID,
+			userCtx.Roles,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -315,7 +334,13 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	}
 
 	for idx := range votes.NegativeVotes {
-		extracted, err := s.userExtractor.Extract(ctx, &votes.NegativeVotes[idx], nil, userCtx.UserID, userCtx.Roles)
+		extracted, err := s.userExtractor.Extract(
+			ctx,
+			&votes.NegativeVotes[idx],
+			nil,
+			userCtx.UserID,
+			userCtx.Roles,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -331,7 +356,10 @@ func (s *CommentsGRPCServer) GetCommentVotes(
 	}, nil
 }
 
-func (s *CommentsGRPCServer) Subscribe(ctx context.Context, in *CommentsSubscribeRequest) (*emptypb.Empty, error) {
+func (s *CommentsGRPCServer) Subscribe(
+	ctx context.Context,
+	in *CommentsSubscribeRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -350,7 +378,10 @@ func (s *CommentsGRPCServer) Subscribe(ctx context.Context, in *CommentsSubscrib
 	return &emptypb.Empty{}, err
 }
 
-func (s *CommentsGRPCServer) UnSubscribe(ctx context.Context, in *CommentsUnSubscribeRequest) (*emptypb.Empty, error) {
+func (s *CommentsGRPCServer) UnSubscribe(
+	ctx context.Context,
+	in *CommentsUnSubscribeRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -369,7 +400,10 @@ func (s *CommentsGRPCServer) UnSubscribe(ctx context.Context, in *CommentsUnSubs
 	return &emptypb.Empty{}, nil
 }
 
-func (s *CommentsGRPCServer) View(ctx context.Context, in *CommentsViewRequest) (*emptypb.Empty, error) {
+func (s *CommentsGRPCServer) View(
+	ctx context.Context,
+	in *CommentsViewRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -388,7 +422,10 @@ func (s *CommentsGRPCServer) View(ctx context.Context, in *CommentsViewRequest) 
 	return &emptypb.Empty{}, nil
 }
 
-func (s *CommentsGRPCServer) SetDeleted(ctx context.Context, in *CommentsSetDeletedRequest) (*emptypb.Empty, error) {
+func (s *CommentsGRPCServer) SetDeleted(
+	ctx context.Context,
+	in *CommentsSetDeletedRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -415,7 +452,10 @@ func (s *CommentsGRPCServer) SetDeleted(ctx context.Context, in *CommentsSetDele
 	return &emptypb.Empty{}, nil
 }
 
-func (s *CommentsGRPCServer) MoveComment(ctx context.Context, in *CommentsMoveCommentRequest) (*emptypb.Empty, error) {
+func (s *CommentsGRPCServer) MoveComment(
+	ctx context.Context,
+	in *CommentsMoveCommentRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -536,7 +576,10 @@ func (s *AddCommentRequest) Validate(
 	return result, nil
 }
 
-func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*AddCommentResponse, error) {
+func (s *CommentsGRPCServer) Add(
+	ctx context.Context,
+	in *AddCommentRequest,
+) (*AddCommentResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -570,7 +613,13 @@ func (s *CommentsGRPCServer) Add(ctx context.Context, in *AddCommentRequest) (*A
 	ctx = context.WithoutCancel(ctx)
 
 	messageID, err := s.repository.Add(
-		ctx, commentsType, in.GetItemId(), in.GetParentId(), userCtx.UserID, in.GetMessage(), userCtx.IP.String(),
+		ctx,
+		commentsType,
+		in.GetItemId(),
+		in.GetParentId(),
+		userCtx.UserID,
+		in.GetMessage(),
+		userCtx.IP.String(),
 		moderatorAttention,
 	)
 	if err != nil {
@@ -635,7 +684,10 @@ func (s *CommentsGRPCServer) GetMessagePage(
 	}, nil
 }
 
-func (s *CommentsGRPCServer) GetMessage(ctx context.Context, in *GetMessageRequest) (*APICommentsMessage, error) {
+func (s *CommentsGRPCServer) GetMessage(
+	ctx context.Context,
+	in *GetMessageRequest,
+) (*APICommentsMessage, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -648,7 +700,13 @@ func (s *CommentsGRPCServer) GetMessage(ctx context.Context, in *GetMessageReque
 		fields = &CommentMessageFields{} //nolint:exhaustruct
 	}
 
-	row, err := s.repository.Message(ctx, in.GetId(), fields.GetPreview() || fields.GetText(), fields.GetVote(), canViewIP)
+	row, err := s.repository.Message(
+		ctx,
+		in.GetId(),
+		fields.GetPreview() || fields.GetText(),
+		fields.GetVote(),
+		canViewIP,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -657,10 +715,22 @@ func (s *CommentsGRPCServer) GetMessage(ctx context.Context, in *GetMessageReque
 		return nil, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	return extractMessage(ctx, row, s.repository, s.picturesRepository, userCtx.UserID, userCtx.Roles, canViewIP, fields)
+	return extractMessage(
+		ctx,
+		row,
+		s.repository,
+		s.picturesRepository,
+		userCtx.UserID,
+		userCtx.Roles,
+		canViewIP,
+		fields,
+	)
 }
 
-func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesRequest) (*APICommentsMessages, error) {
+func (s *CommentsGRPCServer) GetMessages(
+	ctx context.Context,
+	in *GetMessagesRequest,
+) (*APICommentsMessages, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -757,8 +827,16 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 		}
 
 		for _, row := range rows {
-			msg, err := extractMessage(ctx, row, s.repository, s.picturesRepository, userCtx.UserID, userCtx.Roles,
-				canViewIP, fields)
+			msg, err := extractMessage(
+				ctx,
+				row,
+				s.repository,
+				s.picturesRepository,
+				userCtx.UserID,
+				userCtx.Roles,
+				canViewIP,
+				fields,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -767,7 +845,13 @@ func (s *CommentsGRPCServer) GetMessages(ctx context.Context, in *GetMessagesReq
 		}
 
 		if userCtx.UserID > 0 && in.GetItemId() > 0 && in.GetTypeId() > 0 {
-			err = s.repository.SetSubscriptionSent(ctx, typeID, in.GetItemId(), userCtx.UserID, false)
+			err = s.repository.SetSubscriptionSent(
+				ctx,
+				typeID,
+				in.GetItemId(),
+				userCtx.UserID,
+				false,
+			)
 			if err != nil {
 				return nil, err
 			}

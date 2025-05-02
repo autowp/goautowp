@@ -138,12 +138,16 @@ func (s *UsersREST) postPhotoAction(ctx *gin.Context) {
 		return
 	}
 
-	if imageConfig.Width < users.UserPhotoMinWidth || imageConfig.Height < users.UserPhotoMinHeight {
+	if imageConfig.Width < users.UserPhotoMinWidth ||
+		imageConfig.Height < users.UserPhotoMinHeight {
 		ctx.JSON(http.StatusBadRequest, BadRequestResponse{
 			InvalidParams: map[string]map[string]string{userPhotoFileField: {
 				"fileImageSizeTooSmall": fmt.Sprintf(
 					"Minimum expected size for image should be '%dx%d' but '%dx%d' detected",
-					users.UserPhotoMinWidth, users.UserPhotoMinHeight, imageConfig.Width, imageConfig.Height,
+					users.UserPhotoMinWidth,
+					users.UserPhotoMinHeight,
+					imageConfig.Width,
+					imageConfig.Height,
 				),
 			}},
 		})

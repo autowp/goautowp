@@ -72,7 +72,10 @@ func (s *ItemParentCacheExtractor) preloadItems(
 }
 
 func (s *ItemParentCacheExtractor) ExtractRows(
-	ctx context.Context, rows []*schema.ItemParentCacheRow, fields *ItemParentCacheFields, lang string,
+	ctx context.Context,
+	rows []*schema.ItemParentCacheRow,
+	fields *ItemParentCacheFields,
+	lang string,
 	userCtx UserContext,
 ) ([]*ItemParentCache, error) {
 	parentIDs := make([]int64, 0, len(rows))

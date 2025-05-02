@@ -28,7 +28,10 @@ func NewCatalogue(db *goqu.Database) (*Catalogue, error) {
 	}, nil
 }
 
-func (s *Catalogue) getVehicleTypesTree(ctx context.Context, parentID int64) ([]*VehicleType, error) {
+func (s *Catalogue) getVehicleTypesTree(
+	ctx context.Context,
+	parentID int64,
+) ([]*VehicleType, error) {
 	sqSelect := s.db.Select(schema.VehicleTypeTableIDCol, schema.VehicleTypeTableNameCol).
 		From(schema.VehicleTypeTable).
 		Order(schema.VehicleTypeTablePositionCol.Asc())
@@ -114,7 +117,10 @@ func (s *Catalogue) getSpecs(ctx context.Context, parentID int32) ([]*Spec, erro
 	return specs, nil
 }
 
-func (s *Catalogue) getPerspectiveGroups(ctx context.Context, pageID int32) ([]*PerspectiveGroup, error) {
+func (s *Catalogue) getPerspectiveGroups(
+	ctx context.Context,
+	pageID int32,
+) ([]*PerspectiveGroup, error) {
 	sqSelect := s.db.Select(schema.PerspectivesGroupsTableIDCol, schema.PerspectivesGroupsTableNameCol).
 		From(schema.PerspectivesGroupsTable).
 		Where(schema.PerspectivesGroupsTablePageIDCol.Eq(pageID)).
@@ -219,7 +225,11 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 		sqSelect = sqSelect.
 			Join(
 				schema.PerspectivesGroupsPerspectivesTable,
-				goqu.On(schema.PerspectivesTableIDCol.Eq(schema.PerspectivesGroupsPerspectivesTablePerspectiveIDCol)),
+				goqu.On(
+					schema.PerspectivesTableIDCol.Eq(
+						schema.PerspectivesGroupsPerspectivesTablePerspectiveIDCol,
+					),
+				),
 			).
 			Where(schema.PerspectivesGroupsPerspectivesTableGroupIDCol.Eq(*groupID)).
 			Order(schema.PerspectivesGroupsPerspectivesTablePositionCol.Asc())
@@ -253,7 +263,10 @@ func (s *Catalogue) getPerspectives(ctx context.Context, groupID *int32) ([]*Per
 	return perspectives, nil
 }
 
-func (s *Catalogue) getBrandVehicleTypes(ctx context.Context, brandID int32) ([]*BrandVehicleType, error) {
+func (s *Catalogue) getBrandVehicleTypes(
+	ctx context.Context,
+	brandID int32,
+) ([]*BrandVehicleType, error) {
 	sqSelect := s.db.
 		Select(schema.VehicleTypeTableIDCol, schema.VehicleTypeTableNameCol, schema.VehicleTypeTableCatnameCol,
 			goqu.COUNT(goqu.DISTINCT(schema.ItemTableIDCol))).

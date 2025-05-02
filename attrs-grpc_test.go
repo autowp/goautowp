@@ -276,7 +276,11 @@ func TestGetValues(t *testing.T) {
 	require.Empty(t, values.GetItems())
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -404,7 +408,11 @@ func TestGetEmptyValues(t *testing.T) {
 	t.Helper()
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -540,14 +548,25 @@ func TestConflicts(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	client := NewAttrsClient(conn)
 
 	_, err = client.GetConflicts(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&AttrConflictsRequest{
 			Filter:   AttrConflictsRequest_ALL,
 			Page:     0,
@@ -557,7 +576,11 @@ func TestConflicts(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.GetConflicts(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&AttrConflictsRequest{
 			Filter:   AttrConflictsRequest_MINUS_WEIGHT,
 			Page:     0,
@@ -567,7 +590,11 @@ func TestConflicts(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.GetConflicts(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&AttrConflictsRequest{
 			Filter:   AttrConflictsRequest_I_DISAGREE,
 			Page:     0,
@@ -577,7 +604,11 @@ func TestConflicts(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.GetConflicts(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&AttrConflictsRequest{
 			Filter:   AttrConflictsRequest_DO_NOT_AGREE_WITH_ME,
 			Page:     0,
@@ -614,12 +645,23 @@ func TestValuesInherits(t *testing.T) {
 	itemsClient := NewItemsClient(conn)
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	_, err = itemsClient.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: childItemID, ParentId: itemID, Catname: "vehicle1",
 		},
@@ -627,7 +669,11 @@ func TestValuesInherits(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -647,7 +693,11 @@ func TestValuesInherits(t *testing.T) {
 	// check values
 	for _, currentItemID := range []int64{itemID, childItemID} {
 		values, err := client.GetValues(
-			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(
+				ctx,
+				authorizationHeader,
+				bearerPrefix+token.AccessToken,
+			),
 			&AttrValuesRequest{
 				ItemId:   currentItemID,
 				Language: "en",
@@ -698,7 +748,11 @@ func TestEngineValuesApplied(t *testing.T) {
 	})
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -718,7 +772,11 @@ func TestEngineValuesApplied(t *testing.T) {
 	// check values
 	for _, currentItemID := range []int64{itemID, engineItemID} {
 		values, err := client.GetValues(
-			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(
+				ctx,
+				authorizationHeader,
+				bearerPrefix+token.AccessToken,
+			),
 			&AttrValuesRequest{
 				ItemId:   currentItemID,
 				Language: "en",
@@ -797,7 +855,11 @@ func TestSetUserValuesList(t *testing.T) {
 
 	for _, testCase := range cases {
 		_, err = client.SetUserValues(
-			metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(
+				t.Context(),
+				authorizationHeader,
+				bearerPrefix+token.AccessToken,
+			),
 			&AttrSetUserValuesRequest{
 				Items: []*AttrUserValue{
 					{
@@ -817,7 +879,11 @@ func TestSetUserValuesList(t *testing.T) {
 
 		// check values
 		values, err := client.GetValues(
-			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(
+				ctx,
+				authorizationHeader,
+				bearerPrefix+token.AccessToken,
+			),
 			&AttrValuesRequest{
 				ItemId:   itemID,
 				Language: "en",
@@ -1034,7 +1100,11 @@ func TestSetValuesRaceConditions(t *testing.T) {
 				defer wg.Done()
 
 				_, err = client.SetUserValues(
-					metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+					metadata.AppendToOutgoingContext(
+						ctx,
+						authorizationHeader,
+						bearerPrefix+token.AccessToken,
+					),
 					&AttrSetUserValuesRequest{
 						Items: []*AttrUserValue{
 							{
@@ -1049,7 +1119,11 @@ func TestSetValuesRaceConditions(t *testing.T) {
 
 				// check values
 				_, err := client.GetValues(
-					metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+					metadata.AppendToOutgoingContext(
+						ctx,
+						authorizationHeader,
+						bearerPrefix+token.AccessToken,
+					),
 					&AttrValuesRequest{
 						ItemId:   itemID,
 						Language: "en",
@@ -1104,12 +1178,23 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	itemsClient := NewItemsClient(conn)
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	_, err = itemsClient.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: childItemID, ParentId: itemID, Catname: "vehicle1",
 		},
@@ -1117,7 +1202,11 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = itemsClient.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: inheritorItemID, ParentId: childItemID, Catname: "vehicle1",
 		},
@@ -1125,7 +1214,11 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1145,7 +1238,11 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	// check values
 	for _, currentItemID := range []int64{itemID, childItemID, inheritorItemID} {
 		values, err := client.GetValues(
-			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(
+				ctx,
+				authorizationHeader,
+				bearerPrefix+token.AccessToken,
+			),
 			&AttrValuesRequest{
 				ItemId:   currentItemID,
 				Language: "en",
@@ -1173,7 +1270,11 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 
 	// delete user value
 	_, err = client.DeleteUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&DeleteAttrUserValuesRequest{
 			AttributeId: intAttributeID,
 			ItemId:      itemID,
@@ -1185,7 +1286,11 @@ func TestValuesInheritsThroughItem(t *testing.T) {
 	// check values
 	for _, currentItemID := range []int64{itemID, childItemID, inheritorItemID} {
 		values, err := client.GetValues(
-			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(
+				ctx,
+				authorizationHeader,
+				bearerPrefix+token.AccessToken,
+			),
 			&AttrValuesRequest{
 				ItemId:   currentItemID,
 				Language: "en",
@@ -1231,7 +1336,11 @@ func TestInheritedValueOverridden(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1249,7 +1358,11 @@ func TestInheritedValueOverridden(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1345,7 +1458,11 @@ func TestMoveValues(t *testing.T) {
 	})
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1363,7 +1480,11 @@ func TestMoveValues(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.MoveUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&MoveAttrUserValuesRequest{
 			SrcItemId:  srcItemID,
 			DestItemId: destItemID,
@@ -1430,7 +1551,11 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 
 	// set initial value
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1470,7 +1595,11 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	time.Sleep(time.Second)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1512,7 +1641,11 @@ func TestValueDateMustChangesWhenValueChanged(t *testing.T) {
 	time.Sleep(time.Second)
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1571,7 +1704,11 @@ func TestNonMultipleValuesFiltered(t *testing.T) {
 
 	// set value
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1628,7 +1765,11 @@ func TestEmptyListValueConsiderAsNonValid(t *testing.T) {
 
 	// set value
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1677,7 +1818,11 @@ func TestEmptyStringValueConsiderAsNonValid(t *testing.T) {
 
 	// set value
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -1911,7 +2056,11 @@ func TestSpecifications(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err := client.GetSpecifications(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&GetSpecificationsRequest{
 			ItemId:   itemID,
 			Language: "en",
@@ -1943,7 +2092,7 @@ func TestSpecifications(t *testing.T) {
 	require.Contains(t, res.GetHtml(), engineName)
 }
 
-func TestChildSpecifications(t *testing.T) {
+func TestChildSpecifications(t *testing.T) { //nolint: maintidx
 	t.Parallel()
 
 	ctx := t.Context()
@@ -2180,7 +2329,11 @@ func TestChildSpecifications(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err := client.GetChildSpecifications(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&GetSpecificationsRequest{
 			ItemId:   itemID,
 			Language: "en",
@@ -2252,7 +2405,11 @@ func TestLocalizedFormat(t *testing.T) {
 	require.NoError(t, err)
 
 	res, err := client.GetSpecifications(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&GetSpecificationsRequest{
 			ItemId:   itemID,
 			Language: "en",
@@ -2262,7 +2419,11 @@ func TestLocalizedFormat(t *testing.T) {
 	require.Contains(t, res.GetHtml(), "250.0")
 
 	res, err = client.GetSpecifications(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&GetSpecificationsRequest{
 			ItemId:   itemID,
 			Language: "ru",
@@ -2291,7 +2452,11 @@ func TestSetUserValuesIsEmpty(t *testing.T) {
 	})
 
 	_, err = client.SetUserValues(
-		metadata.AppendToOutgoingContext(t.Context(), authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			t.Context(),
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&AttrSetUserValuesRequest{
 			Items: []*AttrUserValue{
 				{
@@ -2320,7 +2485,7 @@ func TestSetUserValuesIsEmpty(t *testing.T) {
 	index := slices.IndexFunc(values.GetItems(), func(value *AttrUserValue) bool {
 		return value.GetAttributeId() == schema.EngineTypeAttr
 	})
-	require.NotEqualValues(t, -1, index)
+	require.NotEqual(t, -1, index)
 	require.True(t, values.GetItems()[index].GetValue().GetIsEmpty())
 }
 

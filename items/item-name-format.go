@@ -115,7 +115,9 @@ func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, lang strin
 	if len(item.Spec) > 0 {
 		attrs := `class="badge bg-info text-dark"`
 		if len(item.SpecFull) > 0 {
-			attrs += ` title="` + html.EscapeString(item.SpecFull) + `" data-toggle="tooltip" data-placement="top"`
+			attrs += ` title="` + html.EscapeString(
+				item.SpecFull,
+			) + `" data-toggle="tooltip" data-placement="top"`
 		}
 
 		result += " <span " + attrs + ">" + html.EscapeString(item.Spec) + "</span>"
@@ -141,7 +143,9 @@ func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, lang strin
 	localizer := s.i18nBundle.Localizer(lang)
 
 	if useModelYear {
-		modelYearsMsg, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: "carlist/model-years"})
+		modelYearsMsg, err := localizer.Localize(
+			&i18n.LocalizeConfig{MessageID: "carlist/model-years"},
+		)
 		if err != nil {
 			return "", err
 		}
@@ -151,7 +155,11 @@ func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, lang strin
 			return "", err
 		}
 
-		result = `<span title="` + html.EscapeString(modelYearsMsg) + `">` + html.EscapeString(modelYearsPrefix) +
+		result = `<span title="` + html.EscapeString(
+			modelYearsMsg,
+		) + `">` + html.EscapeString(
+			modelYearsPrefix,
+		) +
 			"</span> " + result
 
 		if by > 0 || ey > 0 {
@@ -172,7 +180,9 @@ func (s *ItemNameFormatter) FormatHTML(item ItemNameFormatterOptions, lang strin
 				return "", err
 			}
 
-			result += `<small> '<span class="realyears" title="` + html.EscapeString(yearsMsg) + `">` +
+			result += `<small> '<span class="realyears" title="` + html.EscapeString(
+				yearsMsg,
+			) + `">` +
 				renderedYears +
 				"</span></small>"
 		}
@@ -207,8 +217,8 @@ func (s *ItemNameFormatter) getModelYearsPrefix(
 		return fmt.Sprintf("%d%s", begin, endFraction), nil
 	}
 
-	bms := begin / hundred //nolint: ifshort
-	ems := end / hundred   //nolint: ifshort
+	bms := begin / hundred
+	ems := end / hundred
 
 	if bms == ems {
 		return fmt.Sprintf("%d%s–%02d%s", begin, beginFraction, end%hundred, endFraction), nil
@@ -339,7 +349,12 @@ func RenderYearsHTML(
 
 	if equalY {
 		if bm > 0 && em > 0 {
-			return `<small class="month">` + monthsRange(bm, em) + ".</small>" + strconv.Itoa(int(by)), nil
+			return `<small class="month">` + monthsRange(
+				bm,
+				em,
+			) + ".</small>" + strconv.Itoa(
+				int(by),
+			), nil
 		}
 
 		return strconv.Itoa(int(by)), nil

@@ -19,7 +19,11 @@ func NewContactsRepository(db *goqu.Database) *ContactsRepository {
 	}
 }
 
-func (s *ContactsRepository) isExists(ctx context.Context, id int64, contactID int64) (bool, error) {
+func (s *ContactsRepository) isExists(
+	ctx context.Context,
+	id int64,
+	contactID int64,
+) (bool, error) {
 	v := 0
 
 	return s.autowpDB.Select(goqu.V(1)).

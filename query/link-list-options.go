@@ -27,7 +27,10 @@ func (s *LinkListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectD
 	)
 }
 
-func (s *LinkListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *LinkListOptions) CountSelect(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
@@ -36,7 +39,10 @@ func (s *LinkListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.Se
 	return sqSelect.Select(goqu.COUNT(goqu.Star())), nil
 }
 
-func (s *LinkListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *LinkListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	if s == nil {
 		return sqSelect, nil
 	}

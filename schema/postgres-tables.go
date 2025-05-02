@@ -65,5 +65,7 @@ var (
 	UserUserPreferencesTable            = goqu.T(UserUserPreferencesTableName)
 	UserUserPreferencesTableUserIDCol   = UserUserPreferencesTable.Col("user_id")
 	UserUserPreferencesTableToUserIDCol = UserUserPreferencesTable.Col("to_user_id")
-	UserUserPreferencesTableDCNCol      = UserUserPreferencesTable.Col(UserUserPreferencesTableDCNColName)
+	UserUserPreferencesTableDCNCol      = UserUserPreferencesTable.Col(
+		UserUserPreferencesTableDCNColName,
+	)
 )

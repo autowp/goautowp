@@ -31,7 +31,10 @@ func NewDonationsGRPCServer(
 	}
 }
 
-func (s *DonationsGRPCServer) GetVODData(ctx context.Context, _ *emptypb.Empty) (*VODDataResponse, error) {
+func (s *DonationsGRPCServer) GetVODData(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*VODDataResponse, error) {
 	dates := make([]*VODDataDate, 0)
 
 	nextDates, err := s.itemOfDay.NextDates(ctx)

@@ -32,7 +32,10 @@ func NewContactsGRPCServer(
 	}
 }
 
-func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContactRequest) (*emptypb.Empty, error) {
+func (s *ContactsGRPCServer) CreateContact(
+	ctx context.Context,
+	in *CreateContactRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -48,8 +51,12 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 
 	deleted := false
 
-	user, err := s.userRepository.User(ctx, &query.UserListOptions{ID: in.GetUserId(), Deleted: &deleted},
-		users.UserFields{}, users.OrderByNone)
+	user, err := s.userRepository.User(
+		ctx,
+		&query.UserListOptions{ID: in.GetUserId(), Deleted: &deleted},
+		users.UserFields{},
+		users.OrderByNone,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -66,7 +73,10 @@ func (s *ContactsGRPCServer) CreateContact(ctx context.Context, in *CreateContac
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContactRequest) (*emptypb.Empty, error) {
+func (s *ContactsGRPCServer) DeleteContact(
+	ctx context.Context,
+	in *DeleteContactRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -84,7 +94,10 @@ func (s *ContactsGRPCServer) DeleteContact(ctx context.Context, in *DeleteContac
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactRequest) (*Contact, error) {
+func (s *ContactsGRPCServer) GetContact(
+	ctx context.Context,
+	in *GetContactRequest,
+) (*Contact, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -112,7 +125,10 @@ func (s *ContactsGRPCServer) GetContact(ctx context.Context, in *GetContactReque
 	}, nil
 }
 
-func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequest) (*ContactItems, error) {
+func (s *ContactsGRPCServer) GetContacts(
+	ctx context.Context,
+	_ *GetContactsRequest,
+) (*ContactItems, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -132,7 +148,13 @@ func (s *ContactsGRPCServer) GetContacts(ctx context.Context, _ *GetContactsRequ
 	items := make([]*Contact, len(userRows))
 
 	for idx := range userRows {
-		user, err := s.userExtractor.Extract(ctx, &userRows[idx], nil, userCtx.UserID, userCtx.Roles)
+		user, err := s.userExtractor.Extract(
+			ctx,
+			&userRows[idx],
+			nil,
+			userCtx.UserID,
+			userCtx.Roles,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

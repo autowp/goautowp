@@ -129,12 +129,16 @@ func (s *APIItem) Validate( //nolint: maintidx
 		s.Today = &wrapperspb.BoolValue{Value: false}
 	}
 
-	if (maskPaths == nil || util.Contains(maskPaths, "spec_id")) && s.GetSpecId() > 0 && s.GetSpecInherit() {
+	if (maskPaths == nil || util.Contains(maskPaths, "spec_id")) && s.GetSpecId() > 0 &&
+		s.GetSpecInherit() {
 		s.SpecId = 0
 	}
 
 	if (maskPaths == nil || util.Contains(maskPaths, "location")) &&
-		!util.Contains([]ItemType{ItemType_ITEM_TYPE_FACTORY, ItemType_ITEM_TYPE_MUSEUM}, s.GetItemTypeId()) {
+		!util.Contains(
+			[]ItemType{ItemType_ITEM_TYPE_FACTORY, ItemType_ITEM_TYPE_MUSEUM},
+			s.GetItemTypeId(),
+		) {
 		if s.GetLocation() != nil {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "location",
@@ -151,7 +155,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 		})
 	}
 
-	if !util.Contains([]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE}, s.GetItemTypeId()) {
+	if !util.Contains(
+		[]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE},
+		s.GetItemTypeId(),
+	) {
 		if (maskPaths == nil || util.Contains(maskPaths, "is_concept")) && s.GetIsConcept() {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "is_concept",
@@ -159,7 +166,8 @@ func (s *APIItem) Validate( //nolint: maintidx
 			})
 		}
 
-		if (maskPaths == nil || util.Contains(maskPaths, "is_concept_inherit")) && s.GetIsConceptInherit() {
+		if (maskPaths == nil || util.Contains(maskPaths, "is_concept_inherit")) &&
+			s.GetIsConceptInherit() {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "is_concept_inherit",
 				Description: "is_concept_inherit can be used only for vehicle or engine",
@@ -173,7 +181,8 @@ func (s *APIItem) Validate( //nolint: maintidx
 			})
 		}
 
-		if (maskPaths == nil || util.Contains(maskPaths, "produced_exactly")) && s.GetProducedExactly() {
+		if (maskPaths == nil || util.Contains(maskPaths, "produced_exactly")) &&
+			s.GetProducedExactly() {
 			result = append(result, &errdetails.BadRequest_FieldViolation{
 				Field:       "produced_exactly",
 				Description: "produced_exactly can be used only for vehicle or engine",
@@ -183,9 +192,15 @@ func (s *APIItem) Validate( //nolint: maintidx
 
 	if maskPaths == nil || util.Contains(maskPaths, "name") {
 		nameInputFilter := validation.InputFilter{
-			Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+			Filters: []validation.FilterInterface{
+				&validation.StringTrimFilter{},
+				&validation.StringSingleSpaces{},
+			},
 			Validators: []validation.ValidatorInterface{
-				&validation.StringLength{Min: schema.ItemNameMinLength, Max: schema.ItemNameMaxLength},
+				&validation.StringLength{
+					Min: schema.ItemNameMinLength,
+					Max: schema.ItemNameMaxLength,
+				},
 			},
 		}
 
@@ -204,7 +219,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 
 	if maskPaths == nil || util.Contains(maskPaths, "full_name") {
 		fullNameInputFilter := validation.InputFilter{
-			Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+			Filters: []validation.FilterInterface{
+				&validation.StringTrimFilter{},
+				&validation.StringSingleSpaces{},
+			},
 			Validators: []validation.ValidatorInterface{
 				&validation.StringLength{Max: schema.ItemFullNameMaxLength},
 			},
@@ -224,7 +242,8 @@ func (s *APIItem) Validate( //nolint: maintidx
 	}
 
 	if s.GetItemTypeId() == ItemType_ITEM_TYPE_VEHICLE {
-		if s.GetEngineItemId() > 0 && (maskPaths == nil || util.Contains(maskPaths, "engine_item_id")) {
+		if s.GetEngineItemId() > 0 &&
+			(maskPaths == nil || util.Contains(maskPaths, "engine_item_id")) {
 			exists, err := repository.Exists(ctx, query.ItemListOptions{
 				ItemID: s.GetEngineItemId(),
 				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDEngine},
@@ -257,7 +276,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 	}
 
 	if maskPaths == nil || util.Contains(maskPaths, "catname") {
-		if util.Contains([]ItemType{ItemType_ITEM_TYPE_CATEGORY, ItemType_ITEM_TYPE_BRAND}, s.GetItemTypeId()) {
+		if util.Contains(
+			[]ItemType{ItemType_ITEM_TYPE_CATEGORY, ItemType_ITEM_TYPE_BRAND},
+			s.GetItemTypeId(),
+		) {
 			catnameInputFilter := validation.InputFilter{
 				Filters: []validation.FilterInterface{
 					&validation.StringTrimFilter{},
@@ -265,7 +287,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 					&validation.StringSanitizeFilename{},
 				},
 				Validators: []validation.ValidatorInterface{
-					&validation.StringLength{Min: schema.ItemCatnameMinLength, Max: schema.ItemCatnameMaxLength},
+					&validation.StringLength{
+						Min: schema.ItemCatnameMinLength,
+						Max: schema.ItemCatnameMaxLength,
+					},
 				},
 			}
 
@@ -282,7 +307,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 			}
 
 			if len(problems) == 0 {
-				exists, err := repository.Exists(ctx, query.ItemListOptions{Catname: s.GetCatname(), ExcludeID: s.GetId()})
+				exists, err := repository.Exists(
+					ctx,
+					query.ItemListOptions{Catname: s.GetCatname(), ExcludeID: s.GetId()},
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -303,14 +331,20 @@ func (s *APIItem) Validate( //nolint: maintidx
 	}
 
 	if maskPaths == nil || util.Contains(maskPaths, "body") {
-		if util.Contains([]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE}, s.GetItemTypeId()) {
+		if util.Contains(
+			[]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE},
+			s.GetItemTypeId(),
+		) {
 			bodyInputFilter := validation.InputFilter{
 				Filters: []validation.FilterInterface{
 					&validation.StringTrimFilter{},
 					&validation.StringSingleSpaces{},
 				},
 				Validators: []validation.ValidatorInterface{
-					&validation.StringLength{Min: schema.ItemBodyMinLength, Max: schema.ItemBodyMaxLength},
+					&validation.StringLength{
+						Min: schema.ItemBodyMinLength,
+						Max: schema.ItemBodyMaxLength,
+					},
 				},
 			}
 
@@ -334,7 +368,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 	}
 
 	if maskPaths == nil || util.Contains(maskPaths, "spec_id") {
-		if util.Contains([]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE}, s.GetItemTypeId()) {
+		if util.Contains(
+			[]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE},
+			s.GetItemTypeId(),
+		) {
 			if s.GetSpecId() != 0 {
 				exists, err := repository.SpecExists(ctx, s.GetSpecId())
 				if err != nil {
@@ -366,7 +403,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 	}
 
 	if maskPaths == nil || util.Contains(maskPaths, "begin_model_year") {
-		if util.Contains([]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE}, s.GetItemTypeId()) {
+		if util.Contains(
+			[]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE},
+			s.GetItemTypeId(),
+		) {
 			if s.GetBeginModelYear() > 0 {
 				var maxYear int32 = schema.ItemYearMax
 
@@ -380,7 +420,9 @@ func (s *APIItem) Validate( //nolint: maintidx
 					},
 				}
 
-				s.BeginModelYear, problems, err = beginModelYearInputFilter.IsValidInt32(s.GetBeginModelYear())
+				s.BeginModelYear, problems, err = beginModelYearInputFilter.IsValidInt32(
+					s.GetBeginModelYear(),
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -401,7 +443,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 	}
 
 	if maskPaths == nil || util.Contains(maskPaths, "begin_model_year_fraction") {
-		if util.Contains([]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE}, s.GetItemTypeId()) {
+		if util.Contains(
+			[]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE},
+			s.GetItemTypeId(),
+		) {
 			if len(s.GetBeginModelYearFraction()) > 0 {
 				beginModelYearFractionInputFilter := validation.InputFilter{
 					Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
@@ -411,7 +456,8 @@ func (s *APIItem) Validate( //nolint: maintidx
 				}
 
 				s.BeginModelYearFraction, problems, err = beginModelYearFractionInputFilter.IsValidString(
-					s.GetBeginModelYearFraction())
+					s.GetBeginModelYearFraction(),
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -432,7 +478,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 	}
 
 	if maskPaths == nil || util.Contains(maskPaths, "end_model_year") {
-		if util.Contains([]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE}, s.GetItemTypeId()) {
+		if util.Contains(
+			[]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE},
+			s.GetItemTypeId(),
+		) {
 			if s.GetEndModelYear() > 0 {
 				var minYear int32 = schema.ItemYearMin
 
@@ -446,7 +495,9 @@ func (s *APIItem) Validate( //nolint: maintidx
 					},
 				}
 
-				s.EndModelYear, problems, err = endModelYearInputFilter.IsValidInt32(s.GetEndModelYear())
+				s.EndModelYear, problems, err = endModelYearInputFilter.IsValidInt32(
+					s.GetEndModelYear(),
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -467,7 +518,10 @@ func (s *APIItem) Validate( //nolint: maintidx
 	}
 
 	if maskPaths == nil || util.Contains(maskPaths, "end_model_year_fraction") {
-		if util.Contains([]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE}, s.GetItemTypeId()) {
+		if util.Contains(
+			[]ItemType{ItemType_ITEM_TYPE_VEHICLE, ItemType_ITEM_TYPE_ENGINE},
+			s.GetItemTypeId(),
+		) {
 			if len(s.GetEndModelYearFraction()) > 0 {
 				endModelYearFractionInputFilter := validation.InputFilter{
 					Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
@@ -476,7 +530,9 @@ func (s *APIItem) Validate( //nolint: maintidx
 					},
 				}
 
-				s.EndModelYearFraction, problems, err = endModelYearFractionInputFilter.IsValidString(s.GetEndModelYearFraction())
+				s.EndModelYearFraction, problems, err = endModelYearFractionInputFilter.IsValidString(
+					s.GetEndModelYearFraction(),
+				)
 				if err != nil {
 					return nil, err
 				}

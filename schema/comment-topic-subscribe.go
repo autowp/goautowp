@@ -12,7 +12,13 @@ const (
 
 var (
 	CommentTopicSubscribeTable          = goqu.T(CommentTopicSubscribeTableName)
-	CommentTopicSubscribeTableItemIDCol = CommentTopicSubscribeTable.Col(CommentTopicSubscribeTableItemIDColName)
-	CommentTopicSubscribeTableTypeIDCol = CommentTopicSubscribeTable.Col(CommentTopicSubscribeTableTypeIDColName)
-	CommentTopicSubscribeTableUserIDCol = CommentTopicSubscribeTable.Col(CommentTopicSubscribeTableUserIDColName)
+	CommentTopicSubscribeTableItemIDCol = CommentTopicSubscribeTable.Col(
+		CommentTopicSubscribeTableItemIDColName,
+	)
+	CommentTopicSubscribeTableTypeIDCol = CommentTopicSubscribeTable.Col(
+		CommentTopicSubscribeTableTypeIDColName,
+	)
+	CommentTopicSubscribeTableUserIDCol = CommentTopicSubscribeTable.Col(
+		CommentTopicSubscribeTableUserIDColName,
+	)
 )

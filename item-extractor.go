@@ -90,7 +90,13 @@ func (s *ItemExtractor) preloadItemParentChilds(
 
 	itemParentExtractor := s.container.ItemParentExtractor()
 
-	extractedRows, err := itemParentExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, userCtx)
+	extractedRows, err := itemParentExtractor.ExtractRows(
+		ctx,
+		rows,
+		request.GetFields(),
+		lang,
+		userCtx,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +114,11 @@ func (s *ItemExtractor) preloadItemParentChilds(
 }
 
 func (s *ItemExtractor) preloadPictureItems(
-	ctx context.Context, request *PictureItemsRequest, ids []int64, lang string, userCtx UserContext,
+	ctx context.Context,
+	request *PictureItemsRequest,
+	ids []int64,
+	lang string,
+	userCtx UserContext,
 ) (map[int64][]*PictureItem, error) {
 	if request == nil {
 		return nil, nil //nolint: nilnil
@@ -164,7 +174,13 @@ func (s *ItemExtractor) preloadPictureItems(
 
 	pictureItemExtractor := s.container.PictureItemExtractor()
 
-	extractedRows, err := pictureItemExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, userCtx)
+	extractedRows, err := pictureItemExtractor.ExtractRows(
+		ctx,
+		rows,
+		request.GetFields(),
+		lang,
+		userCtx,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +226,13 @@ func (s *ItemExtractor) ExtractRows(
 
 	itemParentChildsRequest := fields.GetItemParentChilds()
 
-	itemParentChildRows, err := s.preloadItemParentChilds(ctx, itemParentChildsRequest, ids, lang, userCtx)
+	itemParentChildRows, err := s.preloadItemParentChilds(
+		ctx,
+		itemParentChildsRequest,
+		ids,
+		lang,
+		userCtx,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +279,11 @@ func (s *ItemExtractor) ExtractRows(
 		}
 
 		if fields.GetMeta() && isModer {
-			resultRow.Name, err = itemRepository.LanguageName(ctx, row.ID, items.DefaultLanguageCode)
+			resultRow.Name, err = itemRepository.LanguageName(
+				ctx,
+				row.ID,
+				items.DefaultLanguageCode,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -317,8 +343,13 @@ func (s *ItemExtractor) Extract(
 	return result[0], nil
 }
 
-func (s *ItemExtractor) extractPlain(
-	ctx context.Context, fields *ItemFields, row *items.Item, resultRow *APIItem, lang string, userCtx UserContext,
+func (s *ItemExtractor) extractPlain( //nolint: maintidx
+	ctx context.Context,
+	fields *ItemFields,
+	row *items.Item,
+	resultRow *APIItem,
+	lang string,
+	userCtx UserContext,
 ) error {
 	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 
@@ -359,9 +390,12 @@ func (s *ItemExtractor) extractPlain(
 	}
 
 	if fields.GetSpecificationsCount() && isModer {
-		resultRow.SpecificationsCount, err = attrsRepository.ValuesCount(ctx, query.AttrsValueListOptions{
-			ItemID: row.ID,
-		})
+		resultRow.SpecificationsCount, err = attrsRepository.ValuesCount(
+			ctx,
+			query.AttrsValueListOptions{
+				ItemID: row.ID,
+			},
+		)
 		if err != nil {
 			return err
 		}
@@ -429,7 +463,8 @@ func (s *ItemExtractor) extractPlain(
 	}
 
 	if fields.GetCanEditSpecs() {
-		resultRow.CanEditSpecs = util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) && userCtx.UserID != 0
+		resultRow.CanEditSpecs = util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) &&
+			userCtx.UserID != 0
 	}
 
 	resultRow.CommentsCount, err = s.extractCommentsCount(ctx, fields, row)
@@ -453,10 +488,13 @@ func (s *ItemExtractor) extractPlain(
 	}
 
 	if fields.GetItemLanguageCount() && isModer {
-		resultRow.ItemLanguageCount, err = itemRepository.ItemLanguageCount(ctx, &query.ItemLanguageListOptions{
-			ItemID:          row.ID,
-			ExcludeLanguage: items.DefaultLanguageCode,
-		})
+		resultRow.ItemLanguageCount, err = itemRepository.ItemLanguageCount(
+			ctx,
+			&query.ItemLanguageListOptions{
+				ItemID:          row.ID,
+				ExcludeLanguage: items.DefaultLanguageCode,
+			},
+		)
 		if err != nil {
 			return err
 		}
@@ -560,7 +598,11 @@ func (s *ItemExtractor) extractItemOfDayPictures(
 
 	imagesInfo := make(map[string]map[int]storage.Image)
 	for format, requests := range formatRequests {
-		imagesInfo[format], err = imageStorage.FormattedImages(ctx, slices.Collect(maps.Values(requests)), format)
+		imagesInfo[format], err = imageStorage.FormattedImages(
+			ctx,
+			slices.Collect(maps.Values(requests)),
+			format,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -627,7 +669,12 @@ func (s *ItemExtractor) extractItemOfDayPictures(
 					case items.CataloguePathResultTypeBrand:
 						route = frontend.PictureRoute(row.Identity)
 					case items.CataloguePathResultTypeBrandItem:
-						route = frontend.BrandItemPathPicturesPictureRoute(path.BrandCatname, path.CarCatname, path.Path, row.Identity)
+						route = frontend.BrandItemPathPicturesPictureRoute(
+							path.BrandCatname,
+							path.CarCatname,
+							path.Path,
+							row.Identity,
+						)
 					case items.CataloguePathResultTypeCategory:
 						route = frontend.CategoryPictureRoute(path.CategoryCatname, row.Identity)
 					case items.CataloguePathResultTypePerson:
@@ -672,7 +719,10 @@ func (s *ItemExtractor) extractItemOfDayPictures(
 	return result, nil
 }
 
-func (s *ItemExtractor) orientedPictureList(ctx context.Context, itemID int64) ([]*schema.PictureRow, error) {
+func (s *ItemExtractor) orientedPictureList(
+	ctx context.Context,
+	itemID int64,
+) ([]*schema.PictureRow, error) {
 	result := make([]*schema.PictureRow, 0)
 	usedIDs := make([]int64, 0)
 
@@ -681,7 +731,10 @@ func (s *ItemExtractor) orientedPictureList(ctx context.Context, itemID int64) (
 		return nil, err
 	}
 
-	perspectivesGroupIDs, err := pictureRepository.PerspectivePageGroupIDs(ctx, schema.PerspectivesPageFivePics)
+	perspectivesGroupIDs, err := pictureRepository.PerspectivePageGroupIDs(
+		ctx,
+		schema.PerspectivesPageFivePics,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -701,7 +754,12 @@ func (s *ItemExtractor) orientedPictureList(ctx context.Context, itemID int64) (
 			Limit: 1,
 		}
 
-		picture, err := pictureRepository.Picture(ctx, &sqSelect, nil, pictures.OrderByVotesAndPerspectivesGroupPerspectives)
+		picture, err := pictureRepository.Picture(
+			ctx,
+			&sqSelect,
+			nil,
+			pictures.OrderByVotesAndPerspectivesGroupPerspectives,
+		)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
@@ -844,9 +902,13 @@ func (s *ItemExtractor) extractRelatedGroupsPictures(
 				src = imagesInfo.Src()
 			}
 
-			cataloguePaths, err := itemRepository.CataloguePaths(ctx, car.ID, items.CataloguePathOptions{
-				BreakOnFirst: true,
-			})
+			cataloguePaths, err := itemRepository.CataloguePaths(
+				ctx,
+				car.ID,
+				items.CataloguePathOptions{
+					BreakOnFirst: true,
+				},
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -959,7 +1021,13 @@ func (s *ItemExtractor) extractEngineVehicles(
 
 	repoListOptions.ItemIDs = ids
 
-	rows, _, err := itemRepository.List(ctx, repoListOptions, convertItemFields(itemFields), items.OrderByNone, false)
+	rows, _, err := itemRepository.List(
+		ctx,
+		repoListOptions,
+		convertItemFields(itemFields),
+		items.OrderByNone,
+		false,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1059,7 +1127,13 @@ func (s *ItemExtractor) extractPreviewPictures(
 		}
 
 		if pic != nil && pic.Row != nil {
-			extractedPic, err := pictureExtractor.Extract(ctx, pic.Row, pictureFields, lang, userCtx)
+			extractedPic, err := pictureExtractor.Extract(
+				ctx,
+				pic.Row,
+				pictureFields,
+				lang,
+				userCtx,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -1092,7 +1166,11 @@ func (s *ItemExtractor) extractIsCompilesItemOfDay(
 	return itemOfDayRepository.IsComplies(ctx, row.ID)
 }
 
-func (s *ItemExtractor) extractCommentsCount(ctx context.Context, fields *ItemFields, row *items.Item) (int32, error) {
+func (s *ItemExtractor) extractCommentsCount(
+	ctx context.Context,
+	fields *ItemFields,
+	row *items.Item,
+) (int32, error) {
 	if !fields.GetCommentsCount() {
 		return 0, nil
 	}
@@ -1154,7 +1232,11 @@ func (s *ItemExtractor) extractLogos(
 }
 
 func (s *ItemExtractor) extractConnectedItems(
-	ctx context.Context, request *ItemsRequest, opts *query.ItemListOptions, lang string, userCtx UserContext,
+	ctx context.Context,
+	request *ItemsRequest,
+	opts *query.ItemListOptions,
+	lang string,
+	userCtx UserContext,
 ) ([]*APIItem, error) {
 	itemRepository, err := s.container.ItemsRepository()
 	if err != nil {
@@ -1167,7 +1249,13 @@ func (s *ItemExtractor) extractConnectedItems(
 
 	opts.Language = lang
 
-	rows, _, err := itemRepository.List(ctx, opts, convertItemFields(request.GetFields()), order, false)
+	rows, _, err := itemRepository.List(
+		ctx,
+		opts,
+		convertItemFields(request.GetFields()),
+		order,
+		false,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1202,7 +1290,10 @@ func (s *ItemExtractor) extractCategories(
 	opts := &query.ItemListOptions{
 		ItemParentChild: &query.ItemParentListOptions{
 			ChildItems: &query.ItemListOptions{
-				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
+				TypeID: []schema.ItemTableItemTypeID{
+					schema.ItemTableItemTypeIDVehicle,
+					schema.ItemTableItemTypeIDEngine,
+				},
 			},
 			ItemParentCacheAncestorByChildID: &query.ItemParentCacheListOptions{ItemID: row.ID},
 		},
@@ -1216,7 +1307,9 @@ func (s *ItemExtractor) extractRoutes(
 	ctx context.Context, fields *ItemFields, row *items.Item,
 ) ([]string, []string, error) {
 	extractRoute := fields.GetRoute() && util.Contains(itemTypeCanHaveRoute, row.ItemTypeID)
-	extractSpecsRoute := fields.GetSpecsRoute() && util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) && row.HasSpecs
+	extractSpecsRoute := fields.GetSpecsRoute() &&
+		util.Contains(itemTypeCanHaveSpecs, row.ItemTypeID) &&
+		row.HasSpecs
 
 	var (
 		route      []string
@@ -1252,7 +1345,11 @@ func (s *ItemExtractor) extractRoutes(
 			case schema.ItemTableItemTypeIDEngine,
 				schema.ItemTableItemTypeIDVehicle:
 				for _, cPath := range cataloguePaths {
-					route = frontend.BrandItemPathRoute(cPath.BrandCatname, cPath.CarCatname, cPath.Path)
+					route = frontend.BrandItemPathRoute(
+						cPath.BrandCatname,
+						cPath.CarCatname,
+						cPath.Path,
+					)
 
 					break
 				}
@@ -1266,7 +1363,11 @@ func (s *ItemExtractor) extractRoutes(
 
 		if extractSpecsRoute {
 			for _, path := range cataloguePaths {
-				specsRoute = frontend.BrandItemPathSpecificationsRoute(path.BrandCatname, path.CarCatname, path.Path)
+				specsRoute = frontend.BrandItemPathSpecificationsRoute(
+					path.BrandCatname,
+					path.CarCatname,
+					path.Path,
+				)
 
 				break
 			}
@@ -1467,7 +1568,10 @@ func (s *ItemExtractor) extractLocation(
 	}, nil
 }
 
-func (s *ItemExtractor) itemPublicRoutes(ctx context.Context, item *items.Item) ([]*PublicRoute, error) {
+func (s *ItemExtractor) itemPublicRoutes(
+	ctx context.Context,
+	item *items.Item,
+) ([]*PublicRoute, error) {
 	if item.ItemTypeID == schema.ItemTableItemTypeIDFactory {
 		return []*PublicRoute{
 			{Route: frontend.FactoryRoute(item.ID)},
@@ -1495,7 +1599,11 @@ func (s *ItemExtractor) itemPublicRoutes(ctx context.Context, item *items.Item) 
 	return s.walkUpUntilBrand(ctx, item.ID, []string{})
 }
 
-func (s *ItemExtractor) walkUpUntilBrand(ctx context.Context, id int64, path []string) ([]*PublicRoute, error) {
+func (s *ItemExtractor) walkUpUntilBrand(
+	ctx context.Context,
+	id int64,
+	path []string,
+) ([]*PublicRoute, error) {
 	routes := make([]*PublicRoute, 0)
 
 	itemRepository, err := s.container.ItemsRepository()
@@ -1521,11 +1629,19 @@ func (s *ItemExtractor) walkUpUntilBrand(ctx context.Context, id int64, path []s
 
 		if err == nil {
 			routes = append(routes, &PublicRoute{
-				Route: frontend.BrandItemPathRoute(util.NullStringToString(brand.Catname), parentRow.Catname, path),
+				Route: frontend.BrandItemPathRoute(
+					util.NullStringToString(brand.Catname),
+					parentRow.Catname,
+					path,
+				),
 			})
 		}
 
-		nextRoutes, err := s.walkUpUntilBrand(ctx, parentRow.ParentID, append([]string{parentRow.Catname}, path...))
+		nextRoutes, err := s.walkUpUntilBrand(
+			ctx,
+			parentRow.ParentID,
+			append([]string{parentRow.Catname}, path...),
+		)
 		if err != nil {
 			return nil, err
 		}

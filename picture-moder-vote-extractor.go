@@ -10,7 +10,9 @@ func NewPictureModerVoteExtractor() *PictureModerVoteExtractor {
 	return &PictureModerVoteExtractor{}
 }
 
-func (s *PictureModerVoteExtractor) ExtractRows(rows []*schema.PictureModerVoteRow) ([]*PictureModerVote, error) {
+func (s *PictureModerVoteExtractor) ExtractRows(
+	rows []*schema.PictureModerVoteRow,
+) ([]*PictureModerVote, error) {
 	result := make([]*PictureModerVote, 0, len(rows))
 
 	for _, row := range rows {

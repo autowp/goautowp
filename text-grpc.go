@@ -23,7 +23,10 @@ func NewTextGRPCServer(
 	}
 }
 
-func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*APIGetTextResponse, error) {
+func (s *TextGRPCServer) GetText(
+	ctx context.Context,
+	in *APIGetTextRequest,
+) (*APIGetTextResponse, error) {
 	var (
 		lastRevision    int64
 		currentRevision = in.GetRevision()
@@ -57,7 +60,8 @@ func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*A
 		Where(
 			schema.TextstorageRevisionTableTextIDCol.Eq(in.GetId()),
 			schema.TextstorageRevisionTableRevisionCol.Eq(currentRevision),
-		).ScanStructContext(ctx, &stCurrent)
+		).
+		ScanStructContext(ctx, &stCurrent)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -79,7 +83,8 @@ func (s *TextGRPCServer) GetText(ctx context.Context, in *APIGetTextRequest) (*A
 			Where(
 				schema.TextstorageRevisionTableTextIDCol.Eq(in.GetId()),
 				schema.TextstorageRevisionTableRevisionCol.Eq(prevRevision),
-			).ScanStructContext(ctx, &stPrevious)
+			).
+			ScanStructContext(ctx, &stPrevious)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

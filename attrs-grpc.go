@@ -91,7 +91,10 @@ func convertAttribute(row *schema.AttrsAttributeRow) *AttrAttribute {
 	}
 }
 
-func (s *AttrsGRPCServer) GetAttribute(ctx context.Context, in *AttrAttributeID) (*AttrAttribute, error) {
+func (s *AttrsGRPCServer) GetAttribute(
+	ctx context.Context,
+	in *AttrAttributeID,
+) (*AttrAttribute, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -125,7 +128,10 @@ func (s *AttrsGRPCServer) GetAttributes(
 		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
 
-	rows, err := s.repository.Attributes(ctx, &query.AttrsListOptions{ZoneID: in.GetZoneId(), ParentID: in.GetParentId()})
+	rows, err := s.repository.Attributes(
+		ctx,
+		&query.AttrsListOptions{ZoneID: in.GetZoneId(), ParentID: in.GetParentId()},
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -200,7 +206,10 @@ func (s *AttrsGRPCServer) GetListOptions(
 	}, nil
 }
 
-func (s *AttrsGRPCServer) GetUnits(ctx context.Context, _ *emptypb.Empty) (*AttrUnitsResponse, error) {
+func (s *AttrsGRPCServer) GetUnits(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*AttrUnitsResponse, error) {
 	rows, err := s.repository.Units(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -241,7 +250,10 @@ func (s *AttrsGRPCServer) GetZoneAttributes(
 	}, nil
 }
 
-func (s *AttrsGRPCServer) GetZones(ctx context.Context, _ *emptypb.Empty) (*AttrZonesResponse, error) {
+func (s *AttrsGRPCServer) GetZones(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*AttrZonesResponse, error) {
 	rows, err := s.repository.Zones(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -260,14 +272,20 @@ func (s *AttrsGRPCServer) GetZones(ctx context.Context, _ *emptypb.Empty) (*Attr
 	}, nil
 }
 
-func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) (*AttrValuesResponse, error) {
+func (s *AttrsGRPCServer) GetValues(
+	ctx context.Context,
+	in *AttrValuesRequest,
+) (*AttrValuesResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userCtx.UserID == 0 {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
+		return nil, status.Errorf(
+			codes.PermissionDenied,
+			"PermissionDenied: specifications.edit is required",
+		)
 	}
 
 	rows, err := s.repository.Values(ctx, query.AttrsValueListOptions{
@@ -281,7 +299,12 @@ func (s *AttrsGRPCServer) GetValues(ctx context.Context, in *AttrValuesRequest) 
 	res := make([]*AttrValue, len(rows))
 
 	for idx, row := range rows {
-		value, valueText, err := s.repository.ActualValueText(ctx, row.AttributeID, row.ItemID, in.GetLanguage())
+		value, valueText, err := s.repository.ActualValueText(
+			ctx,
+			row.AttributeID,
+			row.ItemID,
+			in.GetLanguage(),
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -310,7 +333,10 @@ func (s *AttrsGRPCServer) GetUserValues(
 	}
 
 	if userCtx.UserID == 0 {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
+		return nil, status.Errorf(
+			codes.PermissionDenied,
+			"PermissionDenied: specifications.edit is required",
+		)
 	}
 
 	if in.GetItemId() == 0 {
@@ -336,7 +362,13 @@ func (s *AttrsGRPCServer) GetUserValues(
 		)
 
 		if in.GetFields().GetValueText() {
-			value, valueText, err = s.repository.UserValueText(ctx, row.AttributeID, row.ItemID, row.UserID, in.GetLanguage())
+			value, valueText, err = s.repository.UserValueText(
+				ctx,
+				row.AttributeID,
+				row.ItemID,
+				row.UserID,
+				in.GetLanguage(),
+			)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -364,7 +396,10 @@ func (s *AttrsGRPCServer) GetUserValues(
 	}, nil
 }
 
-func (s *AttrsGRPCServer) GetConflicts(ctx context.Context, in *AttrConflictsRequest) (*AttrConflictsResponse, error) {
+func (s *AttrsGRPCServer) GetConflicts(
+	ctx context.Context,
+	in *AttrConflictsRequest,
+) (*AttrConflictsResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -449,7 +484,10 @@ func (s *AttrsGRPCServer) DeleteUserValues(
 	}
 
 	if !util.Contains(userCtx.Roles, users.RoleAdmin) {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.admin is required")
+		return nil, status.Errorf(
+			codes.PermissionDenied,
+			"PermissionDenied: specifications.admin is required",
+		)
 	}
 
 	err = s.repository.DeleteUserValue(ctx, in.GetAttributeId(), in.GetItemId(), in.GetUserId())
@@ -460,14 +498,20 @@ func (s *AttrsGRPCServer) DeleteUserValues(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *AttrsGRPCServer) SetUserValues(ctx context.Context, in *AttrSetUserValuesRequest) (*emptypb.Empty, error) {
+func (s *AttrsGRPCServer) SetUserValues(
+	ctx context.Context,
+	in *AttrSetUserValuesRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if userCtx.UserID == 0 {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.edit is required")
+		return nil, status.Errorf(
+			codes.PermissionDenied,
+			"PermissionDenied: specifications.edit is required",
+		)
 	}
 
 	for _, item := range in.GetItems() {
@@ -496,14 +540,20 @@ func (s *AttrsGRPCServer) SetUserValues(ctx context.Context, in *AttrSetUserValu
 	return &emptypb.Empty{}, nil
 }
 
-func (s *AttrsGRPCServer) MoveUserValues(ctx context.Context, in *MoveAttrUserValuesRequest) (*emptypb.Empty, error) {
+func (s *AttrsGRPCServer) MoveUserValues(
+	ctx context.Context,
+	in *MoveAttrUserValuesRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	if !util.Contains(userCtx.Roles, users.RoleAdmin) {
-		return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied: specifications.admin is required")
+		return nil, status.Errorf(
+			codes.PermissionDenied,
+			"PermissionDenied: specifications.admin is required",
+		)
 	}
 
 	srcItemID := in.GetSrcItemId()
@@ -555,7 +605,10 @@ func (s *AttrsGRPCServer) GetChildSpecifications(
 	}, nil
 }
 
-func (s *AttrsGRPCServer) GetChartParameters(ctx context.Context, _ *emptypb.Empty) (*ChartParameters, error) {
+func (s *AttrsGRPCServer) GetChartParameters(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*ChartParameters, error) {
 	rows, err := s.repository.Attributes(ctx, &query.AttrsListOptions{
 		IDs: attrs.ChartParameters,
 	})
@@ -576,7 +629,10 @@ func (s *AttrsGRPCServer) GetChartParameters(ctx context.Context, _ *emptypb.Emp
 	}, nil
 }
 
-func (s *AttrsGRPCServer) GetChartData(ctx context.Context, in *ChartDataRequest) (*ChartData, error) {
+func (s *AttrsGRPCServer) GetChartData(
+	ctx context.Context,
+	in *ChartDataRequest,
+) (*ChartData, error) {
 	datasets, err := s.repository.ChartData(ctx, in.GetId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

@@ -100,8 +100,13 @@ func NewRepository(
 
 func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, error) {
 	rows, err := s.db.Select(
-		schema.UserTableIDCol, schema.UserTableNameCol, schema.UserTableDeletedCol, schema.UserTableIdentityCol,
-		schema.UserTableLastOnlineCol, schema.UserTableGreenCol, schema.UserTableSpecsWeightCol,
+		schema.UserTableIDCol,
+		schema.UserTableNameCol,
+		schema.UserTableDeletedCol,
+		schema.UserTableIdentityCol,
+		schema.UserTableLastOnlineCol,
+		schema.UserTableGreenCol,
+		schema.UserTableSpecsWeightCol,
 		schema.CommentVoteTableVoteCol,
 	).
 		From(schema.CommentVoteTable).
@@ -123,8 +128,16 @@ func (s *Repository) GetVotes(ctx context.Context, id int64) (*GetVotesResult, e
 			vote  int
 		)
 
-		err = rows.Scan(&rUser.ID, &rUser.Name, &rUser.Deleted, &rUser.Identity, &rUser.LastOnline, &rUser.Green,
-			&rUser.SpecsWeight, &vote)
+		err = rows.Scan(
+			&rUser.ID,
+			&rUser.Name,
+			&rUser.Deleted,
+			&rUser.Identity,
+			&rUser.LastOnline,
+			&rUser.Green,
+			&rUser.SpecsWeight,
+			&vote,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -208,10 +221,15 @@ func (s *Repository) View(
 	return err
 }
 
-func (s *Repository) QueueDeleteMessage(ctx context.Context, commentID int64, byUserID int64) error {
+func (s *Repository) QueueDeleteMessage(
+	ctx context.Context,
+	commentID int64,
+	byUserID int64,
+) error {
 	var moderatorAttention schema.CommentMessageModeratorAttention
 
-	success, err := s.db.Select(schema.CommentMessageTableModeratorAttentionCol).From(schema.CommentMessageTable).
+	success, err := s.db.Select(schema.CommentMessageTableModeratorAttentionCol).
+		From(schema.CommentMessageTable).
 		Where(schema.CommentMessageTableIDCol.Eq(commentID)).
 		ScanValContext(ctx, &moderatorAttention)
 	if err != nil {
@@ -250,7 +268,10 @@ func (s *Repository) RestoreMessage(ctx context.Context, commentID int64) error 
 	return err
 }
 
-func (s *Repository) GetCommentType(ctx context.Context, commentID int64) (schema.CommentMessageType, error) {
+func (s *Repository) GetCommentType(
+	ctx context.Context,
+	commentID int64,
+) (schema.CommentMessageType, error) {
 	var commentType schema.CommentMessageType
 
 	success, err := s.db.Select(schema.CommentMessageTableTypeIDCol).
@@ -277,7 +298,8 @@ func (s *Repository) MoveMessage(
 	}{}
 
 	success, err := s.db.Select(schema.CommentMessageTableTypeIDCol, schema.CommentMessageTableItemIDCol).
-		From(schema.CommentMessageTable).Where(schema.CommentMessageTableIDCol.Eq(commentID)).
+		From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableIDCol.Eq(commentID)).
 		ScanStructContext(ctx, &st)
 	if err != nil {
 		return err
@@ -355,7 +377,11 @@ func (s *Repository) moveMessageRecursive(
 	return nil
 }
 
-func (s *Repository) updateTopicStat(ctx context.Context, commentType schema.CommentMessageType, itemID int64) error {
+func (s *Repository) updateTopicStat(
+	ctx context.Context,
+	commentType schema.CommentMessageType,
+	itemID int64,
+) error {
 	st := struct {
 		MessagesCount int           `db:"count"`
 		LastUpdate    *sql.NullTime `db:"last_update"`
@@ -399,8 +425,14 @@ func (s *Repository) updateTopicStat(ctx context.Context, commentType schema.Com
 		}).OnConflict(goqu.DoUpdate(
 			schema.CommentTopicTableItemIDColName+","+schema.CommentTopicTableTypeIDColName,
 			goqu.Record{
-				schema.CommentTopicTableLastUpdateColName: goqu.Func("VALUES", goqu.C(schema.CommentTopicTableLastUpdateColName)),
-				schema.CommentTopicTableMessagesColName:   goqu.Func("VALUES", goqu.C(schema.CommentTopicTableMessagesColName)),
+				schema.CommentTopicTableLastUpdateColName: goqu.Func(
+					"VALUES",
+					goqu.C(schema.CommentTopicTableLastUpdateColName),
+				),
+				schema.CommentTopicTableMessagesColName: goqu.Func(
+					"VALUES",
+					goqu.C(schema.CommentTopicTableMessagesColName),
+				),
 			},
 		)).Executor().ExecContext(ctx)
 	}
@@ -426,7 +458,12 @@ func (s *Repository) UserVote(ctx context.Context, userID int64, commentID int64
 	return vote, err
 }
 
-func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID int64, vote int32) (int32, error) {
+func (s *Repository) VoteComment(
+	ctx context.Context,
+	userID int64,
+	commentID int64,
+	vote int32,
+) (int32, error) {
 	if vote > 0 {
 		vote = 1
 	} else {
@@ -435,7 +472,8 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 
 	var authorID int64
 
-	success, err := s.db.Select(schema.CommentMessageTableAuthorIDCol).From(schema.CommentMessageTable).
+	success, err := s.db.Select(schema.CommentMessageTableAuthorIDCol).
+		From(schema.CommentMessageTable).
 		Where(schema.CommentMessageTableIDCol.Eq(commentID), schema.CommentMessageTableDeletedCol.IsFalse()).
 		ScanValContext(ctx, &authorID)
 	if err != nil {
@@ -459,7 +497,10 @@ func (s *Repository) VoteComment(ctx context.Context, userID int64, commentID in
 	}).OnConflict(goqu.DoUpdate(
 		schema.CommentVoteTableCommentIDColName+","+schema.CommentVoteTableUserIDColName,
 		goqu.Record{
-			schema.CommentVoteTableVoteColName: goqu.Func("VALUES", goqu.C(schema.CommentVoteTableVoteColName)),
+			schema.CommentVoteTableVoteColName: goqu.Func(
+				"VALUES",
+				goqu.C(schema.CommentVoteTableVoteColName),
+			),
 		},
 	)).Executor().ExecContext(ctx)
 	if err != nil {
@@ -644,7 +685,11 @@ func (s *Repository) UpdateTopicView(
 	return err
 }
 
-func (s *Repository) AssertItem(ctx context.Context, typeID schema.CommentMessageType, itemID int64) error {
+func (s *Repository) AssertItem(
+	ctx context.Context,
+	typeID schema.CommentMessageType,
+	itemID int64,
+) error {
 	var (
 		err     error
 		val     int
@@ -713,16 +758,22 @@ func (s *Repository) NotifyAboutReply(ctx context.Context, messageID int64) erro
 			),
 		)).
 		Join(schema.UserTable.As(u1), goqu.On(
-			cm1Table.Col(schema.CommentMessageTableAuthorIDColName).Eq(u1Table.Col(schema.UserTableIDColName))),
+			cm1Table.Col(schema.CommentMessageTableAuthorIDColName).
+				Eq(u1Table.Col(schema.UserTableIDColName)),
+		),
 		).
 		Join(schema.UserTable.As(pu), goqu.On(
-			pmTable.Col(schema.CommentMessageTableAuthorIDColName).Eq(puTable.Col(schema.UserTableIDColName))),
+			pmTable.Col(schema.CommentMessageTableAuthorIDColName).
+				Eq(puTable.Col(schema.UserTableIDColName)),
+		),
 		).
 		Where(
 			cm1Table.Col(schema.CommentMessageTableIDColName).Eq(messageID),
-			cm1Table.Col(schema.CommentMessageTableAuthorIDColName).Neq(pmTable.Col(schema.CommentMessageTableAuthorIDColName)),
+			cm1Table.Col(schema.CommentMessageTableAuthorIDColName).
+				Neq(pmTable.Col(schema.CommentMessageTableAuthorIDColName)),
 			puTable.Col(schema.UserTableDeletedColName).IsFalse(),
-		).Executor().ScanStructContext(ctx, &st)
+		).
+		Executor().ScanStructContext(ctx, &st)
 	if err != nil {
 		return err
 	}
@@ -771,7 +822,8 @@ func (s *Repository) NotifySubscribers(ctx context.Context, messageID int64) err
 
 	success, err := s.db.Select(schema.CommentMessageTableItemIDCol, schema.CommentMessageTableTypeIDCol,
 		schema.CommentMessageTableAuthorIDCol).
-		From(schema.CommentMessageTable).Where(schema.CommentMessageTableIDCol.Eq(messageID)).
+		From(schema.CommentMessageTable).
+		Where(schema.CommentMessageTableIDCol.Eq(messageID)).
 		ScanStructContext(ctx, &st)
 	if err != nil {
 		return err
@@ -891,10 +943,12 @@ func (s *Repository) getSubscribersIDs(
 	itemID int64,
 	onlyAwaiting bool,
 ) ([]int64, error) {
-	sel := s.db.Select(schema.CommentTopicSubscribeTableUserIDCol).From(schema.CommentTopicSubscribeTable).Where(
-		schema.CommentTopicSubscribeTableTypeIDCol.Eq(typeID),
-		schema.CommentTopicSubscribeTableItemIDCol.Eq(itemID),
-	)
+	sel := s.db.Select(schema.CommentTopicSubscribeTableUserIDCol).
+		From(schema.CommentTopicSubscribeTable).
+		Where(
+			schema.CommentTopicSubscribeTableTypeIDCol.Eq(typeID),
+			schema.CommentTopicSubscribeTableItemIDCol.Eq(itemID),
+		)
 
 	if onlyAwaiting {
 		sel = sel.Where(goqu.L("NOT sent"))
@@ -926,7 +980,11 @@ func (s *Repository) SetSubscriptionSent(
 	return err
 }
 
-func (s *Repository) messageURL(ctx context.Context, messageID int64, uri *url.URL) (string, error) {
+func (s *Repository) messageURL(
+	ctx context.Context,
+	messageID int64,
+	uri *url.URL,
+) (string, error) {
 	st := struct {
 		ItemID int64                     `db:"item_id"`
 		TypeID schema.CommentMessageType `db:"type_id"`
@@ -1002,12 +1060,26 @@ func (s *Repository) messageRowRoute(
 			return frontend.TwinsGroupRoute(itemID), nil
 		case schema.ItemTableItemTypeIDMuseum:
 			return frontend.MuseumRoute(itemID), nil
-		case schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine, schema.ItemTableItemTypeIDCategory,
-			schema.ItemTableItemTypeIDBrand, schema.ItemTableItemTypeIDFactory, schema.ItemTableItemTypeIDPerson,
+		case schema.ItemTableItemTypeIDVehicle,
+			schema.ItemTableItemTypeIDEngine,
+			schema.ItemTableItemTypeIDCategory,
+			schema.ItemTableItemTypeIDBrand,
+			schema.ItemTableItemTypeIDFactory,
+			schema.ItemTableItemTypeIDPerson,
 			schema.ItemTableItemTypeIDCopyright:
-			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
+			return nil, fmt.Errorf(
+				"%w: for message `%v` item_type `%v`",
+				errFailedToBuildURL,
+				itemID,
+				itemTypeID,
+			)
 		default:
-			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
+			return nil, fmt.Errorf(
+				"%w: for message `%v` item_type `%v`",
+				errFailedToBuildURL,
+				itemID,
+				itemTypeID,
+			)
 		}
 
 	case schema.CommentMessageTypeIDVotings:
@@ -1367,7 +1439,11 @@ func (s *Repository) CleanTopics(ctx context.Context) (int64, error) {
 	return affected, nil
 }
 
-func (s *Repository) TopicStat(ctx context.Context, typeID schema.CommentMessageType, itemID int64) (int32, error) {
+func (s *Repository) TopicStat(
+	ctx context.Context,
+	typeID schema.CommentMessageType,
+	itemID int64,
+) (int32, error) {
 	sqSelect := s.db.Select(schema.CommentTopicTableMessagesCol).
 		From(schema.CommentTopicTable).
 		Where(
@@ -1462,7 +1538,12 @@ func (s *Repository) TopicsStatForUser(
 	for _, message := range messages {
 		newMessages := message.Messages
 		if userID > 0 && message.Timestamp.Valid {
-			newMessages, err = s.MessagesCountFromTimestamp(ctx, typeID, message.ItemID, message.Timestamp.Time)
+			newMessages, err = s.MessagesCountFromTimestamp(
+				ctx,
+				typeID,
+				message.ItemID,
+				message.Timestamp.Time,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -1477,7 +1558,10 @@ func (s *Repository) TopicsStatForUser(
 	return res, nil
 }
 
-func (s *Repository) Count(ctx context.Context, options query.CommentMessageListOptions) (int32, error) {
+func (s *Repository) Count(
+	ctx context.Context,
+	options query.CommentMessageListOptions,
+) (int32, error) {
 	sqSelect, err := options.CountSelect(s.db, query.CommentMessageAlias)
 	if err != nil {
 		return 0, err
@@ -1513,8 +1597,11 @@ func (s *Repository) MessagePage(
 	}{}
 
 	success, err = s.db.Select(
-		schema.CommentMessageTableTypeIDCol, schema.CommentMessageTableItemIDCol, schema.CommentMessageTableParentIDCol,
-		schema.CommentMessageTableDatetimeCol).
+		schema.CommentMessageTableTypeIDCol,
+		schema.CommentMessageTableItemIDCol,
+		schema.CommentMessageTableParentIDCol,
+		schema.CommentMessageTableDatetimeCol,
+	).
 		From(schema.CommentMessageTable).
 		Where(schema.CommentMessageTableIDCol.Eq(messageID)).
 		ScanStructContext(ctx, &row)
@@ -1606,7 +1693,11 @@ func (s *Repository) Message(
 }
 
 func (s *Repository) IsNewMessage(
-	ctx context.Context, typeID schema.CommentMessageType, itemID int64, msgTime time.Time, userID int64,
+	ctx context.Context,
+	typeID schema.CommentMessageType,
+	itemID int64,
+	msgTime time.Time,
+	userID int64,
 ) (bool, error) {
 	var success bool
 
@@ -1675,9 +1766,19 @@ func (s *Repository) MessageRowRoute(
 			schema.ItemTableItemTypeIDFactory,
 			schema.ItemTableItemTypeIDPerson,
 			schema.ItemTableItemTypeIDCopyright:
-			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
+			return nil, fmt.Errorf(
+				"%w: for message `%v` item_type `%v`",
+				errFailedToBuildURL,
+				itemID,
+				itemTypeID,
+			)
 		default:
-			return nil, fmt.Errorf("%w: for message `%v` item_type `%v`", errFailedToBuildURL, itemID, itemTypeID)
+			return nil, fmt.Errorf(
+				"%w: for message `%v` item_type `%v`",
+				errFailedToBuildURL,
+				itemID,
+				itemTypeID,
+			)
 		}
 
 	case schema.CommentMessageTypeIDVotings:
@@ -1755,7 +1856,9 @@ func (s *Repository) Paginator(request Request) *util.Paginator {
 	}
 
 	if request.ModeratorAttention > 0 {
-		sqSelect = sqSelect.Where(schema.CommentMessageTableModeratorAttentionCol.Eq(request.ModeratorAttention))
+		sqSelect = sqSelect.Where(
+			schema.CommentMessageTableModeratorAttentionCol.Eq(request.ModeratorAttention),
+		)
 	}
 
 	sqSelect = sqSelect.Order(request.Order...)
@@ -1781,7 +1884,11 @@ func (s *Repository) TopAuthors(ctx context.Context, limit uint) ([]RatingUser, 
 	return rows, err
 }
 
-func (s *Repository) AuthorsFans(ctx context.Context, userID int64, limit uint) ([]RatingFan, error) {
+func (s *Repository) AuthorsFans(
+	ctx context.Context,
+	userID int64,
+	limit uint,
+) ([]RatingFan, error) {
 	rows := make([]RatingFan, 0)
 
 	const volumeAlias = "volume"
@@ -1825,7 +1932,11 @@ func (s *Repository) MoveMessages(
 	return s.updateTopicStat(ctx, dstTypeID, dstItemID)
 }
 
-func (s *Repository) DeleteTopic(ctx context.Context, typeID schema.CommentMessageType, itemID int64) error {
+func (s *Repository) DeleteTopic(
+	ctx context.Context,
+	typeID schema.CommentMessageType,
+	itemID int64,
+) error {
 	ctx = context.WithoutCancel(ctx)
 
 	_, err := s.db.Delete(schema.CommentMessageTable).Where(

@@ -38,7 +38,10 @@ type DuplicateFinder struct {
 }
 
 // NewDuplicateFinder constructor.
-func NewDuplicateFinder(db *goqu.Database, config config.DuplicateFinderConfig) (*DuplicateFinder, error) {
+func NewDuplicateFinder(
+	db *goqu.Database,
+	config config.DuplicateFinderConfig,
+) (*DuplicateFinder, error) {
 	s := &DuplicateFinder{
 		db:     db,
 		config: config,
@@ -203,7 +206,8 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int64) error {
 
 	err = s.db.Select(
 		schema.DfHashTablePictureIDCol,
-		goqu.Func("BIT_COUNT", goqu.L("? ^ "+strconv.FormatUint(hash, decimal), schema.DfHashTableHashCol)).As(alias),
+		goqu.Func("BIT_COUNT", goqu.L("? ^ "+strconv.FormatUint(hash, decimal), schema.DfHashTableHashCol)).
+			As(alias),
 	).
 		From(schema.DfHashTable).
 		Where(schema.DfHashTablePictureIDCol.Neq(id)).
@@ -235,9 +239,14 @@ func (s *DuplicateFinder) updateDistance(ctx context.Context, id int64) error {
 	_, err = s.db.Insert(schema.DfDistanceTable).
 		Rows(records).
 		OnConflict(goqu.DoUpdate(
-			schema.DfDistanceTableSrcPictureIDColName+","+schema.DfDistanceTableDstPictureIDColName, goqu.Record{
-				schema.DfDistanceTableDistanceColName: goqu.Func("VALUES", goqu.C(schema.DfDistanceTableDistanceColName)),
-			})).
+			schema.DfDistanceTableSrcPictureIDColName+","+schema.DfDistanceTableDstPictureIDColName,
+			goqu.Record{
+				schema.DfDistanceTableDistanceColName: goqu.Func(
+					"VALUES",
+					goqu.C(schema.DfDistanceTableDistanceColName),
+				),
+			},
+		)).
 		Executor().ExecContext(ctx)
 
 	return err

@@ -15,9 +15,15 @@ const (
 
 var (
 	AttrsValuesFloatTable               = goqu.T(AttrsValuesFloatTableName)
-	AttrsValuesFloatTableAttributeIDCol = AttrsValuesFloatTable.Col(AttrsValuesFloatTableAttributeIDColName)
-	AttrsValuesFloatTableItemIDCol      = AttrsValuesFloatTable.Col(AttrsValuesFloatTableItemIDColName)
-	AttrsValuesFloatTableValueCol       = AttrsValuesFloatTable.Col(AttrsValuesFloatTableValueColName)
+	AttrsValuesFloatTableAttributeIDCol = AttrsValuesFloatTable.Col(
+		AttrsValuesFloatTableAttributeIDColName,
+	)
+	AttrsValuesFloatTableItemIDCol = AttrsValuesFloatTable.Col(
+		AttrsValuesFloatTableItemIDColName,
+	)
+	AttrsValuesFloatTableValueCol = AttrsValuesFloatTable.Col(
+		AttrsValuesFloatTableValueColName,
+	)
 )
 
 type AttrsValuesFloatRow struct {

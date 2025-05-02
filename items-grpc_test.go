@@ -75,12 +75,23 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	kc := cnt.Keycloak()
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	_, err = client.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: vehicle1, ParentId: brand1, Catname: "vehicle1",
 		},
@@ -88,7 +99,11 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: vehicle2, ParentId: brand2, Catname: "vehicle2",
 		},
@@ -96,7 +111,11 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: vehicle1, ParentId: twins, Catname: "vehicle1",
 		},
@@ -104,7 +123,11 @@ func TestGetTwinsBrandsList(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: vehicle2, ParentId: twins, Catname: "vehicle2",
 		},
@@ -206,14 +229,25 @@ func TestItemLinks(t *testing.T) {
 	kc := cnt.Keycloak()
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	client := NewItemsClient(conn)
 
 	r1, err := client.CreateItemLink(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemLink{
 			Name:   "Link 1 ",
 			Url:    " https://example.org",
@@ -239,7 +273,11 @@ func TestItemLinks(t *testing.T) {
 	require.Equal(t, int64(1), r2.GetItemId())
 
 	_, err = client.UpdateItemLink(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemLink{
 			Id:     r1.GetId(),
 			Name:   "Link 2",
@@ -283,14 +321,25 @@ func TestItemVehicleTypes(t *testing.T) {
 	kc := cnt.Keycloak()
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	client := NewItemsClient(conn)
 
 	_, err = client.CreateItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemVehicleType{
 			ItemId:        1,
 			VehicleTypeId: 1,
@@ -299,7 +348,11 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.NoError(t, err)
 
 	r2, err := client.GetItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemVehicleTypeRequest{
 			ItemId:        1,
 			VehicleTypeId: 1,
@@ -310,7 +363,11 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.Equal(t, int64(1), r2.GetVehicleTypeId())
 
 	_, err = client.CreateItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemVehicleType{
 			ItemId:        1,
 			VehicleTypeId: 2,
@@ -319,7 +376,11 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.NoError(t, err)
 
 	r4, err := client.GetItemVehicleTypes(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIGetItemVehicleTypesRequest{
 			ItemId: 1,
 		},
@@ -328,7 +389,11 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.Len(t, r4.GetItems(), 2)
 
 	_, err = client.DeleteItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemVehicleTypeRequest{
 			ItemId:        1,
 			VehicleTypeId: 1,
@@ -337,7 +402,11 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.NoError(t, err)
 
 	r6, err := client.GetItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemVehicleTypeRequest{
 			ItemId:        1,
 			VehicleTypeId: 2,
@@ -348,7 +417,11 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.Equal(t, int64(2), r6.GetVehicleTypeId())
 
 	_, err = client.GetItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemVehicleTypeRequest{
 			ItemId:        1,
 			VehicleTypeId: 1,
@@ -357,7 +430,11 @@ func TestItemVehicleTypes(t *testing.T) {
 	require.Error(t, err)
 
 	r8, err := client.GetItemVehicleTypes(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIGetItemVehicleTypesRequest{
 			ItemId: 1,
 		},
@@ -376,14 +453,25 @@ func TestItemParentLanguages(t *testing.T) {
 	kc := cnt.Keycloak()
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	client := NewItemsClient(conn)
 
 	_, err = client.GetItemParentLanguages(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIGetItemParentLanguagesRequest{
 			ItemId:   1,
 			ParentId: 1,
@@ -402,14 +490,25 @@ func TestItemLanguages(t *testing.T) {
 	kc := cnt.Keycloak()
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	client := NewItemsClient(conn)
 
 	_, err = client.GetItemLanguages(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIGetItemLanguagesRequest{
 			ItemId: 1,
 		},
@@ -735,12 +834,23 @@ func TestInboxPicturesCount(t *testing.T) {
 	picturesClient := NewPicturesClient(conn)
 
 	// login with admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	_, err = client.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: childID, ParentId: brandID, Catname: "child-item", Type: ItemParentType_ITEM_TYPE_DEFAULT,
 		},
@@ -755,7 +865,11 @@ func TestInboxPicturesCount(t *testing.T) {
 
 		if i >= 5 {
 			_, err = picturesClient.SetPictureStatus(
-				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+				metadata.AppendToOutgoingContext(
+					ctx,
+					authorizationHeader,
+					bearerPrefix+adminToken.AccessToken,
+				),
 				&SetPictureStatusRequest{
 					Id:     pictureID,
 					Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
@@ -786,7 +900,11 @@ func TestInboxPicturesCount(t *testing.T) {
 	require.ErrorContains(t, err, "PermissionDenied")
 
 	list, err := client.List(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemsRequest{
 			Fields: &ItemFields{
 				InboxPicturesCount: true,
@@ -802,7 +920,11 @@ func TestInboxPicturesCount(t *testing.T) {
 	require.Equal(t, int32(5), list.GetItems()[0].GetInboxPicturesCount())
 
 	item, err := client.Item(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemRequest{
 			Id: brandID,
 			Fields: &ItemFields{
@@ -1323,8 +1445,8 @@ func TestUpdateItemLanguage(t *testing.T) {
 	require.Equal(t, "fr", row.GetLanguage())
 	require.Equal(t, itemName, row.GetName())
 	require.Equal(t, lastTextID, row.GetTextId())
-	require.Equal(t, "", row.GetText())
-	require.Equal(t, "", row.GetFullText())
+	require.Empty(t, row.GetText())
+	require.Empty(t, row.GetFullText())
 	require.Equal(t, lastFullTextID, row.GetFullTextId())
 }
 
@@ -1692,9 +1814,12 @@ func TestGetBrands(t *testing.T) {
 
 			line := res.GetLines()[lineIndex]
 
-			characterIndex := slices.IndexFunc(line.GetCharacters(), func(character *APIBrandsListCharacter) bool {
-				return testCase.Character == character.GetCharacter()
-			})
+			characterIndex := slices.IndexFunc(
+				line.GetCharacters(),
+				func(character *APIBrandsListCharacter) bool {
+					return testCase.Character == character.GetCharacter()
+				},
+			)
 			require.GreaterOrEqual(t, characterIndex, 0)
 
 			character := line.GetCharacters()[characterIndex]
@@ -1836,7 +1961,11 @@ func TestBrandSections2(t *testing.T) {
 
 			for _, vehicleTypeID := range testCase.VehicleTypeID {
 				_, err = client.CreateItemVehicleType(
-					metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken),
+					metadata.AppendToOutgoingContext(
+						ctx,
+						authorizationHeader,
+						bearerPrefix+adminToken,
+					),
 					&APIItemVehicleType{
 						ItemId:        childID,
 						VehicleTypeId: vehicleTypeID,
@@ -1853,20 +1982,35 @@ func TestBrandSections2(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			res, err := client.GetBrandSections(ctx, &GetBrandSectionsRequest{Language: "en", ItemId: brandID})
+			res, err := client.GetBrandSections(
+				ctx,
+				&GetBrandSectionsRequest{Language: "en", ItemId: brandID},
+			)
 			require.NoError(t, err)
 
 			for _, sectionName := range testCase.SectionNames {
 				idx := slices.IndexFunc(res.GetSections(), func(section *APIBrandSection) bool {
 					return section.GetName() == sectionName
 				})
-				require.GreaterOrEqual(t, idx, 0, "section `%s` not present in results", sectionName)
+				require.GreaterOrEqual(
+					t,
+					idx,
+					0,
+					"section `%s` not present in results",
+					sectionName,
+				)
 
 				section := res.GetSections()[idx]
 
-				require.True(t, slices.ContainsFunc(section.GetGroups(), func(a *APIBrandSection) bool {
-					return a.GetName() == testCase.Name
-				}), "item `%s` not found in section `%s`", testCase.Name, sectionName)
+				require.True(
+					t,
+					slices.ContainsFunc(section.GetGroups(), func(a *APIBrandSection) bool {
+						return a.GetName() == testCase.Name
+					}),
+					"item `%s` not found in section `%s`",
+					testCase.Name,
+					sectionName,
+				)
 			}
 		})
 	}
@@ -2138,12 +2282,23 @@ func TestItemFields(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	res, err := client.List(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemsRequest{
 			Language: "ru",
 			Fields: &ItemFields{
@@ -2204,12 +2359,23 @@ func TestItemParentFields(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	res, err := client.GetItemParents(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParentsRequest{
 			Language: "ru",
 			Fields: &ItemParentFields{
@@ -2311,7 +2477,11 @@ func TestTwinsGroupPictures(t *testing.T) {
 	require.NotEmpty(t, res2.GetItems())
 	require.NotEmpty(t, res2.GetItems()[0].GetChildDescendantPictures())
 	require.NotEmpty(t, res2.GetItems()[0].GetChildDescendantPictures().GetItems()[0])
-	require.EqualValues(t, pictureID, res2.GetItems()[0].GetChildDescendantPictures().GetItems()[0].GetId())
+	require.Equal(
+		t,
+		pictureID,
+		res2.GetItems()[0].GetChildDescendantPictures().GetItems()[0].GetId(),
+	)
 }
 
 func TestPersonPreviewPictures(t *testing.T) {
@@ -2388,7 +2558,11 @@ func TestPersonPreviewPictures(t *testing.T) {
 	require.NotEmpty(t, res2.GetItems())
 	require.NotEmpty(t, res2.GetItems()[0].GetPreviewPictures())
 	require.EqualValues(t, 1, res2.GetItems()[0].GetPreviewPictures().GetTotalPictures())
-	require.EqualValues(t, pictureID, res2.GetItems()[0].GetPreviewPictures().GetPictures()[0].GetPicture().GetId())
+	require.Equal(
+		t,
+		pictureID,
+		res2.GetItems()[0].GetPreviewPictures().GetPictures()[0].GetPicture().GetId(),
+	)
 }
 
 func TestCutawayAuthorsWithPreviewPictures(t *testing.T) {
@@ -2459,8 +2633,10 @@ func TestCutawayAuthorsWithPreviewPictures(t *testing.T) {
 				Pictures: &PicturesRequest{
 					Options: &PictureListOptions{
 						PictureItem: &PictureItemListOptions{
-							PictureItemByPictureId: &PictureItemListOptions{PerspectiveId: schema.PerspectiveCutaway},
-							TypeId:                 PictureItemType_PICTURE_ITEM_AUTHOR,
+							PictureItemByPictureId: &PictureItemListOptions{
+								PerspectiveId: schema.PerspectiveCutaway,
+							},
+							TypeId: PictureItemType_PICTURE_ITEM_AUTHOR,
 						},
 						Status: PictureStatus_PICTURE_STATUS_ACCEPTED,
 					},
@@ -2486,7 +2662,11 @@ func TestCutawayAuthorsWithPreviewPictures(t *testing.T) {
 	require.NotEmpty(t, res2.GetItems())
 	require.NotEmpty(t, res2.GetItems()[0].GetPreviewPictures())
 	require.EqualValues(t, 1, res2.GetItems()[0].GetPreviewPictures().GetTotalPictures())
-	require.EqualValues(t, pictureID, res2.GetItems()[0].GetPreviewPictures().GetPictures()[0].GetPicture().GetId())
+	require.Equal(
+		t,
+		pictureID,
+		res2.GetItems()[0].GetPreviewPictures().GetPictures()[0].GetPicture().GetId(),
+	)
 }
 
 func TestItemOfDayPicture(t *testing.T) {
@@ -2498,7 +2678,14 @@ func TestItemOfDayPicture(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
@@ -2516,7 +2703,11 @@ func TestItemOfDayPicture(t *testing.T) {
 		PictureStatus_PICTURE_STATUS_ACCEPTED, adminToken.AccessToken)
 
 	res, err := client.Item(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemRequest{
 			Language: "ru",
 			Fields:   &ItemFields{ItemOfDayPictures: true},
@@ -2755,7 +2946,11 @@ func TestVehiclesOnEnginesMerge(t *testing.T) {
 		})
 
 		_, err = client.CreateItemParent(
-			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(
+				ctx,
+				authorizationHeader,
+				bearerPrefix+token.AccessToken,
+			),
 			&ItemParent{
 				ItemId: childChildID, ParentId: childID, Catname: "vehicle1",
 			},
@@ -2763,14 +2958,20 @@ func TestVehiclesOnEnginesMerge(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = client.UpdateItem(
-			metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+			metadata.AppendToOutgoingContext(
+				ctx,
+				authorizationHeader,
+				bearerPrefix+token.AccessToken,
+			),
 			&UpdateItemRequest{
 				Item: &APIItem{
 					Id:            childChildID,
 					EngineItemId:  engineID,
 					EngineInherit: false,
 				},
-				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"engine_item_id", "engine_inherit"}},
+				UpdateMask: &fieldmaskpb.FieldMask{
+					Paths: []string{"engine_item_id", "engine_inherit"},
+				},
 			},
 		)
 		require.NoError(t, err)
@@ -2801,7 +3002,14 @@ func TestBrandSectionLanguageName(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
@@ -2821,7 +3029,11 @@ func TestBrandSectionLanguageName(t *testing.T) {
 	})
 
 	_, err = client.CreateItemParent(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParent{
 			ItemId: vehicleID, ParentId: brandID, Catname: "vehicle1",
 		},
@@ -2829,7 +3041,11 @@ func TestBrandSectionLanguageName(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetItemParentLanguage(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParentLanguage{
 			ItemId:   vehicleID,
 			ParentId: brandID,
@@ -2840,7 +3056,11 @@ func TestBrandSectionLanguageName(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.SetItemParentLanguage(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&ItemParentLanguage{
 			ItemId:   vehicleID,
 			ParentId: brandID,
@@ -2851,7 +3071,11 @@ func TestBrandSectionLanguageName(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.CreateItemVehicleType(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIItemVehicleType{
 			ItemId:        vehicleID,
 			VehicleTypeId: 19,
@@ -2859,7 +3083,10 @@ func TestBrandSectionLanguageName(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	res, err := client.GetBrandSections(ctx, &GetBrandSectionsRequest{Language: "en", ItemId: brandID})
+	res, err := client.GetBrandSections(
+		ctx,
+		&GetBrandSectionsRequest{Language: "en", ItemId: brandID},
+	)
 	require.NoError(t, err)
 	require.NotEmpty(t, res.GetSections()[2].GetGroups())
 	require.Equal(t, "Custom name", res.GetSections()[2].GetGroups()[0].GetName())
@@ -2874,12 +3101,23 @@ func TestAlpha(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	_, err = client.GetAlpha(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&emptypb.Empty{},
 	)
 	require.NoError(t, err)
@@ -2896,11 +3134,22 @@ func TestUpdateItemName(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 	newName := fmt.Sprintf("vehicle-%d-2", randomInt)
@@ -2943,11 +3192,22 @@ func TestUpdateItemBody(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 	body := "Body"
@@ -2992,11 +3252,22 @@ func TestUpdateItemBeginYear(t *testing.T) { //nolint: dupl
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3044,11 +3315,22 @@ func TestUpdateItemEndYear(t *testing.T) { //nolint: dupl
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3096,11 +3378,22 @@ func TestUpdateItemBeginModelYear(t *testing.T) { //nolint: dupl
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3148,11 +3441,22 @@ func TestUpdateItemEndModelYear(t *testing.T) { //nolint: dupl
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3200,11 +3504,22 @@ func TestUpdateItemBeginMonth(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3252,11 +3567,22 @@ func TestUpdateItemEndMonth(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3290,7 +3616,7 @@ func TestUpdateItemEndMonth(t *testing.T) {
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.EqualValues(t, newEndMonth, item.GetEndMonth())
-	require.EqualValues(t, "¼", item.GetBeginModelYearFraction())
+	require.Equal(t, "¼", item.GetBeginModelYearFraction())
 }
 
 func TestUpdateItemBeginModelYearFraction(t *testing.T) { //nolint: dupl
@@ -3304,11 +3630,22 @@ func TestUpdateItemBeginModelYearFraction(t *testing.T) { //nolint: dupl
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3327,7 +3664,7 @@ func TestUpdateItemBeginModelYearFraction(t *testing.T) { //nolint: dupl
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, beginModelYearFraction, item.GetBeginModelYearFraction())
+	require.Equal(t, beginModelYearFraction, item.GetBeginModelYearFraction())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3341,8 +3678,8 @@ func TestUpdateItemBeginModelYearFraction(t *testing.T) { //nolint: dupl
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newBeginModelYearFraction, item.GetBeginModelYearFraction())
-	require.EqualValues(t, "¼", item.GetEndModelYearFraction())
+	require.Equal(t, newBeginModelYearFraction, item.GetBeginModelYearFraction())
+	require.Equal(t, "¼", item.GetEndModelYearFraction())
 }
 
 func TestUpdateItemEndModelYearFraction(t *testing.T) {
@@ -3356,11 +3693,22 @@ func TestUpdateItemEndModelYearFraction(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3379,7 +3727,7 @@ func TestUpdateItemEndModelYearFraction(t *testing.T) {
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, endModelYearFraction, item.GetEndModelYearFraction())
+	require.Equal(t, endModelYearFraction, item.GetEndModelYearFraction())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3393,7 +3741,7 @@ func TestUpdateItemEndModelYearFraction(t *testing.T) {
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newEndModelYearFraction, item.GetEndModelYearFraction())
+	require.Equal(t, newEndModelYearFraction, item.GetEndModelYearFraction())
 	require.EqualValues(t, schema.SpecIDWorldwide, item.GetSpecId())
 }
 
@@ -3408,11 +3756,22 @@ func TestUpdateItemSpecID(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3460,11 +3819,22 @@ func TestUpdateItemIsConcept(t *testing.T) { //nolint: dupl
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3483,7 +3853,7 @@ func TestUpdateItemIsConcept(t *testing.T) { //nolint: dupl
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, isConcept, item.GetIsConcept())
+	require.Equal(t, isConcept, item.GetIsConcept())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3497,7 +3867,7 @@ func TestUpdateItemIsConcept(t *testing.T) { //nolint: dupl
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newIsConcept, item.GetIsConcept())
+	require.Equal(t, newIsConcept, item.GetIsConcept())
 	require.True(t, item.GetSpecInherit())
 }
 
@@ -3512,11 +3882,22 @@ func TestUpdateItemSpecInherit(t *testing.T) { //nolint: dupl
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3535,7 +3916,7 @@ func TestUpdateItemSpecInherit(t *testing.T) { //nolint: dupl
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, specInherit, item.GetSpecInherit())
+	require.Equal(t, specInherit, item.GetSpecInherit())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3549,7 +3930,7 @@ func TestUpdateItemSpecInherit(t *testing.T) { //nolint: dupl
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newSpecInherit, item.GetSpecInherit())
+	require.Equal(t, newSpecInherit, item.GetSpecInherit())
 	require.True(t, item.GetIsConceptInherit())
 }
 
@@ -3564,11 +3945,22 @@ func TestUpdateItemIsConceptInherit(t *testing.T) { //nolint: dupl
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3587,7 +3979,7 @@ func TestUpdateItemIsConceptInherit(t *testing.T) { //nolint: dupl
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, isConceptInherit, item.GetIsConceptInherit())
+	require.Equal(t, isConceptInherit, item.GetIsConceptInherit())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3601,7 +3993,7 @@ func TestUpdateItemIsConceptInherit(t *testing.T) { //nolint: dupl
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newIsConceptInherit, item.GetIsConceptInherit())
+	require.Equal(t, newIsConceptInherit, item.GetIsConceptInherit())
 	require.True(t, item.GetIsGroup())
 }
 
@@ -3616,11 +4008,22 @@ func TestUpdateItemIsGroup(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3639,7 +4042,7 @@ func TestUpdateItemIsGroup(t *testing.T) {
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, isGroup, item.GetIsGroup())
+	require.Equal(t, isGroup, item.GetIsGroup())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3653,7 +4056,7 @@ func TestUpdateItemIsGroup(t *testing.T) {
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newIsGroup, item.GetIsGroup())
+	require.Equal(t, newIsGroup, item.GetIsGroup())
 	require.EqualValues(t, 10, item.GetProduced().GetValue())
 }
 
@@ -3668,11 +4071,22 @@ func TestUpdateItemProduced(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3720,11 +4134,22 @@ func TestUpdateItemProducedExactly(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3743,7 +4168,7 @@ func TestUpdateItemProducedExactly(t *testing.T) {
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, producedExactly, item.GetProducedExactly())
+	require.Equal(t, producedExactly, item.GetProducedExactly())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3757,7 +4182,7 @@ func TestUpdateItemProducedExactly(t *testing.T) {
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newProducedExactly, item.GetProducedExactly())
+	require.Equal(t, newProducedExactly, item.GetProducedExactly())
 	require.True(t, item.GetToday().GetValue())
 }
 
@@ -3772,11 +4197,22 @@ func TestUpdateItemToday(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 	catname := fmt.Sprintf("vehicle-%d", randomInt)
@@ -3796,7 +4232,7 @@ func TestUpdateItemToday(t *testing.T) {
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, today, item.GetToday().GetValue())
+	require.Equal(t, today, item.GetToday().GetValue())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3810,8 +4246,8 @@ func TestUpdateItemToday(t *testing.T) {
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newToday, item.GetToday().GetValue())
-	require.EqualValues(t, catname, item.GetCatname())
+	require.Equal(t, newToday, item.GetToday().GetValue())
+	require.Equal(t, catname, item.GetCatname())
 }
 
 func TestUpdateItemCatname(t *testing.T) {
@@ -3825,11 +4261,22 @@ func TestUpdateItemCatname(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 	catname := fmt.Sprintf("vehicle-%d", randomInt)
@@ -3845,7 +4292,7 @@ func TestUpdateItemCatname(t *testing.T) {
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, catname, item.GetCatname())
+	require.Equal(t, catname, item.GetCatname())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3859,8 +4306,8 @@ func TestUpdateItemCatname(t *testing.T) {
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, newCatname, item.GetCatname())
-	require.EqualValues(t, "FullName", item.GetFullName())
+	require.Equal(t, newCatname, item.GetCatname())
+	require.Equal(t, "FullName", item.GetFullName())
 }
 
 func TestUpdateItemFullname(t *testing.T) {
@@ -3874,11 +4321,22 @@ func TestUpdateItemFullname(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	name := fmt.Sprintf("vehicle-%d", randomInt)
 
@@ -3892,7 +4350,7 @@ func TestUpdateItemFullname(t *testing.T) {
 	item, err := client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
 	require.Equal(t, name, item.GetName())
-	require.EqualValues(t, "FullName", item.GetFullName())
+	require.Equal(t, "FullName", item.GetFullName())
 
 	_, err = client.UpdateItem(apiCtx, &UpdateItemRequest{
 		Item: &APIItem{
@@ -3906,8 +4364,8 @@ func TestUpdateItemFullname(t *testing.T) {
 
 	item, err = client.Item(apiCtx, &ItemRequest{Id: itemID, Fields: &ItemFields{Meta: true}})
 	require.NoError(t, err)
-	require.EqualValues(t, "FullName New", item.GetFullName())
-	require.EqualValues(t, name, item.GetName())
+	require.Equal(t, "FullName New", item.GetFullName())
+	require.Equal(t, name, item.GetName())
 }
 
 func TestUpdateBeginOrderCache(t *testing.T) {
@@ -3935,11 +4393,22 @@ func TestGetTree(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	randomInt := random.Int()
@@ -3965,11 +4434,22 @@ func TestCreatedBrandIsGroup(t *testing.T) {
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
-	apiCtx := metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken)
+	apiCtx := metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+adminToken.AccessToken,
+	)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	randomInt := random.Int()

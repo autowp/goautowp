@@ -27,7 +27,11 @@ type exifExtractedValues struct {
 	gpsInfo      *exif.GpsInfo
 }
 
-func extractFromEXIF(imageType string, handle io.ReadSeeker, size int64) (exifExtractedValues, error) {
+func extractFromEXIF(
+	imageType string,
+	handle io.ReadSeeker,
+	size int64,
+) (exifExtractedValues, error) {
 	var parser riimage.MediaParser
 
 	switch imageType {

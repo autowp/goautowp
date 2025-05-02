@@ -51,10 +51,18 @@ type PicturesREST struct {
 	telegramService      *telegram.Service
 }
 
-func NewPicturesREST(auth *Auth, picturesRepository *pictures.Repository,
-	pictureNameFormatter *pictures.PictureNameFormatter, hostManager *hosts.Manager, imageStorage *storage.Storage,
-	itemOfDay *itemofday.Repository, itemsRepository *items.Repository, usersRepository *users.Repository,
-	commentsRepository *comments.Repository, duplicateFinder *DuplicateFinder, telegramService *telegram.Service,
+func NewPicturesREST(
+	auth *Auth,
+	picturesRepository *pictures.Repository,
+	pictureNameFormatter *pictures.PictureNameFormatter,
+	hostManager *hosts.Manager,
+	imageStorage *storage.Storage,
+	itemOfDay *itemofday.Repository,
+	itemsRepository *items.Repository,
+	usersRepository *users.Repository,
+	commentsRepository *comments.Repository,
+	duplicateFinder *DuplicateFinder,
+	telegramService *telegram.Service,
 ) *PicturesREST {
 	return &PicturesREST{
 		auth:                 auth,
@@ -161,7 +169,12 @@ func (s *PicturesREST) handleItemOfDayPicture(ctx *gin.Context) {
 					order = pictures.OrderByPerspectivesGroupPerspectives
 				}
 
-				row, err = s.picturesRepository.Picture(ctx, &filter, &pictures.PictureFields{NameText: true}, order)
+				row, err = s.picturesRepository.Picture(
+					ctx,
+					&filter,
+					&pictures.PictureFields{NameText: true},
+					order,
+				)
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					ctx.String(http.StatusInternalServerError, err.Error())
 
@@ -207,9 +220,13 @@ func (s *PicturesREST) populatePicture(ctx *gin.Context, row *schema.PictureRow,
 		return
 	}
 
-	namesData, err := s.picturesRepository.NameData(ctx, []*schema.PictureRow{row}, pictures.NameDataOptions{
-		Language: lang,
-	})
+	namesData, err := s.picturesRepository.NameData(
+		ctx,
+		[]*schema.PictureRow{row},
+		pictures.NameDataOptions{
+			Language: lang,
+		},
+	)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 
@@ -438,7 +455,12 @@ func (s *PicturesREST) handlePicturePOST(ctx *gin.Context) {
 		}
 	}
 
-	err = s.commentsRepository.Subscribe(ctx, userCtx.UserID, schema.CommentMessageTypeIDPictures, pictureID)
+	err = s.commentsRepository.Subscribe(
+		ctx,
+		userCtx.UserID,
+		schema.CommentMessageTypeIDPictures,
+		pictureID,
+	)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, err.Error())
 

@@ -45,7 +45,13 @@ func NewRepository(db *goqu.Database) (*Repository, error) {
 }
 
 // Add IP to list of banned.
-func (s *Repository) Add(ctx context.Context, ip net.IP, duration time.Duration, byUserID int64, reason string) error {
+func (s *Repository) Add(
+	ctx context.Context,
+	ip net.IP,
+	duration time.Duration,
+	byUserID int64,
+	reason string,
+) error {
 	reason = strings.TrimSpace(reason)
 	upTo := time.Now().Add(duration)
 
@@ -78,7 +84,10 @@ func (s *Repository) Add(ctx context.Context, ip net.IP, duration time.Duration,
 // Remove IP from list of banned.
 func (s *Repository) Remove(ctx context.Context, ip net.IP) error {
 	logrus.Info(ip.String() + ": unban")
-	_, err := s.db.Delete(schema.IPBanTable).Where(schema.IPBanTableIPCol.Eq(ip.String())).Executor().ExecContext(ctx)
+	_, err := s.db.Delete(schema.IPBanTable).
+		Where(schema.IPBanTableIPCol.Eq(ip.String())).
+		Executor().
+		ExecContext(ctx)
 
 	return err
 }
@@ -116,7 +125,9 @@ func (s *Repository) Get(ctx context.Context, ip net.IP) (*Item, error) {
 		schema.IPBanTableByUserIDCol).
 		From(schema.IPBanTable).
 		Where(schema.IPBanTableIPCol.Eq(ip.String()), schema.IPBanTableUntilCol.Gte(goqu.Func("NOW"))).
-		Limit(1).Executor().ScanStructContext(ctx, &st)
+		Limit(1).
+		Executor().
+		ScanStructContext(ctx, &st)
 	if err != nil {
 		return nil, err
 	}

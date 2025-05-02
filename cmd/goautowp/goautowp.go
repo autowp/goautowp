@@ -9,6 +9,7 @@ import (
 
 	"github.com/autowp/goautowp"
 	"github.com/autowp/goautowp/config"
+	"github.com/autowp/goautowp/image/storage"
 	"github.com/autowp/goautowp/schema"
 	"github.com/autowp/goautowp/util"
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,16 @@ import (
 	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
-const attrsUpdateValuesAMQPFlag = "attrs-update-values-amqp"
+const (
+	attrsUpdateValuesAMQPFlag = "attrs-update-values-amqp"
+	imageStorageFormatFlag    = "format"
+	imageStorageImageIDFlag   = "image_id"
+	imageStorageRecreateFlag  = "recreate"
+	imageStorageExtFlag       = "ext"
+	limitFlag                 = "limit"
+	loglevelFlag              = "loglevel"
+	ginmodeFlag               = "ginmode"
+)
 
 var autowpApp *goautowp.Application
 
@@ -60,7 +70,7 @@ func mainReturnWithCode() int { //nolint: maintidx
 		Description: "autowp cli interface",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "loglevel",
+				Name:     loglevelFlag,
 				Value:    "info",
 				Usage:    "trace|debug|info|warn|error|fatal|panic",
 				Required: false,
@@ -82,7 +92,7 @@ func mainReturnWithCode() int { //nolint: maintidx
 				},
 			},
 			&cli.StringFlag{
-				Name:     "ginmode",
+				Name:     ginmodeFlag,
 				Value:    "release",
 				Usage:    "debug|test|release",
 				Required: false,
@@ -101,14 +111,17 @@ func mainReturnWithCode() int { //nolint: maintidx
 						Name: "get-image",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:     "image_id",
+								Name:     imageStorageImageIDFlag,
 								Value:    "english",
 								Usage:    "Image ID",
 								Required: true,
 							},
 						},
 						Action: func(ctx context.Context, command *cli.Command) error {
-							i, err := autowpApp.ImageStorageGetImage(ctx, int(command.Int("image_id")))
+							i, err := autowpApp.ImageStorageGetImage(
+								ctx,
+								command.Int(imageStorageImageIDFlag),
+							)
 							if err != nil {
 								return err
 							}
@@ -122,12 +135,12 @@ func mainReturnWithCode() int { //nolint: maintidx
 						Name: "get-formatted-image",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:     "image_id",
+								Name:     imageStorageImageIDFlag,
 								Usage:    "Image ID",
 								Required: true,
 							},
 							&cli.StringFlag{
-								Name:     "format",
+								Name:     imageStorageFormatFlag,
 								Usage:    "Format",
 								Required: true,
 							},
@@ -135,14 +148,57 @@ func mainReturnWithCode() int { //nolint: maintidx
 						Action: func(ctx context.Context, command *cli.Command) error {
 							img, err := autowpApp.ImageStorageGetFormattedImage(
 								ctx,
-								int(command.Int("image_id")),
-								command.String("format"),
+								command.Int(imageStorageImageIDFlag),
+								command.String(imageStorageFormatFlag),
 							)
 							if err != nil {
 								return err
 							}
 
 							logrus.Printf("%v", img)
+
+							return nil
+						},
+					},
+					{
+						Name: "flush-formatted-images",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     imageStorageFormatFlag,
+								Value:    "",
+								Usage:    "Format",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     imageStorageExtFlag,
+								Value:    "",
+								Usage:    "jpg",
+								Required: false,
+							},
+							&cli.UintFlag{
+								Name:     limitFlag,
+								Value:    0,
+								Usage:    "limit",
+								Required: false,
+							},
+							&cli.BoolFlag{
+								Name:     imageStorageRecreateFlag,
+								Required: false,
+							},
+						},
+						Action: func(ctx context.Context, command *cli.Command) error {
+							err := autowpApp.ImageStorageFlushFormattedImages(
+								ctx,
+								storage.FlushOptions{
+									Format:   command.String(imageStorageFormatFlag),
+									Ext:      command.String(imageStorageExtFlag),
+									Recreate: command.Bool(imageStorageRecreateFlag),
+									Limit:    command.Uint(limitFlag),
+								},
+							)
+							if err != nil {
+								return err
+							}
 
 							return nil
 						},
@@ -305,7 +361,7 @@ func mainReturnWithCode() int { //nolint: maintidx
 			{
 				Name: "specs-refresh-item-conflict-flags",
 				Flags: []cli.Flag{
-					&cli.IntFlag{
+					&cli.Int64Flag{
 						Name:     "item_id",
 						Value:    0,
 						Usage:    "item_id",
@@ -313,13 +369,13 @@ func mainReturnWithCode() int { //nolint: maintidx
 					},
 				},
 				Action: func(ctx context.Context, command *cli.Command) error {
-					return autowpApp.SpecsRefreshItemConflictFlags(ctx, command.Int("item_id"))
+					return autowpApp.SpecsRefreshItemConflictFlags(ctx, command.Int64("item_id"))
 				},
 			},
 			{
 				Name: "specs-refresh-user-stat",
 				Flags: []cli.Flag{
-					&cli.IntFlag{
+					&cli.Int64Flag{
 						Name:     "user_id",
 						Value:    0,
 						Usage:    "user_id",
@@ -327,7 +383,7 @@ func mainReturnWithCode() int { //nolint: maintidx
 					},
 				},
 				Action: func(ctx context.Context, command *cli.Command) error {
-					return autowpApp.SpecsRefreshUserConflicts(ctx, command.Int("user_id"))
+					return autowpApp.SpecsRefreshUserConflicts(ctx, command.Int64("user_id"))
 				},
 			},
 			{
@@ -346,14 +402,14 @@ func mainReturnWithCode() int { //nolint: maintidx
 				Name: "refresh-item-parent-language",
 				Flags: []cli.Flag{
 					&cli.UintFlag{
-						Name:     "limit",
+						Name:     limitFlag,
 						Value:    0,
 						Usage:    "limit",
 						Required: true,
 					},
 					&cli.IntFlag{
 						Name:     "parent_item_type_id",
-						Value:    int64(schema.ItemTableItemTypeIDBrand),
+						Value:    int(schema.ItemTableItemTypeIDBrand),
 						Usage:    "parent_item_type_id",
 						Required: false,
 					},
@@ -363,7 +419,7 @@ func mainReturnWithCode() int { //nolint: maintidx
 
 					return autowpApp.RefreshItemParentLanguage(ctx,
 						schema.ItemTableItemTypeID(parentItemTypeID),
-						uint(command.Uint("limit")),
+						command.Uint(limitFlag),
 					)
 				},
 			},

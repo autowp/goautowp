@@ -23,7 +23,10 @@ func (s *APIUser) Validate(
 		}
 
 		languageInputFilter := validation.InputFilter{
-			Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+			Filters: []validation.FilterInterface{
+				&validation.StringTrimFilter{},
+				&validation.StringSingleSpaces{},
+			},
 			Validators: []validation.ValidatorInterface{
 				&validation.InArray{HaystackString: langs},
 			},
@@ -44,7 +47,10 @@ func (s *APIUser) Validate(
 
 	if util.Contains(maskPaths, "timezone") {
 		timezoneInputFilter := validation.InputFilter{
-			Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+			Filters: []validation.FilterInterface{
+				&validation.StringTrimFilter{},
+				&validation.StringSingleSpaces{},
+			},
 			Validators: []validation.ValidatorInterface{
 				&validation.InArray{HaystackString: TimeZones()},
 			},

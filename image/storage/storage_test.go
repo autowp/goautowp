@@ -119,8 +119,8 @@ func TestAddImageFromBlobAndFormat(t *testing.T) {
 	formattedImage, err := mw.FormattedImage(ctx, imageID, "test")
 	require.NoError(t, err)
 
-	require.EqualValues(t, 160, formattedImage.Width())
-	require.EqualValues(t, 120, formattedImage.Height())
+	require.Equal(t, 160, formattedImage.Width())
+	require.Equal(t, 120, formattedImage.Height())
 	require.Positive(t, formattedImage.FileSize())
 	require.NotEmpty(t, formattedImage.Src())
 }
@@ -181,7 +181,7 @@ func TestAddImageAndCrop(t *testing.T) {
 	c, err := mw.ImageCrop(ctx, imageID)
 	require.NoError(t, err)
 
-	require.EqualValues(t, crop, *c)
+	require.Equal(t, crop, *c)
 
 	imageInfo, err := mw.Image(ctx, imageID)
 	require.NoError(t, err)
@@ -224,8 +224,8 @@ func TestAddImageAndCrop(t *testing.T) {
 	formattedImage, err := mw.FormattedImage(ctx, imageID, "picture-gallery")
 	require.NoError(t, err)
 
-	require.EqualValues(t, 1020, formattedImage.Width())
-	require.EqualValues(t, 500, formattedImage.Height())
+	require.Equal(t, 1020, formattedImage.Width())
+	require.Equal(t, 500, formattedImage.Height())
 	require.Positive(t, formattedImage.FileSize())
 	require.NotEmpty(t, formattedImage.Src())
 
@@ -298,16 +298,16 @@ func TestRequestFormattedImageAgain(t *testing.T) {
 	formattedImage, err := mw.FormattedImage(ctx, imageID, formatName)
 	require.NoError(t, err)
 
-	require.EqualValues(t, 160, formattedImage.Width())
-	require.EqualValues(t, 120, formattedImage.Height())
+	require.Equal(t, 160, formattedImage.Width())
+	require.Equal(t, 120, formattedImage.Height())
 	require.Positive(t, formattedImage.FileSize())
 	require.NotEmpty(t, formattedImage.Src())
 
 	formattedImage, err = mw.FormattedImage(ctx, imageID, formatName)
 	require.NoError(t, err)
 
-	require.EqualValues(t, 160, formattedImage.Width())
-	require.EqualValues(t, 120, formattedImage.Height())
+	require.Equal(t, 160, formattedImage.Width())
+	require.Equal(t, 120, formattedImage.Height())
 	require.Positive(t, formattedImage.FileSize())
 	require.NotEmpty(t, formattedImage.Src())
 }

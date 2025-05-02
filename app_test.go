@@ -123,13 +123,24 @@ func TestSpecsRefreshUserConflicts(t *testing.T) {
 	usersClient := NewUsersClient(conn)
 
 	// tester
-	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	testerToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		testUsername,
+		testPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
 	// tester (me)
 	tester, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+testerToken.AccessToken,
+		),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
@@ -228,7 +239,12 @@ func TestBuildBrandsSprite(t *testing.T) {
 			Catname:    fmt.Sprintf("brand-%d-%d", random.Int(), i),
 		})
 
-		imageID, err := imageStorage.AddImageFromFilepath(t.Context(), "./test/png.png", "brand", storage.GenerateOptions{})
+		imageID, err := imageStorage.AddImageFromFilepath(
+			t.Context(),
+			"./test/png.png",
+			"brand",
+			storage.GenerateOptions{},
+		)
 		require.NoError(t, err)
 		require.NotEmpty(t, imageID)
 

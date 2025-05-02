@@ -25,7 +25,12 @@ func NewAttrsAMQP(repository *attrs.Repository) *AttrsAMQP {
 }
 
 // ListenUpdateValues for incoming messages.
-func (s *AttrsAMQP) ListenUpdateValues(ctx context.Context, url string, queue string, quitChan chan bool) error {
+func (s *AttrsAMQP) ListenUpdateValues(
+	ctx context.Context,
+	url string,
+	queue string,
+	quitChan chan bool,
+) error {
 	conn, err := util.ConnectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)

@@ -33,8 +33,13 @@ const (
 const bearerPrefix = "Bearer "
 
 func addPicture(
-	t *testing.T, cnt *Container, conn *grpc.ClientConn, filepath string, data PicturePostForm, //nolint: unparam
-	status PictureStatus, token string,
+	t *testing.T,
+	cnt *Container,
+	conn *grpc.ClientConn,
+	filepath string, //nolint: unparam
+	data PicturePostForm,
+	status PictureStatus,
+	token string,
 ) int64 {
 	t.Helper()
 
@@ -117,7 +122,13 @@ func createItem(t *testing.T, conn *grpc.ClientConn, cnt *Container, row *APIIte
 	return itemID
 }
 
-func CreatePicture(t *testing.T, cnt *Container, file string, data PicturePostForm, token string) int64 {
+func CreatePicture(
+	t *testing.T,
+	cnt *Container,
+	file string,
+	data PicturePostForm,
+	token string,
+) int64 {
 	t.Helper()
 
 	req := CreatePictureRequest(t, file, data, token)
@@ -150,7 +161,12 @@ func CreatePicture(t *testing.T, cnt *Container, file string, data PicturePostFo
 	return id
 }
 
-func CreatePictureRequest(t *testing.T, file string, data PicturePostForm, token string) *http.Request {
+func CreatePictureRequest(
+	t *testing.T,
+	file string,
+	data PicturePostForm,
+	token string,
+) *http.Request {
 	t.Helper()
 
 	var (

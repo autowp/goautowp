@@ -24,7 +24,10 @@ func NewArticlesGRPCServer(db *goqu.Database) *ArticlesGRPCServer {
 	}
 }
 
-func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (*ArticlesResponse, error) {
+func (s *ArticlesGRPCServer) GetList(
+	ctx context.Context,
+	in *ArticlesRequest,
+) (*ArticlesResponse, error) {
 	type row struct {
 		ID              int64          `db:"id"`
 		Name            string         `db:"name"`
@@ -104,7 +107,10 @@ func (s *ArticlesGRPCServer) GetList(ctx context.Context, in *ArticlesRequest) (
 	}, nil
 }
 
-func (s *ArticlesGRPCServer) GetItemByCatname(ctx context.Context, in *ArticleByCatnameRequest) (*Article, error) {
+func (s *ArticlesGRPCServer) GetItemByCatname(
+	ctx context.Context,
+	in *ArticleByCatnameRequest,
+) (*Article, error) {
 	type row struct {
 		ID              int64          `db:"id"`
 		Name            string         `db:"name"`

@@ -42,7 +42,13 @@ func TestView(t *testing.T) {
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{ItemID: itemID}, token.AccessToken)
+	pictureID := CreatePicture(
+		t,
+		cnt,
+		"./test/test.jpg",
+		PicturePostForm{ItemID: itemID},
+		token.AccessToken,
+	)
 
 	_, err = client.View(ctx, &PicturesViewRequest{PictureId: pictureID})
 	require.NoError(t, err)
@@ -67,7 +73,13 @@ func TestVote(t *testing.T) {
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{ItemID: itemID}, token.AccessToken)
+	pictureID := CreatePicture(
+		t,
+		cnt,
+		"./test/test.jpg",
+		PicturePostForm{ItemID: itemID},
+		token.AccessToken,
+	)
 
 	_, err = client.Vote(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -685,8 +697,15 @@ func TestClearReplacePicture(t *testing.T) {
 
 	replacePictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID},
 		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
-	pictureID := addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ReplacePictureID: replacePictureID},
-		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
+	pictureID := addPicture(
+		t,
+		cnt,
+		conn,
+		"./test/test.jpg",
+		PicturePostForm{ReplacePictureID: replacePictureID},
+		PictureStatus_PICTURE_STATUS_INBOX,
+		token.AccessToken,
+	)
 
 	client := NewPicturesClient(conn)
 
@@ -741,7 +760,10 @@ func TestSetPicturePoint(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID}})
+	pic, err := client.GetPicture(
+		ctx,
+		&PicturesRequest{Options: &PictureListOptions{Id: pictureID}},
+	)
 	require.NoError(t, err)
 	require.Nil(t, pic.GetPoint())
 
@@ -853,7 +875,9 @@ func TestUpdatePicture(t *testing.T) {
 	var pic schema.PictureRow
 
 	success, err := goquDB.Select(
-		schema.PictureTableTakenYearColName, schema.PictureTableTakenMonthColName, schema.PictureTableTakenDayColName,
+		schema.PictureTableTakenYearColName,
+		schema.PictureTableTakenMonthColName,
+		schema.PictureTableTakenDayColName,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).ScanStructContext(ctx, &pic)
@@ -881,7 +905,9 @@ func TestUpdatePicture(t *testing.T) {
 	require.NoError(t, err)
 
 	success, err = goquDB.Select(
-		schema.PictureTableTakenYearColName, schema.PictureTableTakenMonthColName, schema.PictureTableTakenDayColName,
+		schema.PictureTableTakenYearColName,
+		schema.PictureTableTakenMonthColName,
+		schema.PictureTableTakenDayColName,
 	).
 		From(schema.PictureTable).
 		Where(schema.PictureTableIDCol.Eq(pictureID)).ScanStructContext(ctx, &pic)
@@ -932,7 +958,10 @@ func TestSetPictureCopyrights(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	pic, err := client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID}})
+	pic, err := client.GetPicture(
+		ctx,
+		&PicturesRequest{Options: &PictureListOptions{Id: pictureID}},
+	)
 	require.NoError(t, err)
 	require.NotZero(t, pic.GetCopyrightsTextId())
 	require.NotEmpty(t, pic.GetCopyrightsTextId())
@@ -963,7 +992,10 @@ func TestSetPictureCopyrights(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Second", text)
 
-	pic2, err := client.GetPicture(ctx, &PicturesRequest{Options: &PictureListOptions{Id: pictureID2}})
+	pic2, err := client.GetPicture(
+		ctx,
+		&PicturesRequest{Options: &PictureListOptions{Id: pictureID2}},
+	)
 	require.NoError(t, err)
 	require.NotZero(t, pic2.GetCopyrightsTextId())
 	require.NotEmpty(t, pic2.GetCopyrightsTextId())
@@ -1121,14 +1153,25 @@ func TestReplacePicture(t *testing.T) {
 		PictureStatus_PICTURE_STATUS_INBOX, token.AccessToken)
 
 	// tester
-	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	testerToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		testUsername,
+		testPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
 	// tester (me)
 	usersClient := NewUsersClient(conn)
 	tester, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+testerToken.AccessToken,
+		),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
@@ -1205,7 +1248,11 @@ func TestGetPictures(t *testing.T) {
 		Image:       true,
 		ThumbMedium: true,
 	}, Limit: 100})
-	require.ErrorContains(t, err, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
+	require.ErrorContains(
+		t,
+		err,
+		"PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required",
+	)
 
 	cfg := config.LoadConfig(".")
 
@@ -1390,7 +1437,11 @@ func TestGetPicturePath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, picture.GetPath())
 	require.Equal(t, "child", picture.GetPath()[0].GetItem().GetParents()[0].GetCatname())
-	require.Equal(t, "item", picture.GetPath()[0].GetItem().GetParents()[0].GetItem().GetParents()[0].GetCatname())
+	require.Equal(
+		t,
+		"item",
+		picture.GetPath()[0].GetItem().GetParents()[0].GetItem().GetParents()[0].GetCatname(),
+	)
 }
 
 func TestGetPicturesOrders(t *testing.T) {
@@ -1452,7 +1503,11 @@ func TestGetPicturesOrders(t *testing.T) {
 			}
 
 			_, err = client.GetPictures(
-				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
+				metadata.AppendToOutgoingContext(
+					ctx,
+					authorizationHeader,
+					bearerPrefix+token.AccessToken,
+				),
 				&request,
 			)
 			require.NoError(t, err)
@@ -1644,7 +1699,13 @@ func TestNewbox(t *testing.T) {
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	pictureID := CreatePicture(t, cnt, "./test/test.jpg", PicturePostForm{ItemID: itemID}, token.AccessToken)
+	pictureID := CreatePicture(
+		t,
+		cnt,
+		"./test/test.jpg",
+		PicturePostForm{ItemID: itemID},
+		token.AccessToken,
+	)
 
 	_, err = client.SetPictureStatus(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),
@@ -1747,7 +1808,12 @@ func TestCorrectFileNamesVote(t *testing.T) {
 		fmt.Sprintf("t/toyota_%d_corolla_new/toyota_%d_corolla_new", randomInt, randomInt),
 	)
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
+	request, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodHead,
+		picture.GetImage().GetSrc(),
+		nil,
+	)
 	require.NoError(t, err)
 
 	httpResponse, err := http.DefaultClient.Do(request) //nolint: bodyclose
@@ -1790,7 +1856,12 @@ func TestCorrectFileNamesVote(t *testing.T) {
 		fmt.Sprintf("t/toyota-%d/corolla_new/toyota_%d_corolla_new", randomInt, randomInt),
 	)
 
-	request, err = http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
+	request, err = http.NewRequestWithContext(
+		ctx,
+		http.MethodHead,
+		picture.GetImage().GetSrc(),
+		nil,
+	)
 	require.NoError(t, err)
 
 	httpResponse, err = http.DefaultClient.Do(request) //nolint: bodyclose
@@ -1828,12 +1899,23 @@ func TestCorrectFileNamesVote(t *testing.T) {
 		Fields:  &PictureFields{Image: true},
 	})
 	require.NoError(t, err)
-	require.Contains(t,
+	require.Contains(
+		t,
 		picture.GetImage().GetSrc(),
-		fmt.Sprintf("p/peugeot-%d/toyota-%d/corolla_new/toyota_%d_corolla_new", randomInt, randomInt, randomInt),
+		fmt.Sprintf(
+			"p/peugeot-%d/toyota-%d/corolla_new/toyota_%d_corolla_new",
+			randomInt,
+			randomInt,
+			randomInt,
+		),
 	)
 
-	request, err = http.NewRequestWithContext(ctx, http.MethodHead, picture.GetImage().GetSrc(), nil)
+	request, err = http.NewRequestWithContext(
+		ctx,
+		http.MethodHead,
+		picture.GetImage().GetSrc(),
+		nil,
+	)
 	require.NoError(t, err)
 
 	httpResponse, err = http.DefaultClient.Do(request) //nolint: bodyclose
@@ -1862,8 +1944,15 @@ func TestGetGallery(t *testing.T) {
 		ItemTypeId: ItemType_ITEM_TYPE_VEHICLE,
 	})
 
-	addPicture(t, cnt, conn, "./test/test.jpg", PicturePostForm{ItemID: itemID}, PictureStatus_PICTURE_STATUS_INBOX,
-		token.AccessToken)
+	addPicture(
+		t,
+		cnt,
+		conn,
+		"./test/test.jpg",
+		PicturePostForm{ItemID: itemID},
+		PictureStatus_PICTURE_STATUS_INBOX,
+		token.AccessToken,
+	)
 
 	_, err = client.GetGallery(
 		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+token.AccessToken),

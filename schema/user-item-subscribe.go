@@ -10,6 +10,10 @@ const (
 
 var (
 	UserItemSubscribeTable          = goqu.T(UserItemSubscribeTableName)
-	UserItemSubscribeTableUserIDCol = UserItemSubscribeTable.Col(UserItemSubscribeTableUserIDColName)
-	UserItemSubscribeTableItemIDCol = UserItemSubscribeTable.Col(UserItemSubscribeTableItemIDColName)
+	UserItemSubscribeTableUserIDCol = UserItemSubscribeTable.Col(
+		UserItemSubscribeTableUserIDColName,
+	)
+	UserItemSubscribeTableItemIDCol = UserItemSubscribeTable.Col(
+		UserItemSubscribeTableItemIDColName,
+	)
 )

@@ -11,9 +11,17 @@ const (
 )
 
 var (
-	CommentTopicViewTable             = goqu.T(CommentTopicViewTableName)
-	CommentTopicViewTableUserIDCol    = CommentTopicViewTable.Col(CommentTopicViewTableUserIDColName)
-	CommentTopicViewTableTypeIDCol    = CommentTopicViewTable.Col(CommentTopicViewTableTypeIDColName)
-	CommentTopicViewTableItemIDCol    = CommentTopicViewTable.Col(CommentTopicViewTableItemIDColName)
-	CommentTopicViewTableTimestampCol = CommentTopicViewTable.Col(CommentTopicViewTableTimestampColName)
+	CommentTopicViewTable          = goqu.T(CommentTopicViewTableName)
+	CommentTopicViewTableUserIDCol = CommentTopicViewTable.Col(
+		CommentTopicViewTableUserIDColName,
+	)
+	CommentTopicViewTableTypeIDCol = CommentTopicViewTable.Col(
+		CommentTopicViewTableTypeIDColName,
+	)
+	CommentTopicViewTableItemIDCol = CommentTopicViewTable.Col(
+		CommentTopicViewTableItemIDColName,
+	)
+	CommentTopicViewTableTimestampCol = CommentTopicViewTable.Col(
+		CommentTopicViewTableTimestampColName,
+	)
 )

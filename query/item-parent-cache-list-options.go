@@ -49,14 +49,20 @@ func (s *ItemParentCacheListOptions) Clone() *ItemParentCacheListOptions {
 	return &clone
 }
 
-func (s *ItemParentCacheListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *ItemParentCacheListOptions) Select(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	return s.apply(
 		alias,
 		db.Select().From(schema.ItemParentCacheTable.As(alias)),
 	)
 }
 
-func (s *ItemParentCacheListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *ItemParentCacheListOptions) CountSelect(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
@@ -105,7 +111,10 @@ func (s *ItemParentCacheListOptions) ItemsByParentIDAlias(alias string) string {
 	return AppendItemAlias(alias, "a")
 }
 
-func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *ItemParentCacheListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	var (
 		err         error
 		aliasTable  = goqu.T(alias)
@@ -133,12 +142,20 @@ func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDa
 		sqSelect = sqSelect.Where(parentIDCol.Eq(s.ParentIDExpr))
 	}
 
-	sqSelect, _, err = s.ItemsByItemID.JoinToIDAndApply(itemIDCol, s.ItemsByItemIDAlias(alias), sqSelect)
+	sqSelect, _, err = s.ItemsByItemID.JoinToIDAndApply(
+		itemIDCol,
+		s.ItemsByItemIDAlias(alias),
+		sqSelect,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	sqSelect, _, err = s.ItemsByParentID.JoinToIDAndApply(parentIDCol, s.ItemsByParentIDAlias(alias), sqSelect)
+	sqSelect, _, err = s.ItemsByParentID.JoinToIDAndApply(
+		parentIDCol,
+		s.ItemsByParentIDAlias(alias),
+		sqSelect,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +208,9 @@ func (s *ItemParentCacheListOptions) apply(alias string, sqSelect *goqu.SelectDa
 	}
 
 	if s.ExcludeTuning {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentCacheTableTuningColName).IsFalse())
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemParentCacheTableTuningColName).IsFalse(),
+		)
 	}
 
 	if s.ItemVehicleTypeByItemID != nil {

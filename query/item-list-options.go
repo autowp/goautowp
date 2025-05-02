@@ -125,7 +125,10 @@ func (s *ItemListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectD
 	return sqSelect, err
 }
 
-func (s *ItemListOptions) ExistsSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *ItemListOptions) ExistsSelect(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
@@ -134,7 +137,10 @@ func (s *ItemListOptions) ExistsSelect(db *goqu.Database, alias string) (*goqu.S
 	return sqSelect.Select(goqu.V(true)), nil
 }
 
-func (s *ItemListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *ItemListOptions) CountSelect(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
@@ -143,7 +149,10 @@ func (s *ItemListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.Se
 	return sqSelect.Select(goqu.COUNT(goqu.Star())), nil
 }
 
-func (s *ItemListOptions) CountDistinctSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *ItemListOptions) CountDistinctSelect(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	if s.Alias != "" {
 		alias = s.Alias
 	}
@@ -174,7 +183,10 @@ func (s *ItemListOptions) JoinToIDAndApply(
 	)
 }
 
-func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool, error) {
+func (s *ItemListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, bool, error) {
 	var (
 		err        error
 		groupBy    = false
@@ -227,7 +239,9 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 	}
 
 	if s.EngineItemID > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableEngineItemIDColName).Eq(s.EngineItemID))
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemTableEngineItemIDColName).Eq(s.EngineItemID),
+		)
 	}
 
 	sqSelect = s.applyName(alias, sqSelect)
@@ -308,13 +322,18 @@ func (s *ItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*go
 	if s.AttrsUserValues != nil {
 		groupBy = true
 
-		sqSelect = s.AttrsUserValues.JoinToItemIDAndApply(aliasIDCol, AppendAttrsUserValuesAlias(alias), sqSelect)
+		sqSelect = s.AttrsUserValues.JoinToItemIDAndApply(
+			aliasIDCol,
+			AppendAttrsUserValuesAlias(alias),
+			sqSelect,
+		)
 	}
 
 	if s.AttrsUserValuesCountGte > 0 {
 		auvAlias := AppendAttrsUserValuesAlias(alias)
 		sqSelect = sqSelect.Having(
-			goqu.COUNT(goqu.T(auvAlias).Col(schema.AttrsUserValuesTableItemIDColName)).Gte(s.AttrsUserValuesCountGte),
+			goqu.COUNT(goqu.T(auvAlias).Col(schema.AttrsUserValuesTableItemIDColName)).
+				Gte(s.AttrsUserValuesCountGte),
 		)
 	}
 
@@ -375,7 +394,10 @@ func (s *ItemListOptions) applyJoins(
 		sqSelect = sqSelect.
 			LeftJoin(
 				schema.ItemVehicleTypeTable,
-				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.ItemVehicleTypeTableItemIDCol)),
+				goqu.On(
+					aliasTable.Col(schema.ItemTableIDColName).
+						Eq(schema.ItemVehicleTypeTableItemIDCol),
+				),
 			).
 			Where(schema.ItemVehicleTypeTableItemIDCol.IsNull())
 	}
@@ -383,7 +405,11 @@ func (s *ItemListOptions) applyJoins(
 	if s.ItemParentChild != nil {
 		groupBy = true
 
-		sqSelect, _, err = s.ItemParentChild.JoinToParentIDAndApply(idCol, AppendItemParentAlias(alias, "c"), sqSelect)
+		sqSelect, _, err = s.ItemParentChild.JoinToParentIDAndApply(
+			idCol,
+			AppendItemParentAlias(alias, "c"),
+			sqSelect,
+		)
 		if err != nil {
 			return nil, false, err
 		}
@@ -401,7 +427,11 @@ func (s *ItemListOptions) applyJoins(
 	if s.PictureItems != nil {
 		groupBy = true
 
-		sqSelect, err = s.PictureItems.JoinToItemIDAndApply(idCol, AppendPictureItemAlias(alias, ""), sqSelect)
+		sqSelect, err = s.PictureItems.JoinToItemIDAndApply(
+			idCol,
+			AppendPictureItemAlias(alias, ""),
+			sqSelect,
+		)
 		if err != nil {
 			return nil, false, err
 		}
@@ -445,7 +475,11 @@ func (s *ItemListOptions) applyJoins(
 
 	if s.EngineItem != nil {
 		sqSelect, subGroupBy, err = s.EngineItem.JoinToIDAndApply(
-			aliasTable.Col(schema.ItemTableEngineItemIDColName), AppendItemAlias(alias, ""), sqSelect,
+			aliasTable.Col(
+				schema.ItemTableEngineItemIDColName,
+			),
+			AppendItemAlias(alias, ""),
+			sqSelect,
 		)
 		if err != nil {
 			return nil, false, err
@@ -464,8 +498,10 @@ func (s *ItemListOptions) applyJoins(
 
 		sqSelect = sqSelect.
 			Join(schema.ItemLanguageTable.As(ilsAlias), goqu.On(
-				aliasTable.Col(schema.ItemTableIDColName).Eq(ilsAliasTable.Col(schema.ItemLanguageTableItemIDColName)),
-			)).
+				aliasTable.Col(schema.ItemTableIDColName).
+					Eq(ilsAliasTable.Col(schema.ItemLanguageTableItemIDColName)),
+			),
+			).
 			Join(schema.TextstorageTextTable.As(ttsAlias), goqu.On(
 				ilsAliasTable.Col(schema.ItemLanguageTableTextIDColName).Eq(
 					ttsAliasTable.Col(schema.TextstorageTextTableIDColName),
@@ -559,7 +595,13 @@ func (s *ItemListOptions) applyName(
 	alias string, sqSelect *goqu.SelectDataset,
 ) *goqu.SelectDataset {
 	if len(s.Name) > 0 {
-		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
+		subSelect := sqSelect.ClearSelect().
+			ClearLimit().
+			ClearOffset().
+			ClearOrder().
+			ClearWhere().
+			GroupBy().
+			FromSelf()
 
 		ilmAlias := "ilm"
 		ilmAliasTable := goqu.T(ilmAlias)
@@ -581,7 +623,13 @@ func (s *ItemListOptions) applyName(
 	}
 
 	if len(s.NameExclude) > 0 {
-		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
+		subSelect := sqSelect.ClearSelect().
+			ClearLimit().
+			ClearOffset().
+			ClearOrder().
+			ClearWhere().
+			GroupBy().
+			FromSelf()
 
 		ilmAlias := "ilmn"
 		ilmAliasTable := goqu.T(ilmAlias)
@@ -616,7 +664,8 @@ func (s *ItemListOptions) applyExcludeSelfAndChilds(
 		sqSelect = sqSelect.
 			LeftJoin(schema.ItemParentCacheTable.As(esacAlias), goqu.On(
 				aliasTable.Col(schema.ItemTableIDColName).Eq(esacAliasTableItemIDCol),
-				esacAliasTable.Col(schema.ItemParentCacheTableParentIDColName).Eq(s.ExcludeSelfAndChilds),
+				esacAliasTable.Col(schema.ItemParentCacheTableParentIDColName).
+					Eq(s.ExcludeSelfAndChilds),
 			)).
 			Where(esacAliasTableItemIDCol.IsNull())
 	}
@@ -632,7 +681,13 @@ func (s *ItemListOptions) applySuggestionsTo(
 		groupBy = true
 		aliasTable := goqu.T(alias)
 		aliasIDCol := aliasTable.Col(schema.ItemTableIDColName)
-		subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
+		subSelect := sqSelect.ClearSelect().
+			ClearLimit().
+			ClearOffset().
+			ClearOrder().
+			ClearWhere().
+			GroupBy().
+			FromSelf()
 		ilsAlias := alias + "ils"
 		ils2Alias := alias + "ils2"
 		ilsAliasTable := goqu.T(ilsAlias)
@@ -646,7 +701,8 @@ func (s *ItemListOptions) applySuggestionsTo(
 					goqu.T(ils2Alias).Col(schema.ItemLanguageTableNameColName)),
 			)).
 			Where(
-				aliasTable.Col(schema.ItemTableItemTypeIDColName).Eq(schema.ItemTableItemTypeIDBrand),
+				aliasTable.Col(schema.ItemTableItemTypeIDColName).
+					Eq(schema.ItemTableItemTypeIDBrand),
 				ilsAliasTable.Col(schema.ItemLanguageTableItemIDColName).Eq(s.SuggestionsTo),
 				aliasIDCol.In(
 					subSelect.Select(schema.ItemTableIDCol).
@@ -671,7 +727,13 @@ func (s *ItemListOptions) applyExcludeVehicleTypeAncestorID(
 	}
 
 	aliasTable := goqu.T(alias)
-	subSelect := sqSelect.ClearSelect().ClearLimit().ClearOffset().ClearOrder().ClearWhere().GroupBy().FromSelf()
+	subSelect := sqSelect.ClearSelect().
+		ClearLimit().
+		ClearOffset().
+		ClearOrder().
+		ClearWhere().
+		GroupBy().
+		FromSelf()
 	subSelect = subSelect.Select(schema.VehicleTypeParentTableIDCol).
 		From(schema.VehicleTypeParentTable).
 		Where(schema.VehicleTypeParentTableParentIDCol.In(s.ExcludeVehicleTypeAncestorID))
@@ -780,7 +842,8 @@ func (s *ItemListOptions) applyAutocompleteFilter(
 		ilAliasTable := goqu.T(ilAlias)
 		sqSelect = sqSelect.
 			Join(schema.ItemLanguageTable.As(ilAlias), goqu.On(
-				aliasTable.Col(schema.ItemTableIDColName).Eq(ilAliasTable.Col(schema.ItemLanguageTableItemIDColName)),
+				aliasTable.Col(schema.ItemTableIDColName).
+					Eq(ilAliasTable.Col(schema.ItemLanguageTableItemIDColName)),
 			)).
 			Where(ilAliasTable.Col(schema.ItemLanguageTableNameColName).ILike(query + "%"))
 	}
@@ -800,11 +863,15 @@ func (s *ItemListOptions) applyAutocompleteFilter(
 	}
 
 	if beginModelYear > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableBeginModelYearColName).Eq(beginModelYear))
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemTableBeginModelYearColName).Eq(beginModelYear),
+		)
 	}
 
 	if endModelYear > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableEndModelYearColName).Eq(endModelYear))
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemTableEndModelYearColName).Eq(endModelYear),
+		)
 	}
 
 	return sqSelect, groupBy
@@ -825,7 +892,9 @@ func (s *ItemListOptions) applyParentTypesOf(
 		}
 
 		if len(parentTypes) > 0 {
-			sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemTableItemTypeIDColName).In(parentTypes))
+			sqSelect = sqSelect.Where(
+				aliasTable.Col(schema.ItemTableItemTypeIDColName).In(parentTypes),
+			)
 		} else {
 			sqSelect = sqSelect.Where(goqu.V(false))
 		}

@@ -11,7 +11,9 @@ const (
 )
 
 var (
-	PerspectivesGroupsPerspectivesTable                 = goqu.T(PerspectivesGroupsPerspectivesTableName)
+	PerspectivesGroupsPerspectivesTable = goqu.T(
+		PerspectivesGroupsPerspectivesTableName,
+	)
 	PerspectivesGroupsPerspectivesTablePerspectiveIDCol = PerspectivesGroupsPerspectivesTable.Col(
 		PerspectivesGroupsPerspectivesTablePerspectiveIDColName,
 	)

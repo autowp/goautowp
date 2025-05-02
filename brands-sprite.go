@@ -176,7 +176,13 @@ func createIconsSprite(
 	dw := imagick.NewDrawingWand()
 	defer dw.Destroy()
 
-	mwr := mw.MontageImage(dw, fmt.Sprintf("%dx", width), "+1+1", imagick.MONTAGE_MODE_UNDEFINED, "0x0+0+0")
+	mwr := mw.MontageImage(
+		dw,
+		fmt.Sprintf("%dx", width),
+		"+1+1",
+		imagick.MONTAGE_MODE_UNDEFINED,
+		"0x0+0+0",
+	)
 	if mwr == nil {
 		return errEmptyMagickWand
 	}

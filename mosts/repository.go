@@ -93,7 +93,10 @@ func (s *Repository) Items(
 	)
 
 	if len(options.CarType) > 0 {
-		carType, err = s.itemsRepository.VehicleType(ctx, &query.VehicleTypeListOptions{Catname: options.CarType})
+		carType, err = s.itemsRepository.VehicleType(
+			ctx,
+			&query.VehicleTypeListOptions{Catname: options.CarType},
+		)
 		if err != nil {
 			return nil, 0, err
 		}

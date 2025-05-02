@@ -15,7 +15,14 @@ func TestHttpBanPost(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(t.Context(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(
+		t.Context(),
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
@@ -30,7 +37,10 @@ func TestHttpBanPost(t *testing.T) {
 		metadata.New(map[string]string{authorizationHeader: bearerPrefix + token.AccessToken}),
 	)
 
-	_, err = trafficSrv.DeleteFromBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
+	_, err = trafficSrv.DeleteFromBlacklist(
+		ctx,
+		&DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"},
+	)
 	require.NoError(t, err)
 
 	_, err = trafficSrv.AddToBlacklist(ctx, &AddToTrafficBlacklistRequest{
@@ -47,7 +57,10 @@ func TestHttpBanPost(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ip.GetBlacklist())
 
-	_, err = trafficSrv.DeleteFromBlacklist(ctx, &DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"})
+	_, err = trafficSrv.DeleteFromBlacklist(
+		ctx,
+		&DeleteFromTrafficBlacklistRequest{Ip: "127.0.0.1"},
+	)
 	require.NoError(t, err)
 
 	ip, err = srv.GetIP(ctx, &APIGetIPRequest{Ip: "127.0.0.1"})
@@ -61,7 +74,14 @@ func TestTop(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(t.Context(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(
+		t.Context(),
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
@@ -84,7 +104,14 @@ func TestWhitelist(t *testing.T) {
 	ctx := t.Context()
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(t.Context(), "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(
+		t.Context(),
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 

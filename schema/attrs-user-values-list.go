@@ -16,12 +16,22 @@ const (
 )
 
 var (
-	AttrsUserValuesListTable               = goqu.T(AttrsUserValuesListTableName)
-	AttrsUserValuesListTableUserIDCol      = AttrsUserValuesListTable.Col(AttrsUserValuesListTableUserIDColName)
-	AttrsUserValuesListTableAttributeIDCol = AttrsUserValuesListTable.Col(AttrsUserValuesListTableAttributeIDColName)
-	AttrsUserValuesListTableItemIDCol      = AttrsUserValuesListTable.Col(AttrsUserValuesListTableItemIDColName)
-	AttrsUserValuesListTableValueCol       = AttrsUserValuesListTable.Col(AttrsUserValuesListTableValueColName)
-	AttrsUserValuesListTableOrderingCol    = AttrsUserValuesListTable.Col(AttrsUserValuesListTableOrderingColName)
+	AttrsUserValuesListTable          = goqu.T(AttrsUserValuesListTableName)
+	AttrsUserValuesListTableUserIDCol = AttrsUserValuesListTable.Col(
+		AttrsUserValuesListTableUserIDColName,
+	)
+	AttrsUserValuesListTableAttributeIDCol = AttrsUserValuesListTable.Col(
+		AttrsUserValuesListTableAttributeIDColName,
+	)
+	AttrsUserValuesListTableItemIDCol = AttrsUserValuesListTable.Col(
+		AttrsUserValuesListTableItemIDColName,
+	)
+	AttrsUserValuesListTableValueCol = AttrsUserValuesListTable.Col(
+		AttrsUserValuesListTableValueColName,
+	)
+	AttrsUserValuesListTableOrderingCol = AttrsUserValuesListTable.Col(
+		AttrsUserValuesListTableOrderingColName,
+	)
 )
 
 type AttrsUserValuesListRow struct {

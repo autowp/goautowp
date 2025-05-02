@@ -15,11 +15,19 @@ const (
 )
 
 var (
-	AttrsUserValuesStringTable               = goqu.T(AttrsUserValuesStringTableName)
-	AttrsUserValuesStringTableUserIDCol      = AttrsUserValuesStringTable.Col(AttrsUserValuesStringTableUserIDColName)
-	AttrsUserValuesStringTableAttributeIDCol = AttrsUserValuesStringTable.Col(AttrsUserValuesStringTableAttributeIDColName)
-	AttrsUserValuesStringTableItemIDCol      = AttrsUserValuesStringTable.Col(AttrsUserValuesStringTableItemIDColName)
-	AttrsUserValuesStringTableValueCol       = AttrsUserValuesStringTable.Col(AttrsUserValuesStringTableValueColName)
+	AttrsUserValuesStringTable          = goqu.T(AttrsUserValuesStringTableName)
+	AttrsUserValuesStringTableUserIDCol = AttrsUserValuesStringTable.Col(
+		AttrsUserValuesStringTableUserIDColName,
+	)
+	AttrsUserValuesStringTableAttributeIDCol = AttrsUserValuesStringTable.Col(
+		AttrsUserValuesStringTableAttributeIDColName,
+	)
+	AttrsUserValuesStringTableItemIDCol = AttrsUserValuesStringTable.Col(
+		AttrsUserValuesStringTableItemIDColName,
+	)
+	AttrsUserValuesStringTableValueCol = AttrsUserValuesStringTable.Col(
+		AttrsUserValuesStringTableValueColName,
+	)
 )
 
 type AttrsUserValuesStringRow struct {

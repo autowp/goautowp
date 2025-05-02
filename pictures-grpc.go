@@ -63,11 +63,20 @@ type PicturesGRPCServer struct {
 }
 
 func NewPicturesGRPCServer(
-	repository *pictures.Repository, auth *Auth, events *Events, hostManager *hosts.Manager,
-	messagingRepository *messaging.Repository, userRepository *users.Repository,
-	duplicateFinder *DuplicateFinder, textStorageRepository *textstorage.Repository, telegramService *telegram.Service,
-	itemRepository *items.Repository, commentRepository *comments.Repository, pictureExtractor *PictureExtractor,
-	pictureItemExtractor *PictureItemExtractor, itemExtractor *ItemExtractor,
+	repository *pictures.Repository,
+	auth *Auth,
+	events *Events,
+	hostManager *hosts.Manager,
+	messagingRepository *messaging.Repository,
+	userRepository *users.Repository,
+	duplicateFinder *DuplicateFinder,
+	textStorageRepository *textstorage.Repository,
+	telegramService *telegram.Service,
+	itemRepository *items.Repository,
+	commentRepository *comments.Repository,
+	pictureExtractor *PictureExtractor,
+	pictureItemExtractor *PictureItemExtractor,
+	itemExtractor *ItemExtractor,
 ) *PicturesGRPCServer {
 	return &PicturesGRPCServer{
 		repository:            repository,
@@ -89,7 +98,10 @@ func NewPicturesGRPCServer(
 	}
 }
 
-func (s *PicturesGRPCServer) View(ctx context.Context, in *PicturesViewRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) View(
+	ctx context.Context,
+	in *PicturesViewRequest,
+) (*emptypb.Empty, error) {
 	err := s.repository.IncView(ctx, in.GetPictureId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -98,7 +110,10 @@ func (s *PicturesGRPCServer) View(ctx context.Context, in *PicturesViewRequest) 
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) Vote(ctx context.Context, in *PicturesVoteRequest) (*PicturesVoteSummary, error) {
+func (s *PicturesGRPCServer) Vote(
+	ctx context.Context,
+	in *PicturesVoteRequest,
+) (*PicturesVoteSummary, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -223,7 +238,10 @@ func (s *PicturesGRPCServer) DeleteModerVoteTemplate(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) GetModerVoteTemplates(ctx context.Context, _ *emptypb.Empty) (*ModerVoteTemplates, error) {
+func (s *PicturesGRPCServer) GetModerVoteTemplates(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*ModerVoteTemplates, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -252,7 +270,10 @@ func (s *PicturesGRPCServer) GetModerVoteTemplates(ctx context.Context, _ *empty
 	}, nil
 }
 
-func (s *PicturesGRPCServer) DeleteModerVote(ctx context.Context, in *DeleteModerVoteRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) DeleteModerVote(
+	ctx context.Context,
+	in *DeleteModerVoteRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -289,7 +310,10 @@ func (s *PicturesGRPCServer) DeleteModerVote(ctx context.Context, in *DeleteMode
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) UpdateModerVote(ctx context.Context, in *UpdateModerVoteRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) UpdateModerVote(
+	ctx context.Context,
+	in *UpdateModerVoteRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -437,7 +461,11 @@ func (s *UpdateModerVoteRequest) Validate() ([]*errdetails.BadRequest_FieldViola
 	return result, nil
 }
 
-func (s *PicturesGRPCServer) restoreFromRemoving(ctx context.Context, pictureID int64, userID int64) error {
+func (s *PicturesGRPCServer) restoreFromRemoving(
+	ctx context.Context,
+	pictureID int64,
+	userID int64,
+) error {
 	if pictureID == 0 {
 		return sql.ErrNoRows
 	}
@@ -551,7 +579,10 @@ func (s *PicturesGRPCServer) notifyVote(
 		})
 }
 
-func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empty) (*PicturesUserSummary, error) {
+func (s *PicturesGRPCServer) GetUserSummary(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*PicturesUserSummary, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -583,7 +614,10 @@ func (s *PicturesGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empt
 	}, nil
 }
 
-func (s *PicturesGRPCServer) enforcePictureImageOperation(ctx context.Context, pictureID int64) (int64, error) {
+func (s *PicturesGRPCServer) enforcePictureImageOperation(
+	ctx context.Context,
+	pictureID int64,
+) (int64, error) {
 	if pictureID == 0 {
 		return 0, status.Error(codes.NotFound, "NotFound")
 	}
@@ -612,7 +646,8 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(ctx context.Context, p
 		return 0, status.Errorf(codes.NotFound, "NotFound")
 	}
 
-	canNormalize := pic.Status == schema.PictureStatusInbox && util.Contains(userCtx.Roles, users.RolePicturesModer)
+	canNormalize := pic.Status == schema.PictureStatusInbox &&
+		util.Contains(userCtx.Roles, users.RolePicturesModer)
 	if !canNormalize {
 		return 0, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -620,7 +655,10 @@ func (s *PicturesGRPCServer) enforcePictureImageOperation(ctx context.Context, p
 	return userCtx.UserID, nil
 }
 
-func (s *PicturesGRPCServer) Normalize(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) Normalize(
+	ctx context.Context,
+	in *PictureIDRequest,
+) (*emptypb.Empty, error) {
 	pictureID := in.GetId()
 
 	userID, err := s.enforcePictureImageOperation(ctx, pictureID)
@@ -647,7 +685,10 @@ func (s *PicturesGRPCServer) Normalize(ctx context.Context, in *PictureIDRequest
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) Flop(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) Flop(
+	ctx context.Context,
+	in *PictureIDRequest,
+) (*emptypb.Empty, error) {
 	pictureID := in.GetId()
 
 	userID, err := s.enforcePictureImageOperation(ctx, pictureID)
@@ -674,7 +715,10 @@ func (s *PicturesGRPCServer) Flop(ctx context.Context, in *PictureIDRequest) (*e
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimilarRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) DeleteSimilar(
+	ctx context.Context,
+	in *DeleteSimilarRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -710,7 +754,10 @@ func (s *PicturesGRPCServer) DeleteSimilar(ctx context.Context, in *DeleteSimila
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) Repair(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) Repair(
+	ctx context.Context,
+	in *PictureIDRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -801,7 +848,8 @@ func (s *PicturesGRPCServer) SetPictureItemPerspective(
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userCtx.UserID || pic.Status != schema.PictureStatusInbox {
+		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userCtx.UserID ||
+			pic.Status != schema.PictureStatusInbox {
 			return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 		}
 	}
@@ -891,7 +939,12 @@ func (s *PicturesGRPCServer) DeletePictureItem(
 	pictureItemType := convertPictureItemType(in.GetType())
 	ctx = context.WithoutCancel(ctx)
 
-	success, err := s.repository.DeletePictureItem(ctx, in.GetPictureId(), in.GetItemId(), pictureItemType)
+	success, err := s.repository.DeletePictureItem(
+		ctx,
+		in.GetPictureId(),
+		in.GetItemId(),
+		pictureItemType,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -957,7 +1010,10 @@ func (s *PicturesGRPCServer) CreatePictureItem(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureCropRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) SetPictureCrop(
+	ctx context.Context,
+	in *SetPictureCropRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -984,7 +1040,8 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userCtx.UserID || pic.Status != schema.PictureStatusInbox {
+		if !pic.OwnerID.Valid || pic.OwnerID.Int64 != userCtx.UserID ||
+			pic.Status != schema.PictureStatusInbox {
 			return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
 		}
 	}
@@ -1015,7 +1072,10 @@ func (s *PicturesGRPCServer) SetPictureCrop(ctx context.Context, in *SetPictureC
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) ClearReplacePicture(
+	ctx context.Context,
+	in *PictureIDRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1050,7 +1110,10 @@ func (s *PicturesGRPCServer) ClearReplacePicture(ctx context.Context, in *Pictur
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) AcceptReplacePicture(
+	ctx context.Context,
+	in *PictureIDRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1108,7 +1171,8 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		}
 	}
 
-	if replacePicture.Status != schema.PictureStatusRemoving && replacePicture.Status != schema.PictureStatusRemoved {
+	if replacePicture.Status != schema.PictureStatusRemoving &&
+		replacePicture.Status != schema.PictureStatusRemoved {
 		success, err := s.repository.QueueRemove(ctx, replacePicture.ID, userCtx.UserID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "QueueRemove error: "+err.Error())
@@ -1142,8 +1206,12 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 		recipients[replacePicture.OwnerID.Int64] = replacePicture.OwnerID
 	}
 
-	user, err := s.userRepository.User(ctx, &query.UserListOptions{ID: userCtx.UserID}, users.UserFields{},
-		users.OrderByNone)
+	user, err := s.userRepository.User(
+		ctx,
+		&query.UserListOptions{ID: userCtx.UserID},
+		users.UserFields{},
+		users.OrderByNone,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1181,7 +1249,10 @@ func (s *PicturesGRPCServer) AcceptReplacePicture(ctx context.Context, in *Pictu
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicturePointRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) SetPicturePoint(
+	ctx context.Context,
+	in *SetPicturePointRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1225,7 +1296,10 @@ func (s *PicturesGRPCServer) SetPicturePoint(ctx context.Context, in *SetPicture
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) UpdatePicture(ctx context.Context, in *UpdatePictureRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) UpdatePicture(
+	ctx context.Context,
+	in *UpdatePictureRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1284,7 +1358,12 @@ func (s *PicturesGRPCServer) SetPictureCopyrights(
 	pictureID := in.GetId()
 	ctx = context.WithoutCancel(ctx)
 
-	success, textID, err := s.repository.SetPictureCopyrights(ctx, pictureID, in.GetCopyrights(), userCtx.UserID)
+	success, textID, err := s.repository.SetPictureCopyrights(
+		ctx,
+		pictureID,
+		in.GetCopyrights(),
+		userCtx.UserID,
+	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "NotFound")
@@ -1449,7 +1528,10 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 			if pic.OwnerID.Valid {
 				err = s.userRepository.RefreshPicturesCount(ctx, pic.OwnerID.Int64)
 				if err != nil {
-					return nil, status.Error(codes.Internal, "RefreshPicturesCount error: "+err.Error())
+					return nil, status.Error(
+						codes.Internal,
+						"RefreshPicturesCount error: "+err.Error(),
+					)
 				}
 			}
 
@@ -1459,7 +1541,8 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 			}
 		}
 	case PictureStatus_PICTURE_STATUS_INBOX:
-		if pic.Status == schema.PictureStatusRemoving {
+		switch pic.Status {
+		case schema.PictureStatusRemoving:
 			canRestore := util.Contains(userCtx.Roles, users.RoleAdmin)
 			if !canRestore {
 				return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
@@ -1469,7 +1552,7 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
-		} else if pic.Status == schema.PictureStatusAccepted {
+		case schema.PictureStatusAccepted:
 			canUnaccept := util.Contains(userCtx.Roles, users.RolePicturesModer)
 			if !canUnaccept {
 				return nil, status.Errorf(codes.PermissionDenied, "PermissionDenied")
@@ -1479,6 +1562,7 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
+		case schema.PictureStatusUnknown, schema.PictureStatusRemoved, schema.PictureStatusInbox:
 		}
 	case PictureStatus_PICTURE_STATUS_REMOVING:
 		canDelete, err := s.pictureCanDelete(ctx, pic, userCtx.Roles, userCtx.UserID)
@@ -1522,7 +1606,10 @@ func (s *PicturesGRPCServer) SetPictureStatus(
 }
 
 func (s *PicturesGRPCServer) sendMessage(
-	ctx context.Context, userID int64, receiverID sql.NullInt64, messageFunc func(lang string) (string, error),
+	ctx context.Context,
+	userID int64,
+	receiverID sql.NullInt64,
+	messageFunc func(lang string) (string, error),
 ) error {
 	if !receiverID.Valid || (receiverID.Int64 == userID) {
 		return nil
@@ -1530,8 +1617,12 @@ func (s *PicturesGRPCServer) sendMessage(
 
 	notDeleted := false
 
-	receiver, err := s.userRepository.User(ctx, &query.UserListOptions{ID: receiverID.Int64, Deleted: &notDeleted},
-		users.UserFields{}, users.OrderByNone)
+	receiver, err := s.userRepository.User(
+		ctx,
+		&query.UserListOptions{ID: receiverID.Int64, Deleted: &notDeleted},
+		users.UserFields{},
+		users.OrderByNone,
+	)
 	if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 		return err
 	}
@@ -1558,8 +1649,12 @@ func (s *PicturesGRPCServer) sendLocalizedMessage(
 
 	notDeleted := false
 
-	receiver, err := s.userRepository.User(ctx, &query.UserListOptions{ID: receiverID.Int64, Deleted: &notDeleted},
-		users.UserFields{}, users.OrderByNone)
+	receiver, err := s.userRepository.User(
+		ctx,
+		&query.UserListOptions{ID: receiverID.Int64, Deleted: &notDeleted},
+		users.UserFields{},
+		users.OrderByNone,
+	)
 	if err != nil && !errors.Is(err, users.ErrUserNotFound) {
 		return err
 	}
@@ -1573,7 +1668,14 @@ func (s *PicturesGRPCServer) sendLocalizedMessage(
 		return err
 	}
 
-	return s.messagingRepository.CreateMessageFromTemplate(ctx, 0, receiver.ID, messageID, templateData, receiver.Language)
+	return s.messagingRepository.CreateMessageFromTemplate(
+		ctx,
+		0,
+		receiver.ID,
+		messageID,
+		templateData,
+		receiver.Language,
+	)
 }
 
 func (s *PicturesGRPCServer) notifyAccepted(
@@ -1620,7 +1722,11 @@ func (s *PicturesGRPCServer) notifyAccepted(
 	return nil
 }
 
-func (s *PicturesGRPCServer) NotifyInboxed(ctx context.Context, pic *schema.PictureRow, userID int64) error {
+func (s *PicturesGRPCServer) NotifyInboxed(
+	ctx context.Context,
+	pic *schema.PictureRow,
+	userID int64,
+) error {
 	if !pic.ChangeStatusUserID.Valid || pic.ChangeStatusUserID.Int64 == userID {
 		return nil
 	}
@@ -1638,7 +1744,11 @@ func (s *PicturesGRPCServer) NotifyInboxed(ctx context.Context, pic *schema.Pict
 	})
 }
 
-func (s *PicturesGRPCServer) notifyRemoving(ctx context.Context, pic *schema.PictureRow, userID int64) error {
+func (s *PicturesGRPCServer) notifyRemoving(
+	ctx context.Context,
+	pic *schema.PictureRow,
+	userID int64,
+) error {
 	ctx = context.WithoutCancel(ctx)
 
 	return s.sendLocalizedMessage(
@@ -1653,7 +1763,10 @@ func (s *PicturesGRPCServer) notifyRemoving(ctx context.Context, pic *schema.Pic
 
 			for _, request := range deleteRequests {
 				user, err := s.userRepository.User(
-					ctx, &query.UserListOptions{ID: request.UserID}, users.UserFields{}, users.OrderByNone,
+					ctx,
+					&query.UserListOptions{ID: request.UserID},
+					users.UserFields{},
+					users.OrderByNone,
 				)
 				if err != nil {
 					return nil, err
@@ -1679,7 +1792,11 @@ func (s *PicturesGRPCServer) notifyRemoving(ctx context.Context, pic *schema.Pic
 		})
 }
 
-func (s *PicturesGRPCServer) canAccept(ctx context.Context, picture *schema.PictureRow, roles []string) (bool, error) {
+func (s *PicturesGRPCServer) canAccept(
+	ctx context.Context,
+	picture *schema.PictureRow,
+	roles []string,
+) (bool, error) {
 	if !util.Contains(roles, users.RolePicturesModer) {
 		return false, nil
 	}
@@ -1723,7 +1840,10 @@ func (s *PicturesGRPCServer) pictureCanDelete(
 	return false, nil
 }
 
-func (s *PicturesGRPCServer) canReplace(picture, replacedPicture *schema.PictureRow, roles []string) bool {
+func (s *PicturesGRPCServer) canReplace(
+	picture, replacedPicture *schema.PictureRow,
+	roles []string,
+) bool {
 	return (picture.Status == schema.PictureStatusAccepted ||
 		picture.Status == schema.PictureStatusInbox) &&
 		(replacedPicture.Status == schema.PictureStatusRemoving ||
@@ -1732,7 +1852,10 @@ func (s *PicturesGRPCServer) canReplace(picture, replacedPicture *schema.Picture
 		util.Contains(roles, users.RolePicturesModer)
 }
 
-func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *PictureItemsRequest) (*PictureItem, error) {
+func (s *PicturesGRPCServer) GetPictureItem(
+	ctx context.Context,
+	in *PictureItemsRequest,
+) (*PictureItem, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1757,7 +1880,13 @@ func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *PictureItem
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	result, err := s.pictureItemExtractor.Extract(ctx, row, in.GetFields(), in.GetLanguage(), userCtx)
+	result, err := s.pictureItemExtractor.Extract(
+		ctx,
+		row,
+		in.GetFields(),
+		in.GetLanguage(),
+		userCtx,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1765,7 +1894,10 @@ func (s *PicturesGRPCServer) GetPictureItem(ctx context.Context, in *PictureItem
 	return result, nil
 }
 
-func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureItemsRequest) (*PictureItems, error) {
+func (s *PicturesGRPCServer) GetPictureItems(
+	ctx context.Context,
+	in *PictureItemsRequest,
+) (*PictureItems, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1789,7 +1921,13 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureIte
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res, err := s.pictureItemExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), userCtx)
+	res, err := s.pictureItemExtractor.ExtractRows(
+		ctx,
+		rows,
+		in.GetFields(),
+		in.GetLanguage(),
+		userCtx,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1799,7 +1937,10 @@ func (s *PicturesGRPCServer) GetPictureItems(ctx context.Context, in *PictureIte
 	}, nil
 }
 
-func (s *PicturesGRPCServer) GetPicture(ctx context.Context, in *PicturesRequest) (*Picture, error) {
+func (s *PicturesGRPCServer) GetPicture(
+	ctx context.Context,
+	in *PicturesRequest,
+) (*Picture, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1858,7 +1999,11 @@ func (s *PicturesGRPCServer) LoadLocation(timezone string) (*time.Location, erro
 	return loc, nil
 }
 
-func (s *PicturesGRPCServer) resolveTimezone(ctx context.Context, userID int64, lang string) (*time.Location, error) {
+func (s *PicturesGRPCServer) resolveTimezone(
+	ctx context.Context,
+	userID int64,
+	lang string,
+) (*time.Location, error) {
 	var (
 		err      error
 		timezone = ""
@@ -1866,7 +2011,10 @@ func (s *PicturesGRPCServer) resolveTimezone(ctx context.Context, userID int64, 
 
 	if userID > 0 {
 		user, err := s.userRepository.User(
-			ctx, &query.UserListOptions{ID: userID}, users.UserFields{Timezone: true}, users.OrderByNone,
+			ctx,
+			&query.UserListOptions{ID: userID},
+			users.UserFields{Timezone: true},
+			users.OrderByNone,
 		)
 		if err != nil {
 			return nil, err
@@ -1907,7 +2055,10 @@ func (s *PicturesGRPCServer) isRestricted(in *PicturesRequest, isModer bool, use
 		inOptions.GetOwnerId() == 0 && inOptions.GetAcceptedInDays() < acceptedInDaysMax &&
 		inOptions.GetAddDate() == nil && inOptions.GetId() == 0 && inOptions.GetIdentity() == ""
 	if restricted {
-		return status.Error(codes.PermissionDenied, "PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required")
+		return status.Error(
+			codes.PermissionDenied,
+			"PictureItem.ItemParentCacheAncestor.ItemID or OwnerID is required",
+		)
 	}
 
 	restricted = !isModer && (inOptions.GetHasNoComments() || inOptions.GetCommentTopic() != nil ||
@@ -1929,7 +2080,10 @@ func (s *PicturesGRPCServer) isRestricted(in *PicturesRequest, isModer bool, use
 	return nil
 }
 
-func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesRequest) (*PicturesList, error) {
+func (s *PicturesGRPCServer) GetPictures(
+	ctx context.Context,
+	in *PicturesRequest,
+) (*PicturesList, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1998,7 +2152,10 @@ func (s *PicturesGRPCServer) GetPictures(ctx context.Context, in *PicturesReques
 	}, nil
 }
 
-func (s *PicturesGRPCServer) GetPicturesPaginator(ctx context.Context, in *PicturesRequest) (*Pages, error) {
+func (s *PicturesGRPCServer) GetPicturesPaginator(
+	ctx context.Context,
+	in *PicturesRequest,
+) (*Pages, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -2191,7 +2348,11 @@ func (s *PicturesGRPCServer) GetNewbox(ctx context.Context, in *NewboxRequest) (
 	}
 
 	service, err := NewDayPictures(
-		s.repository, schema.PictureTableAcceptDatetimeColName, timezone, &listOptions, *inCurrentDate,
+		s.repository,
+		schema.PictureTableAcceptDatetimeColName,
+		timezone,
+		&listOptions,
+		*inCurrentDate,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -2229,7 +2390,14 @@ func (s *PicturesGRPCServer) GetNewbox(ctx context.Context, in *NewboxRequest) (
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	groups, pages, err := s.newboxGroups(ctx, service.CurrentDate(), in.GetPage(), timezone, in.GetLanguage(), userCtx)
+	groups, pages, err := s.newboxGroups(
+		ctx,
+		service.CurrentDate(),
+		in.GetPage(),
+		timezone,
+		in.GetLanguage(),
+		userCtx,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2258,7 +2426,12 @@ func (s *PicturesGRPCServer) GetNewbox(ctx context.Context, in *NewboxRequest) (
 }
 
 func (s *PicturesGRPCServer) newboxGroups(
-	ctx context.Context, acceptDate civil.Date, page uint32, timezone *time.Location, lang string, userCtx UserContext,
+	ctx context.Context,
+	acceptDate civil.Date,
+	page uint32,
+	timezone *time.Location,
+	lang string,
+	userCtx UserContext,
 ) ([]*NewboxGroup, *util.Pages, error) {
 	pictureFields := PictureFields{
 		ThumbMedium:   true,
@@ -2314,7 +2487,11 @@ func (s *PicturesGRPCServer) newboxGroups(
 		}
 
 		if groupData.Type == newboxGroupTypeItem {
-			itemRow, err := s.itemRepository.Item(ctx, &query.ItemListOptions{ItemID: groupData.ItemID}, repoItemFields)
+			itemRow, err := s.itemRepository.Item(
+				ctx,
+				&query.ItemListOptions{ItemID: groupData.ItemID},
+				repoItemFields,
+			)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -2341,7 +2518,13 @@ func (s *PicturesGRPCServer) newboxGroups(
 				return nil, nil, err
 			}
 
-			group.Pictures, err = s.pictureExtractor.ExtractRows(ctx, pictureRows, &itemPictureFields, lang, userCtx)
+			group.Pictures, err = s.pictureExtractor.ExtractRows(
+				ctx,
+				pictureRows,
+				&itemPictureFields,
+				lang,
+				userCtx,
+			)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -2519,10 +2702,14 @@ func (s *PicturesGRPCServer) GetCanonicalRoute(
 	if len(pictureItems) > 0 {
 		pictureItem := pictureItems[0]
 
-		paths, err := s.itemRepository.CataloguePaths(ctx, pictureItem.ItemID, items.CataloguePathOptions{
-			BreakOnFirst: true,
-			StockFirst:   true,
-		})
+		paths, err := s.itemRepository.CataloguePaths(
+			ctx,
+			pictureItem.ItemID,
+			items.CataloguePathOptions{
+				BreakOnFirst: true,
+				StockFirst:   true,
+			},
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -2533,7 +2720,12 @@ func (s *PicturesGRPCServer) GetCanonicalRoute(
 			switch path.Type {
 			case items.CataloguePathResultTypeBrand:
 				if len(path.CarCatname) > 0 {
-					route = frontend.BrandItemPathPicturesPictureRoute(path.BrandCatname, path.CarCatname, path.Path, picture.Identity)
+					route = frontend.BrandItemPathPicturesPictureRoute(
+						path.BrandCatname,
+						path.CarCatname,
+						path.Path,
+						picture.Identity,
+					)
 				} else {
 					action := frontend.BrandOther
 
@@ -2549,7 +2741,12 @@ func (s *PicturesGRPCServer) GetCanonicalRoute(
 					route = frontend.BrandGroupPictureRoute(path.BrandCatname, action, picture.Identity)
 				}
 			case items.CataloguePathResultTypeBrandItem:
-				route = frontend.BrandItemPathPicturesPictureRoute(path.BrandCatname, path.CarCatname, path.Path, picture.Identity)
+				route = frontend.BrandItemPathPicturesPictureRoute(
+					path.BrandCatname,
+					path.CarCatname,
+					path.Path,
+					picture.Identity,
+				)
 			case items.CataloguePathResultTypeCategory:
 				route = frontend.CategoryPictureRoute(path.CategoryCatname, picture.Identity)
 			case items.CataloguePathResultTypePerson:
@@ -2563,7 +2760,10 @@ func (s *PicturesGRPCServer) GetCanonicalRoute(
 	}, nil
 }
 
-func (s *PicturesGRPCServer) CorrectFileNames(ctx context.Context, in *PictureIDRequest) (*emptypb.Empty, error) {
+func (s *PicturesGRPCServer) CorrectFileNames(
+	ctx context.Context,
+	in *PictureIDRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -2586,7 +2786,10 @@ func (s *PicturesGRPCServer) CorrectFileNames(ctx context.Context, in *PictureID
 	return &emptypb.Empty{}, nil
 }
 
-func (s *PicturesGRPCServer) GetGallery(ctx context.Context, in *GalleryRequest) (*GalleryResponse, error) {
+func (s *PicturesGRPCServer) GetGallery(
+	ctx context.Context,
+	in *GalleryRequest,
+) (*GalleryResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

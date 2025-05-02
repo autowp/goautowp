@@ -60,7 +60,10 @@ func (s *PictureItemListOptions) IsItemIDUnique() bool {
 	return s.PictureID != 0 && s.TypeID != 0
 }
 
-func (s *PictureItemListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *PictureItemListOptions) Select(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	return s.apply(
 		alias,
 		db.Select().From(schema.PictureItemTable.As(alias)),
@@ -103,7 +106,10 @@ func (s *PictureItemListOptions) ItemParentCacheAncestorAlias(alias string) stri
 	return AppendItemParentCacheAlias(alias, "a")
 }
 
-func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *PictureItemListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	var (
 		err              error
 		aliasTable       = goqu.T(alias)
@@ -159,7 +165,8 @@ func (s *PictureItemListOptions) apply(alias string, sqSelect *goqu.SelectDatase
 		sqSelect = sqSelect.
 			LeftJoin(goqu.T(schema.ItemParentCacheTableName).As(eaosAlias), goqu.On(
 				itemIDCol.Eq(eaosAliasTable.Col(schema.ItemParentCacheTableItemIDColName)),
-				eaosAliasTable.Col(schema.ItemParentCacheTableParentIDColName).Eq(s.ExcludeAncestorOrSelfID),
+				eaosAliasTable.Col(schema.ItemParentCacheTableParentIDColName).
+					Eq(s.ExcludeAncestorOrSelfID),
 			)).
 			Where(eaosAliasTable.Col(schema.ItemParentCacheTableItemIDColName).IsNull())
 	}

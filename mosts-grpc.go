@@ -15,7 +15,11 @@ type MostsGRPCServer struct {
 	repository *mosts.Repository
 }
 
-func NewMostsGRPCServer(auth *Auth, extractor *ItemExtractor, repository *mosts.Repository) *MostsGRPCServer {
+func NewMostsGRPCServer(
+	auth *Auth,
+	extractor *ItemExtractor,
+	repository *mosts.Repository,
+) *MostsGRPCServer {
 	return &MostsGRPCServer{
 		auth:       auth,
 		extractor:  extractor,
@@ -23,7 +27,10 @@ func NewMostsGRPCServer(auth *Auth, extractor *ItemExtractor, repository *mosts.
 	}
 }
 
-func (s *MostsGRPCServer) GetItems(ctx context.Context, in *MostsItemsRequest) (*MostsItems, error) {
+func (s *MostsGRPCServer) GetItems(
+	ctx context.Context,
+	in *MostsItemsRequest,
+) (*MostsItems, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

@@ -40,7 +40,12 @@ func NewMonitoring(db *goqu.Database) (*Monitoring, error) {
 }
 
 // Listen for incoming messages.
-func (s *Monitoring) Listen(ctx context.Context, url string, queue string, quitChan chan bool) error {
+func (s *Monitoring) Listen(
+	ctx context.Context,
+	url string,
+	queue string,
+	quitChan chan bool,
+) error {
 	conn, err := util.ConnectRabbitMQ(url)
 	if err != nil {
 		logrus.Error(err)
@@ -117,12 +122,21 @@ func (s *Monitoring) Listen(ctx context.Context, url string, queue string, quitC
 func (s *Monitoring) Add(ctx context.Context, ip net.IP, timestamp time.Time) error {
 	_, err := s.db.Insert(schema.IPMonitoringTable).Rows(
 		goqu.Record{
-			schema.IPMonitoringTableDayDateColName:   timestamp,
-			schema.IPMonitoringTableHourColName:      goqu.Func("EXTRACT", goqu.L("HOUR FROM ?::timestamptz", timestamp)),
-			schema.IPMonitoringTableTenminuteColName: goqu.L("FLOOR(EXTRACT(MINUTE FROM ?::timestamptz)/10)", timestamp),
-			schema.IPMonitoringTableMinuteColName:    goqu.Func("EXTRACT", goqu.L("MINUTE FROM ?::timestamptz", timestamp)),
-			schema.IPMonitoringTableIPColName:        ip.String(),
-			schema.IPMonitoringTableCountColName:     1,
+			schema.IPMonitoringTableDayDateColName: timestamp,
+			schema.IPMonitoringTableHourColName: goqu.Func(
+				"EXTRACT",
+				goqu.L("HOUR FROM ?::timestamptz", timestamp),
+			),
+			schema.IPMonitoringTableTenminuteColName: goqu.L(
+				"FLOOR(EXTRACT(MINUTE FROM ?::timestamptz)/10)",
+				timestamp,
+			),
+			schema.IPMonitoringTableMinuteColName: goqu.Func(
+				"EXTRACT",
+				goqu.L("MINUTE FROM ?::timestamptz", timestamp),
+			),
+			schema.IPMonitoringTableIPColName:    ip.String(),
+			schema.IPMonitoringTableCountColName: 1,
 		}).
 		OnConflict(
 			goqu.DoUpdate(
@@ -172,83 +186,67 @@ func (s *Monitoring) ClearIP(ctx context.Context, ip net.IP) error {
 
 // ListOfTop ListOfTop.
 func (s *Monitoring) ListOfTop(ctx context.Context, limit uint) ([]ListOfTopItem, error) {
-	rows, err := s.db.Select(schema.IPMonitoringTableIPCol, goqu.SUM(schema.IPMonitoringTableCountCol).As("c")).
+	var rows []struct {
+		ip    pgtype.Inet `db:"ip"`
+		Count int         `db:"c"`
+	}
+
+	err := s.db.Select(schema.IPMonitoringTableIPCol, goqu.SUM(schema.IPMonitoringTableCountCol).As("c")).
 		From(schema.IPMonitoringTable).
 		Where(schema.IPMonitoringTableDayDateCol.Eq(goqu.L("CURRENT_DATE"))).
 		GroupBy(schema.IPMonitoringTableIPCol).
 		Order(goqu.I("c").Desc()).
 		Limit(limit).
-		Executor().QueryContext(ctx) //nolint:sqlclosecheck
+		ScanStructsContext(ctx, &rows)
 	if err != nil {
 		return nil, err
 	}
 
-	defer util.Close(rows)
+	result := make([]ListOfTopItem, 0, len(rows))
 
-	result := []ListOfTopItem{}
-
-	for rows.Next() {
-		var (
-			ip   pgtype.Inet
-			item ListOfTopItem
-		)
-
-		if err := rows.Scan(&ip, &item.Count); err != nil {
-			return nil, err
+	for _, row := range rows {
+		item := ListOfTopItem{
+			Count: row.Count,
 		}
 
-		if ip.IPNet != nil {
-			item.IP = ip.IPNet.IP
+		if row.ip.IPNet != nil {
+			item.IP = row.ip.IPNet.IP
 		}
 
 		result = append(result, item)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
 	}
 
 	return result, nil
 }
 
 // ListByBanProfile ListByBanProfile.
-func (s *Monitoring) ListByBanProfile(ctx context.Context, profile AutobanProfile) ([]net.IP, error) {
+func (s *Monitoring) ListByBanProfile(
+	ctx context.Context,
+	profile AutobanProfile,
+) ([]net.IP, error) {
 	group := append([]interface{}{schema.IPMonitoringTableIPCol}, profile.Group...)
 
 	const numberOfRecordsToScanForAutoban = 1000
 
-	rows, err := s.db.Select(schema.IPMonitoringTableIPCol, goqu.SUM(schema.IPMonitoringTableCountCol).As("c")).
+	var rows []pgtype.Inet
+
+	err := s.db.Select(schema.IPMonitoringTableIPCol, goqu.SUM(schema.IPMonitoringTableCountCol).As("c")).
 		From(schema.IPMonitoringTable).
 		Where(schema.IPMonitoringTableDayDateCol.Eq(goqu.L("CURRENT_DATE"))).
 		GroupBy(group...).
 		Having(goqu.SUM(schema.IPMonitoringTableCountCol).Gt(profile.Limit)).
 		Limit(numberOfRecordsToScanForAutoban).
-		Executor().QueryContext(ctx) //nolint:sqlclosecheck
+		ScanValsContext(ctx, &rows)
 	if err != nil {
 		return nil, err
 	}
 
-	defer util.Close(rows)
+	result := make([]net.IP, 0, len(rows))
 
-	result := []net.IP{}
-
-	for rows.Next() {
-		var (
-			ip pgtype.Inet
-			c  int
-		)
-
-		if err := rows.Scan(&ip, &c); err != nil {
-			return nil, err
+	for _, row := range rows {
+		if row.IPNet != nil {
+			result = append(result, row.IPNet.IP)
 		}
-
-		if ip.IPNet != nil {
-			result = append(result, ip.IPNet.IP)
-		}
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
 	}
 
 	return result, nil

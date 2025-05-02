@@ -11,7 +11,13 @@ const (
 
 var (
 	ItemVehicleTypeTable                 = goqu.T(ItemVehicleTypeTableName)
-	ItemVehicleTypeTableVehicleTypeIDCol = ItemVehicleTypeTable.Col(ItemVehicleTypeTableVehicleTypeIDColName)
-	ItemVehicleTypeTableItemIDCol        = ItemVehicleTypeTable.Col(ItemVehicleTypeTableItemIDColName)
-	ItemVehicleTypeTableInheritedCol     = ItemVehicleTypeTable.Col(ItemVehicleTypeTableInheritedColName)
+	ItemVehicleTypeTableVehicleTypeIDCol = ItemVehicleTypeTable.Col(
+		ItemVehicleTypeTableVehicleTypeIDColName,
+	)
+	ItemVehicleTypeTableItemIDCol = ItemVehicleTypeTable.Col(
+		ItemVehicleTypeTableItemIDColName,
+	)
+	ItemVehicleTypeTableInheritedCol = ItemVehicleTypeTable.Col(
+		ItemVehicleTypeTableInheritedColName,
+	)
 )

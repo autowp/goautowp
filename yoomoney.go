@@ -57,18 +57,18 @@ func NewYoomoneyHandler(
 const RUB = "643"
 
 type YoomoneyWebhook struct {
-	NotificationType string `binding:"required"       form:"notification_type" json:"notification_type"`
-	OperationID      string `binding:"required"       form:"operation_id"      json:"operation_id"`
-	Amount           string `binding:"required"       form:"amount"            json:"amount"`
-	WithdrawAmount   string `form:"withdraw_amount"   json:"withdraw_amount"`
-	Currency         string `binding:"required"       form:"currency"          json:"currency"`
-	Datetime         string `binding:"required"       form:"datetime"          json:"datetime"`
-	Sender           string `form:"sender"            json:"sender"`
-	Codepro          string `binding:"required"       form:"codepro"           json:"codepro"`
-	Label            string `form:"label"             json:"label"`
-	SHA1Hash         string `binding:"required"       form:"sha1_hash"         json:"sha1_hash"`
-	TestNotification bool   `form:"test_notification" json:"test_notification"`
-	Unaccepted       bool   `form:"unaccepted"        json:"unaccepted"`
+	NotificationType string `binding:"required" form:"notification_type" json:"notification_type"` //nolint: tagalign
+	OperationID      string `binding:"required" form:"operation_id"      json:"operation_id"`      //nolint: tagalign
+	Amount           string `binding:"required" form:"amount"            json:"amount"`            //nolint: tagalign
+	WithdrawAmount   string `                   form:"withdraw_amount"   json:"withdraw_amount"`   //nolint: tagalign
+	Currency         string `binding:"required" form:"currency"          json:"currency"`          //nolint: tagalign
+	Datetime         string `binding:"required" form:"datetime"          json:"datetime"`          //nolint: tagalign
+	Sender           string `                   form:"sender"            json:"sender"`            //nolint: tagalign
+	Codepro          string `binding:"required" form:"codepro"           json:"codepro"`           //nolint: tagalign
+	Label            string `                   form:"label"             json:"label"`             //nolint: tagalign
+	SHA1Hash         string `binding:"required" form:"sha1_hash"         json:"sha1_hash"`         //nolint: tagalign
+	TestNotification bool   `                   form:"test_notification" json:"test_notification"` //nolint: tagalign
+	Unaccepted       bool   `                   form:"unaccepted"        json:"unaccepted"`        //nolint: tagalign
 }
 
 func (s *YoomoneyHandler) Hash(fields YoomoneyWebhook) (string, error) {

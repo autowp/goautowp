@@ -49,7 +49,13 @@ func createRepository(t *testing.T) *Repository {
 
 	goquPostgresDB := goqu.New("postgres", postgresDB)
 
-	itemsRepository := items.NewRepository(goquDB, 0, cfg.ContentLanguages, textstorageRepository, imageStorage)
+	itemsRepository := items.NewRepository(
+		goquDB,
+		0,
+		cfg.ContentLanguages,
+		textstorageRepository,
+		imageStorage,
+	)
 	usersRepository := users.NewRepository(
 		goquDB,
 		goquPostgresDB,
@@ -63,13 +69,27 @@ func createRepository(t *testing.T) *Repository {
 	i, err := i18nbundle.New()
 	require.NoError(t, err)
 
-	messagingRepo := messaging.NewRepository(goquDB, func(_ context.Context, _ int64, _ int64, _ string) error {
-		return nil
-	}, i)
+	messagingRepo := messaging.NewRepository(
+		goquDB,
+		func(_ context.Context, _ int64, _ int64, _ string) error {
+			return nil
+		},
+		i,
+	)
 	hostsManager := hosts.NewManager(cfg.Languages)
-	commentsRepository := comments.NewRepository(goquDB, usersRepository, messagingRepo, hostsManager)
+	commentsRepository := comments.NewRepository(
+		goquDB,
+		usersRepository,
+		messagingRepo,
+		hostsManager,
+	)
 	picturesRepository := pictures.NewRepository(
-		goquDB, imageStorage, textstorageRepository, itemsRepository, cfg.DuplicateFinder, commentsRepository,
+		goquDB,
+		imageStorage,
+		textstorageRepository,
+		itemsRepository,
+		cfg.DuplicateFinder,
+		commentsRepository,
 	)
 
 	repo := NewRepository(goquDB, i18n, itemsRepository, picturesRepository, imageStorage)

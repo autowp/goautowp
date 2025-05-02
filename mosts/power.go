@@ -26,7 +26,10 @@ type Power struct {
 }
 
 func (s Power) Items(
-	ctx context.Context, db *goqu.Database, attrsRepository *attrs.Repository, listOptions *query.ItemListOptions,
+	ctx context.Context,
+	db *goqu.Database,
+	attrsRepository *attrs.Repository,
+	listOptions *query.ItemListOptions,
 	lang string,
 ) (*MostData, error) {
 	powerAttr, err := attrsRepository.Attribute(ctx, s.PowerAttribute)
@@ -82,7 +85,12 @@ func (s Power) Items(
 			return nil, err
 		}
 
-		turboValue, turbo, err := attrsRepository.ActualValueText(ctx, s.TurboAttribute, itemID, lang)
+		turboValue, turbo, err := attrsRepository.ActualValueText(
+			ctx,
+			s.TurboAttribute,
+			itemID,
+			lang,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +128,11 @@ func (s Power) Items(
 			return nil, err
 		}
 
-		valvePerCylinder, err := attrsRepository.ActualValue(ctx, s.ValvePerCylinderAttribute, itemID)
+		valvePerCylinder, err := attrsRepository.ActualValue(
+			ctx,
+			s.ValvePerCylinderAttribute,
+			itemID,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -138,8 +150,13 @@ func (s Power) Items(
 			}
 
 			if volume.IntValue > 0 {
-				components = append(components,
-					fmt.Sprintf(`%0.1f <span class="unit">л</span>`, float64(volume.IntValue)/cm3PerLiter))
+				components = append(
+					components,
+					fmt.Sprintf(
+						`%0.1f <span class="unit">л</span>`,
+						float64(volume.IntValue)/cm3PerLiter,
+					),
+				)
 			}
 
 			if len(turbo) > 0 {

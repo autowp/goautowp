@@ -34,7 +34,11 @@ type VotingVariant struct {
 	IsMin   bool
 }
 
-func (s *Repository) Voting(ctx context.Context, id int32, userID int64) (*Voting, []*VotingVariant, error) {
+func (s *Repository) Voting(
+	ctx context.Context,
+	id int32,
+	userID int64,
+) (*Voting, []*VotingVariant, error) {
 	var st Voting
 
 	success, err := s.db.Select(schema.VotingTableIDCol, schema.VotingTableNameCol, schema.VotingTableTextCol,
@@ -102,7 +106,11 @@ func (s *Repository) Voting(ctx context.Context, id int32, userID int64) (*Votin
 	return &st, vvRows, nil
 }
 
-func (s *Repository) canVote(ctx context.Context, voting *schema.VotingRow, userID int64) (bool, error) {
+func (s *Repository) canVote(
+	ctx context.Context,
+	voting *schema.VotingRow,
+	userID int64,
+) (bool, error) {
 	if userID == 0 || voting == nil {
 		return false, nil
 	}
@@ -144,7 +152,12 @@ func (s *Repository) Votes(ctx context.Context, id int32) ([]int64, error) {
 	return ids, err
 }
 
-func (s *Repository) Vote(ctx context.Context, id int32, variantIDs []int32, userID int64) (bool, error) {
+func (s *Repository) Vote(
+	ctx context.Context,
+	id int32,
+	variantIDs []int32,
+	userID int64,
+) (bool, error) {
 	if len(variantIDs) == 0 {
 		return false, nil
 	}

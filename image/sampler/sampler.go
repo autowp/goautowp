@@ -26,7 +26,11 @@ func NewSampler() *Sampler {
 	return &Sampler{}
 }
 
-func (s Sampler) ConvertImage(mw *imagick.MagickWand, crop Crop, format Format) (*imagick.MagickWand, error) {
+func (s Sampler) ConvertImage(
+	mw *imagick.MagickWand,
+	crop Crop,
+	format Format,
+) (*imagick.MagickWand, error) {
 	if !crop.IsEmpty() && !format.IsIgnoreCrop() {
 		err := s.cropImage(mw, crop, format)
 		if err != nil {
@@ -473,7 +477,12 @@ func (s Sampler) extendTopColor(mw *imagick.MagickWand) *imagick.PixelWand {
 }
 
 func (s Sampler) extendBottomColor(mw *imagick.MagickWand) *imagick.PixelWand {
-	iterator := mw.NewPixelRegionIterator(0, int(mw.GetImageHeight())-1, mw.GetImageWidth(), 1) //nolint: gosec
+	iterator := mw.NewPixelRegionIterator(
+		0,
+		int(mw.GetImageHeight())-1, //nolint: gosec
+		mw.GetImageWidth(),
+		1,
+	)
 	defer iterator.Destroy()
 
 	return s.extendEdgeColor(iterator)
@@ -487,7 +496,12 @@ func (s Sampler) extendLeftColor(mw *imagick.MagickWand) *imagick.PixelWand {
 }
 
 func (s Sampler) extendRightColor(mw *imagick.MagickWand) *imagick.PixelWand {
-	iterator := mw.NewPixelRegionIterator(int(mw.GetImageWidth())-1, 0, 1, mw.GetImageHeight()) //nolint: gosec
+	iterator := mw.NewPixelRegionIterator(
+		int(mw.GetImageWidth())-1, //nolint: gosec
+		0,
+		1,
+		mw.GetImageHeight(),
+	)
 	defer iterator.Destroy()
 
 	return s.extendEdgeColor(iterator)

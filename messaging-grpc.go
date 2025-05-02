@@ -26,7 +26,10 @@ func NewMessagingGRPCServer(repository *messaging.Repository, auth *Auth) *Messa
 	}
 }
 
-func (s *MessagingGRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptypb.Empty) (*APIMessageNewCount, error) {
+func (s *MessagingGRPCServer) GetMessagesNewCount(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*APIMessageNewCount, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -46,7 +49,10 @@ func (s *MessagingGRPCServer) GetMessagesNewCount(ctx context.Context, _ *emptyp
 	}, nil
 }
 
-func (s *MessagingGRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb.Empty) (*APIMessageSummary, error) {
+func (s *MessagingGRPCServer) GetMessagesSummary(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*APIMessageSummary, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -90,7 +96,10 @@ func (s *MessagingGRPCServer) GetMessagesSummary(ctx context.Context, _ *emptypb
 	}, nil
 }
 
-func (s *MessagingGRPCServer) DeleteMessage(ctx context.Context, in *MessagingDeleteMessage) (*emptypb.Empty, error) {
+func (s *MessagingGRPCServer) DeleteMessage(
+	ctx context.Context,
+	in *MessagingDeleteMessage,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -108,7 +117,10 @@ func (s *MessagingGRPCServer) DeleteMessage(ctx context.Context, in *MessagingDe
 	return &emptypb.Empty{}, nil
 }
 
-func (s *MessagingGRPCServer) ClearFolder(ctx context.Context, in *MessagingClearFolder) (*emptypb.Empty, error) {
+func (s *MessagingGRPCServer) ClearFolder(
+	ctx context.Context,
+	in *MessagingClearFolder,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -137,7 +149,10 @@ func (s *MessagingGRPCServer) ClearFolder(ctx context.Context, in *MessagingClea
 	return &emptypb.Empty{}, nil
 }
 
-func (s *MessagingGRPCServer) CreateMessage(ctx context.Context, in *MessagingCreateMessage) (*emptypb.Empty, error) {
+func (s *MessagingGRPCServer) CreateMessage(
+	ctx context.Context,
+	in *MessagingCreateMessage,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

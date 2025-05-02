@@ -36,13 +36,25 @@ func TestUploadPictureTooSmall(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	picturesREST.SetupRouter(router)
 
-	req := CreatePictureRequest(t, "./test/10x10.png", PicturePostForm{ItemID: brandID}, adminToken.AccessToken)
+	req := CreatePictureRequest(
+		t,
+		"./test/10x10.png",
+		PicturePostForm{ItemID: brandID},
+		adminToken.AccessToken,
+	)
 
 	resRecorder := httptest.NewRecorder()
 	router.ServeHTTP(resRecorder, req)
@@ -75,13 +87,25 @@ func TestUploadPicture(t *testing.T) {
 	cfg := config.LoadConfig(".")
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	picturesREST.SetupRouter(router)
 
-	req := CreatePictureRequest(t, "./test/test.jpg", PicturePostForm{ItemID: brandID}, adminToken.AccessToken)
+	req := CreatePictureRequest(
+		t,
+		"./test/test.jpg",
+		PicturePostForm{ItemID: brandID},
+		adminToken.AccessToken,
+	)
 
 	resRecorder := httptest.NewRecorder()
 	router.ServeHTTP(resRecorder, req)

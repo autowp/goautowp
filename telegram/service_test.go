@@ -53,25 +53,56 @@ func TestInboxCommand(t *testing.T) {
 	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
 	require.NoError(t, err)
 
-	usersRepo := users.NewRepository(goquDB, goquPostgresDB, "", cfg.Languages, client, cfg.Keycloak,
-		cfg.MessageInterval, imageStorage)
+	usersRepo := users.NewRepository(
+		goquDB,
+		goquPostgresDB,
+		"",
+		cfg.Languages,
+		client,
+		cfg.Keycloak,
+		cfg.MessageInterval,
+		imageStorage,
+	)
 	textStorageRepo := textstorage.New(goquDB)
-	itemRepo := items.NewRepository(goquDB, cfg.MostsMinCarsCount, cfg.ContentLanguages, textStorageRepo, imageStorage)
+	itemRepo := items.NewRepository(
+		goquDB,
+		cfg.MostsMinCarsCount,
+		cfg.ContentLanguages,
+		textStorageRepo,
+		imageStorage,
+	)
 	i18n, err := i18nbundle.New()
 	require.NoError(t, err)
 
-	messagingRepo := messaging.NewRepository(goquDB, func(_ context.Context, _ int64, _ int64, _ string) error {
-		return nil
-	}, i18n)
+	messagingRepo := messaging.NewRepository(
+		goquDB,
+		func(_ context.Context, _ int64, _ int64, _ string) error {
+			return nil
+		},
+		i18n,
+	)
 	hostManager := hosts.NewManager(cfg.Languages)
 	commentsRepo := comments.NewRepository(goquDB, usersRepo, messagingRepo, hostManager)
-	picturesRepo := pictures.NewRepository(goquDB, imageStorage, textStorageRepo, itemRepo, cfg.DuplicateFinder,
-		commentsRepo)
+	picturesRepo := pictures.NewRepository(
+		goquDB,
+		imageStorage,
+		textStorageRepo,
+		itemRepo,
+		cfg.DuplicateFinder,
+		commentsRepo,
+	)
 
 	userID := createRandomUser(ctx, t, goquDB)
 
-	repository := NewService(cfg.Telegram, goquDB, hosts.NewManager(cfg.Languages), usersRepo, itemRepo, messagingRepo,
-		picturesRepo)
+	repository := NewService(
+		cfg.Telegram,
+		goquDB,
+		hosts.NewManager(cfg.Languages),
+		usersRepo,
+		itemRepo,
+		messagingRepo,
+		picturesRepo,
+	)
 	repository.enableMockMode()
 
 	err = repository.handleMeCommand(ctx, &tgbotapi.Update{

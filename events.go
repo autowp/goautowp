@@ -75,7 +75,10 @@ func (s *Events) Add(ctx context.Context, event Event) error {
 			}
 		}
 
-		_, err = s.db.Insert(schema.LogEventsPicturesTable).Rows(rows...).Executor().ExecContext(ctx)
+		_, err = s.db.Insert(schema.LogEventsPicturesTable).
+			Rows(rows...).
+			Executor().
+			ExecContext(ctx)
 		if err != nil {
 			return err
 		}

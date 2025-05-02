@@ -38,7 +38,10 @@ func NewRepository(db *goqu.Database) *Repository {
 	}
 }
 
-func (s *Repository) Events(ctx context.Context, options ListOptions) ([]Event, *util.Pages, error) {
+func (s *Repository) Events(
+	ctx context.Context,
+	options ListOptions,
+) ([]Event, *util.Pages, error) {
 	sqSelect := s.db.Select(schema.LogEventsTableIDCol, schema.LogEventsTableUserIDCol,
 		schema.LogEventsTableAddDatetimeCol, schema.LogEventsTableDescriptionCol).
 		From(schema.LogEventsTable).
@@ -95,14 +98,16 @@ func (s *Repository) Events(ctx context.Context, options ListOptions) ([]Event, 
 	for idx, row := range rows {
 		err = s.db.Select(schema.LogEventsItemTableItemIDCol).
 			From(schema.LogEventsItemTable).
-			Where(schema.LogEventsItemTableLogEventIDCol.Eq(row.ID)).ScanValsContext(ctx, &rows[idx].Items)
+			Where(schema.LogEventsItemTableLogEventIDCol.Eq(row.ID)).
+			ScanValsContext(ctx, &rows[idx].Items)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		err = s.db.Select(schema.LogEventsPicturesTablePictureIDCol).
 			From(schema.LogEventsPicturesTable).
-			Where(schema.LogEventsPicturesTableLogEventIDCol.Eq(row.ID)).ScanValsContext(ctx, &rows[idx].Pictures)
+			Where(schema.LogEventsPicturesTableLogEventIDCol.Eq(row.ID)).
+			ScanValsContext(ctx, &rows[idx].Pictures)
 		if err != nil {
 			return nil, nil, err
 		}

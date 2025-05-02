@@ -41,7 +41,9 @@ type selectOptions struct {
 	exclude          []int64
 }
 
-func NewPerspectivePictureFetcher(picturesRepository *pictures.Repository) *PerspectivePictureFetcher {
+func NewPerspectivePictureFetcher(
+	picturesRepository *pictures.Repository,
+) *PerspectivePictureFetcher {
 	return &PerspectivePictureFetcher{
 		picturesRepository: picturesRepository,
 	}
@@ -79,12 +81,22 @@ func (s *PerspectivePictureFetcher) Fetch(
 	}
 
 	for _, groupID := range perspectiveGroupIDs {
-		sqSelect := s.pictureSelect(item.ID, options.ListOptions, options.OnlyExactlyPictures, selectOptions{
-			perspectiveGroup: groupID,
-			exclude:          usedIDs,
-		})
+		sqSelect := s.pictureSelect(
+			item.ID,
+			options.ListOptions,
+			options.OnlyExactlyPictures,
+			selectOptions{
+				perspectiveGroup: groupID,
+				exclude:          usedIDs,
+			},
+		)
 
-		picture, err := s.picturesRepository.Picture(ctx, sqSelect, nil, pictures.OrderByPerspectivesGroupPerspectives)
+		picture, err := s.picturesRepository.Picture(
+			ctx,
+			sqSelect,
+			nil,
+			pictures.OrderByPerspectivesGroupPerspectives,
+		)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
@@ -100,9 +112,14 @@ func (s *PerspectivePictureFetcher) Fetch(
 	needMore := len(perspectiveGroupIDs) - len(usedIDs)
 
 	if needMore > 0 {
-		sqSelect := s.pictureSelect(item.ID, options.ListOptions, options.OnlyExactlyPictures, selectOptions{
-			exclude: usedIDs,
-		})
+		sqSelect := s.pictureSelect(
+			item.ID,
+			options.ListOptions,
+			options.OnlyExactlyPictures,
+			selectOptions{
+				exclude: usedIDs,
+			},
+		)
 
 		sqSelect.Limit = uint32(needMore) //nolint: gosec
 
@@ -187,7 +204,10 @@ func (s *PerspectivePictureFetcher) Fetch(
 }
 
 func (s *PerspectivePictureFetcher) pictureSelect(
-	itemID int64, listOptions *query.PictureListOptions, onlyExactlyPictures bool, options2 selectOptions,
+	itemID int64,
+	listOptions *query.PictureListOptions,
+	onlyExactlyPictures bool,
+	options2 selectOptions,
 ) *query.PictureListOptions {
 	sqSelect := query.PictureListOptions{}
 	if listOptions != nil {
@@ -249,6 +269,7 @@ func (s *PerspectivePictureFetcher) totalPictures(
 	}
 
 	return s.picturesRepository.Count(
-		ctx, s.pictureSelect(itemID, options.ListOptions, options.OnlyExactlyPictures, selectOptions{}),
+		ctx,
+		s.pictureSelect(itemID, options.ListOptions, options.OnlyExactlyPictures, selectOptions{}),
 	)
 }

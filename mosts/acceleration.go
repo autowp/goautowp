@@ -23,7 +23,10 @@ type Acceleration struct {
 }
 
 func (s Acceleration) Items(
-	ctx context.Context, db *goqu.Database, attrsRepository *attrs.Repository, listOptions *query.ItemListOptions,
+	ctx context.Context,
+	db *goqu.Database,
+	attrsRepository *attrs.Repository,
+	listOptions *query.ItemListOptions,
 	lang string,
 ) (*MostData, error) {
 	to100kmhAttribute, err := attrsRepository.Attribute(ctx, s.To100kmhAttribute)

@@ -11,9 +11,13 @@ const (
 )
 
 var (
-	TextstorageTextTable               = goqu.T(TextstorageTextTableName)
-	TextstorageTextTableIDCol          = TextstorageTextTable.Col(TextstorageTextTableIDColName)
-	TextstorageTextTableTextCol        = TextstorageTextTable.Col(TextstorageTextTableTextColName)
-	TextstorageTextTableRevisionCol    = TextstorageTextTable.Col(TextstorageTextTableRevisionColName)
-	TextstorageTextTableLastUpdatedCol = TextstorageTextTable.Col(TextstorageTextTableLastUpdatedColName)
+	TextstorageTextTable            = goqu.T(TextstorageTextTableName)
+	TextstorageTextTableIDCol       = TextstorageTextTable.Col(TextstorageTextTableIDColName)
+	TextstorageTextTableTextCol     = TextstorageTextTable.Col(TextstorageTextTableTextColName)
+	TextstorageTextTableRevisionCol = TextstorageTextTable.Col(
+		TextstorageTextTableRevisionColName,
+	)
+	TextstorageTextTableLastUpdatedCol = TextstorageTextTable.Col(
+		TextstorageTextTableLastUpdatedColName,
+	)
 )

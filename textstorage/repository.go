@@ -98,7 +98,8 @@ func (s *Repository) SetText(ctx context.Context, textID int32, text string, use
 
 	res, err := s.db.Update(schema.TextstorageTextTable).
 		Set(goqu.Record{
-			schema.TextstorageTextTableRevisionColName:    goqu.L("? + 1", goqu.C(schema.TextstorageTextTableRevisionColName)),
+			schema.TextstorageTextTableRevisionColName: goqu.L(
+				"? + 1", goqu.C(schema.TextstorageTextTableRevisionColName)),
 			schema.TextstorageTextTableTextColName:        text,
 			schema.TextstorageTextTableLastUpdatedColName: goqu.Func("NOW"),
 		}).

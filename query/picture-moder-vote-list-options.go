@@ -55,9 +55,14 @@ func (s *PictureModerVoteListOptions) JoinToPictureIDAndApply(
 	)
 }
 
-func (s *PictureModerVoteListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *PictureModerVoteListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	if s.PictureID != 0 {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PictureModerVoteTablePictureIDColName).Eq(s.PictureID))
+		sqSelect = sqSelect.Where(
+			goqu.T(alias).Col(schema.PictureModerVoteTablePictureIDColName).Eq(s.PictureID),
+		)
 	}
 
 	if s.VoteGtZero {

@@ -38,15 +38,25 @@ func (s *PerspectiveGroupPerspectiveListOptions) JoinToPerspectiveIDAndApply(
 		sqSelect.Join(
 			schema.PerspectivesGroupsPerspectivesTable.As(alias),
 			goqu.On(
-				srcCol.Eq(goqu.T(alias).Col(schema.PerspectivesGroupsPerspectivesTablePerspectiveIDColName)),
+				srcCol.Eq(
+					goqu.T(alias).
+						Col(schema.PerspectivesGroupsPerspectivesTablePerspectiveIDColName),
+				),
 			),
 		),
 	)
 }
 
-func (s *PerspectiveGroupPerspectiveListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *PerspectiveGroupPerspectiveListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	if s.GroupID != 0 {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.PerspectivesGroupsPerspectivesTableGroupIDColName).Eq(s.GroupID))
+		sqSelect = sqSelect.Where(
+			goqu.T(alias).
+				Col(schema.PerspectivesGroupsPerspectivesTableGroupIDColName).
+				Eq(s.GroupID),
+		)
 	}
 
 	return sqSelect

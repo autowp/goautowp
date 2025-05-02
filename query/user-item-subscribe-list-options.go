@@ -29,9 +29,14 @@ func (s *UserItemSubscribeListOptions) JoinToItemIDAndApply(
 	return s.apply(alias, sqSelect)
 }
 
-func (s *UserItemSubscribeListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *UserItemSubscribeListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	if len(s.ItemIDs) > 0 {
-		sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.UserItemSubscribeTableItemIDColName).In(s.ItemIDs))
+		sqSelect = sqSelect.Where(
+			goqu.T(alias).Col(schema.UserItemSubscribeTableItemIDColName).In(s.ItemIDs),
+		)
 	}
 
 	return sqSelect

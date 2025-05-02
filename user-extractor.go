@@ -25,7 +25,10 @@ type UserExtractor struct {
 	picturesRepository *pictures.Repository
 }
 
-func NewUserExtractor(imageStorage *storage.Storage, picturesRepository *pictures.Repository) *UserExtractor {
+func NewUserExtractor(
+	imageStorage *storage.Storage,
+	picturesRepository *pictures.Repository,
+) *UserExtractor {
 	return &UserExtractor{
 		imageStorage:       imageStorage,
 		picturesRepository: picturesRepository,
@@ -33,7 +36,11 @@ func NewUserExtractor(imageStorage *storage.Storage, picturesRepository *picture
 }
 
 func (s *UserExtractor) Extract(
-	ctx context.Context, row *schema.UsersRow, fields *UserFields, currentUserID int64, currentUserRoles []string,
+	ctx context.Context,
+	row *schema.UsersRow,
+	fields *UserFields,
+	currentUserID int64,
+	currentUserRoles []string,
 ) (*APIUser, error) {
 	longAway := true
 

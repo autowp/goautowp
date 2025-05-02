@@ -37,7 +37,14 @@ func TestMostsRatings(t *testing.T) { //nolint: maintidx
 
 	// admin
 	kc := cnt.Keycloak()
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
@@ -803,7 +810,11 @@ func TestMostsRatings(t *testing.T) { //nolint: maintidx
 			})
 
 			_, err = itemsClient.CreateItemParent(
-				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+				metadata.AppendToOutgoingContext(
+					ctx,
+					authorizationHeader,
+					bearerPrefix+adminToken.AccessToken,
+				),
 				&ItemParent{
 					ItemId: vehicle1ID, ParentId: brandID, Catname: fmt.Sprintf("vehicle1-%d", randomInt),
 				},
@@ -811,7 +822,11 @@ func TestMostsRatings(t *testing.T) { //nolint: maintidx
 			require.NoError(t, err)
 
 			_, err = itemsClient.CreateItemParent(
-				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+				metadata.AppendToOutgoingContext(
+					ctx,
+					authorizationHeader,
+					bearerPrefix+adminToken.AccessToken,
+				),
 				&ItemParent{
 					ItemId: vehicle2ID, ParentId: brandID, Catname: fmt.Sprintf("vehicle2-%d", randomInt),
 				},
@@ -823,7 +838,11 @@ func TestMostsRatings(t *testing.T) { //nolint: maintidx
 			}
 
 			_, err = attrsClient.SetUserValues(
-				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+				metadata.AppendToOutgoingContext(
+					ctx,
+					authorizationHeader,
+					bearerPrefix+adminToken.AccessToken,
+				),
 				&AttrSetUserValuesRequest{Items: tt.values1},
 			)
 			require.NoError(t, err)
@@ -833,7 +852,11 @@ func TestMostsRatings(t *testing.T) { //nolint: maintidx
 			}
 
 			_, err = attrsClient.SetUserValues(
-				metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+				metadata.AppendToOutgoingContext(
+					ctx,
+					authorizationHeader,
+					bearerPrefix+adminToken.AccessToken,
+				),
 				&AttrSetUserValuesRequest{Items: tt.values2},
 			)
 			require.NoError(t, err)

@@ -24,7 +24,10 @@ type Attr struct {
 }
 
 func (s Attr) Items(
-	ctx context.Context, db *goqu.Database, attrsRepository *attrs.Repository, listOptions *query.ItemListOptions,
+	ctx context.Context,
+	db *goqu.Database,
+	attrsRepository *attrs.Repository,
+	listOptions *query.ItemListOptions,
 	lang string,
 ) (*MostData, error) {
 	attribute, err := attrsRepository.Attribute(ctx, s.Attribute)

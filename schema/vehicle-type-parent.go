@@ -11,5 +11,7 @@ const (
 var (
 	VehicleTypeParentTable            = goqu.T(VehicleTypeParentTableName)
 	VehicleTypeParentTableIDCol       = VehicleTypeParentTable.Col(VehicleTypeParentTableIDColName)
-	VehicleTypeParentTableParentIDCol = VehicleTypeParentTable.Col(VehicleTypeParentTableParentIDColName)
+	VehicleTypeParentTableParentIDCol = VehicleTypeParentTable.Col(
+		VehicleTypeParentTableParentIDColName,
+	)
 )

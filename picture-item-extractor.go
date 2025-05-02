@@ -128,7 +128,11 @@ func (s *PictureItemExtractor) preloadItems(
 }
 
 func (s *PictureItemExtractor) preloadItemParentCache(
-	ctx context.Context, request *ItemParentCacheRequest, ids []int64, lang string, userCtx UserContext,
+	ctx context.Context,
+	request *ItemParentCacheRequest,
+	ids []int64,
+	lang string,
+	userCtx UserContext,
 ) (map[int64][]*ItemParentCache, error) {
 	if request == nil {
 		return nil, nil //nolint: nilnil
@@ -163,7 +167,13 @@ func (s *PictureItemExtractor) preloadItemParentCache(
 
 	itemParentCacheExtractor := s.container.ItemParentCacheExtractor()
 
-	extractedRows, err := itemParentCacheExtractor.ExtractRows(ctx, rows, request.GetFields(), lang, userCtx)
+	extractedRows, err := itemParentCacheExtractor.ExtractRows(
+		ctx,
+		rows,
+		request.GetFields(),
+		lang,
+		userCtx,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +191,11 @@ func (s *PictureItemExtractor) preloadItemParentCache(
 }
 
 func (s *PictureItemExtractor) ExtractRows(
-	ctx context.Context, rows []*schema.PictureItemRow, fields *PictureItemFields, lang string, userCtx UserContext,
+	ctx context.Context,
+	rows []*schema.PictureItemRow,
+	fields *PictureItemFields,
+	lang string,
+	userCtx UserContext,
 ) ([]*PictureItem, error) {
 	if fields == nil {
 		fields = &PictureItemFields{}
@@ -251,7 +265,11 @@ func (s *PictureItemExtractor) ExtractRows(
 }
 
 func (s *PictureItemExtractor) Extract(
-	ctx context.Context, row *schema.PictureItemRow, fields *PictureItemFields, lang string, userCtx UserContext,
+	ctx context.Context,
+	row *schema.PictureItemRow,
+	fields *PictureItemFields,
+	lang string,
+	userCtx UserContext,
 ) (*PictureItem, error) {
 	result, err := s.ExtractRows(ctx, []*schema.PictureItemRow{row}, fields, lang, userCtx)
 

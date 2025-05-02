@@ -28,7 +28,11 @@ type MapGRPCServer struct {
 	i18n         *i18nbundle.I18n
 }
 
-func NewMapGRPCServer(db *goqu.Database, imageStorage *storage.Storage, i18n *i18nbundle.I18n) *MapGRPCServer {
+func NewMapGRPCServer(
+	db *goqu.Database,
+	imageStorage *storage.Storage,
+	i18n *i18nbundle.I18n,
+) *MapGRPCServer {
 	return &MapGRPCServer{
 		db:           db,
 		imageStorage: imageStorage,
@@ -36,7 +40,10 @@ func NewMapGRPCServer(db *goqu.Database, imageStorage *storage.Storage, i18n *i1
 	}
 }
 
-func (s *MapGRPCServer) GetPoints(ctx context.Context, in *MapGetPointsRequest) (*MapPoints, error) {
+func (s *MapGRPCServer) GetPoints(
+	ctx context.Context,
+	in *MapGetPointsRequest,
+) (*MapPoints, error) {
 	const numberOfBounds = 4
 
 	bounds := strings.Split(in.GetBounds(), ",")

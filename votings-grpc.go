@@ -69,7 +69,10 @@ func (s *VotingsGRPCServer) GetVoting(ctx context.Context, in *VotingRequest) (*
 	}, nil
 }
 
-func (s *VotingsGRPCServer) GetVotingVariantVotes(ctx context.Context, in *VotingRequest) (*VotingVariantVotes, error) {
+func (s *VotingsGRPCServer) GetVotingVariantVotes(
+	ctx context.Context,
+	in *VotingRequest,
+) (*VotingVariantVotes, error) {
 	ids, err := s.repository.Votes(ctx, in.GetId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

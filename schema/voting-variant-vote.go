@@ -11,6 +11,8 @@ const (
 
 var (
 	VotingVariantVoteTable                   = goqu.T(VotingVariantVoteTableName)
-	VotingVariantVoteTableVotingVariantIDCol = VotingVariantVoteTable.Col(VotingVariantVoteTableVotingVariantIDColName)
-	VotingVariantVoteTableUserIDCol          = VotingVariantVoteTable.Col("user_id")
+	VotingVariantVoteTableVotingVariantIDCol = VotingVariantVoteTable.Col(
+		VotingVariantVoteTableVotingVariantIDColName,
+	)
+	VotingVariantVoteTableUserIDCol = VotingVariantVoteTable.Col("user_id")
 )

@@ -43,7 +43,10 @@ func NewTrafficGRPCServer(
 	}
 }
 
-func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APITrafficTopResponse, error) {
+func (s *TrafficGRPCServer) GetTop(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*APITrafficTopResponse, error) {
 	var err error
 
 	userCtx, err := s.auth.ValidateGRPC(ctx)
@@ -81,7 +84,13 @@ func (s *TrafficGRPCServer) GetTop(ctx context.Context, _ *emptypb.Empty) (*APIT
 				}
 
 				if user != nil {
-					extractedUser, err = s.userExtractor.Extract(ctx, user, nil, userCtx.UserID, userCtx.Roles)
+					extractedUser, err = s.userExtractor.Extract(
+						ctx,
+						user,
+						nil,
+						userCtx.UserID,
+						userCtx.Roles,
+					)
 					if err != nil {
 						return nil, status.Error(codes.Internal, err.Error())
 					}

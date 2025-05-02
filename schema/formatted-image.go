@@ -15,11 +15,19 @@ const (
 )
 
 var (
-	FormattedImageTable                    = goqu.T(FormattedImageTableName)
-	FormattedImageTableStatusCol           = FormattedImageTable.Col(FormattedImageTableStatusColName)
-	FormattedImageTableImageIDCol          = FormattedImageTable.Col(FormattedImageTableImageIDColName)
-	FormattedImageTableFormatCol           = FormattedImageTable.Col(FormattedImageTableFormatColName)
-	FormattedImageTableFormattedImageIDCol = FormattedImageTable.Col(FormattedImageTableFormattedImageIDColName)
+	FormattedImageTable          = goqu.T(FormattedImageTableName)
+	FormattedImageTableStatusCol = FormattedImageTable.Col(
+		FormattedImageTableStatusColName,
+	)
+	FormattedImageTableImageIDCol = FormattedImageTable.Col(
+		FormattedImageTableImageIDColName,
+	)
+	FormattedImageTableFormatCol = FormattedImageTable.Col(
+		FormattedImageTableFormatColName,
+	)
+	FormattedImageTableFormattedImageIDCol = FormattedImageTable.Col(
+		FormattedImageTableFormattedImageIDColName,
+	)
 )
 
 type FormattedImageRow struct {

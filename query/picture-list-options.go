@@ -89,7 +89,10 @@ func (s *PictureListOptions) Select(db *goqu.Database, alias string) (*goqu.Sele
 	)
 }
 
-func (s *PictureListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *PictureListOptions) CountSelect(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
@@ -109,7 +112,9 @@ func (s *PictureListOptions) IsIDUnique() bool {
 		return true
 	}
 
-	return (s.PictureItem == nil || s.PictureItem.IsPictureIDUnique()) && s.PictureModerVote == nil && s.DfDistance == nil
+	return (s.PictureItem == nil || s.PictureItem.IsPictureIDUnique()) &&
+		s.PictureModerVote == nil &&
+		s.DfDistance == nil
 }
 
 func (s *PictureListOptions) JoinToIDAndApply(
@@ -134,7 +139,10 @@ func (s *PictureListOptions) PictureItemAlias(alias string, idx int) string {
 	return AppendPictureItemAlias(alias, strconv.Itoa(idx))
 }
 
-func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *PictureListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	var (
 		err        error
 		aliasTable = goqu.T(alias)
@@ -193,7 +201,9 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 	}
 
 	if s.HasCopyrights {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.PictureTableCopyrightsTextIDColName).IsNotNull())
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.PictureTableCopyrightsTextIDColName).IsNotNull(),
+		)
 	}
 
 	sqSelect, err = s.applyAddDate(alias, sqSelect)
@@ -274,7 +284,10 @@ func (s *PictureListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (
 	return sqSelect, nil
 }
 
-func (s *PictureListOptions) applyAddDate(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *PictureListOptions) applyAddDate(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	var (
 		err        error
 		aliasTable = goqu.T(alias)
@@ -286,7 +299,9 @@ func (s *PictureListOptions) applyAddDate(alias string, sqSelect *goqu.SelectDat
 			return nil, errNoTimezone
 		}
 
-		sqSelect = sqSelect.Where(addDateCol.Gte(s.AddedFrom.In(s.Timezone).In(time.UTC).Format(time.DateTime)))
+		sqSelect = sqSelect.Where(
+			addDateCol.Gte(s.AddedFrom.In(s.Timezone).In(time.UTC).Format(time.DateTime)),
+		)
 	}
 
 	if s.AddDate != nil {
@@ -315,7 +330,10 @@ func (s *PictureListOptions) applyAddDate(alias string, sqSelect *goqu.SelectDat
 	return sqSelect, nil
 }
 
-func (s *PictureListOptions) applyAcceptDate(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *PictureListOptions) applyAcceptDate(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	var (
 		err           error
 		aliasTable    = goqu.T(alias)
@@ -325,7 +343,11 @@ func (s *PictureListOptions) applyAcceptDate(alias string, sqSelect *goqu.Select
 	if s.AcceptedInDays > 0 {
 		sqSelect = sqSelect.Where(
 			acceptDateCol.Gt(
-				goqu.Func("DATE_SUB", goqu.Func("CURDATE"), goqu.L("INTERVAL ? DAY", s.AcceptedInDays)),
+				goqu.Func(
+					"DATE_SUB",
+					goqu.Func("CURDATE"),
+					goqu.L("INTERVAL ? DAY", s.AcceptedInDays),
+				),
 			),
 		)
 	}
@@ -342,7 +364,9 @@ func (s *PictureListOptions) applyAcceptDate(alias string, sqSelect *goqu.Select
 			return nil, errNoTimezone
 		}
 
-		sqSelect = sqSelect.Where(acceptDateCol.Lt(s.AcceptDateLt.In(time.UTC).Format(time.DateTime)))
+		sqSelect = sqSelect.Where(
+			acceptDateCol.Lt(s.AcceptDateLt.In(time.UTC).Format(time.DateTime)),
+		)
 	}
 
 	if s.AcceptDateGte != nil {
@@ -350,13 +374,18 @@ func (s *PictureListOptions) applyAcceptDate(alias string, sqSelect *goqu.Select
 			return nil, errNoTimezone
 		}
 
-		sqSelect = sqSelect.Where(acceptDateCol.Gte(s.AcceptDateGte.In(time.UTC).Format(time.DateTime)))
+		sqSelect = sqSelect.Where(
+			acceptDateCol.Gte(s.AcceptDateGte.In(time.UTC).Format(time.DateTime)),
+		)
 	}
 
 	return sqSelect, nil
 }
 
-func (s *PictureListOptions) applyHasNoReplacePicture(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *PictureListOptions) applyHasNoReplacePicture(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	if !s.HasNoReplacePicture {
 		return sqSelect
 	}
@@ -372,7 +401,10 @@ func (s *PictureListOptions) applyHasNoReplacePicture(alias string, sqSelect *go
 	).Where(pAliasTable.Col(schema.PictureTableIDColName).IsNull())
 }
 
-func (s *PictureListOptions) applyHasNoPictureItem(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *PictureListOptions) applyHasNoPictureItem(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	if !s.HasNoPictureItem {
 		return sqSelect
 	}
@@ -387,7 +419,10 @@ func (s *PictureListOptions) applyHasNoPictureItem(alias string, sqSelect *goqu.
 	).Where(piAliasTable.Col(schema.PictureItemTableItemIDColName).IsNull())
 }
 
-func (s *PictureListOptions) applyHasNoComments(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *PictureListOptions) applyHasNoComments(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	if !s.HasNoComments {
 		return sqSelect
 	}
@@ -400,7 +435,8 @@ func (s *PictureListOptions) applyHasNoComments(alias string, sqSelect *goqu.Sel
 		schema.CommentTopicTable.As(ctAlias),
 		goqu.On(
 			idCol.Eq(ctAliasTable.Col(schema.CommentTopicTableItemIDColName)),
-			ctAliasTable.Col(schema.CommentTopicTableTypeIDColName).Eq(schema.CommentMessageTypeIDPictures),
+			ctAliasTable.Col(schema.CommentTopicTableTypeIDColName).
+				Eq(schema.CommentMessageTypeIDPictures),
 		),
 	).Where(
 		goqu.Or(
@@ -411,7 +447,10 @@ func (s *PictureListOptions) applyHasNoComments(alias string, sqSelect *goqu.Sel
 }
 
 func (s *PictureListOptions) setDateFilter(
-	sqSelect *goqu.SelectDataset, column exp.IdentifierExpression, date civil.Date, timezone *time.Location,
+	sqSelect *goqu.SelectDataset,
+	column exp.IdentifierExpression,
+	date civil.Date,
+	timezone *time.Location,
 ) (*goqu.SelectDataset, error) {
 	if s.Timezone == nil {
 		return nil, errNoTimezone

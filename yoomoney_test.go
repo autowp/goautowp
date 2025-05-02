@@ -65,7 +65,10 @@ func TestYoomoneyWebhookHappyPath(t *testing.T) {
 	dateStr := time.Now().Format(itemofday.YoomoneyLabelDateFormat)
 
 	// prepare test data
-	_, err = goquDB.Delete(schema.OfDayTable).Where(schema.OfDayTableDayDateCol.Eq(dateStr)).Executor().ExecContext(ctx)
+	_, err = goquDB.Delete(schema.OfDayTable).
+		Where(schema.OfDayTableDayDateCol.Eq(dateStr)).
+		Executor().
+		ExecContext(ctx)
 	require.NoError(t, err)
 
 	random := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec

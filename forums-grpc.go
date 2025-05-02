@@ -39,7 +39,10 @@ func NewForumsGRPCServer(
 	}
 }
 
-func (s *ForumsGRPCServer) GetUserSummary(ctx context.Context, _ *emptypb.Empty) (*APIForumsUserSummary, error) {
+func (s *ForumsGRPCServer) GetUserSummary(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*APIForumsUserSummary, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -83,7 +86,13 @@ func (s *ForumsGRPCServer) CreateTopic(
 
 	ctx = context.WithoutCancel(ctx)
 
-	topicID, err := s.forums.AddTopic(ctx, in.GetThemeId(), in.GetName(), userCtx.UserID, userCtx.IP.String())
+	topicID, err := s.forums.AddTopic(
+		ctx,
+		in.GetThemeId(),
+		in.GetName(),
+		userCtx.UserID,
+		userCtx.IP.String(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +112,12 @@ func (s *ForumsGRPCServer) CreateTopic(
 	}
 
 	if in.GetSubscription() {
-		err = s.commentsRepository.Subscribe(ctx, userCtx.UserID, schema.CommentMessageTypeIDForums, topicID)
+		err = s.commentsRepository.Subscribe(
+			ctx,
+			userCtx.UserID,
+			schema.CommentMessageTypeIDForums,
+			topicID,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -185,7 +199,10 @@ func (s *APICreateTopicRequest) Validate(
 	return result, nil
 }
 
-func (s *ForumsGRPCServer) CloseTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
+func (s *ForumsGRPCServer) CloseTopic(
+	ctx context.Context,
+	in *APISetTopicStatusRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -208,7 +225,10 @@ func (s *ForumsGRPCServer) CloseTopic(ctx context.Context, in *APISetTopicStatus
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ForumsGRPCServer) OpenTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
+func (s *ForumsGRPCServer) OpenTopic(
+	ctx context.Context,
+	in *APISetTopicStatusRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -231,7 +251,10 @@ func (s *ForumsGRPCServer) OpenTopic(ctx context.Context, in *APISetTopicStatusR
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ForumsGRPCServer) DeleteTopic(ctx context.Context, in *APISetTopicStatusRequest) (*emptypb.Empty, error) {
+func (s *ForumsGRPCServer) DeleteTopic(
+	ctx context.Context,
+	in *APISetTopicStatusRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -254,7 +277,10 @@ func (s *ForumsGRPCServer) DeleteTopic(ctx context.Context, in *APISetTopicStatu
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ForumsGRPCServer) MoveTopic(ctx context.Context, in *APIMoveTopicRequest) (*emptypb.Empty, error) {
+func (s *ForumsGRPCServer) MoveTopic(
+	ctx context.Context,
+	in *APIMoveTopicRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -302,7 +328,10 @@ func convertTopic(topic *ForumsTopic) *APIForumsTopic {
 	}
 }
 
-func (s *ForumsGRPCServer) GetTheme(ctx context.Context, in *APIGetForumsThemeRequest) (*APIForumsTheme, error) {
+func (s *ForumsGRPCServer) GetTheme(
+	ctx context.Context,
+	in *APIGetForumsThemeRequest,
+) (*APIForumsTheme, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -322,7 +351,10 @@ func (s *ForumsGRPCServer) GetTheme(ctx context.Context, in *APIGetForumsThemeRe
 	return convertTheme(theme), nil
 }
 
-func (s *ForumsGRPCServer) GetThemes(ctx context.Context, in *APIGetForumsThemesRequest) (*APIForumsThemes, error) {
+func (s *ForumsGRPCServer) GetThemes(
+	ctx context.Context,
+	in *APIGetForumsThemesRequest,
+) (*APIForumsThemes, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -345,7 +377,10 @@ func (s *ForumsGRPCServer) GetThemes(ctx context.Context, in *APIGetForumsThemes
 	}, nil
 }
 
-func (s *ForumsGRPCServer) GetLastTopic(ctx context.Context, in *APIGetForumsThemeRequest) (*APIForumsTopic, error) {
+func (s *ForumsGRPCServer) GetLastTopic(
+	ctx context.Context,
+	in *APIGetForumsThemeRequest,
+) (*APIForumsTopic, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -397,7 +432,10 @@ func (s *ForumsGRPCServer) GetLastMessage(
 	}, nil
 }
 
-func (s *ForumsGRPCServer) GetTopics(ctx context.Context, in *APIGetForumsTopicsRequest) (*APIForumsTopics, error) {
+func (s *ForumsGRPCServer) GetTopics(
+	ctx context.Context,
+	in *APIGetForumsTopicsRequest,
+) (*APIForumsTopics, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -405,8 +443,14 @@ func (s *ForumsGRPCServer) GetTopics(ctx context.Context, in *APIGetForumsTopics
 
 	isModerator := util.Contains(userCtx.Roles, users.RoleForumsModer)
 
-	topics, pages, err := s.forums.Topics(ctx, in.GetThemeId(), userCtx.UserID, isModerator, in.GetSubscription(),
-		in.GetPage())
+	topics, pages, err := s.forums.Topics(
+		ctx,
+		in.GetThemeId(),
+		userCtx.UserID,
+		isModerator,
+		in.GetSubscription(),
+		in.GetPage(),
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -433,7 +477,10 @@ func (s *ForumsGRPCServer) GetTopics(ctx context.Context, in *APIGetForumsTopics
 	}, nil
 }
 
-func (s *ForumsGRPCServer) GetTopic(ctx context.Context, in *APIGetForumsTopicRequest) (*APIForumsTopic, error) {
+func (s *ForumsGRPCServer) GetTopic(
+	ctx context.Context,
+	in *APIGetForumsTopicRequest,
+) (*APIForumsTopic, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

@@ -296,7 +296,10 @@ func (s *Index) GenerateFactoriesCache(ctx context.Context, lang string) error {
 		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDFactory},
 		ItemParentChild: &query.ItemParentListOptions{
 			ChildItems: &query.ItemListOptions{
-				TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
+				TypeID: []schema.ItemTableItemTypeID{
+					schema.ItemTableItemTypeIDVehicle,
+					schema.ItemTableItemTypeIDEngine,
+				},
 			},
 		},
 		Limit: topFactoriesCount,

@@ -53,16 +53,30 @@ type CommentMessageRow struct {
 }
 
 var (
-	CommentMessageTable                      = goqu.T(CommentMessageTableName)
-	CommentMessageTableIDCol                 = CommentMessageTable.Col(CommentMessageTableIDColName)
-	CommentMessageTableTypeIDCol             = CommentMessageTable.Col(CommentMessageTableTypeIDColName)
-	CommentMessageTableItemIDCol             = CommentMessageTable.Col(CommentMessageTableItemIDColName)
-	CommentMessageTableAuthorIDCol           = CommentMessageTable.Col(CommentMessageTableAuthorIDColName)
-	CommentMessageTableDatetimeCol           = CommentMessageTable.Col("datetime")
-	CommentMessageTableVoteCol               = CommentMessageTable.Col(CommentMessageTableVoteColName)
-	CommentMessageTableParentIDCol           = CommentMessageTable.Col(CommentMessageTableParentIDColName)
-	CommentMessageTableMessageCol            = CommentMessageTable.Col("message")
-	CommentMessageTableIPCol                 = CommentMessageTable.Col("ip")
-	CommentMessageTableDeletedCol            = CommentMessageTable.Col(CommentMessageTableDeletedColName)
-	CommentMessageTableModeratorAttentionCol = CommentMessageTable.Col(CommentMessageTableModeratorAttentionColName)
+	CommentMessageTable          = goqu.T(CommentMessageTableName)
+	CommentMessageTableIDCol     = CommentMessageTable.Col(CommentMessageTableIDColName)
+	CommentMessageTableTypeIDCol = CommentMessageTable.Col(
+		CommentMessageTableTypeIDColName,
+	)
+	CommentMessageTableItemIDCol = CommentMessageTable.Col(
+		CommentMessageTableItemIDColName,
+	)
+	CommentMessageTableAuthorIDCol = CommentMessageTable.Col(
+		CommentMessageTableAuthorIDColName,
+	)
+	CommentMessageTableDatetimeCol = CommentMessageTable.Col("datetime")
+	CommentMessageTableVoteCol     = CommentMessageTable.Col(
+		CommentMessageTableVoteColName,
+	)
+	CommentMessageTableParentIDCol = CommentMessageTable.Col(
+		CommentMessageTableParentIDColName,
+	)
+	CommentMessageTableMessageCol = CommentMessageTable.Col("message")
+	CommentMessageTableIPCol      = CommentMessageTable.Col("ip")
+	CommentMessageTableDeletedCol = CommentMessageTable.Col(
+		CommentMessageTableDeletedColName,
+	)
+	CommentMessageTableModeratorAttentionCol = CommentMessageTable.Col(
+		CommentMessageTableModeratorAttentionColName,
+	)
 )

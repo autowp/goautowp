@@ -10,6 +10,10 @@ const (
 
 var (
 	LogEventsPicturesTable              = goqu.T(LogEventsPicturesTableName)
-	LogEventsPicturesTableLogEventIDCol = LogEventsPicturesTable.Col(LogEventsPicturesTableLogEventIDColName)
-	LogEventsPicturesTablePictureIDCol  = LogEventsPicturesTable.Col(LogEventsPicturesTablePictureIDColName)
+	LogEventsPicturesTableLogEventIDCol = LogEventsPicturesTable.Col(
+		LogEventsPicturesTableLogEventIDColName,
+	)
+	LogEventsPicturesTablePictureIDCol = LogEventsPicturesTable.Col(
+		LogEventsPicturesTablePictureIDColName,
+	)
 )

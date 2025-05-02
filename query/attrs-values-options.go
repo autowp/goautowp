@@ -24,7 +24,10 @@ func (s *AttrsValueListOptions) Select(db *goqu.Database, alias string) *goqu.Se
 	)
 }
 
-func (s *AttrsValueListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *AttrsValueListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	var (
 		aliasTable     = goqu.T(alias)
 		attributeIDCol = aliasTable.Col(schema.AttrsValuesTableAttributeIDColName)
@@ -53,7 +56,11 @@ func (s *AttrsValueListOptions) apply(alias string, sqSelect *goqu.SelectDataset
 
 		sqSelect = sqSelect.Join(
 			schema.AttrsZoneAttributesTable.As(azaAlias),
-			goqu.On(attributeIDCol.Eq(goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableAttributeIDColName))),
+			goqu.On(
+				attributeIDCol.Eq(
+					goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableAttributeIDColName),
+				),
+			),
 		).Where(goqu.T(azaAlias).Col(schema.AttrsZoneAttributesTableZoneIDColName).Eq(s.ZoneID))
 	}
 

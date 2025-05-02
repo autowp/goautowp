@@ -279,7 +279,11 @@ func IsMysqlDeadlockError(err error) bool {
 	return isMysqlErrorCode(err, mysqlDeadlockErrorCode)
 }
 
-func ScanValContextAndRetryOnDeadlock(ctx context.Context, sd *goqu.SelectDataset, i interface{}) (bool, error) {
+func ScanValContextAndRetryOnDeadlock(
+	ctx context.Context,
+	sd *goqu.SelectDataset,
+	i interface{},
+) (bool, error) {
 	var (
 		res               bool
 		err               error

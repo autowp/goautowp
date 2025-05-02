@@ -14,7 +14,9 @@ import (
 
 var (
 	errTopicsInThemeDisabled                 = errors.New("topics in this theme is disabled")
-	errCantDeleteTopicWithModeratorAttention = errors.New("cannot delete topic with moderator attention requirement")
+	errCantDeleteTopicWithModeratorAttention = errors.New(
+		"cannot delete topic with moderator attention requirement",
+	)
 )
 
 const (
@@ -211,7 +213,8 @@ func (s *Forums) Delete(ctx context.Context, id int64) error {
 			schema.CommentMessageTableItemIDCol.Eq(id),
 			schema.CommentMessageTableTypeIDCol.Eq(schema.CommentMessageTypeIDForums),
 			schema.CommentMessageTableModeratorAttentionCol.Eq(schema.CommentMessageModeratorAttentionRequired),
-		).ScanValContext(ctx, &needAttention)
+		).
+		ScanValContext(ctx, &needAttention)
 	if err != nil {
 		return err
 	}
@@ -267,9 +270,13 @@ func (s *Forums) MoveTopic(ctx context.Context, id int64, themeID int64) error {
 
 func (s *Forums) Theme(ctx context.Context, themeID int64, isModerator bool) (*ForumsTheme, error) {
 	sqSelect := s.db.Select(
-		schema.ForumsThemesTableIDCol, schema.ForumsThemesTableNameCol, schema.ForumsThemesTableTopicsCol,
-		schema.ForumsThemesTableMessagesCol, schema.ForumsThemesTableDisableTopicsCol,
-		schema.ForumsThemesTableDescriptionCol).
+		schema.ForumsThemesTableIDCol,
+		schema.ForumsThemesTableNameCol,
+		schema.ForumsThemesTableTopicsCol,
+		schema.ForumsThemesTableMessagesCol,
+		schema.ForumsThemesTableDisableTopicsCol,
+		schema.ForumsThemesTableDescriptionCol,
+	).
 		From(schema.ForumsThemesTable).
 		Where(schema.ForumsThemesTableIDCol.Eq(themeID))
 
@@ -291,11 +298,19 @@ func (s *Forums) Theme(ctx context.Context, themeID int64, isModerator bool) (*F
 	return &row, nil
 }
 
-func (s *Forums) Themes(ctx context.Context, themeID int64, isModerator bool) ([]*ForumsTheme, error) {
+func (s *Forums) Themes(
+	ctx context.Context,
+	themeID int64,
+	isModerator bool,
+) ([]*ForumsTheme, error) {
 	sqSelect := s.db.Select(
-		schema.ForumsThemesTableIDCol, schema.ForumsThemesTableNameCol, schema.ForumsThemesTableTopicsCol,
-		schema.ForumsThemesTableMessagesCol, schema.ForumsThemesTableDisableTopicsCol,
-		schema.ForumsThemesTableDescriptionCol).
+		schema.ForumsThemesTableIDCol,
+		schema.ForumsThemesTableNameCol,
+		schema.ForumsThemesTableTopicsCol,
+		schema.ForumsThemesTableMessagesCol,
+		schema.ForumsThemesTableDisableTopicsCol,
+		schema.ForumsThemesTableDescriptionCol,
+	).
 		From(schema.ForumsThemesTable).Order(schema.ForumsThemesTablePositionCol.Asc())
 
 	if themeID > 0 {
@@ -330,7 +345,12 @@ func (s *Forums) prepareTopic(ctx context.Context, topic *ForumsTopic, userID in
 		topic.Messages = stat.Messages
 		topic.NewMessages = stat.NewMessages
 
-		topic.Subscription, err = s.commentsRepository.IsSubscribed(ctx, userID, schema.CommentMessageTypeIDForums, topic.ID)
+		topic.Subscription, err = s.commentsRepository.IsSubscribed(
+			ctx,
+			userID,
+			schema.CommentMessageTypeIDForums,
+			topic.ID,
+		)
 		if err != nil {
 			return err
 		}
@@ -338,7 +358,11 @@ func (s *Forums) prepareTopic(ctx context.Context, topic *ForumsTopic, userID in
 		return nil
 	}
 
-	messages, err := s.commentsRepository.TopicStat(ctx, schema.CommentMessageTypeIDForums, topic.ID)
+	messages, err := s.commentsRepository.TopicStat(
+		ctx,
+		schema.CommentMessageTypeIDForums,
+		topic.ID,
+	)
 	if err != nil {
 		return err
 	}
@@ -350,8 +374,12 @@ func (s *Forums) prepareTopic(ctx context.Context, topic *ForumsTopic, userID in
 
 func (s *Forums) topicsSelect(isModerator bool) *goqu.SelectDataset {
 	sqSelect := s.db.Select(
-		schema.ForumsTopicsTableIDCol, schema.ForumsTopicsTableNameCol, schema.ForumsTopicsTableStatusCol,
-		schema.ForumsTopicsTableAddDatetimeCol, schema.ForumsTopicsTableAuthorIDCol, schema.ForumsTopicsTableThemeIDCol,
+		schema.ForumsTopicsTableIDCol,
+		schema.ForumsTopicsTableNameCol,
+		schema.ForumsTopicsTableStatusCol,
+		schema.ForumsTopicsTableAddDatetimeCol,
+		schema.ForumsTopicsTableAuthorIDCol,
+		schema.ForumsTopicsTableThemeIDCol,
 	).
 		From(schema.ForumsTopicsTable).
 		Join(schema.CommentTopicTable, goqu.On(
@@ -362,14 +390,22 @@ func (s *Forums) topicsSelect(isModerator bool) *goqu.SelectDataset {
 
 	if !isModerator {
 		sqSelect = sqSelect.
-			Join(schema.ForumsThemesTable, goqu.On(schema.ForumsTopicsTableThemeIDCol.Eq(schema.ForumsThemesTableIDCol))).
+			Join(
+				schema.ForumsThemesTable,
+				goqu.On(schema.ForumsTopicsTableThemeIDCol.Eq(schema.ForumsThemesTableIDCol)),
+			).
 			Where(schema.ForumsThemesTableIsModeratorCol.IsFalse())
 	}
 
 	return sqSelect
 }
 
-func (s *Forums) Topic(ctx context.Context, topicID int64, userID int64, isModerator bool) (*ForumsTopic, error) {
+func (s *Forums) Topic(
+	ctx context.Context,
+	topicID int64,
+	userID int64,
+	isModerator bool,
+) (*ForumsTopic, error) {
 	sqSelect := s.topicsSelect(isModerator).
 		Where(schema.ForumsTopicsTableIDCol.Eq(topicID)).
 		Limit(1)
@@ -393,7 +429,12 @@ func (s *Forums) Topic(ctx context.Context, topicID int64, userID int64, isModer
 	return &topic, nil
 }
 
-func (s *Forums) LastTopic(ctx context.Context, themeID int64, userID int64, isModerator bool) (*ForumsTopic, error) {
+func (s *Forums) LastTopic(
+	ctx context.Context,
+	themeID int64,
+	userID int64,
+	isModerator bool,
+) (*ForumsTopic, error) {
 	sqSelect := s.topicsSelect(isModerator).
 		Join(
 			schema.ForumsThemeParentTable,
@@ -422,7 +463,11 @@ func (s *Forums) LastTopic(ctx context.Context, themeID int64, userID int64, isM
 	return &topic, nil
 }
 
-func (s *Forums) LastMessage(ctx context.Context, topicID int64, isModerator bool) (*CommentMessage, error) {
+func (s *Forums) LastMessage(
+	ctx context.Context,
+	topicID int64,
+	isModerator bool,
+) (*CommentMessage, error) {
 	sqSelect := s.db.Select(
 		schema.CommentMessageTableIDCol, schema.CommentMessageTableDatetimeCol, schema.CommentMessageTableAuthorIDCol,
 	).

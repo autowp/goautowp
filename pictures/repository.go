@@ -39,8 +39,12 @@ import (
 )
 
 var (
-	errIsAllowedForPictureItemContentOnly     = errors.New("is allowed only for picture-item-content")
-	errJoinNeededToSortByPerspective          = errors.New("can't sort by perspective: need a join with picture_item")
+	errIsAllowedForPictureItemContentOnly = errors.New(
+		"is allowed only for picture-item-content",
+	)
+	errJoinNeededToSortByPerspective = errors.New(
+		"can't sort by perspective: need a join with picture_item",
+	)
 	errJoinNeededToSortByDfDistanceSimilarity = errors.New(
 		"can't sort by df-distance-similarity: need a join with df_distance",
 	)
@@ -69,7 +73,11 @@ var (
 		schema.PerspectiveBackStrict, schema.PerspectiveBack, schema.PerspectiveCutaway, schema.PerspectiveFrontPanel,
 		schema.PerspectiveInterior,
 	}
-	frontPerspectives = []int64{schema.Perspective3Div4Left, schema.Perspective3Div4Right, schema.PerspectiveFront}
+	frontPerspectives = []int64{
+		schema.Perspective3Div4Left,
+		schema.Perspective3Div4Right,
+		schema.PerspectiveFront,
+	}
 )
 
 // DuplicateFinderInputMessage InputMessage.
@@ -164,8 +172,12 @@ const (
 )
 
 func NewRepository(
-	db *goqu.Database, imageStorage *storage.Storage, textStorageRepository *textstorage.Repository,
-	itemsRepository *items.Repository, dfConfig config.DuplicateFinderConfig, commentsRepository *comments.Repository,
+	db *goqu.Database,
+	imageStorage *storage.Storage,
+	textStorageRepository *textstorage.Repository,
+	itemsRepository *items.Repository,
+	dfConfig config.DuplicateFinderConfig,
+	commentsRepository *comments.Repository,
 ) *Repository {
 	return &Repository{
 		db:                    db,
@@ -225,7 +237,12 @@ func (s *Repository) Status(ctx context.Context, id int64) (schema.PictureStatus
 	return status, nil
 }
 
-func (s *Repository) SetStatus(ctx context.Context, id int64, status schema.PictureStatus, userID int64) error {
+func (s *Repository) SetStatus(
+	ctx context.Context,
+	id int64,
+	status schema.PictureStatus,
+	userID int64,
+) error {
 	_, err := s.db.Update(schema.PictureTable).
 		Set(goqu.Record{
 			schema.PictureTableStatusColName:             status,
@@ -297,8 +314,14 @@ func (s *Repository) Vote(ctx context.Context, id int64, value int32, userID int
 	}).OnConflict(goqu.DoUpdate(
 		schema.PictureVoteTablePictureIDColName+","+schema.PictureVoteTableUserIDColName,
 		goqu.Record{
-			schema.PictureVoteTableValueColName:     goqu.Func("VALUES", goqu.C(schema.PictureVoteTableValueColName)),
-			schema.PictureVoteTableTimestampColName: goqu.Func("VALUES", goqu.C(schema.PictureVoteTableTimestampColName)),
+			schema.PictureVoteTableValueColName: goqu.Func(
+				"VALUES",
+				goqu.C(schema.PictureVoteTableValueColName),
+			),
+			schema.PictureVoteTableTimestampColName: goqu.Func(
+				"VALUES",
+				goqu.C(schema.PictureVoteTableTimestampColName),
+			),
 		},
 	)).Executor().ExecContext(ctx)
 	if err != nil {
@@ -319,7 +342,10 @@ func (s *Repository) CreateModerVoteTemplate(
 		tpl.Vote = 1
 	}
 
-	res, err := s.db.Insert(schema.PictureModerVoteTemplateTable).Rows(tpl).Executor().ExecContext(ctx)
+	res, err := s.db.Insert(schema.PictureModerVoteTemplateTable).
+		Rows(tpl).
+		Executor().
+		ExecContext(ctx)
 	if err != nil {
 		return tpl, err
 	}
@@ -339,7 +365,11 @@ func (s *Repository) DeleteModerVoteTemplate(ctx context.Context, id int64, user
 	return err
 }
 
-func (s *Repository) IsModerVoteTemplateExists(ctx context.Context, userID int64, reason string) (bool, error) {
+func (s *Repository) IsModerVoteTemplateExists(
+	ctx context.Context,
+	userID int64,
+	reason string,
+) (bool, error) {
 	var id int64
 
 	success, err := s.db.Select(schema.PictureModerVoteTemplateTableIDCol).
@@ -428,7 +458,11 @@ func (s *Repository) TopLikes(ctx context.Context, limit uint) ([]RatingUser, er
 	return rows, err
 }
 
-func (s *Repository) TopOwnerFans(ctx context.Context, userID int64, limit uint) ([]RatingFan, error) {
+func (s *Repository) TopOwnerFans(
+	ctx context.Context,
+	userID int64,
+	limit uint,
+) ([]RatingFan, error) {
 	rows := make([]RatingFan, 0)
 
 	const volumeAlias = "volume"
@@ -444,7 +478,11 @@ func (s *Repository) TopOwnerFans(ctx context.Context, userID int64, limit uint)
 	return rows, err
 }
 
-func (s *Repository) DeleteModerVote(ctx context.Context, pictureID int64, userID int64) (bool, error) {
+func (s *Repository) DeleteModerVote(
+	ctx context.Context,
+	pictureID int64,
+	userID int64,
+) (bool, error) {
 	res, err := s.db.Delete(schema.PictureModerVoteTable).
 		Where(
 			schema.PictureModerVoteTableUserIDCol.Eq(userID),
@@ -496,7 +534,8 @@ func (s *Repository) ModerVoteCount(ctx context.Context, pictureID int64) (int32
 	}{}
 
 	success, err := s.db.Select(
-		goqu.SUM(goqu.Func("IF", schema.PictureModerVoteTableVoteCol, goqu.V(1), goqu.V(-1))).As("sum"),
+		goqu.SUM(goqu.Func("IF", schema.PictureModerVoteTableVoteCol, goqu.V(1), goqu.V(-1))).
+			As("sum"),
 		goqu.COUNT(goqu.Star()).As("count"),
 	).
 		From(schema.PictureModerVoteTable).
@@ -518,7 +557,11 @@ func (s *Repository) ModerVoteCount(ctx context.Context, pictureID int64) (int32
 	return st.Count, st.Sum.Int32, nil
 }
 
-func (s *Repository) HasModerVote(ctx context.Context, pictureID int64, userID int64) (bool, error) {
+func (s *Repository) HasModerVote(
+	ctx context.Context,
+	pictureID int64,
+	userID int64,
+) (bool, error) {
 	res := false
 
 	success, err := s.db.Select(goqu.V(true)).
@@ -578,7 +621,9 @@ func (s *Repository) orderBy( //nolint: maintidx
 				aliasTable.Col(schema.PictureTableIDColName).Eq(
 					goqu.T(ctoAlias).Col(schema.CommentTopicTableItemIDColName),
 				),
-				goqu.T(ctoAlias).Col(schema.CommentTopicTableTypeIDColName).Eq(schema.CommentMessageTypeIDPictures),
+				goqu.T(ctoAlias).
+					Col(schema.CommentTopicTableTypeIDColName).
+					Eq(schema.CommentMessageTypeIDPictures),
 			)).
 			Order(goqu.T(ctoAlias).Col(schema.CommentTopicTableMessagesColName).Desc())
 	case OrderByViews:
@@ -667,7 +712,8 @@ func (s *Repository) orderBy( //nolint: maintidx
 			piAlias                 = options.PictureItemAlias(alias, 0)
 			ipcaAlias               = options.PictureItem.ItemParentCacheAncestorAlias(piAlias)
 			pgpAlias                = query.AppendPerspectiveGroupPerspectiveAlias(piAlias)
-			col       exp.Orderable = goqu.T(pgpAlias).Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
+			col       exp.Orderable = goqu.T(pgpAlias).
+					Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
 		)
 
 		if !options.IsIDUnique() {
@@ -676,7 +722,8 @@ func (s *Repository) orderBy( //nolint: maintidx
 
 		sqSelect = sqSelect.
 			Join(schema.PictureVoteSummaryTable, goqu.On(
-				aliasTable.Col(schema.PictureTableIDColName).Eq(schema.PictureVoteSummaryTablePictureIDCol),
+				aliasTable.Col(schema.PictureTableIDColName).
+					Eq(schema.PictureVoteSummaryTablePictureIDCol),
 			)).
 			Order(
 				goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableSportColName)).Asc(),
@@ -703,15 +750,25 @@ func (s *Repository) orderBy( //nolint: maintidx
 
 			ipcaAlias := options.PictureItem.ItemParentCacheAncestorAlias(piAlias)
 			iAlias := options.PictureItem.ItemParentCacheAncestor.ItemsByItemIDAlias(ipcaAlias)
-			exps = append(exps, goqu.MAX(goqu.T(iAlias).Col(schema.ItemTableIsConceptColName)).Asc())
-			exps = append(exps, goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableSportColName)).Asc())
-			exps = append(exps, goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableTuningColName)).Asc())
+			exps = append(
+				exps,
+				goqu.MAX(goqu.T(iAlias).Col(schema.ItemTableIsConceptColName)).Asc(),
+			)
+			exps = append(
+				exps,
+				goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableSportColName)).Asc(),
+			)
+			exps = append(
+				exps,
+				goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableTuningColName)).Asc(),
+			)
 		}
 
 		if options.PictureItem.PerspectiveGroupPerspective != nil {
 			var (
 				pgpAlias               = query.AppendPerspectiveGroupPerspectiveAlias(piAlias)
-				col      exp.Orderable = goqu.T(pgpAlias).Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
+				col      exp.Orderable = goqu.T(pgpAlias).
+						Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
 			)
 
 			if !options.IsIDUnique() {
@@ -721,7 +778,9 @@ func (s *Repository) orderBy( //nolint: maintidx
 			exps = append(exps, col.Asc())
 		}
 
-		exps = append([]exp.OrderedExpression{aliasTable.Col(schema.PictureTableContentCountColName).Asc()}, exps...)
+		exps = append(
+			[]exp.OrderedExpression{aliasTable.Col(schema.PictureTableContentCountColName).Asc()},
+			exps...)
 		exps = append(exps,
 			aliasTable.Col(schema.PictureTableWidthColName).Desc(),
 			aliasTable.Col(schema.PictureTableHeightColName).Desc(),
@@ -738,7 +797,9 @@ func (s *Repository) orderBy( //nolint: maintidx
 		groupBy = true
 		sqSelect = sqSelect.
 			LeftJoin(schema.PerspectivesTable, goqu.On(
-				goqu.T(piAlias).Col(schema.PictureItemTablePerspectiveIDColName).Eq(schema.PerspectivesTableIDCol),
+				goqu.T(piAlias).
+					Col(schema.PictureItemTablePerspectiveIDColName).
+					Eq(schema.PerspectivesTableIDCol),
 			)).
 			Order(
 				goqu.MIN(schema.PerspectivesTablePositionCol).Asc(),
@@ -752,11 +813,15 @@ func (s *Repository) orderBy( //nolint: maintidx
 			return nil, false, errJoinNeededToSortByPerspective
 		}
 
-		perspectives := specsTopPerspectives
-		if order == OrderByBottomPerspectives {
+		var perspectives []int64
+
+		switch order {
+		case OrderByBottomPerspectives:
 			perspectives = specsBottomPerspectives
-		} else if order == OrderByFrontPerspectives {
+		case OrderByFrontPerspectives:
 			perspectives = frontPerspectives
+		default:
+			perspectives = specsTopPerspectives
 		}
 
 		orderExprs := make([]exp.OrderedExpression, 0, len(perspectives))
@@ -789,7 +854,9 @@ func (s *Repository) orderBy( //nolint: maintidx
 		piAlias := options.PictureItemAlias(alias, 0)
 		ipcaAlias := options.PictureItem.ItemParentCacheAncestorAlias(piAlias)
 		iAlias := options.PictureItem.ItemParentCacheAncestor.ItemsByParentIDAlias(ipcaAlias)
-		perspectiveIDCol := goqu.MAX(goqu.T(piAlias).Col(schema.PictureItemTablePerspectiveIDColName))
+		perspectiveIDCol := goqu.MAX(
+			goqu.T(piAlias).Col(schema.PictureItemTablePerspectiveIDColName),
+		)
 
 		sqSelect = sqSelect.Order(
 			goqu.MAX(goqu.T(ipcaAlias).Col(schema.ItemParentCacheTableTuningColName)).Asc(),
@@ -888,7 +955,11 @@ func (s *Repository) PicturesPaginator(
 }
 
 func (s *Repository) Pictures(
-	ctx context.Context, options *query.PictureListOptions, fields *PictureFields, order OrderBy, pagination bool,
+	ctx context.Context,
+	options *query.PictureListOptions,
+	fields *PictureFields,
+	order OrderBy,
+	pagination bool,
 ) ([]*schema.PictureRow, *util.Pages, error) {
 	var (
 		sqSelect *goqu.SelectDataset
@@ -1005,7 +1076,11 @@ func (s *Repository) Repair(ctx context.Context, id int64) error {
 }
 
 func (s *Repository) SetPictureItemArea(
-	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, area PictureItemArea,
+	ctx context.Context,
+	pictureID int64,
+	itemID int64,
+	pictureItemType schema.PictureItemType,
+	area PictureItemArea,
 ) error {
 	if pictureItemType != schema.PictureItemTypeContent {
 		return errIsAllowedForPictureItemContentOnly
@@ -1028,8 +1103,11 @@ func (s *Repository) SetPictureItemArea(
 	picItem := schema.PictureItemRow{}
 
 	success, err = s.db.Select(
-		schema.PictureItemTableCropLeftCol, schema.PictureItemTableCropTopCol, schema.PictureItemTableCropWidthCol,
-		schema.PictureItemTableCropHeightCol, schema.PictureItemTableTypeCol,
+		schema.PictureItemTableCropLeftCol,
+		schema.PictureItemTableCropTopCol,
+		schema.PictureItemTableCropWidthCol,
+		schema.PictureItemTableCropHeightCol,
+		schema.PictureItemTableTypeCol,
 	).
 		From(schema.PictureItemTable).
 		Where(
@@ -1052,7 +1130,8 @@ func (s *Repository) SetPictureItemArea(
 		Height: pic.Height,
 	}))
 
-	isFull := area.Left == 0 && area.Top == 0 && area.Width == pic.Width && area.Height == pic.Height
+	isFull := area.Left == 0 && area.Top == 0 && area.Width == pic.Width &&
+		area.Height == pic.Height
 	isEmpty := area.Height == 0 || area.Width == 0
 	valid := !isEmpty && !isFull
 
@@ -1091,7 +1170,11 @@ func (s *Repository) SetPictureItemArea(
 }
 
 func (s *Repository) SetPictureItemPerspective(
-	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, perspective int32,
+	ctx context.Context,
+	pictureID int64,
+	itemID int64,
+	pictureItemType schema.PictureItemType,
+	perspective int32,
 ) error {
 	if pictureItemType != schema.PictureItemTypeContent {
 		return errIsAllowedForPictureItemContentOnly
@@ -1115,7 +1198,11 @@ func (s *Repository) SetPictureItemPerspective(
 }
 
 func (s *Repository) SetPictureItemItemID(
-	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, dstItemID int64,
+	ctx context.Context,
+	pictureID int64,
+	itemID int64,
+	pictureItemType schema.PictureItemType,
+	dstItemID int64,
 ) error {
 	isAllowed, err := s.isAllowedTypeByItemID(ctx, dstItemID, pictureItemType)
 	if err != nil {
@@ -1176,9 +1263,15 @@ func (s *Repository) isAllowedTypeByItemID(
 	return s.isAllowedType(itemTypeID, pictureItemType), nil
 }
 
-func (s *Repository) isAllowedType(itemTypeID schema.ItemTableItemTypeID, pictureItemType schema.PictureItemType) bool {
+func (s *Repository) isAllowedType(
+	itemTypeID schema.ItemTableItemTypeID,
+	pictureItemType schema.PictureItemType,
+) bool {
 	allowed := map[schema.ItemTableItemTypeID][]schema.PictureItemType{
-		schema.ItemTableItemTypeIDBrand:    {schema.PictureItemTypeContent, schema.PictureItemTypeCopyrights},
+		schema.ItemTableItemTypeIDBrand: {
+			schema.PictureItemTypeContent,
+			schema.PictureItemTypeCopyrights,
+		},
 		schema.ItemTableItemTypeIDCategory: {schema.PictureItemTypeContent},
 		schema.ItemTableItemTypeIDEngine:   {schema.PictureItemTypeContent},
 		schema.ItemTableItemTypeIDFactory:  {schema.PictureItemTypeContent},
@@ -1199,7 +1292,10 @@ func (s *Repository) isAllowedType(itemTypeID schema.ItemTableItemTypeID, pictur
 	return util.Contains(pictureItemTypes, pictureItemType)
 }
 
-func (s *Repository) DeletePictureItemsByPicture(ctx context.Context, pictureID int64) (bool, error) {
+func (s *Repository) DeletePictureItemsByPicture(
+	ctx context.Context,
+	pictureID int64,
+) (bool, error) {
 	ctx = context.WithoutCancel(ctx)
 
 	res, err := s.db.Delete(schema.PictureItemTable).Where(
@@ -1254,7 +1350,11 @@ func (s *Repository) DeletePictureItem(
 }
 
 func (s *Repository) CreatePictureItem(
-	ctx context.Context, pictureID int64, itemID int64, pictureItemType schema.PictureItemType, perspective int32,
+	ctx context.Context,
+	pictureID int64,
+	itemID int64,
+	pictureItemType schema.PictureItemType,
+	perspective int32,
 ) (bool, error) {
 	isAllowed, err := s.isAllowedTypeByItemID(ctx, itemID, pictureItemType)
 	if err != nil {
@@ -1344,7 +1444,11 @@ func (s *Repository) ClearReplacePicture(ctx context.Context, pictureID int64) (
 	return affected > 0, err
 }
 
-func (s *Repository) SetPicturePoint(ctx context.Context, pictureID int64, point *orb.Point) (bool, error) {
+func (s *Repository) SetPicturePoint(
+	ctx context.Context,
+	pictureID int64,
+	point *orb.Point,
+) (bool, error) {
 	var pointExpr goqu.Expression
 
 	if point != nil {
@@ -1367,7 +1471,12 @@ func (s *Repository) SetPicturePoint(ctx context.Context, pictureID int64, point
 }
 
 func (s *Repository) UpdatePicture(
-	ctx context.Context, pictureID int64, name string, takenYear int16, takenMonth int8, takenDay int8,
+	ctx context.Context,
+	pictureID int64,
+	name string,
+	takenYear int16,
+	takenMonth int8,
+	takenDay int8,
 ) (bool, error) {
 	res, err := s.db.Update(schema.PictureTable).
 		Set(goqu.Record{
@@ -1466,7 +1575,10 @@ func (s *Repository) CanDelete(ctx context.Context, row *schema.PictureRow) (boo
 	return votes <= 0, err
 }
 
-func (s *Repository) NegativeVotes(ctx context.Context, pictureID int64) ([]schema.PictureModerVoteRow, error) {
+func (s *Repository) NegativeVotes(
+	ctx context.Context,
+	pictureID int64,
+) ([]schema.PictureModerVoteRow, error) {
 	var sts []schema.PictureModerVoteRow
 
 	err := s.db.Select(schema.PictureModerVoteTableUserIDCol, schema.PictureModerVoteTableReasonCol).
@@ -1474,7 +1586,8 @@ func (s *Repository) NegativeVotes(ctx context.Context, pictureID int64) ([]sche
 		Where(
 			schema.PictureModerVoteTablePictureIDCol.Eq(pictureID),
 			schema.PictureModerVoteTableVoteCol.Eq(0),
-		).ScanStructsContext(ctx, &sts)
+		).
+		ScanStructsContext(ctx, &sts)
 
 	return sts, err
 }
@@ -1507,7 +1620,11 @@ func (s *Repository) HasVote(ctx context.Context, pictureID int64, userID int64)
 	return success && exists, err
 }
 
-func (s *Repository) Accept(ctx context.Context, pictureID int64, userID int64) (bool, bool, error) {
+func (s *Repository) Accept(
+	ctx context.Context,
+	pictureID int64,
+	userID int64,
+) (bool, bool, error) {
 	isFirstTimeAccepted := false
 
 	if pictureID == 0 {
@@ -1558,7 +1675,9 @@ func (s *Repository) QueueRemove(ctx context.Context, pictureID int64, userID in
 	return affected > 0, err
 }
 
-func (s *Repository) PictureItemSelect(options *query.PictureItemListOptions) (*goqu.SelectDataset, error) {
+func (s *Repository) PictureItemSelect(
+	options *query.PictureItemListOptions,
+) (*goqu.SelectDataset, error) {
 	alias := query.PictureItemAlias
 	aliasTable := goqu.T(alias)
 
@@ -1637,7 +1756,10 @@ func (s *Repository) PictureItemsBatch(
 }
 
 func (s *Repository) PictureItems(
-	ctx context.Context, options *query.PictureItemListOptions, order PictureItemOrderBy, limit uint32,
+	ctx context.Context,
+	options *query.PictureItemListOptions,
+	order PictureItemOrderBy,
+	limit uint32,
 ) ([]*schema.PictureItemRow, error) {
 	var rows []*schema.PictureItemRow
 
@@ -1654,8 +1776,12 @@ func (s *Repository) PictureItems(
 		orderExprs := make([]exp.OrderedExpression, 0, len(perspectives))
 
 		for _, pid := range perspectives {
-			orderExprs = append(orderExprs, goqu.L("?",
-				goqu.T(query.PictureItemAlias).Col(schema.PictureItemTablePerspectiveIDColName).Eq(pid)).Desc())
+			orderExprs = append(orderExprs, goqu.L(
+				"?",
+				goqu.T(query.PictureItemAlias).
+					Col(schema.PictureItemTablePerspectiveIDColName).
+					Eq(pid),
+			).Desc())
 		}
 
 		sqSelect = sqSelect.Order(orderExprs...)
@@ -1704,7 +1830,8 @@ func (s *Repository) NameData(
 		for _, pictureItemRow := range pictureItemRows {
 			itemIDs[pictureItemRow.ItemID] = util.NullInt32ToScalar(pictureItemRow.CropLeft)
 
-			if pictureItemRow.PerspectiveID.Valid && util.Contains(prefixedPerspectives, pictureItemRow.PerspectiveID.Int32) {
+			if pictureItemRow.PerspectiveID.Valid &&
+				util.Contains(prefixedPerspectives, pictureItemRow.PerspectiveID.Int32) {
 				perspectiveIDs[pictureItemRow.PerspectiveID.Int32] = true
 			}
 		}
@@ -1912,7 +2039,9 @@ func (s *Repository) queueIndexImage(ctx context.Context, id int64, url string) 
 	})
 }
 
-func (s *Repository) DfDistanceSelect(options *query.DfDistanceListOptions) (*goqu.SelectDataset, error) {
+func (s *Repository) DfDistanceSelect(
+	options *query.DfDistanceListOptions,
+) (*goqu.SelectDataset, error) {
 	alias := query.DfDistanceAlias
 	aliasTable := goqu.T(alias)
 
@@ -1943,7 +2072,9 @@ func (s *Repository) DfDistances(
 	return rows, err
 }
 
-func (s *Repository) PictureModerVoteSelect(options *query.PictureModerVoteListOptions) *goqu.SelectDataset {
+func (s *Repository) PictureModerVoteSelect(
+	options *query.PictureModerVoteListOptions,
+) *goqu.SelectDataset {
 	alias := query.PictureModerVoteAlias
 	aliasTable := goqu.T(alias)
 
@@ -2059,9 +2190,13 @@ func (s *Repository) CorrectFileNames(ctx context.Context, id int64) error {
 			return err
 		}
 
-		err = s.imageStorage.ChangeImageName(ctx, int(picture.ImageID.Int64), storage.GenerateOptions{
-			Pattern: pattern,
-		})
+		err = s.imageStorage.ChangeImageName(
+			ctx,
+			int(picture.ImageID.Int64),
+			storage.GenerateOptions{
+				Pattern: pattern,
+			},
+		)
 		if err != nil {
 			return err
 		}
@@ -2076,7 +2211,9 @@ func (s *Repository) FileNamePattern(ctx context.Context, pictureID int64) (stri
 		maxPictureItems   = 3
 	)
 
-	random := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), uint64(time.Now().UnixNano()))) //nolint: gosec
+	random := rand.New( //nolint: gosec
+		rand.NewPCG(uint64(time.Now().UnixNano()), uint64(time.Now().UnixNano())),
+	)
 	result := strconv.FormatInt(int64((random.Uint32()%maxFilenameNumber)+1), 10)
 
 	filenameFilter := validation.StringSanitizeFilename{}
@@ -2259,7 +2396,11 @@ func (s *Repository) ClearQueue(ctx context.Context) error {
 			goqu.Or(
 				schema.PictureTableRemovingDateCol.IsNull(),
 				schema.PictureTableRemovingDateCol.Lt(
-					goqu.Func("DATE_SUB", goqu.Func("CURDATE"), goqu.L("INTERVAL ? DAY", queueLifetimeDays)),
+					goqu.Func(
+						"DATE_SUB",
+						goqu.Func("CURDATE"),
+						goqu.L("INTERVAL ? DAY", queueLifetimeDays),
+					),
 				),
 			),
 		).
@@ -2322,7 +2463,12 @@ func (s *Repository) ClearQueue(ctx context.Context) error {
 }
 
 func (s *Repository) AddPictureFromReader(
-	ctx context.Context, handle io.ReadSeeker, userID int64, remoteAddr string, itemID int64, perspectiveID int32,
+	ctx context.Context,
+	handle io.ReadSeeker,
+	userID int64,
+	remoteAddr string,
+	itemID int64,
+	perspectiveID int32,
 	replacePictureID int64,
 ) (int64, error) {
 	imageConfig, imageType, err := image.DecodeConfig(handle)
@@ -2335,8 +2481,14 @@ func (s *Repository) AddPictureFromReader(
 	}
 
 	if imageConfig.Width < ImageMinWidth || imageConfig.Height < ImageMinHeight {
-		return 0, fmt.Errorf("%w: minimum expected size for image should be '%dx%d' but '%dx%d' detected",
-			ErrInvalidImage, ImageMinWidth, ImageMinHeight, imageConfig.Width, imageConfig.Height)
+		return 0, fmt.Errorf(
+			"%w: minimum expected size for image should be '%dx%d' but '%dx%d' detected",
+			ErrInvalidImage,
+			ImageMinWidth,
+			ImageMinHeight,
+			imageConfig.Width,
+			imageConfig.Height,
+		)
 	}
 
 	if imageConfig.Width > ImageMaxWidth || imageConfig.Height > ImageMaxHeight {
@@ -2374,10 +2526,15 @@ func (s *Repository) AddPictureFromReader(
 
 	ctx = context.WithoutCancel(ctx)
 
-	imageID, err := s.imageStorage.AddImageFromReader(ctx, handle, "picture", storage.GenerateOptions{
-		Extension: ext,
-		Pattern:   fmt.Sprintf("autowp_%d", rand.Int()), //nolint: gosec
-	})
+	imageID, err := s.imageStorage.AddImageFromReader(
+		ctx,
+		handle,
+		"picture",
+		storage.GenerateOptions{
+			Extension: ext,
+			Pattern:   fmt.Sprintf("autowp_%d", rand.Int()), //nolint: gosec
+		},
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -2394,17 +2551,20 @@ func (s *Repository) AddPictureFromReader(
 
 	// add record to db
 	res, err := s.db.Insert(schema.PictureTable).Rows(goqu.Record{
-		schema.PictureTableImageIDColName:          imageID,
-		schema.PictureTableWidthColName:            imageConfig.Width,
-		schema.PictureTableHeightColName:           imageConfig.Height,
-		schema.PictureTableOwnerIDColName:          userID,
-		schema.PictureTableAddDateColName:          goqu.Func("NOW"),
-		schema.PictureTableFilesizeColName:         img.FileSize(),
-		schema.PictureTableStatusColName:           schema.PictureStatusInbox,
-		schema.PictureTableRemovingDateColName:     nil,
-		schema.PictureTableIPColName:               goqu.Func("INET6_ATON", remoteAddr),
-		schema.PictureTableIdentityColName:         identity,
-		schema.PictureTableReplacePictureIDColName: sql.NullInt64{Int64: replacePictureID, Valid: replacePictureID > 0},
+		schema.PictureTableImageIDColName:      imageID,
+		schema.PictureTableWidthColName:        imageConfig.Width,
+		schema.PictureTableHeightColName:       imageConfig.Height,
+		schema.PictureTableOwnerIDColName:      userID,
+		schema.PictureTableAddDateColName:      goqu.Func("NOW"),
+		schema.PictureTableFilesizeColName:     img.FileSize(),
+		schema.PictureTableStatusColName:       schema.PictureStatusInbox,
+		schema.PictureTableRemovingDateColName: nil,
+		schema.PictureTableIPColName:           goqu.Func("INET6_ATON", remoteAddr),
+		schema.PictureTableIdentityColName:     identity,
+		schema.PictureTableReplacePictureIDColName: sql.NullInt64{
+			Int64: replacePictureID,
+			Valid: replacePictureID > 0,
+		},
 	}).Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
@@ -2416,7 +2576,13 @@ func (s *Repository) AddPictureFromReader(
 	}
 
 	if itemID > 0 {
-		_, err = s.CreatePictureItem(ctx, pictureID, itemID, schema.PictureItemTypeContent, perspectiveID)
+		_, err = s.CreatePictureItem(
+			ctx,
+			pictureID,
+			itemID,
+			schema.PictureItemTypeContent,
+			perspectiveID,
+		)
 		if err != nil {
 			return 0, err
 		}
@@ -2464,32 +2630,12 @@ func (s *Repository) AddPictureFromReader(
 		return 0, err
 	}
 
-	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb")
-	if err != nil {
-		return 0, err
-	}
-
-	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-medium")
-	if err != nil {
-		return 0, err
-	}
-
-	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-medium")
-	if err != nil {
-		return 0, err
-	}
-
-	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-large")
-	if err != nil {
-		return 0, err
-	}
-
-	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-gallery-full")
-	if err != nil {
-		return 0, err
-	}
-
 	err = s.queueIndexImage(ctx, pictureID, img.Src())
+	if err != nil {
+		return 0, err
+	}
+
+	err = s.generateDefaultThumbnails(ctx, imageID)
 	if err != nil {
 		return 0, err
 	}
@@ -2497,8 +2643,42 @@ func (s *Repository) AddPictureFromReader(
 	return pictureID, nil
 }
 
+func (s *Repository) generateDefaultThumbnails(ctx context.Context, imageID int) error {
+	_, err := s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb")
+	if err != nil {
+		return err
+	}
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-medium")
+	if err != nil {
+		return err
+	}
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-medium")
+	if err != nil {
+		return err
+	}
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-thumb-large")
+	if err != nil {
+		return err
+	}
+
+	_, err = s.imageStorage.FormattedImage(ctx, imageID, "picture-gallery-full")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Repository) processEXIF(
-	ctx context.Context, pictureID int64, imageType string, handle io.ReadSeeker, fileSize int64, userID int64,
+	ctx context.Context,
+	pictureID int64,
+	imageType string,
+	handle io.ReadSeeker,
+	fileSize int64,
+	userID int64,
 ) error {
 	extractedEXIF, err := extractFromEXIF(imageType, handle, fileSize)
 	if err != nil {
@@ -2518,7 +2698,9 @@ func (s *Repository) processEXIF(
 
 	if extractedEXIF.gpsInfo != nil {
 		set[schema.PictureTablePointColName] = goqu.Func(
-			"Point", extractedEXIF.gpsInfo.Longitude.Decimal(), extractedEXIF.gpsInfo.Latitude.Decimal(),
+			"Point",
+			extractedEXIF.gpsInfo.Longitude.Decimal(),
+			extractedEXIF.gpsInfo.Latitude.Decimal(),
 		)
 	}
 

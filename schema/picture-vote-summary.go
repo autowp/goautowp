@@ -11,7 +11,13 @@ const (
 
 var (
 	PictureVoteSummaryTable             = goqu.T(PictureVoteSummaryTableName)
-	PictureVoteSummaryTablePictureIDCol = PictureVoteSummaryTable.Col(PictureVoteSummaryTablePictureIDColName)
-	PictureVoteSummaryTablePositiveCol  = PictureVoteSummaryTable.Col(PictureVoteSummaryTablePositiveColName)
-	PictureVoteSummaryTableNegativeCol  = PictureVoteSummaryTable.Col(PictureVoteSummaryTableNegativeColName)
+	PictureVoteSummaryTablePictureIDCol = PictureVoteSummaryTable.Col(
+		PictureVoteSummaryTablePictureIDColName,
+	)
+	PictureVoteSummaryTablePositiveCol = PictureVoteSummaryTable.Col(
+		PictureVoteSummaryTablePositiveColName,
+	)
+	PictureVoteSummaryTableNegativeCol = PictureVoteSummaryTable.Col(
+		PictureVoteSummaryTableNegativeColName,
+	)
 )

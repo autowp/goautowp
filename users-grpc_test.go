@@ -77,7 +77,12 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	imageStorage, err := cnt.ImageStorage()
 	require.NoError(t, err)
 
-	imageID, err := imageStorage.AddImageFromFilepath(ctx, TestImageFile, "user", storage.GenerateOptions{})
+	imageID, err := imageStorage.AddImageFromFilepath(
+		ctx,
+		TestImageFile,
+		"user",
+		storage.GenerateOptions{},
+	)
 	require.NoError(t, err)
 
 	_, err = db.Update(schema.UserTable).
@@ -93,12 +98,23 @@ func TestCreateUpdateDeleteUser(t *testing.T) {
 	require.NotEmpty(t, user.GetAvatar().GetSrc())
 	require.Equal(t, name+" "+lastName, user.GetName())
 
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	_, err = client.DeleteUser(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIDeleteUserRequest{UserId: me.GetId(), Password: password},
 	)
 	require.NoError(t, err)
@@ -115,31 +131,57 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
 	// tester
-	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	testerToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		testUsername,
+		testPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
 	// tester (me)
 	tester, err := client.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+testerToken.AccessToken,
+		),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
 
 	// disable
 	_, err = client.DisableUserCommentsNotifications(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIUserPreferencesRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 
 	res1, err := client.GetUserPreferences(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIUserPreferencesRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
@@ -147,13 +189,21 @@ func TestSetDisabledUserCommentsNotifications(t *testing.T) {
 
 	// enable
 	_, err = client.EnableUserCommentsNotifications(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIUserPreferencesRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
 
 	res2, err := client.GetUserPreferences(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+adminToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+adminToken.AccessToken,
+		),
 		&APIUserPreferencesRequest{UserId: tester.GetId()},
 	)
 	require.NoError(t, err)
@@ -171,13 +221,24 @@ func TestGetOnlineUsers(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	// tester
-	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	testerToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		testUsername,
+		testPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
 	// touch last_online for tester
 	_, err = client.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+testerToken.AccessToken,
+		),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
@@ -224,13 +285,24 @@ func TestGetUsersSearch(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	// tester
-	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	testerToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		testUsername,
+		testPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
 	// touch last_online for tester
 	me, err := client.Me(
-		metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctx,
+			authorizationHeader,
+			bearerPrefix+testerToken.AccessToken,
+		),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)
@@ -257,11 +329,22 @@ func TestUpdateUser(t *testing.T) {
 	client := NewUsersClient(conn)
 
 	// tester
-	testerToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, testUsername, testPassword)
+	testerToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		testUsername,
+		testPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, testerToken)
 
-	ctx = metadata.AppendToOutgoingContext(ctx, authorizationHeader, bearerPrefix+testerToken.AccessToken)
+	ctx = metadata.AppendToOutgoingContext(
+		ctx,
+		authorizationHeader,
+		bearerPrefix+testerToken.AccessToken,
+	)
 
 	me, err := client.Me(
 		ctx,

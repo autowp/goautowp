@@ -57,8 +57,11 @@ var AutobanProfiles = []AutobanProfile{
 	{
 		Limit:  tenMinsLimit,
 		Reason: "ten min limit",
-		Group:  []interface{}{schema.IPMonitoringTableHourCol, schema.IPMonitoringTableTenminuteCol},
-		Time:   time.Hour * hoursInDay,
+		Group: []interface{}{
+			schema.IPMonitoringTableHourCol,
+			schema.IPMonitoringTableTenminuteCol,
+		},
+		Time: time.Hour * hoursInDay,
 	},
 	{
 		Limit:  oneMinLimit,
@@ -84,7 +87,11 @@ type APITrafficWhitelistPostRequestBody struct {
 }
 
 // NewTraffic constructor.
-func NewTraffic(pool *goqu.Database, autowpDB *goqu.Database, ban *ban.Repository) (*Traffic, error) {
+func NewTraffic(
+	pool *goqu.Database,
+	autowpDB *goqu.Database,
+	ban *ban.Repository,
+) (*Traffic, error) {
 	monitoring, err := NewMonitoring(pool)
 	if err != nil {
 		logrus.Error(err)

@@ -51,14 +51,20 @@ func (s *ItemParentListOptions) Clone() *ItemParentListOptions {
 	return &clone
 }
 
-func (s *ItemParentListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, bool, error) {
+func (s *ItemParentListOptions) Select(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, bool, error) {
 	return s.apply(
 		alias,
 		db.Select().From(schema.ItemParentTable.As(alias)),
 	)
 }
 
-func (s *ItemParentListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *ItemParentListOptions) CountSelect(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	sqSelect, groupBy, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
@@ -105,7 +111,10 @@ func (s *ItemParentListOptions) JoinToItemIDAndApply(
 	)
 }
 
-func (s *ItemParentListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, bool, error) {
+func (s *ItemParentListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, bool, error) {
 	var (
 		err         error
 		groupBy     = false
@@ -146,11 +155,15 @@ func (s *ItemParentListOptions) apply(alias string, sqSelect *goqu.SelectDataset
 	}
 
 	if s.Catname != "" {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableCatnameColName).Eq(s.Catname))
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemParentTableCatnameColName).Eq(s.Catname),
+		)
 	}
 
 	if s.NotManualCatname {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemParentTableManualCatnameColName).IsFalse())
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemParentTableManualCatnameColName).IsFalse(),
+		)
 	}
 
 	sqSelect, subGroupBy, err = s.ParentItems.JoinToIDAndApply(

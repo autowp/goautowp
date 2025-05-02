@@ -293,7 +293,12 @@ func (s *Container) CommentsRepository() (*comments.Repository, error) {
 			return nil, err
 		}
 
-		s.commentsRepository = comments.NewRepository(db, usersRepository, messagingRepository, s.HostsManager())
+		s.commentsRepository = comments.NewRepository(
+			db,
+			usersRepository,
+			messagingRepository,
+			s.HostsManager(),
+		)
 	}
 
 	return s.commentsRepository, nil
@@ -592,8 +597,19 @@ func (s *Container) PicturesREST() (*PicturesREST, error) {
 		i18nBundle,
 	)
 
-	return NewPicturesREST(auth, picturesRepo, pictureNameFormatter, s.HostsManager(), imageStorage, itemOfDayRepo,
-		itemsRepo, usersRepo, commentsRepo, df, ts), nil
+	return NewPicturesREST(
+		auth,
+		picturesRepo,
+		pictureNameFormatter,
+		s.HostsManager(),
+		imageStorage,
+		itemOfDayRepo,
+		itemsRepo,
+		usersRepo,
+		commentsRepo,
+		df,
+		ts,
+	), nil
 }
 
 func (s *Container) PublicRouter(ctx context.Context) (http.HandlerFunc, error) {
@@ -848,8 +864,15 @@ func (s *Container) TelegramService() (*telegram.Service, error) {
 			return nil, err
 		}
 
-		s.telegramService = telegram.NewService(s.Config().Telegram, db, s.HostsManager(), userRepository,
-			itemRepository, messagingRepository, picturesRepository)
+		s.telegramService = telegram.NewService(
+			s.Config().Telegram,
+			db,
+			s.HostsManager(),
+			userRepository,
+			itemRepository,
+			messagingRepository,
+			picturesRepository,
+		)
 	}
 
 	return s.telegramService, nil
@@ -979,7 +1002,11 @@ func (s *Container) ItemsRepository() (*items.Repository, error) {
 		}
 
 		s.itemsRepository = items.NewRepository(
-			db, cfg.MostsMinCarsCount, s.Config().ContentLanguages, textStorageRepository, imageStorage,
+			db,
+			cfg.MostsMinCarsCount,
+			s.Config().ContentLanguages,
+			textStorageRepository,
+			imageStorage,
 		)
 	}
 
@@ -1301,9 +1328,24 @@ func (s *Container) ItemsGRPCServer() (*ItemsGRPCServer, error) {
 		}
 
 		s.itemsGrpcServer = NewItemsGRPCServer(
-			repo, db, auth, s.Config().ContentLanguages, textStorageRepository, extractor, i18n,
-			attrsRepository, picturesRepository, idx, events, usersRepository, messagingRepository, s.HostsManager(),
-			s.ItemParentExtractor(), s.NewLinkExtractor(), itemOfDayRepository, redisClient,
+			repo,
+			db,
+			auth,
+			s.Config().ContentLanguages,
+			textStorageRepository,
+			extractor,
+			i18n,
+			attrsRepository,
+			picturesRepository,
+			idx,
+			events,
+			usersRepository,
+			messagingRepository,
+			s.HostsManager(),
+			s.ItemParentExtractor(),
+			s.NewLinkExtractor(),
+			itemOfDayRepository,
+			redisClient,
 		)
 	}
 
@@ -1505,9 +1547,21 @@ func (s *Container) PicturesGRPCServer() (*PicturesGRPCServer, error) {
 			return nil, err
 		}
 
-		s.picturesGrpcServer = NewPicturesGRPCServer(repository, auth, events, s.HostsManager(),
-			messagingRepository, userRepository, duplicateFinder, textStorageRepository, tg, itemRepository,
-			commentsRepository, s.PictureExtractor(), s.PictureItemExtractor(), s.ItemExtractor(),
+		s.picturesGrpcServer = NewPicturesGRPCServer(
+			repository,
+			auth,
+			events,
+			s.HostsManager(),
+			messagingRepository,
+			userRepository,
+			duplicateFinder,
+			textStorageRepository,
+			tg,
+			itemRepository,
+			commentsRepository,
+			s.PictureExtractor(),
+			s.PictureItemExtractor(),
+			s.ItemExtractor(),
 		)
 	}
 

@@ -44,13 +44,24 @@ func TestStatisticsPulse(t *testing.T) {
 	require.NoError(t, err)
 
 	kc := cnt.Keycloak()
-	token, err := kc.Login(ctxTimeout, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	token, err := kc.Login(
+		ctxTimeout,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, token)
 
 	usersClient := NewUsersClient(conn)
 	user, err := usersClient.Me(
-		metadata.AppendToOutgoingContext(ctxTimeout, authorizationHeader, bearerPrefix+token.AccessToken),
+		metadata.AppendToOutgoingContext(
+			ctxTimeout,
+			authorizationHeader,
+			bearerPrefix+token.AccessToken,
+		),
 		&APIMeRequest{},
 	)
 	require.NoError(t, err)

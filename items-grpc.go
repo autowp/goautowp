@@ -150,7 +150,10 @@ func NewItemsGRPCServer(
 	}
 }
 
-func (s *ItemsGRPCServer) GetBrands(ctx context.Context, in *GetBrandsRequest) (*APIBrandsList, error) {
+func (s *ItemsGRPCServer) GetBrands(
+	ctx context.Context,
+	in *GetBrandsRequest,
+) (*APIBrandsList, error) {
 	if s == nil {
 		return nil, status.Error(codes.Internal, "self not initialized")
 	}
@@ -397,7 +400,8 @@ func (s *ItemsGRPCServer) Item(ctx context.Context, in *ItemRequest) (*APIItem, 
 
 	fields := convertItemFields(in.GetFields())
 
-	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) &&
+	if fields != nil &&
+		(fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) &&
 		!isModer {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
@@ -426,7 +430,9 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemL
 	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 
 	fields := convertItemFields(in.GetFields())
-	if fields != nil && (fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) && !isModer {
+	if fields != nil &&
+		(fields.InboxPicturesCount || fields.CommentsAttentionsCount || fields.Meta) &&
+		!isModer {
 		return nil, status.Error(codes.PermissionDenied, "PermissionDenied")
 	}
 
@@ -502,13 +508,19 @@ func (s *ItemsGRPCServer) List(ctx context.Context, in *ItemsRequest) (*APIItemL
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetContentLanguages(_ context.Context, _ *emptypb.Empty) (*APIContentLanguages, error) {
+func (s *ItemsGRPCServer) GetContentLanguages(
+	_ context.Context,
+	_ *emptypb.Empty,
+) (*APIContentLanguages, error) {
 	return &APIContentLanguages{
 		Languages: s.contentLanguages,
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *ItemLinksRequest) (*APIItemLink, error) {
+func (s *ItemsGRPCServer) GetItemLink(
+	ctx context.Context,
+	in *ItemLinksRequest,
+) (*APIItemLink, error) {
 	options, err := convertLinkListOptions(in.GetOptions())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -522,10 +534,14 @@ func (s *ItemsGRPCServer) GetItemLink(ctx context.Context, in *ItemLinksRequest)
 	return s.linkExtractor.ExtractRow(row), nil
 }
 
-func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *ItemLinksRequest) (*ItemLinks, error) {
+func (s *ItemsGRPCServer) GetItemLinks(
+	ctx context.Context,
+	in *ItemLinksRequest,
+) (*ItemLinks, error) {
 	inOptions := in.GetOptions()
 
-	if inOptions.GetItemParentCacheDescendant() == nil && inOptions.GetId() == 0 && inOptions.GetItemId() == 0 {
+	if inOptions.GetItemParentCacheDescendant() == nil && inOptions.GetId() == 0 &&
+		inOptions.GetItemId() == 0 {
 		return nil, status.Error(codes.PermissionDenied, "ItemLinkOptions is almost empty")
 	}
 
@@ -544,7 +560,10 @@ func (s *ItemsGRPCServer) GetItemLinks(ctx context.Context, in *ItemLinksRequest
 	}, nil
 }
 
-func (s *ItemsGRPCServer) DeleteItemLink(ctx context.Context, in *APIItemLinkRequest) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) DeleteItemLink(
+	ctx context.Context,
+	in *APIItemLinkRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -564,7 +583,10 @@ func (s *ItemsGRPCServer) DeleteItemLink(ctx context.Context, in *APIItemLinkReq
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (*APICreateItemLinkResponse, error) {
+func (s *ItemsGRPCServer) CreateItemLink(
+	ctx context.Context,
+	in *APIItemLink,
+) (*APICreateItemLinkResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -603,7 +625,10 @@ func (s *ItemsGRPCServer) CreateItemLink(ctx context.Context, in *APIItemLink) (
 	}, nil
 }
 
-func (s *ItemsGRPCServer) UpdateItemLink(ctx context.Context, in *APIItemLink) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) UpdateItemLink(
+	ctx context.Context,
+	in *APIItemLink,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -646,7 +671,10 @@ func (s *APIItemLink) Validate() ([]*errdetails.BadRequest_FieldViolation, error
 	)
 
 	nameInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+		Filters: []validation.FilterInterface{
+			&validation.StringTrimFilter{},
+			&validation.StringSingleSpaces{},
+		},
 		Validators: []validation.ValidatorInterface{
 			&validation.StringLength{Min: 0, Max: itemLinkNameMaxLength},
 		},
@@ -737,7 +765,9 @@ func (s *ItemsGRPCServer) GetItemVehicleTypes(
 	}
 
 	if in.GetVehicleTypeId() != 0 {
-		sqlSelect = sqlSelect.Where(schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(in.GetVehicleTypeId()))
+		sqlSelect = sqlSelect.Where(
+			schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(in.GetVehicleTypeId()),
+		)
 	}
 
 	rows, err := sqlSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
@@ -817,7 +847,10 @@ func (s *ItemsGRPCServer) GetItemVehicleType(
 	return &ivt, nil
 }
 
-func (s *ItemsGRPCServer) CreateItemVehicleType(ctx context.Context, in *APIItemVehicleType) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) CreateItemVehicleType(
+	ctx context.Context,
+	in *APIItemVehicleType,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -922,7 +955,10 @@ func (s *ItemsGRPCServer) GetItemLanguages(
 	}, nil
 }
 
-func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLanguage) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) UpdateItemLanguage(
+	ctx context.Context,
+	in *ItemLanguage,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -970,8 +1006,12 @@ func (s *ItemsGRPCServer) UpdateItemLanguage(ctx context.Context, in *ItemLangua
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		author, err := s.usersRepository.User(ctx, &query.UserListOptions{ID: userCtx.UserID}, users.UserFields{},
-			users.OrderByNone)
+		author, err := s.usersRepository.User(
+			ctx,
+			&query.UserListOptions{ID: userCtx.UserID},
+			users.UserFields{},
+			users.OrderByNone,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1217,7 +1257,10 @@ func (s *ItemLanguage) Validate() ([]*errdetails.BadRequest_FieldViolation, erro
 	)
 
 	nameInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+		Filters: []validation.FilterInterface{
+			&validation.StringTrimFilter{},
+			&validation.StringSingleSpaces{},
+		},
 		Validators: []validation.ValidatorInterface{
 			&validation.StringLength{Min: 0, Max: schema.ItemLanguageNameMaxLength},
 		},
@@ -1284,7 +1327,10 @@ func (s *ItemParentLanguage) Validate() ([]*errdetails.BadRequest_FieldViolation
 	)
 
 	nameInputFilter := validation.InputFilter{
-		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}, &validation.StringSingleSpaces{}},
+		Filters: []validation.FilterInterface{
+			&validation.StringTrimFilter{},
+			&validation.StringSingleSpaces{},
+		},
 		Validators: []validation.ValidatorInterface{
 			&validation.StringLength{Min: 0, Max: schema.ItemLanguageNameMaxLength},
 		},
@@ -1305,7 +1351,10 @@ func (s *ItemParentLanguage) Validate() ([]*errdetails.BadRequest_FieldViolation
 	return result, nil
 }
 
-func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemParentLanguage) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) SetItemParentLanguage(
+	ctx context.Context,
+	in *ItemParentLanguage,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1324,7 +1373,14 @@ func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemPar
 		return nil, wrapFieldViolations(InvalidParams)
 	}
 
-	err = s.repository.SetItemParentLanguage(ctx, in.GetParentId(), in.GetItemId(), in.GetLanguage(), in.GetName(), false)
+	err = s.repository.SetItemParentLanguage(
+		ctx,
+		in.GetParentId(),
+		in.GetItemId(),
+		in.GetLanguage(),
+		in.GetName(),
+		false,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1332,7 +1388,10 @@ func (s *ItemsGRPCServer) SetItemParentLanguage(ctx context.Context, in *ItemPar
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequest) (*NewItemsResponse, error) {
+func (s *ItemsGRPCServer) GetBrandNewItems(
+	ctx context.Context,
+	in *NewItemsRequest,
+) (*NewItemsResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1358,7 +1417,13 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	extractedBrand, err := s.extractor.Extract(ctx, brand, &ItemFields{Brandicon: true}, lang, userCtx)
+	extractedBrand, err := s.extractor.Extract(
+		ctx,
+		brand,
+		&ItemFields{Brandicon: true},
+		lang,
+		userCtx,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1383,7 +1448,13 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang, userCtx)
+		extractedItem, err := s.extractor.Extract(
+			ctx,
+			car,
+			&ItemFields{NameHtml: true},
+			lang,
+			userCtx,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1397,7 +1468,10 @@ func (s *ItemsGRPCServer) GetBrandNewItems(ctx context.Context, in *NewItemsRequ
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) (*NewItemsResponse, error) {
+func (s *ItemsGRPCServer) GetNewItems(
+	ctx context.Context,
+	in *NewItemsRequest,
+) (*NewItemsResponse, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1430,12 +1504,18 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 
 	carList, _, err := s.repository.List(ctx, &query.ItemListOptions{
 		Language: lang,
-		TypeID:   []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDEngine},
+		TypeID: []schema.ItemTableItemTypeID{
+			schema.ItemTableItemTypeIDVehicle,
+			schema.ItemTableItemTypeIDEngine,
+		},
 		ItemParentParent: &query.ItemParentListOptions{
 			LinkedInDays: daysLimit,
 			ItemParentCacheAncestorByParentID: &query.ItemParentCacheListOptions{
 				ItemsByParentID: &query.ItemListOptions{
-					TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDFactory},
+					TypeID: []schema.ItemTableItemTypeID{
+						schema.ItemTableItemTypeIDCategory,
+						schema.ItemTableItemTypeIDFactory,
+					},
 					ItemID: category.ID,
 				},
 			},
@@ -1451,7 +1531,13 @@ func (s *ItemsGRPCServer) GetNewItems(ctx context.Context, in *NewItemsRequest) 
 	extractedItems := make([]*APIItem, 0, len(carList))
 
 	for _, car := range carList {
-		extractedItem, err := s.extractor.Extract(ctx, car, &ItemFields{NameHtml: true}, lang, userCtx)
+		extractedItem, err := s.extractor.Extract(
+			ctx,
+			car,
+			&ItemFields{NameHtml: true},
+			lang,
+			userCtx,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -1503,7 +1589,10 @@ func (s *ItemsGRPCServer) formatItemNameHTML(row *items.Item, lang string) (stri
 	return nameFormatter.FormatHTML(s.formatterOptions(row), lang)
 }
 
-func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) CreateItemParent(
+	ctx context.Context,
+	in *ItemParent,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1593,7 +1682,13 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.notifyItemParentSubscribers(ctx, item, parentItem, userCtx.UserID, "pm/user-%s-adds-item-%s-%s-to-item-%s-%s")
+	err = s.notifyItemParentSubscribers(
+		ctx,
+		item,
+		parentItem,
+		userCtx.UserID,
+		"pm/user-%s-adds-item-%s-%s-to-item-%s-%s",
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1601,7 +1696,10 @@ func (s *ItemsGRPCServer) CreateItemParent(ctx context.Context, in *ItemParent) 
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ItemsGRPCServer) UpdateItemParent(ctx context.Context, in *ItemParent) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) UpdateItemParent(
+	ctx context.Context,
+	in *ItemParent,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1621,7 +1719,12 @@ func (s *ItemsGRPCServer) UpdateItemParent(ctx context.Context, in *ItemParent) 
 	}
 
 	_, err = s.repository.UpdateItemParent(
-		ctx, in.GetItemId(), in.GetParentId(), convertItemParentType(in.GetType()), in.GetCatname(), false,
+		ctx,
+		in.GetItemId(),
+		in.GetParentId(),
+		convertItemParentType(in.GetType()),
+		in.GetCatname(),
+		false,
 	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1630,7 +1733,10 @@ func (s *ItemsGRPCServer) UpdateItemParent(ctx context.Context, in *ItemParent) 
 	return &emptypb.Empty{}, nil
 }
 
-func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemParentRequest) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) DeleteItemParent(
+	ctx context.Context,
+	in *DeleteItemParentRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1699,7 +1805,13 @@ func (s *ItemsGRPCServer) DeleteItemParent(ctx context.Context, in *DeleteItemPa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.notifyItemParentSubscribers(ctx, item, parent, userCtx.UserID, "pm/user-%s-removed-item-%s-%s-from-item-%s-%s")
+	err = s.notifyItemParentSubscribers(
+		ctx,
+		item,
+		parent,
+		userCtx.UserID,
+		"pm/user-%s-removed-item-%s-%s-from-item-%s-%s",
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1723,7 +1835,12 @@ func (s *ItemsGRPCServer) notifyItemParentSubscribers(
 		return err
 	}
 
-	author, err := s.usersRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
+	author, err := s.usersRepository.User(
+		ctx,
+		&query.UserListOptions{ID: userID},
+		users.UserFields{},
+		users.OrderByNone,
+	)
 	if err != nil {
 		return err
 	}
@@ -1744,13 +1861,20 @@ func (s *ItemsGRPCServer) notifyItemParentSubscribers(
 			return err
 		}
 
-		err = s.messagingRepository.CreateMessageFromTemplate(ctx, 0, subscriber.ID, messageID, map[string]interface{}{
-			"UserURL":            frontend.UserURL(uri, author.ID, author.Identity),
-			"ItemName":           itemNameText,
-			"ItemModerURL":       frontend.ItemModerURL(uri, item.ID),
-			"ParentItemName":     parentNameText,
-			"ParentItemModerURL": frontend.ItemModerURL(uri, parent.ID),
-		}, subscriber.Language)
+		err = s.messagingRepository.CreateMessageFromTemplate(
+			ctx,
+			0,
+			subscriber.ID,
+			messageID,
+			map[string]interface{}{
+				"UserURL":            frontend.UserURL(uri, author.ID, author.Identity),
+				"ItemName":           itemNameText,
+				"ItemModerURL":       frontend.ItemModerURL(uri, item.ID),
+				"ParentItemName":     parentNameText,
+				"ParentItemModerURL": frontend.ItemModerURL(uri, parent.ID),
+			},
+			subscriber.Language,
+		)
 		if err != nil {
 			return err
 		}
@@ -1759,7 +1883,10 @@ func (s *ItemsGRPCServer) notifyItemParentSubscribers(
 	return nil
 }
 
-func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParentRequest) (*emptypb.Empty, error) {
+func (s *ItemsGRPCServer) MoveItemParent(
+	ctx context.Context,
+	in *MoveItemParentRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -1771,7 +1898,12 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 
 	ctx = context.WithoutCancel(ctx)
 
-	success, err := s.repository.MoveItemParent(ctx, in.GetItemId(), in.GetParentId(), in.GetDestParentId())
+	success, err := s.repository.MoveItemParent(
+		ctx,
+		in.GetItemId(),
+		in.GetParentId(),
+		in.GetDestParentId(),
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -1804,7 +1936,8 @@ func (s *ItemsGRPCServer) MoveItemParent(ctx context.Context, in *MoveItemParent
 		}
 
 		newParent, err := s.repository.Item(
-			ctx, &query.ItemListOptions{ItemID: in.GetDestParentId(), Language: EventsDefaultLanguage},
+			ctx,
+			&query.ItemListOptions{ItemID: in.GetDestParentId(), Language: EventsDefaultLanguage},
 			&items.ItemFields{NameText: true},
 		)
 		if err != nil {
@@ -1924,7 +2057,14 @@ func (s *ItemsGRPCServer) notifyItemSubscribers(
 			return err
 		}
 
-		err = s.messagingRepository.CreateMessageFromTemplate(ctx, 0, subscriber.ID, messageID, data, subscriber.Language)
+		err = s.messagingRepository.CreateMessageFromTemplate(
+			ctx,
+			0,
+			subscriber.ID,
+			messageID,
+			data,
+			subscriber.Language,
+		)
 		if err != nil {
 			return err
 		}
@@ -2082,27 +2222,42 @@ func (s *ItemsGRPCServer) carSections(
 ) ([]*APIBrandSection, error) {
 	sectionsPresets := []SectionPreset{
 		{
-			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+			ItemTypeID: []schema.ItemTableItemTypeID{
+				schema.ItemTableItemTypeIDVehicle,
+				schema.ItemTableItemTypeIDBrand,
+			},
 		},
 		{
-			Name:       "catalogue/section/moto",
-			CarTypeID:  items.VehicleTypeIDMoto,
-			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+			Name:      "catalogue/section/moto",
+			CarTypeID: items.VehicleTypeIDMoto,
+			ItemTypeID: []schema.ItemTableItemTypeID{
+				schema.ItemTableItemTypeIDVehicle,
+				schema.ItemTableItemTypeIDBrand,
+			},
 		},
 		{
-			Name:       "catalogue/section/buses",
-			CarTypeID:  items.VehicleTypeIDBus,
-			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+			Name:      "catalogue/section/buses",
+			CarTypeID: items.VehicleTypeIDBus,
+			ItemTypeID: []schema.ItemTableItemTypeID{
+				schema.ItemTableItemTypeIDVehicle,
+				schema.ItemTableItemTypeIDBrand,
+			},
 		},
 		{
-			Name:       "catalogue/section/trucks",
-			CarTypeID:  items.VehicleTypeIDTruck,
-			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+			Name:      "catalogue/section/trucks",
+			CarTypeID: items.VehicleTypeIDTruck,
+			ItemTypeID: []schema.ItemTableItemTypeID{
+				schema.ItemTableItemTypeIDVehicle,
+				schema.ItemTableItemTypeIDBrand,
+			},
 		},
 		{
-			Name:       "catalogue/section/tractors",
-			CarTypeID:  items.VehicleTypeIDTractor,
-			ItemTypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDVehicle, schema.ItemTableItemTypeIDBrand},
+			Name:      "catalogue/section/tractors",
+			CarTypeID: items.VehicleTypeIDTractor,
+			ItemTypeID: []schema.ItemTableItemTypeID{
+				schema.ItemTableItemTypeIDVehicle,
+				schema.ItemTableItemTypeIDBrand,
+			},
 		},
 		{
 			Name:       "catalogue/section/engines",
@@ -2208,7 +2363,10 @@ func (s *ItemsGRPCServer) carSectionGroups(
 	return groups, nil
 }
 
-func (s *ItemsGRPCServer) GetItemParent(ctx context.Context, in *ItemParentsRequest) (*ItemParent, error) {
+func (s *ItemsGRPCServer) GetItemParent(
+	ctx context.Context,
+	in *ItemParentsRequest,
+) (*ItemParent, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -2244,7 +2402,13 @@ func (s *ItemsGRPCServer) GetItemParent(ctx context.Context, in *ItemParentsRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res, err := s.itemParentExtractor.ExtractRow(ctx, row, in.GetFields(), in.GetLanguage(), userCtx)
+	res, err := s.itemParentExtractor.ExtractRow(
+		ctx,
+		row,
+		in.GetFields(),
+		in.GetLanguage(),
+		userCtx,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2297,7 +2461,13 @@ func (s *ItemsGRPCServer) GetItemParents(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	res, err := s.itemParentExtractor.ExtractRows(ctx, rows, in.GetFields(), in.GetLanguage(), userCtx)
+	res, err := s.itemParentExtractor.ExtractRows(
+		ctx,
+		rows,
+		in.GetFields(),
+		in.GetLanguage(),
+		userCtx,
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2324,7 +2494,10 @@ func (s *ItemsGRPCServer) GetItemParents(
 	}, nil
 }
 
-func (s *ItemsGRPCServer) GetItemOfDay(ctx context.Context, in *ItemOfDayRequest) (*ItemOfDay, error) {
+func (s *ItemsGRPCServer) GetItemOfDay(
+	ctx context.Context,
+	in *ItemOfDayRequest,
+) (*ItemOfDay, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -2466,7 +2639,9 @@ func (s *ItemsGRPCServer) GetTopSpecsContributions(
 			},
 			Twins: &ItemsRequest{},
 			PreviewPictures: &PreviewPicturesRequest{
-				Pictures:          &PicturesRequest{Fields: &PictureFields{ThumbMedium: true, NameText: true}},
+				Pictures: &PicturesRequest{
+					Fields: &PictureFields{ThumbMedium: true, NameText: true},
+				},
 				PerspectivePageId: 1,
 			},
 			ChildsCount:           true,
@@ -2790,7 +2965,11 @@ func (s *ItemsGRPCServer) CreateItem(ctx context.Context, in *APIItem) (*ItemID,
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	item, err := s.repository.Item(ctx, &query.ItemListOptions{ItemID: itemID}, &items.ItemFields{NameText: true})
+	item, err := s.repository.Item(
+		ctx,
+		&query.ItemListOptions{ItemID: itemID},
+		&items.ItemFields{NameText: true},
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -2831,8 +3010,11 @@ func (s *ItemsGRPCServer) UpdateItem( //nolint: maintidx
 	values := in.GetItem()
 	mask := in.GetUpdateMask()
 
-	item, err := s.repository.Item(ctx, &query.ItemListOptions{ItemID: values.GetId(), Language: EventsDefaultLanguage},
-		&items.ItemFields{Meta: true})
+	item, err := s.repository.Item(
+		ctx,
+		&query.ItemListOptions{ItemID: values.GetId(), Language: EventsDefaultLanguage},
+		&items.ItemFields{Meta: true},
+	)
 	if err != nil {
 		if errors.Is(err, items.ErrItemNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -3032,8 +3214,11 @@ func (s *ItemsGRPCServer) UpdateItem( //nolint: maintidx
 	}
 
 	if notifyMeta {
-		item, err = s.repository.Item(ctx, &query.ItemListOptions{ItemID: item.ID, Language: EventsDefaultLanguage},
-			&items.ItemFields{NameText: true, Meta: true})
+		item, err = s.repository.Item(
+			ctx,
+			&query.ItemListOptions{ItemID: item.ID, Language: EventsDefaultLanguage},
+			&items.ItemFields{NameText: true, Meta: true},
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -3041,7 +3226,12 @@ func (s *ItemsGRPCServer) UpdateItem( //nolint: maintidx
 		newData := item
 		htmlChanges := make([]string, 0)
 
-		changes, err := s.buildChangesMessage(ctx, oldData.ItemRow, newData.ItemRow, EventsDefaultLanguage)
+		changes, err := s.buildChangesMessage(
+			ctx,
+			oldData.ItemRow,
+			newData.ItemRow,
+			EventsDefaultLanguage,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -3069,8 +3259,12 @@ func (s *ItemsGRPCServer) UpdateItem( //nolint: maintidx
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		user, err := s.usersRepository.User(ctx, &query.UserListOptions{ID: userCtx.UserID}, users.UserFields{},
-			users.OrderByNone)
+		user, err := s.usersRepository.User(
+			ctx,
+			&query.UserListOptions{ID: userCtx.UserID},
+			users.UserFields{},
+			users.OrderByNone,
+		)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -3130,7 +3324,11 @@ func (s *ItemsGRPCServer) translateNullBool(value sql.NullBool, lang string) (st
 	return s.translateBool(value.Bool, lang)
 }
 
-func (s *ItemsGRPCServer) boolChange(oldValue, newValue bool, msg string, lang string) (string, error) {
+func (s *ItemsGRPCServer) boolChange(
+	oldValue, newValue bool,
+	msg string,
+	lang string,
+) (string, error) {
 	if oldValue == newValue {
 		return "", nil
 	}
@@ -3156,8 +3354,13 @@ func (s *ItemsGRPCServer) boolChange(oldValue, newValue bool, msg string, lang s
 	})
 }
 
-func (s *ItemsGRPCServer) nullBoolChange(oldValue, newValue sql.NullBool, msg string, lang string) (string, error) {
-	if oldValue.Valid != newValue.Valid || oldValue.Valid && newValue.Valid && (oldValue.Bool != newValue.Bool) {
+func (s *ItemsGRPCServer) nullBoolChange(
+	oldValue, newValue sql.NullBool,
+	msg string,
+	lang string,
+) (string, error) {
+	if oldValue.Valid != newValue.Valid ||
+		oldValue.Valid && newValue.Valid && (oldValue.Bool != newValue.Bool) {
 		from, err := s.translateNullBool(oldValue, lang)
 		if err != nil {
 			return "", err
@@ -3182,7 +3385,11 @@ func (s *ItemsGRPCServer) nullBoolChange(oldValue, newValue sql.NullBool, msg st
 	return "", nil
 }
 
-func (s *ItemsGRPCServer) nullInt16Change(oldValue, newValue sql.NullInt16, msg string, lang string) (string, error) {
+func (s *ItemsGRPCServer) nullInt16Change(
+	oldValue, newValue sql.NullInt16,
+	msg string,
+	lang string,
+) (string, error) {
 	from := util.NullInt16ToScalar(oldValue)
 	to := util.NullInt16ToScalar(newValue)
 
@@ -3201,7 +3408,11 @@ func (s *ItemsGRPCServer) nullInt16Change(oldValue, newValue sql.NullInt16, msg 
 	})
 }
 
-func (s *ItemsGRPCServer) nullInt32Change(oldValue, newValue sql.NullInt32, msg string, lang string) (string, error) {
+func (s *ItemsGRPCServer) nullInt32Change(
+	oldValue, newValue sql.NullInt32,
+	msg string,
+	lang string,
+) (string, error) {
 	from := util.NullInt32ToScalar(oldValue)
 	to := util.NullInt32ToScalar(newValue)
 
@@ -3220,14 +3431,22 @@ func (s *ItemsGRPCServer) nullInt32Change(oldValue, newValue sql.NullInt32, msg 
 	})
 }
 
-func (s *ItemsGRPCServer) nullStringChange(oldValue, newValue sql.NullString, msg string, lang string) (string, error) {
+func (s *ItemsGRPCServer) nullStringChange(
+	oldValue, newValue sql.NullString,
+	msg string,
+	lang string,
+) (string, error) {
 	from := util.NullStringToString(oldValue)
 	to := util.NullStringToString(newValue)
 
 	return s.stringChange(from, to, msg, lang)
 }
 
-func (s *ItemsGRPCServer) stringChange(oldValue, newValue string, msg string, lang string) (string, error) {
+func (s *ItemsGRPCServer) stringChange(
+	oldValue, newValue string,
+	msg string,
+	lang string,
+) (string, error) {
 	if oldValue == newValue {
 		return "", nil
 	}
@@ -3248,7 +3467,12 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 ) ([]string, error) {
 	changes := make([]string, 0)
 
-	change, err := s.stringChange(oldData.Name, newData.Name, "moder/vehicle/changes/name-%s-%s", lang)
+	change, err := s.stringChange(
+		oldData.Name,
+		newData.Name,
+		"moder/vehicle/changes/name-%s-%s",
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -3257,7 +3481,12 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 		changes = append(changes, change)
 	}
 
-	change, err = s.nullStringChange(oldData.Catname, newData.Catname, "moder/vehicle/changes/catname-%s-%s", lang)
+	change, err = s.nullStringChange(
+		oldData.Catname,
+		newData.Catname,
+		"moder/vehicle/changes/catname-%s-%s",
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -3266,7 +3495,12 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 		changes = append(changes, change)
 	}
 
-	change, err = s.stringChange(oldData.Body, newData.Body, "moder/vehicle/changes/body-%s-%s", lang)
+	change, err = s.stringChange(
+		oldData.Body,
+		newData.Body,
+		"moder/vehicle/changes/body-%s-%s",
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -3295,7 +3529,12 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 		changes = append(changes, change)
 	}
 
-	change, err = s.nullInt32Change(oldData.EndYear, newData.EndYear, "moder/vehicle/changes/to/year-%s-%s", lang)
+	change, err = s.nullInt32Change(
+		oldData.EndYear,
+		newData.EndYear,
+		"moder/vehicle/changes/to/year-%s-%s",
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -3304,7 +3543,12 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 		changes = append(changes, change)
 	}
 
-	change, err = s.nullInt16Change(oldData.EndMonth, newData.EndMonth, "moder/vehicle/changes/to/month-%s-%s", lang)
+	change, err = s.nullInt16Change(
+		oldData.EndMonth,
+		newData.EndMonth,
+		"moder/vehicle/changes/to/month-%s-%s",
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -3313,7 +3557,12 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 		changes = append(changes, change)
 	}
 
-	change, err = s.nullBoolChange(oldData.Today, newData.Today, "moder/vehicle/changes/to/today-%s-%s", lang)
+	change, err = s.nullBoolChange(
+		oldData.Today,
+		newData.Today,
+		"moder/vehicle/changes/to/today-%s-%s",
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -3342,7 +3591,12 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 		changes = append(changes, change)
 	}
 
-	change, err = s.boolChange(oldData.IsConcept, newData.IsConcept, "moder/vehicle/changes/is-concept-%s-%s", lang)
+	change, err = s.boolChange(
+		oldData.IsConcept,
+		newData.IsConcept,
+		"moder/vehicle/changes/is-concept-%s-%s",
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -3450,7 +3704,12 @@ func (s *ItemsGRPCServer) buildChangesMessage( //nolint: maintidx
 		changes = append(changes, change)
 	}
 
-	change, err = s.boolChange(oldData.SpecInherit, newData.SpecInherit, "moder/vehicle/changes/spec-inherit-%s-%s", lang)
+	change, err = s.boolChange(
+		oldData.SpecInherit,
+		newData.SpecInherit,
+		"moder/vehicle/changes/spec-inherit-%s-%s",
+		lang,
+	)
 	if err != nil {
 		return nil, err
 	}

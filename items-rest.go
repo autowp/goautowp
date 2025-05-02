@@ -126,7 +126,10 @@ func (s *ItemsREST) postLogoAction(ctx *gin.Context) {
 			"invalid_params": gin.H{itemLogoFileField: map[string]string{
 				"fileImageSizeTooSmall": fmt.Sprintf(
 					"Minimum expected size for image should be '%dx%d' but '%dx%d' detected",
-					items.ItemLogoMinWidth, items.ItemLogoMinHeight, imageConfig.Width, imageConfig.Height,
+					items.ItemLogoMinWidth,
+					items.ItemLogoMinHeight,
+					imageConfig.Width,
+					imageConfig.Height,
 				),
 			}},
 		})

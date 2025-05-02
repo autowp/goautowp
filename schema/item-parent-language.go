@@ -12,12 +12,22 @@ const (
 )
 
 var (
-	ItemParentLanguageTable            = goqu.T(ItemParentLanguageTableName)
-	ItemParentLanguageTableItemIDCol   = ItemParentLanguageTable.Col(ItemParentLanguageTableItemIDColName)
-	ItemParentLanguageTableParentIDCol = ItemParentLanguageTable.Col(ItemParentLanguageTableParentIDColName)
-	ItemParentLanguageTableLanguageCol = ItemParentLanguageTable.Col(ItemParentLanguageTableLanguageColName)
-	ItemParentLanguageTableNameCol     = ItemParentLanguageTable.Col(ItemParentLanguageTableNameColName)
-	ItemParentLanguageTableIsAutoCol   = ItemParentLanguageTable.Col(ItemParentLanguageTableIsAutoColName)
+	ItemParentLanguageTable          = goqu.T(ItemParentLanguageTableName)
+	ItemParentLanguageTableItemIDCol = ItemParentLanguageTable.Col(
+		ItemParentLanguageTableItemIDColName,
+	)
+	ItemParentLanguageTableParentIDCol = ItemParentLanguageTable.Col(
+		ItemParentLanguageTableParentIDColName,
+	)
+	ItemParentLanguageTableLanguageCol = ItemParentLanguageTable.Col(
+		ItemParentLanguageTableLanguageColName,
+	)
+	ItemParentLanguageTableNameCol = ItemParentLanguageTable.Col(
+		ItemParentLanguageTableNameColName,
+	)
+	ItemParentLanguageTableIsAutoCol = ItemParentLanguageTable.Col(
+		ItemParentLanguageTableIsAutoColName,
+	)
 )
 
 type ItemParentLanguageRow struct {

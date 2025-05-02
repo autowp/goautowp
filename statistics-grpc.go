@@ -185,7 +185,10 @@ func (s *StatisticsGRPCServer) totalComments(ctx context.Context) (int32, error)
 	return roundTo(int32(result), thousands), nil //nolint: gosec
 }
 
-func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empty) (*AboutDataResponse, error) {
+func (s *StatisticsGRPCServer) GetAboutData(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*AboutDataResponse, error) {
 	response := AboutDataResponse{
 		Developer:      s.aboutConfig.Developer,
 		FrTranslator:   s.aboutConfig.FrTranslator,
@@ -266,7 +269,10 @@ func (s *StatisticsGRPCServer) GetAboutData(ctx context.Context, _ *emptypb.Empt
 	return &response, nil
 }
 
-func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (*PulseResponse, error) {
+func (s *StatisticsGRPCServer) GetPulse(
+	ctx context.Context,
+	in *PulseRequest,
+) (*PulseResponse, error) {
 	var (
 		now                          = time.Now()
 		from, to                     time.Time
@@ -294,7 +300,16 @@ func (s *StatisticsGRPCServer) GetPulse(ctx context.Context, in *PulseRequest) (
 
 	default:
 		from = time.Now().AddDate(0, 0, -1)
-		from = time.Date(from.Year(), from.Month(), from.Day(), from.Hour(), 0, 0, 0, from.Location())
+		from = time.Date(
+			from.Year(),
+			from.Month(),
+			from.Day(),
+			from.Hour(),
+			0,
+			0,
+			0,
+			from.Location(),
+		)
 		to = time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, now.Location())
 		subPeriodTime = time.Hour
 		format = "2006-01-02 15"

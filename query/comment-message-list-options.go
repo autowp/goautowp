@@ -15,14 +15,20 @@ type CommentMessageListOptions struct {
 	PictureItems *PictureItemListOptions
 }
 
-func (s *CommentMessageListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *CommentMessageListOptions) Select(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	return s.apply(
 		alias,
 		db.From(schema.CommentMessageTable.As(alias)),
 	)
 }
 
-func (s *CommentMessageListOptions) CountSelect(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *CommentMessageListOptions) CountSelect(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	sqSelect, err := s.Select(db, alias)
 	if err != nil {
 		return nil, err
@@ -31,7 +37,10 @@ func (s *CommentMessageListOptions) CountSelect(db *goqu.Database, alias string)
 	return sqSelect.Select(goqu.COUNT(goqu.Star())), nil
 }
 
-func (s *CommentMessageListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *CommentMessageListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	var (
 		err        error
 		aliasTable = goqu.T(alias)

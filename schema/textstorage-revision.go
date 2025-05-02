@@ -12,10 +12,20 @@ const (
 )
 
 var (
-	TextstorageRevisionTable             = goqu.T(TextstorageRevisionTableName)
-	TextstorageRevisionTableTextIDCol    = TextstorageRevisionTable.Col(TextstorageRevisionTableTextIDColName)
-	TextstorageRevisionTableRevisionCol  = TextstorageRevisionTable.Col(TextstorageRevisionTableRevisionColName)
-	TextstorageRevisionTableTextCol      = TextstorageRevisionTable.Col(TextstorageRevisionTableTextColName)
-	TextstorageRevisionTableTimestampCol = TextstorageRevisionTable.Col(TextstorageRevisionTableTimestampColName)
-	TextstorageRevisionTableUserIDCol    = TextstorageRevisionTable.Col(TextstorageRevisionTableUserIDColName)
+	TextstorageRevisionTable          = goqu.T(TextstorageRevisionTableName)
+	TextstorageRevisionTableTextIDCol = TextstorageRevisionTable.Col(
+		TextstorageRevisionTableTextIDColName,
+	)
+	TextstorageRevisionTableRevisionCol = TextstorageRevisionTable.Col(
+		TextstorageRevisionTableRevisionColName,
+	)
+	TextstorageRevisionTableTextCol = TextstorageRevisionTable.Col(
+		TextstorageRevisionTableTextColName,
+	)
+	TextstorageRevisionTableTimestampCol = TextstorageRevisionTable.Col(
+		TextstorageRevisionTableTimestampColName,
+	)
+	TextstorageRevisionTableUserIDCol = TextstorageRevisionTable.Col(
+		TextstorageRevisionTableUserIDColName,
+	)
 )

@@ -108,17 +108,23 @@ type YoomoneyConfig struct {
 	Price  string `mapstructure:"price"  yaml:"price"`
 }
 
+type GRPCConfig struct {
+	Listen string `mapstructure:"listen" yaml:"listen"`
+}
+
+type MetricsConfig struct {
+	Listen string `mapstructure:"listen" yaml:"listen"`
+}
+
+type AttrsAttrs struct {
+	AttrsUpdateValuesQueue string `mapstructure:"update_values_queue" yaml:"update_values_queue"`
+}
+
 // Config Application config definition.
 type Config struct {
-	GRPC struct {
-		Listen string `mapstructure:"listen" yaml:"listen"`
-	} `mapstructure:"grpc" yaml:"grpc"`
-	Metrics struct {
-		Listen string `mapstructure:"listen" yaml:"listen"`
-	} `mapstructure:"metrics" yaml:"metrics"`
-	Attrs struct {
-		AttrsUpdateValuesQueue string `mapstructure:"update_values_queue" yaml:"update_values_queue"`
-	} `mapstructure:"attrs" yaml:"attrs"`
+	GRPC               GRPCConfig                `mapstructure:"grpc"                 yaml:"grpc"`
+	Metrics            MetricsConfig             `mapstructure:"metrics"              yaml:"metrics"`
+	Attrs              AttrsAttrs                `mapstructure:"attrs"                yaml:"attrs"`
 	PublicRest         RestConfig                `mapstructure:"public-rest"          yaml:"public-rest"`
 	DuplicateFinder    DuplicateFinderConfig     `mapstructure:"duplicate_finder"     yaml:"duplicate_finder"`
 	AutowpDSN          string                    `mapstructure:"autowp-dsn"           yaml:"autowp-dsn"`

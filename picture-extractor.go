@@ -34,7 +34,11 @@ func NewPictureExtractor(container *Container) *PictureExtractor {
 }
 
 func (s *PictureExtractor) Extract(
-	ctx context.Context, row *schema.PictureRow, fields *PictureFields, lang string, userCtx UserContext,
+	ctx context.Context,
+	row *schema.PictureRow,
+	fields *PictureFields,
+	lang string,
+	userCtx UserContext,
 ) (*Picture, error) {
 	result, err := s.ExtractRows(ctx, []*schema.PictureRow{row}, fields, lang, userCtx)
 	if err != nil {
@@ -56,7 +60,12 @@ func (s *PictureExtractor) preloadTopicsStat(
 		return nil, err
 	}
 
-	stats, err := commentsRepository.TopicsStatForUser(ctx, schema.CommentMessageTypeIDPictures, itemIDs, userID)
+	stats, err := commentsRepository.TopicsStatForUser(
+		ctx,
+		schema.CommentMessageTypeIDPictures,
+		itemIDs,
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +74,11 @@ func (s *PictureExtractor) preloadTopicsStat(
 }
 
 func (s *PictureExtractor) ExtractRows( //nolint: maintidx
-	ctx context.Context, rows []*schema.PictureRow, fields *PictureFields, lang string, userCtx UserContext,
+	ctx context.Context,
+	rows []*schema.PictureRow,
+	fields *PictureFields,
+	lang string,
+	userCtx UserContext,
 ) ([]*Picture, error) {
 	isModer := util.Contains(userCtx.Roles, users.RoleModer)
 
@@ -170,7 +183,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			if img, ok := images[int(row.ImageID.Int64)]; ok {
 				resultRow.Cropped = img.CropHeight() > 0 && img.CropWidth() > 0
 				if resultRow.GetCropped() {
-					resultRow.CropResolution = fmt.Sprintf("%d×%d", img.CropWidth(), img.CropHeight())
+					resultRow.CropResolution = fmt.Sprintf(
+						"%d×%d",
+						img.CropWidth(),
+						img.CropHeight(),
+					)
 				}
 			}
 		}
@@ -222,7 +239,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetThumbMedium() && row.ImageID.Valid {
-			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-medium")
+			image, err := imageStorage.FormattedImage(
+				ctx,
+				int(row.ImageID.Int64),
+				"picture-thumb-medium",
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -231,7 +252,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetThumbLarge() && row.ImageID.Valid {
-			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-thumb-large")
+			image, err := imageStorage.FormattedImage(
+				ctx,
+				int(row.ImageID.Int64),
+				"picture-thumb-large",
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -240,7 +265,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetImageGalleryFull() && row.ImageID.Valid {
-			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-gallery-full")
+			image, err := imageStorage.FormattedImage(
+				ctx,
+				int(row.ImageID.Int64),
+				"picture-gallery-full",
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -249,8 +278,13 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetImageGallery() && row.ImageID.Valid {
-			if img, ok := images[int(row.ImageID.Int64)]; ok && img.CropHeight() > 0 && img.CropWidth() > 0 {
-				image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-gallery")
+			if img, ok := images[int(row.ImageID.Int64)]; ok && img.CropHeight() > 0 &&
+				img.CropWidth() > 0 {
+				image, err := imageStorage.FormattedImage(
+					ctx,
+					int(row.ImageID.Int64),
+					"picture-gallery",
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -260,7 +294,11 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 		}
 
 		if fields.GetPreviewLarge() && row.ImageID.Valid {
-			image, err := imageStorage.FormattedImage(ctx, int(row.ImageID.Int64), "picture-preview-large")
+			image, err := imageStorage.FormattedImage(
+				ctx,
+				int(row.ImageID.Int64),
+				"picture-preview-large",
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -335,7 +373,13 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			extractor := s.container.PictureItemExtractor()
 
-			res, err := extractor.ExtractRows(ctx, piRows, pictureItemRequest.GetFields(), lang, userCtx)
+			res, err := extractor.ExtractRows(
+				ctx,
+				piRows,
+				pictureItemRequest.GetFields(),
+				lang,
+				userCtx,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -358,14 +402,24 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 			ddOptions.SrcPictureID = row.ID
 
-			ddRows, err := picturesRepository.DfDistances(ctx, ddOptions, dfDistanceRequest.GetLimit())
+			ddRows, err := picturesRepository.DfDistances(
+				ctx,
+				ddOptions,
+				dfDistanceRequest.GetLimit(),
+			)
 			if err != nil {
 				return nil, err
 			}
 
 			dfDistanceExtractor := s.container.DfDistanceExtractor()
 
-			res, err := dfDistanceExtractor.ExtractRows(ctx, ddRows, dfDistanceRequest.GetFields(), lang, userCtx)
+			res, err := dfDistanceExtractor.ExtractRows(
+				ctx,
+				ddRows,
+				dfDistanceRequest.GetFields(),
+				lang,
+				userCtx,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -421,7 +475,12 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 
 					exifStr += "<p>[" + html.EscapeString(key) + "]"
 					for name, val := range section {
-						exifStr += "<br />" + html.EscapeString(name) + ": " + fmt.Sprintf("%v", val)
+						exifStr += "<br />" + html.EscapeString(
+							name,
+						) + ": " + fmt.Sprintf(
+							"%v",
+							val,
+						)
 					}
 
 					exifStr += "</p>"
@@ -525,14 +584,18 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			resultRow.Rights = &PictureRights{
-				Move:      util.Contains(userCtx.Roles, users.RolePicturesModer),
-				Unaccept:  (row.Status == schema.PictureStatusAccepted) && util.Contains(userCtx.Roles, users.RolePicturesModer),
-				Accept:    canAccept && util.Contains(userCtx.Roles, users.RolePicturesModer),
-				Restore:   (row.Status == schema.PictureStatusRemoving) && util.Contains(userCtx.Roles, users.RoleAdmin),
-				Normalize: (row.Status == schema.PictureStatusInbox) && util.Contains(userCtx.Roles, users.RolePicturesModer),
-				Flop:      (row.Status == schema.PictureStatusInbox) && util.Contains(userCtx.Roles, users.RolePicturesModer),
-				Crop:      util.Contains(userCtx.Roles, users.RolePicturesModer),
-				Delete:    canDelete,
+				Move: util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Unaccept: (row.Status == schema.PictureStatusAccepted) &&
+					util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Accept: canAccept && util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Restore: (row.Status == schema.PictureStatusRemoving) &&
+					util.Contains(userCtx.Roles, users.RoleAdmin),
+				Normalize: (row.Status == schema.PictureStatusInbox) &&
+					util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Flop: (row.Status == schema.PictureStatusInbox) &&
+					util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Crop:   util.Contains(userCtx.Roles, users.RolePicturesModer),
+				Delete: canDelete,
 			}
 		}
 
@@ -585,7 +648,13 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.PrevNew, err = s.Extract(ctx, prevNewPicture, sFields, lang, userCtx)
+				resultRow.Siblings.PrevNew, err = s.Extract(
+					ctx,
+					prevNewPicture,
+					sFields,
+					lang,
+					userCtx,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -600,7 +669,13 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 			}
 
 			if err == nil {
-				resultRow.Siblings.NextNew, err = s.Extract(ctx, nextNewPicture, sFields, lang, userCtx)
+				resultRow.Siblings.NextNew, err = s.Extract(
+					ctx,
+					nextNewPicture,
+					sFields,
+					lang,
+					userCtx,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -649,7 +724,13 @@ func (s *PictureExtractor) ExtractRows( //nolint: maintidx
 				if total < maxPaginatorLength {
 					filter.Limit = uint32(total) //nolint: gosec
 
-					paginatorPictures, _, err := picturesRepository.Pictures(ctx, filter, nil, orderBy, false)
+					paginatorPictures, _, err := picturesRepository.Pictures(
+						ctx,
+						filter,
+						nil,
+						orderBy,
+						false,
+					)
 					if err != nil {
 						return nil, err
 					}
@@ -753,7 +834,11 @@ func (s *PictureExtractor) path(
 	return result, nil
 }
 
-func (s *PictureExtractor) itemRoute(ctx context.Context, itemID int64, targetItemID int64) (*PathTreeItem, error) {
+func (s *PictureExtractor) itemRoute(
+	ctx context.Context,
+	itemID int64,
+	targetItemID int64,
+) (*PathTreeItem, error) {
 	itemsRepository, err := s.container.ItemsRepository()
 	if err != nil {
 		return nil, err

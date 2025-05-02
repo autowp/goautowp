@@ -16,10 +16,14 @@ const (
 
 var (
 	AttrsValuesListTable               = goqu.T(AttrsValuesListTableName)
-	AttrsValuesListTableAttributeIDCol = AttrsValuesListTable.Col(AttrsValuesListTableAttributeIDColName)
-	AttrsValuesListTableItemIDCol      = AttrsValuesListTable.Col(AttrsValuesListTableItemIDColName)
-	AttrsValuesListTableValueCol       = AttrsValuesListTable.Col(AttrsValuesListTableValueColName)
-	AttrsValuesListTableOrderingCol    = AttrsValuesListTable.Col(AttrsValuesListTableOrderingColName)
+	AttrsValuesListTableAttributeIDCol = AttrsValuesListTable.Col(
+		AttrsValuesListTableAttributeIDColName,
+	)
+	AttrsValuesListTableItemIDCol   = AttrsValuesListTable.Col(AttrsValuesListTableItemIDColName)
+	AttrsValuesListTableValueCol    = AttrsValuesListTable.Col(AttrsValuesListTableValueColName)
+	AttrsValuesListTableOrderingCol = AttrsValuesListTable.Col(
+		AttrsValuesListTableOrderingColName,
+	)
 )
 
 type AttrsValuesListRow struct {

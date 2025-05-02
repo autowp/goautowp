@@ -46,7 +46,10 @@ func (s *CommentTopicListOptions) JoinToItemIDAndApply(
 	return s.apply(alias, sqSelect)
 }
 
-func (s *CommentTopicListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *CommentTopicListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	if s.TypeID != 0 {
 		goqu.T(alias).Col(schema.CommentTopicTableItemIDColName).Eq(s.TypeID)
 	}

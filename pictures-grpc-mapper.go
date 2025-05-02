@@ -65,7 +65,9 @@ func convertPictureStatus(status PictureStatus) schema.PictureStatus {
 	return ""
 }
 
-func convertPictureItemListOptions(in *PictureItemListOptions) (*query.PictureItemListOptions, error) {
+func convertPictureItemListOptions(
+	in *PictureItemListOptions,
+) (*query.PictureItemListOptions, error) {
 	if in == nil {
 		return nil, nil //nolint: nilnil
 	}
@@ -94,12 +96,16 @@ func convertPictureItemListOptions(in *PictureItemListOptions) (*query.PictureIt
 		return nil, err
 	}
 
-	result.ItemParentCacheAncestor, err = convertItemParentCacheListOptions(in.GetItemParentCacheAncestor())
+	result.ItemParentCacheAncestor, err = convertItemParentCacheListOptions(
+		in.GetItemParentCacheAncestor(),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	result.PictureItemByPictureID, err = convertPictureItemListOptions(in.GetPictureItemByPictureId())
+	result.PictureItemByPictureID, err = convertPictureItemListOptions(
+		in.GetPictureItemByPictureId(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +113,9 @@ func convertPictureItemListOptions(in *PictureItemListOptions) (*query.PictureIt
 	return &result, nil
 }
 
-func convertItemVehicleTypeListOptions(in *ItemVehicleTypeListOptions) *query.ItemVehicleTypeListOptions {
+func convertItemVehicleTypeListOptions(
+	in *ItemVehicleTypeListOptions,
+) *query.ItemVehicleTypeListOptions {
 	if in == nil {
 		return nil
 	}
@@ -198,7 +206,9 @@ func convertPictureListOptions(in *PictureListOptions) (*query.PictureListOption
 	return &result, nil
 }
 
-func convertPictureModerVoteListOptions(in *PictureModerVoteListOptions) *query.PictureModerVoteListOptions {
+func convertPictureModerVoteListOptions(
+	in *PictureModerVoteListOptions,
+) *query.PictureModerVoteListOptions {
 	if in == nil {
 		return nil
 	}

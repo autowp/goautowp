@@ -41,7 +41,9 @@ func NewFeedback(
 	}
 }
 
-func (s *Feedback) Create(request CreateFeedbackRequest) ([]*errdetails.BadRequest_FieldViolation, error) {
+func (s *Feedback) Create(
+	request CreateFeedbackRequest,
+) ([]*errdetails.BadRequest_FieldViolation, error) {
 	InvalidParams, err := request.Validate(s.captchaEnabled, request.IP)
 	if err != nil {
 		return nil, err
@@ -51,7 +53,12 @@ func (s *Feedback) Create(request CreateFeedbackRequest) ([]*errdetails.BadReque
 		return InvalidParams, nil
 	}
 
-	message := fmt.Sprintf("Имя: %s\nE-mail: %s\nСообщение:\n%s", request.Name, request.Email, request.Message)
+	message := fmt.Sprintf(
+		"Имя: %s\nE-mail: %s\nСообщение:\n%s",
+		request.Name,
+		request.Email,
+		request.Message,
+	)
 
 	err = s.emailSender.Send(s.config.From, s.config.To, s.config.Subject, message, request.Email)
 
@@ -86,8 +93,11 @@ func (s *CreateFeedbackRequest) Validate(
 	}
 
 	emailInputFilter := validation.InputFilter{
-		Filters:    []validation.FilterInterface{&validation.StringTrimFilter{}},
-		Validators: []validation.ValidatorInterface{&validation.NotEmpty{}, &validation.EmailAddress{}},
+		Filters: []validation.FilterInterface{&validation.StringTrimFilter{}},
+		Validators: []validation.ValidatorInterface{
+			&validation.NotEmpty{},
+			&validation.EmailAddress{},
+		},
 	}
 
 	s.Email, problems, err = emailInputFilter.IsValidString(s.Email)

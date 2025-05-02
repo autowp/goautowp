@@ -43,7 +43,11 @@ func (s *ItemParentExtractor) prefetchItems(
 }
 
 func (s *ItemParentExtractor) ExtractRow(
-	ctx context.Context, row *items.ItemParent, fields *ItemParentFields, lang string, userCtx UserContext,
+	ctx context.Context,
+	row *items.ItemParent,
+	fields *ItemParentFields,
+	lang string,
+	userCtx UserContext,
 ) (*ItemParent, error) {
 	res, err := s.ExtractRows(ctx, []*items.ItemParent{row}, fields, lang, userCtx)
 
@@ -51,7 +55,11 @@ func (s *ItemParentExtractor) ExtractRow(
 }
 
 func (s *ItemParentExtractor) ExtractRows(
-	ctx context.Context, rows []*items.ItemParent, fields *ItemParentFields, lang string, userCtx UserContext,
+	ctx context.Context,
+	rows []*items.ItemParent,
+	fields *ItemParentFields,
+	lang string,
+	userCtx UserContext,
 ) ([]*ItemParent, error) {
 	var err error
 
@@ -115,7 +123,13 @@ func (s *ItemParentExtractor) ExtractRows(
 		if parentFields != nil {
 			itemRow, ok := parentsMap[row.ParentID]
 			if ok && itemRow != nil {
-				resRow.Parent, err = itemExtractor.Extract(ctx, itemRow, parentFields, lang, userCtx)
+				resRow.Parent, err = itemExtractor.Extract(
+					ctx,
+					itemRow,
+					parentFields,
+					lang,
+					userCtx,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -175,7 +189,13 @@ func (s *ItemParentExtractor) ExtractRows(
 			}
 		}
 
-		resRow.ChildDescendantPictures, err = s.extractChildDescendantPictures(ctx, row, fields, lang, userCtx)
+		resRow.ChildDescendantPictures, err = s.extractChildDescendantPictures(
+			ctx,
+			row,
+			fields,
+			lang,
+			userCtx,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -187,7 +207,11 @@ func (s *ItemParentExtractor) ExtractRows(
 }
 
 func (s *ItemParentExtractor) extractChildDescendantPictures(
-	ctx context.Context, row *items.ItemParent, fields *ItemParentFields, lang string, userCtx UserContext,
+	ctx context.Context,
+	row *items.ItemParent,
+	fields *ItemParentFields,
+	lang string,
+	userCtx UserContext,
 ) (*PicturesList, error) {
 	request := fields.GetChildDescendantPictures()
 	if request == nil {
@@ -221,7 +245,13 @@ func (s *ItemParentExtractor) extractChildDescendantPictures(
 
 	pictureListOptions.PictureItem.ItemParentCacheAncestor.ParentID = row.ItemID
 
-	pictureRows, _, err := picturesRepo.Pictures(ctx, pictureListOptions, pictureFields, pictureOrder, false)
+	pictureRows, _, err := picturesRepo.Pictures(
+		ctx,
+		pictureListOptions,
+		pictureFields,
+		pictureOrder,
+		false,
+	)
 	if err != nil {
 		return nil, err
 	}

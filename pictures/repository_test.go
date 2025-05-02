@@ -76,20 +76,45 @@ func repository(t *testing.T) (*goqu.Database, *Repository) {
 	require.NoError(t, err)
 
 	textStorage := textstorage.New(goquDB)
-	itemsRepo := items.NewRepository(goquDB, cfg.MostsMinCarsCount, cfg.ContentLanguages, textStorage, imageStorage)
+	itemsRepo := items.NewRepository(
+		goquDB,
+		cfg.MostsMinCarsCount,
+		cfg.ContentLanguages,
+		textStorage,
+		imageStorage,
+	)
 	keycloak := gocloak.NewClient(cfg.Keycloak.URL)
-	userRepo := users.NewRepository(goquDB, pgGoquDB, cfg.UsersSalt, cfg.Languages, keycloak, cfg.Keycloak,
-		cfg.MessageInterval, imageStorage)
+	userRepo := users.NewRepository(
+		goquDB,
+		pgGoquDB,
+		cfg.UsersSalt,
+		cfg.Languages,
+		keycloak,
+		cfg.Keycloak,
+		cfg.MessageInterval,
+		imageStorage,
+	)
 	i, err := i18nbundle.New()
 	require.NoError(t, err)
 
-	msgRepo := messaging.NewRepository(goquDB, func(_ context.Context, _ int64, _ int64, _ string) error {
-		return nil
-	}, i)
+	msgRepo := messaging.NewRepository(
+		goquDB,
+		func(_ context.Context, _ int64, _ int64, _ string) error {
+			return nil
+		},
+		i,
+	)
 	hostsManager := hosts.NewManager(cfg.Languages)
 	commentsRepo := comments.NewRepository(goquDB, userRepo, msgRepo, hostsManager)
 
-	return goquDB, NewRepository(goquDB, imageStorage, textStorage, itemsRepo, cfg.DuplicateFinder, commentsRepo)
+	return goquDB, NewRepository(
+		goquDB,
+		imageStorage,
+		textStorage,
+		itemsRepo,
+		cfg.DuplicateFinder,
+		commentsRepo,
+	)
 }
 
 func TestImageExif(t *testing.T) {
@@ -108,7 +133,12 @@ func TestImageExif(t *testing.T) {
 	pictureID, err := repo.AddPictureFromReader(ctx, handle, userID, "127.0.0.1", 0, 0, 0)
 	require.NoError(t, err)
 
-	picture, err := repo.Picture(ctx, &query.PictureListOptions{ID: pictureID}, &PictureFields{}, OrderByNone)
+	picture, err := repo.Picture(
+		ctx,
+		&query.PictureListOptions{ID: pictureID},
+		&PictureFields{},
+		OrderByNone,
+	)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 2022, picture.TakenYear.Int16)
@@ -118,7 +148,7 @@ func TestImageExif(t *testing.T) {
 
 	text, err := textStorage.Text(ctx, picture.CopyrightsTextID.Int32)
 	require.NoError(t, err)
-	require.EqualValues(t, "Corey Escobar ©2021 Courtesy of RM Sotheby's", text)
+	require.Equal(t, "Corey Escobar ©2021 Courtesy of RM Sotheby's", text)
 
 	require.False(t, picture.Point.Valid)
 }
@@ -138,7 +168,12 @@ func TestImageExifGPS(t *testing.T) {
 	pictureID, err := repo.AddPictureFromReader(ctx, handle, userID, "127.0.0.1", 0, 0, 0)
 	require.NoError(t, err)
 
-	picture, err := repo.Picture(ctx, &query.PictureListOptions{ID: pictureID}, &PictureFields{}, OrderByNone)
+	picture, err := repo.Picture(
+		ctx,
+		&query.PictureListOptions{ID: pictureID},
+		&PictureFields{},
+		OrderByNone,
+	)
 	require.NoError(t, err)
 
 	require.EqualValues(t, 2008, picture.TakenYear.Int16)

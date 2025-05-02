@@ -63,8 +63,13 @@ type Service struct {
 }
 
 func NewService(
-	config config.TelegramConfig, db *goqu.Database, hostsManager *hosts.Manager, userRepository *users.Repository,
-	itemRepository *items.Repository, messagingRepository *messaging.Repository, picturesRepository *pictures.Repository,
+	config config.TelegramConfig,
+	db *goqu.Database,
+	hostsManager *hosts.Manager,
+	userRepository *users.Repository,
+	itemRepository *items.Repository,
+	messagingRepository *messaging.Repository,
+	picturesRepository *pictures.Repository,
 ) *Service {
 	return &Service{
 		config:              config,
@@ -95,7 +100,12 @@ func (s *Service) getBotAPI() (*tgbotapi.BotAPI, error) {
 	return s.botAPI, nil
 }
 
-func (s *Service) NotifyMessage(ctx context.Context, fromID int64, userID int64, text string) error {
+func (s *Service) NotifyMessage(
+	ctx context.Context,
+	fromID int64,
+	userID int64,
+	text string,
+) error {
 	fromName := "New personal message"
 
 	if fromID > 0 {
@@ -375,12 +385,20 @@ func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Updat
 	}
 
 	if !success || !exists {
-		return s.replyWithMessage(update,
-			fmt.Sprintf("You need to identify your account with /%s command to use that service", commandMe))
+		return s.replyWithMessage(
+			update,
+			fmt.Sprintf(
+				"You need to identify your account with /%s command to use that service",
+				commandMe,
+			),
+		)
 	}
 
 	if len(args) == 0 {
-		return s.replyWithMessage(update, fmt.Sprintf("Please, type brand name. For Example /%s BMW", cmd))
+		return s.replyWithMessage(
+			update,
+			fmt.Sprintf("Please, type brand name. For Example /%s BMW", cmd),
+		)
 	}
 
 	brandRow, err := s.itemRepository.Item(ctx, &query.ItemListOptions{
@@ -421,7 +439,10 @@ func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Updat
 			return err
 		}
 
-		return s.replyWithMessage(update, fmt.Sprintf("Successful unsubscribed from `%s`", brandRow.NameOnly))
+		return s.replyWithMessage(
+			update,
+			fmt.Sprintf("Successful unsubscribed from `%s`", brandRow.NameOnly),
+		)
 	}
 
 	_, err = s.db.Insert(schema.TelegramBrandTable).
@@ -433,7 +454,10 @@ func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Updat
 		OnConflict(goqu.DoUpdate(
 			schema.TelegramBrandTableItemIDColName+","+schema.TelegramBrandTableChatIDColName,
 			goqu.Record{
-				schema.TelegramBrandTableInboxColName: goqu.Func("VALUES", goqu.C(schema.TelegramBrandTableInboxColName)),
+				schema.TelegramBrandTableInboxColName: goqu.Func(
+					"VALUES",
+					goqu.C(schema.TelegramBrandTableInboxColName),
+				),
 			},
 		)).
 		Executor().ExecContext(ctx)
@@ -441,7 +465,10 @@ func (s *Service) handleInboxCommand(ctx context.Context, update *tgbotapi.Updat
 		return err
 	}
 
-	return s.replyWithMessage(update, fmt.Sprintf("Successful subscribed to `%s`", brandRow.NameOnly))
+	return s.replyWithMessage(
+		update,
+		fmt.Sprintf("Successful subscribed to `%s`", brandRow.NameOnly),
+	)
 }
 
 func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update) error {
@@ -458,7 +485,10 @@ func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update)
 	chatID := update.Message.Chat.ID
 
 	if len(args) == 0 {
-		return s.replyWithMessage(update, fmt.Sprintf("Please, type brand name. For Example /%s BMW", cmd))
+		return s.replyWithMessage(
+			update,
+			fmt.Sprintf("Please, type brand name. For Example /%s BMW", cmd),
+		)
 	}
 
 	brandRow, err := s.itemRepository.Item(ctx, &query.ItemListOptions{
@@ -499,7 +529,10 @@ func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update)
 			return err
 		}
 
-		return s.replyWithMessage(update, fmt.Sprintf("Successful unsubscribed from `%s`", brandRow.NameOnly))
+		return s.replyWithMessage(
+			update,
+			fmt.Sprintf("Successful unsubscribed from `%s`", brandRow.NameOnly),
+		)
 	}
 
 	_, err = s.db.Insert(schema.TelegramBrandTable).
@@ -511,7 +544,10 @@ func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update)
 		OnConflict(goqu.DoUpdate(
 			schema.TelegramBrandTableItemIDColName+","+schema.TelegramBrandTableChatIDColName,
 			goqu.Record{
-				schema.TelegramBrandTableNewColName: goqu.Func("VALUES", goqu.C(schema.TelegramBrandTableNewColName)),
+				schema.TelegramBrandTableNewColName: goqu.Func(
+					"VALUES",
+					goqu.C(schema.TelegramBrandTableNewColName),
+				),
 			},
 		)).
 		Executor().ExecContext(ctx)
@@ -519,7 +555,10 @@ func (s *Service) handleNewCommand(ctx context.Context, update *tgbotapi.Update)
 		return err
 	}
 
-	return s.replyWithMessage(update, fmt.Sprintf("Successful subscribed to `%s`", brandRow.NameOnly))
+	return s.replyWithMessage(
+		update,
+		fmt.Sprintf("Successful subscribed to `%s`", brandRow.NameOnly),
+	)
 }
 
 func (s *Service) handleMessagesCommand(ctx context.Context, update *tgbotapi.Update) error {
@@ -547,8 +586,13 @@ func (s *Service) handleMessagesCommand(ctx context.Context, update *tgbotapi.Up
 	}
 
 	if !success || !exists {
-		return s.replyWithMessage(update,
-			fmt.Sprintf("You need to identify your account with /%s command to use that service", commandMe))
+		return s.replyWithMessage(
+			update,
+			fmt.Sprintf(
+				"You need to identify your account with /%s command to use that service",
+				commandMe,
+			),
+		)
 	}
 
 	value := update.Message.CommandArguments() == "on"
@@ -567,12 +611,22 @@ func (s *Service) handleMessagesCommand(ctx context.Context, update *tgbotapi.Up
 	cmd := update.Message.Command()
 
 	if value {
-		return s.replyWithMessage(update,
-			fmt.Sprintf("Subscription to new personal messages is enabled. Send `/%s off` to disable", cmd))
+		return s.replyWithMessage(
+			update,
+			fmt.Sprintf(
+				"Subscription to new personal messages is enabled. Send `/%s off` to disable",
+				cmd,
+			),
+		)
 	}
 
-	return s.replyWithMessage(update,
-		fmt.Sprintf("Subscription to new personal messages is disabled. Send `/%s on` to enable", cmd))
+	return s.replyWithMessage(
+		update,
+		fmt.Sprintf(
+			"Subscription to new personal messages is disabled. Send `/%s on` to enable",
+			cmd,
+		),
+	)
 }
 
 func (s *Service) handleStartCommand(update *tgbotapi.Update) error {
@@ -609,7 +663,9 @@ func (s *Service) handleMeCommand(ctx context.Context, update *tgbotapi.Update) 
 	var telegramChatRow schema.TelegramChatRow
 
 	telegramChatRowFound, err := s.db.Select(
-		schema.TelegramChatTableChatIDCol, schema.TelegramChatTableUserIDCol, schema.TelegramChatTableTokenCol,
+		schema.TelegramChatTableChatIDCol,
+		schema.TelegramChatTableUserIDCol,
+		schema.TelegramChatTableTokenCol,
 	).
 		From(schema.TelegramChatTable).
 		Where(schema.TelegramChatTableChatIDCol.Eq(chatID)).
@@ -628,8 +684,12 @@ func (s *Service) handleMeCommand(ctx context.Context, update *tgbotapi.Update) 
 		}
 
 		if telegramChatRow.UserID.Int64 > 0 {
-			userRow, err := s.userRepository.User(ctx, &query.UserListOptions{ID: telegramChatRow.UserID.Int64},
-				users.UserFields{}, users.OrderByNone)
+			userRow, err := s.userRepository.User(
+				ctx,
+				&query.UserListOptions{ID: telegramChatRow.UserID.Int64},
+				users.UserFields{},
+				users.OrderByNone,
+			)
 			if err != nil {
 				return err
 			}
@@ -645,7 +705,12 @@ func (s *Service) handleMeCommand(ctx context.Context, update *tgbotapi.Update) 
 		return s.replyWithMessage(update, err.Error())
 	}
 
-	userRow, err := s.userRepository.User(ctx, &query.UserListOptions{ID: userID}, users.UserFields{}, users.OrderByNone)
+	userRow, err := s.userRepository.User(
+		ctx,
+		&query.UserListOptions{ID: userID},
+		users.UserFields{},
+		users.OrderByNone,
+	)
 	if err != nil {
 		if errors.Is(err, users.ErrUserNotFound) {
 			return s.replyWithMessage(update, fmt.Sprintf(`User "%s" not found`, args[0]))
@@ -666,7 +731,10 @@ func (s *Service) handleMeCommand(ctx context.Context, update *tgbotapi.Update) 
 			OnConflict(goqu.DoUpdate(
 				schema.TelegramChatTableChatIDColName,
 				goqu.Record{
-					schema.TelegramChatTableTokenColName: goqu.Func("VALUES", goqu.C(schema.TelegramChatTableTokenColName)),
+					schema.TelegramChatTableTokenColName: goqu.Func(
+						"VALUES",
+						goqu.C(schema.TelegramChatTableTokenColName),
+					),
 				},
 			)).
 			Executor().ExecContext(ctx)
@@ -674,8 +742,17 @@ func (s *Service) handleMeCommand(ctx context.Context, update *tgbotapi.Update) 
 			return err
 		}
 
-		err = s.messagingRepository.CreateMessage(ctx, 0, userRow.ID,
-			fmt.Sprintf("To complete identifications type `/%s %d %s` to @autowp_bot", cmd, userRow.ID, token))
+		err = s.messagingRepository.CreateMessage(
+			ctx,
+			0,
+			userRow.ID,
+			fmt.Sprintf(
+				"To complete identifications type `/%s %d %s` to @autowp_bot",
+				cmd,
+				userRow.ID,
+				token,
+			),
+		)
 		if err != nil {
 			return err
 		}
@@ -685,8 +762,12 @@ func (s *Service) handleMeCommand(ctx context.Context, update *tgbotapi.Update) 
 
 	token := args[1]
 
-	if !telegramChatRowFound || !telegramChatRow.Token.Valid || !strings.EqualFold(telegramChatRow.Token.String, token) {
-		return s.replyWithMessage(update, fmt.Sprintf("Token not matched. Try again with `/%s %d`", cmd, userRow.ID))
+	if !telegramChatRowFound || !telegramChatRow.Token.Valid ||
+		!strings.EqualFold(telegramChatRow.Token.String, token) {
+		return s.replyWithMessage(
+			update,
+			fmt.Sprintf("Token not matched. Try again with `/%s %d`", cmd, userRow.ID),
+		)
 	}
 
 	ctx = context.WithoutCancel(ctx)
@@ -786,7 +867,12 @@ func (s *Service) NotifyInbox(ctx context.Context, pictureID int64) error {
 	}
 
 	if len(brandIDs) > 0 {
-		picture, err := s.picturesRepository.Picture(ctx, &query.PictureListOptions{ID: pictureID}, nil, pictures.OrderByNone)
+		picture, err := s.picturesRepository.Picture(
+			ctx,
+			&query.PictureListOptions{ID: pictureID},
+			nil,
+			pictures.OrderByNone,
+		)
 		if err != nil {
 			return err
 		}

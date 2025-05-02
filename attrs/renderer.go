@@ -14,7 +14,11 @@ type Renderer interface {
 }
 
 func unitSuffixHTML(name, abbr string) template.HTML {
-	return ` <span class="unit" title="` + util.HTMLEscapeString(name) + `">` + util.HTMLEscapeString(abbr) + "</span>"
+	return ` <span class="unit" title="` + util.HTMLEscapeString(
+		name,
+	) + `">` + util.HTMLEscapeString(
+		abbr,
+	) + "</span>"
 }
 
 func renderUnitSuffix(attribute *AttributeRow, units map[int64]I18nUnit) template.HTML {
@@ -34,7 +38,11 @@ type BootVolume struct {
 	Max int64
 }
 
-func (s BootVolume) Render(attribute *AttributeRow, values map[int64]string, units map[int64]I18nUnit) template.HTML {
+func (s BootVolume) Render(
+	attribute *AttributeRow,
+	values map[int64]string,
+	units map[int64]I18nUnit,
+) template.HTML {
 	minValue, minValueOk := values[s.Min]
 	maxValue, maxValueOk := values[s.Max]
 
@@ -57,7 +65,11 @@ func (s BootVolume) Render(attribute *AttributeRow, values map[int64]string, uni
 
 type DefaultValue struct{}
 
-func (s DefaultValue) Render(attribute *AttributeRow, values map[int64]string, units map[int64]I18nUnit) template.HTML {
+func (s DefaultValue) Render(
+	attribute *AttributeRow,
+	values map[int64]string,
+	units map[int64]I18nUnit,
+) template.HTML {
 	value, ok := values[attribute.ID]
 	if !ok {
 		return ""
@@ -76,7 +88,11 @@ type EngineConfiguration struct {
 	ValvesCount     int64
 }
 
-func (s EngineConfiguration) Render(_ *AttributeRow, values map[int64]string, _ map[int64]I18nUnit) template.HTML {
+func (s EngineConfiguration) Render(
+	_ *AttributeRow,
+	values map[int64]string,
+	_ map[int64]I18nUnit,
+) template.HTML {
 	cylinders, cylindersOk := values[s.CylindersCount]
 	layout, layoutOk := values[s.CylindersLayout]
 	valves, valvesOk := values[s.ValvesCount]
@@ -109,7 +125,11 @@ type EnginePlacement struct {
 	Orientation int64
 }
 
-func (s EnginePlacement) Render(_ *AttributeRow, values map[int64]string, _ map[int64]I18nUnit) template.HTML {
+func (s EnginePlacement) Render(
+	_ *AttributeRow,
+	values map[int64]string,
+	_ map[int64]I18nUnit,
+) template.HTML {
 	placement, placementOk := values[s.Placement]
 	orientation, orientationOk := values[s.Orientation]
 
@@ -131,7 +151,11 @@ type FuelTank struct {
 	Secondary int64
 }
 
-func (s FuelTank) Render(_ *AttributeRow, values map[int64]string, units map[int64]I18nUnit) template.HTML {
+func (s FuelTank) Render(
+	_ *AttributeRow,
+	values map[int64]string,
+	units map[int64]I18nUnit,
+) template.HTML {
 	primary, primaryOk := values[s.Primary]
 	secondary, secondaryOk := values[s.Secondary]
 
@@ -160,7 +184,11 @@ type Gearbox struct {
 	Name  int64
 }
 
-func (s Gearbox) Render(_ *AttributeRow, values map[int64]string, _ map[int64]I18nUnit) template.HTML {
+func (s Gearbox) Render(
+	_ *AttributeRow,
+	values map[int64]string,
+	_ map[int64]I18nUnit,
+) template.HTML {
 	typeVal, typeOk := values[s.Type]
 	gears, gearsOk := values[s.Gears]
 	name, nameOk := values[s.Name]
@@ -196,7 +224,11 @@ type Wheel struct {
 	Rimwidth   int64
 }
 
-func (s Wheel) Render(_ *AttributeRow, values map[int64]string, _ map[int64]I18nUnit) template.HTML {
+func (s Wheel) Render(
+	_ *AttributeRow,
+	values map[int64]string,
+	_ map[int64]I18nUnit,
+) template.HTML {
 	tyreWidth, tyreWidthOk := values[s.TyreWidth]
 	tyreSeries, tyreSeriesOk := values[s.TyreSeries]
 	radius, radiusOk := values[s.Radius]
@@ -212,7 +244,8 @@ func (s Wheel) Render(_ *AttributeRow, values map[int64]string, _ map[int64]I18n
 	}
 
 	tyreName := ""
-	if tyreWidthOk && len(tyreWidth) > 0 || tyreSeriesOk && len(tyreSeries) > 0 || radiusOk && len(radius) > 0 {
+	if tyreWidthOk && len(tyreWidth) > 0 || tyreSeriesOk && len(tyreSeries) > 0 ||
+		radiusOk && len(radius) > 0 {
 		tyreName = fmt.Sprintf(
 			"%s/%s R%s",
 			util.StringDefault(tyreWidth, "???"),

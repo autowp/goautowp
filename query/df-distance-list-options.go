@@ -31,7 +31,10 @@ func (s *DfDistanceListOptions) Clone() *DfDistanceListOptions {
 	return &clone
 }
 
-func (s *DfDistanceListOptions) Select(db *goqu.Database, alias string) (*goqu.SelectDataset, error) {
+func (s *DfDistanceListOptions) Select(
+	db *goqu.Database,
+	alias string,
+) (*goqu.SelectDataset, error) {
 	return s.apply(
 		alias,
 		db.Select().From(schema.DfDistanceTable.As(alias)),
@@ -54,7 +57,10 @@ func (s *DfDistanceListOptions) JoinToSrcPictureIDAndApply(
 	)
 }
 
-func (s *DfDistanceListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *DfDistanceListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	var err error
 
 	aliasTable := goqu.T(alias)
@@ -62,7 +68,9 @@ func (s *DfDistanceListOptions) apply(alias string, sqSelect *goqu.SelectDataset
 	sqSelect = sqSelect.Where(goqu.T(alias).Col(schema.DfDistanceTableHideColName).IsFalse())
 
 	if s.SrcPictureID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.DfDistanceTableSrcPictureIDColName).Eq(s.SrcPictureID))
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.DfDistanceTableSrcPictureIDColName).Eq(s.SrcPictureID),
+		)
 	}
 
 	sqSelect, err = s.DstPicture.JoinToIDAndApply(

@@ -28,9 +28,15 @@ var (
 	AttrsUserValuesTableUserIDCol      = AttrsUserValuesTable.Col(AttrsUserValuesTableUserIDColName)
 	AttrsUserValuesTableItemIDCol      = AttrsUserValuesTable.Col(AttrsUserValuesTableItemIDColName)
 	AttrsUserValuesTableWeightCol      = AttrsUserValuesTable.Col(AttrsUserValuesTableWeightColName)
-	AttrsUserValuesTableAttributeIDCol = AttrsUserValuesTable.Col(AttrsUserValuesTableAttributeIDColName)
-	AttrsUserValuesTableConflictCol    = AttrsUserValuesTable.Col(AttrsUserValuesTableConflictColName)
-	AttrsUserValuesTableUpdateDateCol  = AttrsUserValuesTable.Col(AttrsUserValuesTableUpdateDateColName)
+	AttrsUserValuesTableAttributeIDCol = AttrsUserValuesTable.Col(
+		AttrsUserValuesTableAttributeIDColName,
+	)
+	AttrsUserValuesTableConflictCol = AttrsUserValuesTable.Col(
+		AttrsUserValuesTableConflictColName,
+	)
+	AttrsUserValuesTableUpdateDateCol = AttrsUserValuesTable.Col(
+		AttrsUserValuesTableUpdateDateColName,
+	)
 )
 
 type AttrsUserValueRow struct {

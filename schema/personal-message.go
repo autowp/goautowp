@@ -19,14 +19,26 @@ const (
 )
 
 var (
-	PersonalMessagesTable                 = goqu.T(PersonalMessagesTableName)
-	PersonalMessagesTableIDCol            = PersonalMessagesTable.Col("id")
-	PersonalMessagesTableAddDatetimeCol   = PersonalMessagesTable.Col(PersonalMessagesTableAddDatetimeColName)
-	PersonalMessagesTableDeletedByFromCol = PersonalMessagesTable.Col(PersonalMessagesTableDeletedByFromColName)
-	PersonalMessagesTableDeletedByToCol   = PersonalMessagesTable.Col(PersonalMessagesTableDeletedByToColName)
-	PersonalMessagesTableFromUserIDCol    = PersonalMessagesTable.Col(PersonalMessagesTableFromUserIDColName)
-	PersonalMessagesTableToUserIDCol      = PersonalMessagesTable.Col(PersonalMessagesTableToUserIDColName)
-	PersonalMessagesTableReadenCol        = PersonalMessagesTable.Col(PersonalMessagesTableReadenColName)
+	PersonalMessagesTable               = goqu.T(PersonalMessagesTableName)
+	PersonalMessagesTableIDCol          = PersonalMessagesTable.Col("id")
+	PersonalMessagesTableAddDatetimeCol = PersonalMessagesTable.Col(
+		PersonalMessagesTableAddDatetimeColName,
+	)
+	PersonalMessagesTableDeletedByFromCol = PersonalMessagesTable.Col(
+		PersonalMessagesTableDeletedByFromColName,
+	)
+	PersonalMessagesTableDeletedByToCol = PersonalMessagesTable.Col(
+		PersonalMessagesTableDeletedByToColName,
+	)
+	PersonalMessagesTableFromUserIDCol = PersonalMessagesTable.Col(
+		PersonalMessagesTableFromUserIDColName,
+	)
+	PersonalMessagesTableToUserIDCol = PersonalMessagesTable.Col(
+		PersonalMessagesTableToUserIDColName,
+	)
+	PersonalMessagesTableReadenCol = PersonalMessagesTable.Col(
+		PersonalMessagesTableReadenColName,
+	)
 )
 
 type PersonalMessageRow struct {

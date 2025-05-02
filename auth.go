@@ -101,7 +101,11 @@ func (s *Auth) ValidateGRPC(ctx context.Context) (UserContext, error) {
 	return s.ValidateToken(ctx, tokenString, ip)
 }
 
-func (s *Auth) ValidateToken(ctx context.Context, tokenString string, ip net.IP) (UserContext, error) {
+func (s *Auth) ValidateToken(
+	ctx context.Context,
+	tokenString string,
+	ip net.IP,
+) (UserContext, error) {
 	res := UserContext{}
 
 	if len(tokenString) == 0 {
@@ -110,7 +114,12 @@ func (s *Auth) ValidateToken(ctx context.Context, tokenString string, ip net.IP)
 
 	var claims users.Claims
 
-	_, err := s.keycloak.DecodeAccessTokenCustomClaims(ctx, tokenString, s.keycloakCfg.Realm, &claims)
+	_, err := s.keycloak.DecodeAccessTokenCustomClaims(
+		ctx,
+		tokenString,
+		s.keycloakCfg.Realm,
+		&claims,
+	)
 	if err != nil {
 		return res, err
 	}

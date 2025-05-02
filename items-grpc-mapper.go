@@ -121,7 +121,9 @@ func convertItemParentListOptions(in *ItemParentListOptions) (*query.ItemParentL
 		return nil, err
 	}
 
-	result.ItemParentParentByChildID, err = convertItemParentListOptions(in.GetItemParentParentByChild())
+	result.ItemParentParentByChildID, err = convertItemParentListOptions(
+		in.GetItemParentParentByChild(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +133,9 @@ func convertItemParentListOptions(in *ItemParentListOptions) (*query.ItemParentL
 		return nil, err
 	}
 
-	result.ItemParentCacheAncestorByChildID, err = convertItemParentCacheListOptions(in.GetItemParentCacheItemByChild())
+	result.ItemParentCacheAncestorByChildID, err = convertItemParentCacheListOptions(
+		in.GetItemParentCacheItemByChild(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +143,9 @@ func convertItemParentListOptions(in *ItemParentListOptions) (*query.ItemParentL
 	return &result, nil
 }
 
-func convertItemParentCacheListOptions(in *ItemParentCacheListOptions) (*query.ItemParentCacheListOptions, error) {
+func convertItemParentCacheListOptions(
+	in *ItemParentCacheListOptions,
+) (*query.ItemParentCacheListOptions, error) {
 	if in == nil {
 		return nil, nil //nolint: nilnil
 	}
@@ -167,7 +173,9 @@ func convertItemParentCacheListOptions(in *ItemParentCacheListOptions) (*query.I
 		return nil, err
 	}
 
-	result.PictureItemsByParentID, err = convertPictureItemListOptions(in.GetPictureItemsByParentId())
+	result.PictureItemsByParentID, err = convertPictureItemListOptions(
+		in.GetPictureItemsByParentId(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +208,9 @@ func convertLinkListOptions(in *ItemLinkListOptions) (*query.LinkListOptions, er
 		Type:   in.GetType(),
 	}
 
-	result.ItemParentCacheDescendant, err = convertItemParentCacheListOptions(in.GetItemParentCacheDescendant())
+	result.ItemParentCacheDescendant, err = convertItemParentCacheListOptions(
+		in.GetItemParentCacheDescendant(),
+	)
 	if err != nil {
 		return nil, err
 	}

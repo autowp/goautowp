@@ -24,15 +24,22 @@ func (s *ItemLanguageListOptions) CountSelect(db *goqu.Database, alias string) *
 	return s.Select(db, alias).Select(goqu.COUNT(goqu.Star()))
 }
 
-func (s *ItemLanguageListOptions) apply(alias string, sqSelect *goqu.SelectDataset) *goqu.SelectDataset {
+func (s *ItemLanguageListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) *goqu.SelectDataset {
 	aliasTable := goqu.T(alias)
 
 	if s.ItemID > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemLanguageTableItemIDColName).Eq(s.ItemID))
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemLanguageTableItemIDColName).Eq(s.ItemID),
+		)
 	}
 
 	if len(s.ExcludeLanguage) > 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemLanguageTableLanguageColName).Neq(s.ExcludeLanguage))
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemLanguageTableLanguageColName).Neq(s.ExcludeLanguage),
+		)
 	}
 
 	return sqSelect

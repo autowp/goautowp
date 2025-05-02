@@ -63,13 +63,18 @@ func (s *ItemVehicleTypeListOptions) JoinToVehicleTypeIDAndApply(
 	return s.apply(alias, sqSelect)
 }
 
-func (s *ItemVehicleTypeListOptions) apply(alias string, sqSelect *goqu.SelectDataset) (*goqu.SelectDataset, error) {
+func (s *ItemVehicleTypeListOptions) apply(
+	alias string,
+	sqSelect *goqu.SelectDataset,
+) (*goqu.SelectDataset, error) {
 	aliasTable := goqu.T(alias)
 
 	var err error
 
 	if s.VehicleTypeID != 0 {
-		sqSelect = sqSelect.Where(aliasTable.Col(schema.ItemVehicleTypeTableVehicleTypeIDColName).Eq(s.VehicleTypeID))
+		sqSelect = sqSelect.Where(
+			aliasTable.Col(schema.ItemVehicleTypeTableVehicleTypeIDColName).Eq(s.VehicleTypeID),
+		)
 	}
 
 	if s.ItemParentCacheAncestor != nil {

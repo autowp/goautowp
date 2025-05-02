@@ -82,7 +82,10 @@ func (s *GRPCServer) GetSpecs(ctx context.Context, _ *emptypb.Empty) (*SpecsItem
 	}, nil
 }
 
-func (s *GRPCServer) GetPerspectives(ctx context.Context, _ *emptypb.Empty) (*PerspectivesItems, error) {
+func (s *GRPCServer) GetPerspectives(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*PerspectivesItems, error) {
 	items, err := s.catalogue.getPerspectives(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -93,7 +96,10 @@ func (s *GRPCServer) GetPerspectives(ctx context.Context, _ *emptypb.Empty) (*Pe
 	}, nil
 }
 
-func (s *GRPCServer) GetPerspectivePages(ctx context.Context, _ *emptypb.Empty) (*PerspectivePagesItems, error) {
+func (s *GRPCServer) GetPerspectivePages(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*PerspectivePagesItems, error) {
 	items, err := s.catalogue.getPerspectivePages(ctx)
 	if err != nil {
 		return nil, err
@@ -120,10 +126,14 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 		return nil, err
 	}
 
-	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/" + brandsSpriteImageFilename
+	parsedURL.Path = "/" + url.PathEscape(
+		s.fileStorageConfig.Bucket,
+	) + "/" + brandsSpriteImageFilename
 	imageURL := parsedURL.String()
 
-	parsedURL.Path = "/" + url.PathEscape(s.fileStorageConfig.Bucket) + "/" + brandsSpriteCSSFilename
+	parsedURL.Path = "/" + url.PathEscape(
+		s.fileStorageConfig.Bucket,
+	) + "/" + brandsSpriteCSSFilename
 	cssURL := parsedURL.String()
 
 	return &BrandIcons{ //nolint:exhaustruct
@@ -132,7 +142,10 @@ func (s *GRPCServer) GetBrandIcons(context.Context, *emptypb.Empty) (*BrandIcons
 	}, nil
 }
 
-func (s *GRPCServer) GetVehicleTypes(ctx context.Context, _ *emptypb.Empty) (*VehicleTypeItems, error) {
+func (s *GRPCServer) GetVehicleTypes(
+	ctx context.Context,
+	_ *emptypb.Empty,
+) (*VehicleTypeItems, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -190,7 +203,10 @@ func (s *GRPCServer) GetIP(ctx context.Context, in *APIGetIPRequest) (*APIIP, er
 	return result, nil
 }
 
-func (s *GRPCServer) CreateFeedback(ctx context.Context, in *APICreateFeedbackRequest) (*emptypb.Empty, error) {
+func (s *GRPCServer) CreateFeedback(
+	ctx context.Context,
+	in *APICreateFeedbackRequest,
+) (*emptypb.Empty, error) {
 	userCtx, err := s.auth.ValidateGRPC(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -233,28 +249,30 @@ func (s *GRPCServer) GetTimezones(context.Context, *emptypb.Empty) (*Timezones, 
 }
 
 func InterceptorLogger(fieldLogger logrus.FieldLogger) logging.Logger {
-	return logging.LoggerFunc(func(_ context.Context, lvl logging.Level, msg string, fields ...any) {
-		fieldsMap := make(map[string]any, len(fields)/2)
-		i := logging.Fields(fields).Iterator()
+	return logging.LoggerFunc(
+		func(_ context.Context, lvl logging.Level, msg string, fields ...any) {
+			fieldsMap := make(map[string]any, len(fields)/2)
+			i := logging.Fields(fields).Iterator()
 
-		for i.Next() {
-			k, v := i.At()
-			fieldsMap[k] = v
-		}
+			for i.Next() {
+				k, v := i.At()
+				fieldsMap[k] = v
+			}
 
-		entry := fieldLogger.WithFields(fieldsMap)
+			entry := fieldLogger.WithFields(fieldsMap)
 
-		switch lvl {
-		case logging.LevelDebug:
-			entry.Debug(msg)
-		case logging.LevelInfo:
-			entry.Info(msg)
-		case logging.LevelWarn:
-			entry.Warn(msg)
-		case logging.LevelError:
-			entry.Error(msg)
-		default:
-			panic(fmt.Sprintf("unknown level %v", lvl))
-		}
-	})
+			switch lvl {
+			case logging.LevelDebug:
+				entry.Debug(msg)
+			case logging.LevelInfo:
+				entry.Info(msg)
+			case logging.LevelWarn:
+				entry.Warn(msg)
+			case logging.LevelError:
+				entry.Error(msg)
+			default:
+				panic(fmt.Sprintf("unknown level %v", lvl))
+			}
+		},
+	)
 }

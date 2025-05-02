@@ -27,7 +27,7 @@ func TestPatternStrategy(t *testing.T) {
 			Pattern:   tc.Pattern,
 			Extension: tc.Extension,
 		})
-		require.EqualValues(t, tc.Result, generated)
+		require.Equal(t, tc.Result, generated)
 	}
 }
 
@@ -41,12 +41,12 @@ func TestSerialStrategy(t *testing.T) {
 		Count:     10,
 		Extension: "png",
 	})
-	require.EqualValues(t, "11.png", generated)
+	require.Equal(t, "11.png", generated)
 
 	generated = strategy.Generate(GenerateOptions{
 		Index:     2,
 		Count:     10,
 		Extension: "png",
 	})
-	require.EqualValues(t, "11_2.png", generated)
+	require.Equal(t, "11_2.png", generated)
 }

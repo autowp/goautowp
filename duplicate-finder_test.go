@@ -25,7 +25,14 @@ func TestDuplicateFinder(t *testing.T) {
 	require.NoError(t, err)
 
 	// admin
-	adminToken, err := kc.Login(ctx, "frontend", "", cfg.Keycloak.Realm, adminUsername, adminPassword)
+	adminToken, err := kc.Login(
+		ctx,
+		"frontend",
+		"",
+		cfg.Keycloak.Realm,
+		adminUsername,
+		adminPassword,
+	)
 	require.NoError(t, err)
 	require.NotNil(t, adminToken)
 
@@ -63,10 +70,13 @@ func TestDuplicateFinder(t *testing.T) {
 
 	var distance int
 
-	success, err = goquDB.Select(schema.DfDistanceTableDistanceCol).From(schema.DfDistanceTable).Where(
-		schema.DfDistanceTableSrcPictureIDCol.Eq(id1),
-		schema.DfDistanceTableDstPictureIDCol.Eq(id2),
-	).ScanValContext(ctx, &distance)
+	success, err = goquDB.Select(schema.DfDistanceTableDistanceCol).
+		From(schema.DfDistanceTable).
+		Where(
+			schema.DfDistanceTableSrcPictureIDCol.Eq(id1),
+			schema.DfDistanceTableDstPictureIDCol.Eq(id2),
+		).
+		ScanValContext(ctx, &distance)
 	require.NoError(t, err)
 	require.True(t, success)
 	require.LessOrEqual(t, distance, 2)

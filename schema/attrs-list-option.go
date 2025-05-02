@@ -17,7 +17,9 @@ var (
 	AttrsListOptionsTableNameCol        = AttrsListOptionsTable.Col("name")
 	AttrsListOptionsTableAttributeIDCol = AttrsListOptionsTable.Col("attribute_id")
 	AttrsListOptionsTableParentIDCol    = AttrsListOptionsTable.Col("parent_id")
-	AttrsListOptionsTablePositionCol    = AttrsListOptionsTable.Col(AttrsListOptionsTablePositionColName)
+	AttrsListOptionsTablePositionCol    = AttrsListOptionsTable.Col(
+		AttrsListOptionsTablePositionColName,
+	)
 )
 
 type AttrsListOptionRow struct {

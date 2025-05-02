@@ -24,7 +24,10 @@ type Wheelsize struct {
 }
 
 func (s Wheelsize) Items(
-	ctx context.Context, db *goqu.Database, attrsRepository *attrs.Repository, listOptions *query.ItemListOptions,
+	ctx context.Context,
+	db *goqu.Database,
+	attrsRepository *attrs.Repository,
+	listOptions *query.ItemListOptions,
 	_ string,
 ) (*MostData, error) {
 	wheel := s.Rear
@@ -140,7 +143,11 @@ func (s Wheelsize) Items(
 	}, nil
 }
 
-func (s Wheelsize) wheelSizeText(ctx context.Context, attrsRepository *attrs.Repository, itemID int64) (string, error) {
+func (s Wheelsize) wheelSizeText(
+	ctx context.Context,
+	attrsRepository *attrs.Repository,
+	itemID int64,
+) (string, error) {
 	text := make([]string, 0, 2)
 
 	for _, wheel := range []WheelAxis{s.Front, s.Rear} {

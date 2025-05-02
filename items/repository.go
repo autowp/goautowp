@@ -39,9 +39,11 @@ var (
 	errFieldRequires                   = errors.New("fields requires")
 	errItemParentCycle                 = errors.New("cycle detected")
 	errFailedToCreateItemParentCatname = errors.New("failed to create catname")
-	errInvalidItemParentCombination    = errors.New("that type of parent is not allowed for this type")
-	errGroupRequired                   = errors.New("only groups can have childs")
-	errSelfParent                      = errors.New("self parent forbidden")
+	errInvalidItemParentCombination    = errors.New(
+		"that type of parent is not allowed for this type",
+	)
+	errGroupRequired = errors.New("only groups can have childs")
+	errSelfParent    = errors.New("self parent forbidden")
 
 	CyrillicRegexp = regexp.MustCompile(`^\p{Cyrillic}`)
 	HanRegexp      = regexp.MustCompile(`^\p{Han}`)
@@ -173,17 +175,171 @@ type TreeItem struct {
 }
 
 var languagePriority = map[string][]string{
-	DefaultLanguageCode: {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
-	"en":                {"en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
-	"fr":                {"fr", "en", "it", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
-	"pt-br":             {"pt", "en", "it", "fr", "de", "es", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
-	"ru":                {"ru", "en", "it", "fr", "de", "es", "pt", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
-	"be":                {"be", "ru", "uk", "en", "it", "fr", "de", "es", "pt", "zh", "jp", "he", DefaultLanguageCode},
-	"uk":                {"uk", "ru", "en", "it", "fr", "de", "es", "pt", "be", "zh", "jp", "he", DefaultLanguageCode},
-	"zh":                {"zh", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "jp", "he", DefaultLanguageCode},
-	"es":                {"es", "en", "it", "fr", "de", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
-	"it":                {"it", "en", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", "he", DefaultLanguageCode},
-	"he":                {"he", "en", "it", "fr", "de", "es", "pt", "ru", "be", "uk", "zh", "jp", DefaultLanguageCode},
+	DefaultLanguageCode: {
+		"en",
+		"it",
+		"fr",
+		"de",
+		"es",
+		"pt",
+		"ru",
+		"be",
+		"uk",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"en": {
+		"en",
+		"it",
+		"fr",
+		"de",
+		"es",
+		"pt",
+		"ru",
+		"be",
+		"uk",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"fr": {
+		"fr",
+		"en",
+		"it",
+		"de",
+		"es",
+		"pt",
+		"ru",
+		"be",
+		"uk",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"pt-br": {
+		"pt",
+		"en",
+		"it",
+		"fr",
+		"de",
+		"es",
+		"ru",
+		"be",
+		"uk",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"ru": {
+		"ru",
+		"en",
+		"it",
+		"fr",
+		"de",
+		"es",
+		"pt",
+		"be",
+		"uk",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"be": {
+		"be",
+		"ru",
+		"uk",
+		"en",
+		"it",
+		"fr",
+		"de",
+		"es",
+		"pt",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"uk": {
+		"uk",
+		"ru",
+		"en",
+		"it",
+		"fr",
+		"de",
+		"es",
+		"pt",
+		"be",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"zh": {
+		"zh",
+		"en",
+		"it",
+		"fr",
+		"de",
+		"es",
+		"pt",
+		"ru",
+		"be",
+		"uk",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"es": {
+		"es",
+		"en",
+		"it",
+		"fr",
+		"de",
+		"pt",
+		"ru",
+		"be",
+		"uk",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"it": {
+		"it",
+		"en",
+		"fr",
+		"de",
+		"es",
+		"pt",
+		"ru",
+		"be",
+		"uk",
+		"zh",
+		"jp",
+		"he",
+		DefaultLanguageCode,
+	},
+	"he": {
+		"he",
+		"en",
+		"it",
+		"fr",
+		"de",
+		"es",
+		"pt",
+		"ru",
+		"be",
+		"uk",
+		"zh",
+		"jp",
+		DefaultLanguageCode,
+	},
 }
 
 type CataloguePathOptions struct {
@@ -351,9 +507,15 @@ func NewRepository(
 		nameOnlyColumn:                &NameOnlyColumn{DB: db},
 		nameDefaultColumn:             &NameDefaultColumn{db: db},
 		commentsAttentionsCountColumn: &CommentsAttentionsCountColumn{db: db},
-		acceptedPicturesCountColumn:   &StatusPicturesCountColumn{db: db, status: schema.PictureStatusAccepted},
-		inboxPicturesCountColumn:      &StatusPicturesCountColumn{db: db, status: schema.PictureStatusInbox},
-		exactPicturesCountColumn:      &ExactPicturesCountColumn{db: db},
+		acceptedPicturesCountColumn: &StatusPicturesCountColumn{
+			db:     db,
+			status: schema.PictureStatusAccepted,
+		},
+		inboxPicturesCountColumn: &StatusPicturesCountColumn{
+			db:     db,
+			status: schema.PictureStatusInbox,
+		},
+		exactPicturesCountColumn: &ExactPicturesCountColumn{db: db},
 		mostsActiveColumn: &MostsActiveColumn{
 			db:                db,
 			mostsMinCarsCount: mostsMinCarsCount,
@@ -368,26 +530,32 @@ func NewRepository(
 		hasSpecsColumn: &HasSpecsColumn{
 			db: db,
 		},
-		idColumn:                        &SimpleColumn{col: schema.ItemTableIDColName},
-		logoColumn:                      &SimpleColumn{col: schema.ItemTableLogoIDColName},
-		fullNameColumn:                  &SimpleColumn{col: schema.ItemTableFullNameColName},
-		catnameColumn:                   &SimpleColumn{col: schema.ItemTableCatnameColName},
-		engineItemIDColumn:              &SimpleColumn{col: schema.ItemTableEngineItemIDColName},
-		engineInheritColumn:             &SimpleColumn{col: schema.ItemTableEngineInheritColName},
-		itemTypeIDColumn:                &SimpleColumn{col: schema.ItemTableItemTypeIDColName},
-		isGroupColumn:                   &SimpleColumn{col: schema.ItemTableIsGroupColName},
-		isConceptColumn:                 &SimpleColumn{col: schema.ItemTableIsConceptColName},
-		isConceptInheritColumn:          &SimpleColumn{col: schema.ItemTableIsConceptInheritColName},
-		specIDColumn:                    &SimpleColumn{col: schema.ItemTableSpecIDColName},
-		specInheritColumn:               &SimpleColumn{col: schema.ItemTableSpecInheritColName},
-		beginYearColumn:                 &SimpleColumn{col: schema.ItemTableBeginYearColName},
-		endYearColumn:                   &SimpleColumn{col: schema.ItemTableEndYearColName},
-		beginMonthColumn:                &SimpleColumn{col: schema.ItemTableBeginMonthColName},
-		endMonthColumn:                  &SimpleColumn{col: schema.ItemTableEndMonthColName},
-		beginModelYearColumn:            &SimpleColumn{col: schema.ItemTableBeginModelYearColName},
-		endModelYearColumn:              &SimpleColumn{col: schema.ItemTableEndModelYearColName},
-		beginModelYearFractionColumn:    &SimpleColumn{col: schema.ItemTableBeginModelYearFractionColName},
-		endModelYearFractionColumn:      &SimpleColumn{col: schema.ItemTableEndModelYearFractionColName},
+		idColumn:            &SimpleColumn{col: schema.ItemTableIDColName},
+		logoColumn:          &SimpleColumn{col: schema.ItemTableLogoIDColName},
+		fullNameColumn:      &SimpleColumn{col: schema.ItemTableFullNameColName},
+		catnameColumn:       &SimpleColumn{col: schema.ItemTableCatnameColName},
+		engineItemIDColumn:  &SimpleColumn{col: schema.ItemTableEngineItemIDColName},
+		engineInheritColumn: &SimpleColumn{col: schema.ItemTableEngineInheritColName},
+		itemTypeIDColumn:    &SimpleColumn{col: schema.ItemTableItemTypeIDColName},
+		isGroupColumn:       &SimpleColumn{col: schema.ItemTableIsGroupColName},
+		isConceptColumn:     &SimpleColumn{col: schema.ItemTableIsConceptColName},
+		isConceptInheritColumn: &SimpleColumn{
+			col: schema.ItemTableIsConceptInheritColName,
+		},
+		specIDColumn:         &SimpleColumn{col: schema.ItemTableSpecIDColName},
+		specInheritColumn:    &SimpleColumn{col: schema.ItemTableSpecInheritColName},
+		beginYearColumn:      &SimpleColumn{col: schema.ItemTableBeginYearColName},
+		endYearColumn:        &SimpleColumn{col: schema.ItemTableEndYearColName},
+		beginMonthColumn:     &SimpleColumn{col: schema.ItemTableBeginMonthColName},
+		endMonthColumn:       &SimpleColumn{col: schema.ItemTableEndMonthColName},
+		beginModelYearColumn: &SimpleColumn{col: schema.ItemTableBeginModelYearColName},
+		endModelYearColumn:   &SimpleColumn{col: schema.ItemTableEndModelYearColName},
+		beginModelYearFractionColumn: &SimpleColumn{
+			col: schema.ItemTableBeginModelYearFractionColName,
+		},
+		endModelYearFractionColumn: &SimpleColumn{
+			col: schema.ItemTableEndModelYearFractionColName,
+		},
 		todayColumn:                     &SimpleColumn{col: schema.ItemTableTodayColName},
 		bodyColumn:                      &SimpleColumn{col: schema.ItemTableBodyColName},
 		addDatetimeColumn:               &SimpleColumn{col: schema.ItemTableAddDatetimeColName},
@@ -498,10 +666,13 @@ func langPriorityOrderExpr( //nolint: ireturn
 func (s *Repository) LanguageName(ctx context.Context, itemID int64, lang string) (string, error) {
 	var res string
 
-	success, err := s.db.Select(schema.ItemLanguageTableNameCol).From(schema.ItemLanguageTable).Where(
-		schema.ItemLanguageTableItemIDCol.Eq(itemID),
-		schema.ItemLanguageTableLanguageCol.Eq(lang),
-	).ScanValContext(ctx, &res)
+	success, err := s.db.Select(schema.ItemLanguageTableNameCol).
+		From(schema.ItemLanguageTable).
+		Where(
+			schema.ItemLanguageTableItemIDCol.Eq(itemID),
+			schema.ItemLanguageTableLanguageCol.Eq(lang),
+		).
+		ScanValContext(ctx, &res)
 	if err != nil {
 		return "", err
 	}
@@ -726,7 +897,10 @@ func (s *Repository) Count(ctx context.Context, options query.ItemListOptions) (
 	return count, nil
 }
 
-func (s *Repository) CountDistinct(ctx context.Context, options query.ItemListOptions) (int, error) {
+func (s *Repository) CountDistinct(
+	ctx context.Context,
+	options query.ItemListOptions,
+) (int, error) {
 	var count int
 
 	sqSelect, err := options.CountDistinctSelect(s.db, query.ItemAlias)
@@ -746,7 +920,11 @@ func (s *Repository) CountDistinct(ctx context.Context, options query.ItemListOp
 	return count, nil
 }
 
-func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, fields *ItemFields) (*Item, error) {
+func (s *Repository) Item(
+	ctx context.Context,
+	options *query.ItemListOptions,
+	fields *ItemFields,
+) (*Item, error) {
 	options.Limit = 1
 
 	res, _, err := s.List(ctx, options, fields, OrderByNone, false)
@@ -761,13 +939,20 @@ func (s *Repository) Item(ctx context.Context, options *query.ItemListOptions, f
 	return res[0], nil
 }
 
-func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields *ItemFields, orderBy OrderBy) error {
+func (s *Repository) isFieldsValid(
+	options *query.ItemListOptions,
+	fields *ItemFields,
+	orderBy OrderBy,
+) error {
 	if fields == nil {
 		return nil
 	}
 
 	if (fields.ChildItemsCount || fields.NewChildItemsCount) && options.ItemParentChild == nil {
-		return fmt.Errorf("%w: ChildItemsCount, NewChildItemsCount requires ItemParentChild", errFieldRequires)
+		return fmt.Errorf(
+			"%w: ChildItemsCount, NewChildItemsCount requires ItemParentChild",
+			errFieldRequires,
+		)
 	}
 
 	if fields.DescendantPicturesCount && (options.ItemParentCacheDescendant == nil ||
@@ -796,7 +981,11 @@ func (s *Repository) isFieldsValid(options *query.ItemListOptions, fields *ItemF
 	return nil
 }
 
-func (s *Repository) orderBy(alias string, orderBy OrderBy, lang string) ([]exp.OrderedExpression, error) {
+func (s *Repository) orderBy(
+	alias string,
+	orderBy OrderBy,
+	lang string,
+) ([]exp.OrderedExpression, error) {
 	type columnOrder struct {
 		col Column
 		asc bool
@@ -863,7 +1052,11 @@ func (s *Repository) orderBy(alias string, orderBy OrderBy, lang string) ([]exp.
 	return orderByExp, nil
 }
 
-func (s *Repository) wrapperOrderBy(wrapperAlias string, wrappedAlias string, orderBy OrderBy) []exp.OrderedExpression {
+func (s *Repository) wrapperOrderBy(
+	wrapperAlias string,
+	wrappedAlias string,
+	orderBy OrderBy,
+) []exp.OrderedExpression {
 	wrapperAliasTable := goqu.T(wrapperAlias)
 	wrappedAliasTable := goqu.T(wrappedAlias)
 
@@ -875,7 +1068,9 @@ func (s *Repository) wrapperOrderBy(wrapperAlias string, wrappedAlias string, or
 	case OrderByDescendantPicturesCount:
 		return []exp.OrderedExpression{wrappedAliasTable.Col(colDescendantPicturesCount).Desc()}
 	case OrderByAddDatetime:
-		return []exp.OrderedExpression{wrapperAliasTable.Col(schema.ItemTableAddDatetimeColName).Desc()}
+		return []exp.OrderedExpression{
+			wrapperAliasTable.Col(schema.ItemTableAddDatetimeColName).Desc(),
+		}
 	case OrderByName:
 		return []exp.OrderedExpression{
 			wrapperAliasTable.Col(schema.ItemTableNameColName).Asc(),
@@ -923,7 +1118,9 @@ func (s *Repository) wrappedOrderBy(alias string, orderBy OrderBy) []exp.Ordered
 	case OrderByDescendantPicturesCount:
 		orderByExp = []exp.OrderedExpression{goqu.C(colDescendantPicturesCount).Desc()}
 	case OrderByAddDatetime:
-		orderByExp = []exp.OrderedExpression{aliasTable.Col(schema.ItemTableAddDatetimeColName).Desc()}
+		orderByExp = []exp.OrderedExpression{
+			aliasTable.Col(schema.ItemTableAddDatetimeColName).Desc(),
+		}
 	case OrderByName:
 		orderByExp = []exp.OrderedExpression{
 			aliasTable.Col(schema.ItemTableNameColName).Asc(),
@@ -1379,7 +1576,11 @@ func (s *Repository) Tree(ctx context.Context, id string) (*TreeItem, error) {
 	}, nil
 }
 
-func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
+func (s *Repository) AddItemVehicleType(
+	ctx context.Context,
+	itemID int64,
+	vehicleTypeID int64,
+) error {
 	ctx = context.WithoutCancel(ctx)
 
 	changed, err := s.setItemVehicleTypeRow(ctx, itemID, vehicleTypeID, false)
@@ -1402,7 +1603,11 @@ func (s *Repository) AddItemVehicleType(ctx context.Context, itemID int64, vehic
 	return nil
 }
 
-func (s *Repository) RemoveItemVehicleType(ctx context.Context, itemID int64, vehicleTypeID int64) error {
+func (s *Repository) RemoveItemVehicleType(
+	ctx context.Context,
+	itemID int64,
+	vehicleTypeID int64,
+) error {
 	ctx = context.WithoutCancel(ctx)
 
 	res, err := s.db.From(schema.ItemVehicleTypeTable).Delete().
@@ -1466,7 +1671,10 @@ func (s *Repository) setItemVehicleTypeRow(
 	return affected > 0, nil
 }
 
-func (s *Repository) RefreshItemVehicleTypeInheritanceFromParents(ctx context.Context, itemID int64) error {
+func (s *Repository) RefreshItemVehicleTypeInheritanceFromParents(
+	ctx context.Context,
+	itemID int64,
+) error {
 	typeIDs, err := s.getItemVehicleTypeIDs(ctx, itemID, false)
 	if err != nil {
 		return err
@@ -1540,7 +1748,11 @@ func (s *Repository) refreshItemVehicleTypeInheritance(ctx context.Context, item
 	return nil
 }
 
-func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, inherited bool) ([]int64, error) {
+func (s *Repository) getItemVehicleTypeIDs(
+	ctx context.Context,
+	itemID int64,
+	inherited bool,
+) ([]int64, error) {
 	sqlSelect := s.db.From(schema.ItemVehicleTypeTable).
 		Select(schema.ItemVehicleTypeTableVehicleTypeIDCol).
 		Where(schema.ItemVehicleTypeTableItemIDCol.Eq(itemID))
@@ -1557,7 +1769,10 @@ func (s *Repository) getItemVehicleTypeIDs(ctx context.Context, itemID int64, in
 	return res, err
 }
 
-func (s *Repository) getItemVehicleTypeInheritedIDs(ctx context.Context, itemID int64) ([]int64, error) {
+func (s *Repository) getItemVehicleTypeInheritedIDs(
+	ctx context.Context,
+	itemID int64,
+) ([]int64, error) {
 	sqlSelect := s.db.From(schema.ItemVehicleTypeTable).
 		Select(schema.ItemVehicleTypeTableVehicleTypeIDCol).Distinct().
 		Join(
@@ -1624,7 +1839,11 @@ type parentInfo struct {
 	Design bool
 }
 
-func (s *Repository) collectParentInfo(ctx context.Context, id int64, diff int64) (map[int64]parentInfo, error) {
+func (s *Repository) collectParentInfo(
+	ctx context.Context,
+	id int64,
+	diff int64,
+) (map[int64]parentInfo, error) {
 	//nolint: sqlclosecheck
 	rows, err := s.db.Select(schema.ItemParentTableParentIDCol, schema.ItemParentTableTypeCol).
 		From(schema.ItemParentTable).
@@ -1788,10 +2007,15 @@ func (s *Repository) RebuildCache(ctx context.Context, itemID int64) (int64, err
 	return updates, nil
 }
 
-func (s *Repository) ItemLanguageCount(ctx context.Context, options *query.ItemLanguageListOptions) (int32, error) {
+func (s *Repository) ItemLanguageCount(
+	ctx context.Context,
+	options *query.ItemLanguageListOptions,
+) (int32, error) {
 	var count int
 
-	success, err := options.CountSelect(s.db, query.ItemLanguageAlias).Executor().ScanValContext(ctx, &count)
+	success, err := options.CountSelect(s.db, query.ItemLanguageAlias).
+		Executor().
+		ScanValContext(ctx, &count)
 	if err != nil {
 		return 0, err
 	}
@@ -1804,8 +2028,13 @@ func (s *Repository) ItemLanguageCount(ctx context.Context, options *query.ItemL
 }
 
 func (s *Repository) ItemLanguageList(ctx context.Context, itemID int64) ([]ItemLanguage, error) {
-	sqSelect := s.db.Select(schema.ItemLanguageTableItemIDCol, schema.ItemLanguageTableLanguageCol,
-		schema.ItemLanguageTableNameCol, schema.ItemLanguageTableTextIDCol, schema.ItemLanguageTableFullTextIDCol).
+	sqSelect := s.db.Select(
+		schema.ItemLanguageTableItemIDCol,
+		schema.ItemLanguageTableLanguageCol,
+		schema.ItemLanguageTableNameCol,
+		schema.ItemLanguageTableTextIDCol,
+		schema.ItemLanguageTableFullTextIDCol,
+	).
 		From(schema.ItemLanguageTable).Where(
 		schema.ItemLanguageTableItemIDCol.Eq(itemID),
 		schema.ItemLanguageTableLanguageCol.Neq(DefaultLanguageCode),
@@ -1863,7 +2092,9 @@ func (s *Repository) UpdateItemLanguage(
 	var row schema.ItemLanguageRow
 
 	success, err := s.db.Select(
-		schema.ItemLanguageTableNameCol, schema.ItemLanguageTableTextIDCol, schema.ItemLanguageTableFullTextIDCol,
+		schema.ItemLanguageTableNameCol,
+		schema.ItemLanguageTableTextIDCol,
+		schema.ItemLanguageTableFullTextIDCol,
 	).
 		From(schema.ItemLanguageTable).
 		Where(
@@ -2039,7 +2270,12 @@ func (s *Repository) ItemsWithPicturesCount(
 }
 
 func (s *Repository) SetItemParentLanguage(
-	ctx context.Context, parentID int64, itemID int64, lang string, newName string, forceIsAuto bool,
+	ctx context.Context,
+	parentID int64,
+	itemID int64,
+	lang string,
+	newName string,
+	forceIsAuto bool,
 ) error {
 	bvlRow := struct {
 		IsAuto bool   `db:"is_auto"`
@@ -2075,9 +2311,14 @@ func (s *Repository) SetItemParentLanguage(
 		itmRow := schema.ItemRow{}
 
 		success, err = s.db.Select(
-			schema.ItemTableIDCol, schema.ItemTableNameCol, schema.ItemTableBodyCol, schema.ItemTableSpecIDCol,
-			schema.ItemTableBeginYearCol, schema.ItemTableEndYearCol,
-			schema.ItemTableBeginModelYearCol, schema.ItemTableEndModelYearCol,
+			schema.ItemTableIDCol,
+			schema.ItemTableNameCol,
+			schema.ItemTableBodyCol,
+			schema.ItemTableSpecIDCol,
+			schema.ItemTableBeginYearCol,
+			schema.ItemTableEndYearCol,
+			schema.ItemTableBeginModelYearCol,
+			schema.ItemTableEndModelYearCol,
 		).
 			From(schema.ItemTable).
 			Where(schema.ItemTableIDCol.Eq(parentID)).
@@ -2091,9 +2332,14 @@ func (s *Repository) SetItemParentLanguage(
 		}
 
 		success, err = s.db.Select(
-			schema.ItemTableIDCol, schema.ItemTableNameCol, schema.ItemTableBodyCol, schema.ItemTableSpecIDCol,
-			schema.ItemTableBeginYearCol, schema.ItemTableEndYearCol,
-			schema.ItemTableBeginModelYearCol, schema.ItemTableEndModelYearCol,
+			schema.ItemTableIDCol,
+			schema.ItemTableNameCol,
+			schema.ItemTableBodyCol,
+			schema.ItemTableSpecIDCol,
+			schema.ItemTableBeginYearCol,
+			schema.ItemTableEndYearCol,
+			schema.ItemTableBeginModelYearCol,
+			schema.ItemTableEndModelYearCol,
 		).
 			From(schema.ItemTable).
 			Where(schema.ItemTableIDCol.Eq(itemID)).
@@ -2136,12 +2382,18 @@ func (s *Repository) SetItemParentLanguage(
 					goqu.C(schema.ItemParentLanguageTableIsAutoColName),
 				),
 			},
-		)).Executor().ExecContext(ctx)
+		),
+	).
+		Executor().ExecContext(ctx)
 
 	return err
 }
 
-func (s *Repository) namePreferLanguage(ctx context.Context, parentID, itemID int64, lang string) (string, error) {
+func (s *Repository) namePreferLanguage(
+	ctx context.Context,
+	parentID, itemID int64,
+	lang string,
+) (string, error) {
 	res := ""
 
 	success, err := s.db.Select(schema.ItemParentLanguageTableNameCol).
@@ -2164,7 +2416,10 @@ func (s *Repository) namePreferLanguage(ctx context.Context, parentID, itemID in
 	return res, nil
 }
 
-func (s *Repository) extractCatname(ctx context.Context, brandRow, vehicleRow schema.ItemRow) (string, error) {
+func (s *Repository) extractCatname(
+	ctx context.Context,
+	brandRow, vehicleRow schema.ItemRow,
+) (string, error) {
 	var err error
 
 	diffName, err := s.namePreferLanguage(ctx, brandRow.ID, vehicleRow.ID, "en")
@@ -2253,7 +2508,8 @@ func (s *Repository) extractName(
 	vemy := vehicleRow.EndModelYear.Int32
 
 	if len(name) == 0 && vehicleRow.BeginModelYear.Valid && vbmy > 0 {
-		modelYearsDifferent := vbmy != parentRow.BeginModelYear.Int32 || vemy != parentRow.EndModelYear.Int32
+		modelYearsDifferent := vbmy != parentRow.BeginModelYear.Int32 ||
+			vemy != parentRow.EndModelYear.Int32
 		if modelYearsDifferent {
 			name = yearsPrefix(vbmy, vemy)
 		}
@@ -2275,7 +2531,8 @@ func (s *Repository) extractName(
 			specShortName := ""
 
 			success, err := s.db.Select(schema.SpecTableShortNameCol).From(schema.SpecTable).
-				Where(schema.SpecTableIDCol.Eq(vehicleRow.SpecID.Int32)).ScanValContext(ctx, &specShortName)
+				Where(schema.SpecTableIDCol.Eq(vehicleRow.SpecID.Int32)).
+				ScanValContext(ctx, &specShortName)
 			if err != nil {
 				return "", err
 			}
@@ -2385,7 +2642,9 @@ func toSortedColumns(cols map[string]Column) []sortedColumnMapItem {
 	return res
 }
 
-func (s *Repository) isAllowedCombination(itemTypeID, parentItemTypeID schema.ItemTableItemTypeID) bool {
+func (s *Repository) isAllowedCombination(
+	itemTypeID, parentItemTypeID schema.ItemTableItemTypeID,
+) bool {
 	itemTypes, ok := schema.AllowedTypeCombinations[parentItemTypeID]
 	if !ok {
 		return false
@@ -2394,7 +2653,11 @@ func (s *Repository) isAllowedCombination(itemTypeID, parentItemTypeID schema.It
 	return util.Contains(itemTypes, itemTypeID)
 }
 
-func (s *Repository) isAllowedCatname(ctx context.Context, itemID, parentID int64, catname string) (bool, error) {
+func (s *Repository) isAllowedCatname(
+	ctx context.Context,
+	itemID, parentID int64,
+	catname string,
+) (bool, error) {
 	if len(catname) == 0 {
 		return false, nil
 	}
@@ -2414,7 +2677,7 @@ func (s *Repository) isAllowedCatname(ctx context.Context, itemID, parentID int6
 		return false, err
 	}
 
-	return !(success && exists), nil
+	return !success || !exists, nil
 }
 
 func (s *Repository) collectAncestorsIDs(ctx context.Context, id int64) ([]int64, error) {
@@ -2443,7 +2706,10 @@ func (s *Repository) collectAncestorsIDs(ctx context.Context, id int64) ([]int64
 }
 
 func (s *Repository) setItemParentLanguages(
-	ctx context.Context, parentID, itemID int64, values map[string]schema.ItemParentLanguageRow, forceIsAuto bool,
+	ctx context.Context,
+	parentID, itemID int64,
+	values map[string]schema.ItemParentLanguageRow,
+	forceIsAuto bool,
 ) error {
 	ctx = context.WithoutCancel(ctx)
 
@@ -2484,7 +2750,12 @@ func (s *Repository) CreateItemParent(
 	}
 
 	if !s.isAllowedCombination(itemRow.ItemTypeID, parentRow.ItemTypeID) {
-		return false, fmt.Errorf("%w: %d/%d", errInvalidItemParentCombination, itemRow.ItemTypeID, parentRow.ItemTypeID)
+		return false, fmt.Errorf(
+			"%w: %d/%d",
+			errInvalidItemParentCombination,
+			itemRow.ItemTypeID,
+			parentRow.ItemTypeID,
+		)
 	}
 
 	if len(catname) > 0 {
@@ -2572,7 +2843,11 @@ func (s *Repository) CreateItemParent(
 }
 
 func (s *Repository) UpdateItemParent(
-	ctx context.Context, itemID, parentID int64, typeID schema.ItemParentType, catname string, forceIsAuto bool,
+	ctx context.Context,
+	itemID, parentID int64,
+	typeID schema.ItemParentType,
+	catname string,
+	forceIsAuto bool,
 ) (bool, error) {
 	var itemParentRow schema.ItemParentRow
 
@@ -2604,12 +2879,20 @@ func (s *Repository) UpdateItemParent(
 	}
 
 	if len(catname) == 0 || catname == "_" || util.Contains(catnameBlacklist, catname) {
-		parentRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, &ItemFields{NameText: true})
+		parentRow, err := s.Item(
+			ctx,
+			&query.ItemListOptions{ItemID: parentID},
+			&ItemFields{NameText: true},
+		)
 		if err != nil {
 			return false, err
 		}
 
-		itemRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, &ItemFields{NameText: true})
+		itemRow, err := s.Item(
+			ctx,
+			&query.ItemListOptions{ItemID: itemID},
+			&ItemFields{NameText: true},
+		)
 		if err != nil {
 			return false, err
 		}
@@ -2703,9 +2986,14 @@ func (s *Repository) UpdateInheritance(ctx context.Context, itemID int64) error 
 	var item schema.ItemRow
 
 	success, err := s.db.Select(
-		schema.ItemTableIDCol, schema.ItemTableIsConceptCol, schema.ItemTableIsConceptInheritCol,
-		schema.ItemTableEngineInheritCol, schema.ItemTableVehicleTypeInheritCol, schema.ItemTableSpecInheritCol,
-		schema.ItemTableSpecIDCol, schema.ItemTableEngineItemIDCol,
+		schema.ItemTableIDCol,
+		schema.ItemTableIsConceptCol,
+		schema.ItemTableIsConceptInheritCol,
+		schema.ItemTableEngineInheritCol,
+		schema.ItemTableVehicleTypeInheritCol,
+		schema.ItemTableSpecInheritCol,
+		schema.ItemTableSpecIDCol,
+		schema.ItemTableEngineItemIDCol,
 	).
 		From(schema.ItemTable).
 		Where(schema.ItemTableIDCol.Eq(itemID)).
@@ -2848,7 +3136,10 @@ func (s *Repository) updateItemInheritance(ctx context.Context, car schema.ItemR
 	return nil
 }
 
-func (s *Repository) MoveItemParent(ctx context.Context, itemID, parentID, newParentID int64) (bool, error) {
+func (s *Repository) MoveItemParent(
+	ctx context.Context,
+	itemID, parentID, newParentID int64,
+) (bool, error) {
 	oldParentRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, nil)
 	if err != nil {
 		return false, err
@@ -2877,7 +3168,12 @@ func (s *Repository) MoveItemParent(ctx context.Context, itemID, parentID, newPa
 	}
 
 	if !s.isAllowedCombination(itemRow.ItemTypeID, newParentRow.ItemTypeID) {
-		return false, fmt.Errorf("%w: %d/%d", errInvalidItemParentCombination, itemRow.ItemTypeID, newParentRow.ItemTypeID)
+		return false, fmt.Errorf(
+			"%w: %d/%d",
+			errInvalidItemParentCombination,
+			itemRow.ItemTypeID,
+			newParentRow.ItemTypeID,
+		)
 	}
 
 	parentIDs, err := s.collectAncestorsIDs(ctx, newParentRow.ID)
@@ -2933,7 +3229,11 @@ func (s *Repository) MoveItemParent(ctx context.Context, itemID, parentID, newPa
 	return true, nil
 }
 
-func (s *Repository) getParentRows(ctx context.Context, itemID int64, stockFirst bool) ([]schema.ItemParentRow, error) {
+func (s *Repository) getParentRows(
+	ctx context.Context,
+	itemID int64,
+	stockFirst bool,
+) ([]schema.ItemParentRow, error) {
 	sqSelect := s.db.Select(schema.ItemParentTableParentIDCol).
 		From(schema.ItemParentTable).
 		Where(
@@ -3036,12 +3336,20 @@ func (s *Repository) refreshAuto(ctx context.Context, parentID, itemID int64) (b
 		return true, nil
 	}
 
-	brandRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: parentID}, &ItemFields{NameText: true})
+	brandRow, err := s.Item(
+		ctx,
+		&query.ItemListOptions{ItemID: parentID},
+		&ItemFields{NameText: true},
+	)
 	if err != nil {
 		return false, err
 	}
 
-	vehicleRow, err := s.Item(ctx, &query.ItemListOptions{ItemID: itemID}, &ItemFields{NameText: true})
+	vehicleRow, err := s.Item(
+		ctx,
+		&query.ItemListOptions{ItemID: itemID},
+		&ItemFields{NameText: true},
+	)
 	if err != nil {
 		return false, err
 	}
@@ -3088,7 +3396,10 @@ func (s *Repository) ItemParentSelect(
 	)
 
 	if fields.Name {
-		orderExpr, err := langPriorityOrderExpr(schema.ItemParentLanguageTableLanguageCol, listOptions.Language)
+		orderExpr, err := langPriorityOrderExpr(
+			schema.ItemParentLanguageTableLanguageCol,
+			listOptions.Language,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -3134,8 +3445,10 @@ func (s *Repository) ItemParentSelect(
 		joinItem = true
 		sqSelect = sqSelect.Order(
 			aliasTable.Col(schema.ItemParentTableTypeColName).Asc(),
-			goqu.L("?",
-				itemOrderAliasTable.Col(schema.ItemTableItemTypeIDColName).Eq(schema.ItemTableItemTypeIDCategory),
+			goqu.L(
+				"?",
+				itemOrderAliasTable.Col(schema.ItemTableItemTypeIDColName).
+					Eq(schema.ItemTableItemTypeIDCategory),
 			).Desc(),
 			itemOrderAliasTable.Col(schema.ItemTableBeginOrderCacheColName).Asc(),
 			itemOrderAliasTable.Col(schema.ItemTableEndOrderCacheColName).Asc(),
@@ -3153,7 +3466,8 @@ func (s *Repository) ItemParentSelect(
 
 	if joinItem {
 		sqSelect = sqSelect.Join(schema.ItemTable.As(itemOrderAlias), goqu.On(
-			aliasTable.Col(schema.ItemParentTableItemIDColName).Eq(itemOrderAliasTable.Col(schema.ItemTableIDColName)),
+			aliasTable.Col(schema.ItemParentTableItemIDColName).
+				Eq(itemOrderAliasTable.Col(schema.ItemTableIDColName)),
 		))
 	}
 
@@ -3168,7 +3482,10 @@ func (s *Repository) ItemParentSelect(
 }
 
 func (s *Repository) ItemParents(
-	ctx context.Context, listOptions *query.ItemParentListOptions, fields ItemParentFields, orderBy ItemParentOrderBy,
+	ctx context.Context,
+	listOptions *query.ItemParentListOptions,
+	fields ItemParentFields,
+	orderBy ItemParentOrderBy,
 ) ([]*ItemParent, *util.Pages, error) {
 	sqSelect, err := s.ItemParentSelect(listOptions, fields, orderBy)
 	if err != nil {
@@ -3308,7 +3625,11 @@ func (s *Repository) VehicleTypes(
 	return sts, nil
 }
 
-func (s *Repository) VehicleTypeIDs(ctx context.Context, vehicleID int64, inherited bool) ([]int64, error) {
+func (s *Repository) VehicleTypeIDs(
+	ctx context.Context,
+	vehicleID int64,
+	inherited bool,
+) ([]int64, error) {
 	sqSelect := s.db.Select(schema.ItemVehicleTypeTableVehicleTypeIDCol).
 		From(schema.ItemVehicleTypeTable).
 		Where(schema.ItemVehicleTypeTableItemIDCol.Eq(vehicleID))
@@ -3517,7 +3838,10 @@ func (s *Repository) RefreshItemParentLanguage(
 
 	if parentItemTypeID > 0 {
 		sqSelect = sqSelect.
-			Join(schema.ItemTable, goqu.On(schema.ItemParentTableParentIDCol.Eq(schema.ItemTableIDCol))).
+			Join(
+				schema.ItemTable,
+				goqu.On(schema.ItemParentTableParentIDCol.Eq(schema.ItemTableIDCol)),
+			).
 			Where(schema.ItemTableItemTypeIDCol.Eq(parentItemTypeID))
 	}
 
@@ -3659,7 +3983,11 @@ func (s *Repository) SpecsRoute(ctx context.Context, id int64) ([]string, error)
 	}
 
 	for _, path := range cataloguePaths {
-		return frontend.BrandItemPathSpecificationsRoute(path.BrandCatname, path.CarCatname, path.Path), nil
+		return frontend.BrandItemPathSpecificationsRoute(
+			path.BrandCatname,
+			path.CarCatname,
+			path.Path,
+		), nil
 	}
 
 	return nil, nil
@@ -3723,7 +4051,10 @@ func (s *Repository) CataloguePaths(
 			Where(
 				schema.ItemTableIDCol.Eq(id),
 				schema.ItemTableItemTypeIDCol.In(
-					[]schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory, schema.ItemTableItemTypeIDPerson},
+					[]schema.ItemTableItemTypeID{
+						schema.ItemTableItemTypeIDCategory,
+						schema.ItemTableItemTypeIDPerson,
+					},
 				),
 			).
 			ScanStructContext(ctx, &category)
@@ -3854,7 +4185,9 @@ func (s *Repository) ChildsCounts(ctx context.Context, id int64) ([]ChildCount, 
 	return res, err
 }
 
-func (s *Repository) ItemParentCacheSelect(options *query.ItemParentCacheListOptions) (*goqu.SelectDataset, error) {
+func (s *Repository) ItemParentCacheSelect(
+	options *query.ItemParentCacheListOptions,
+) (*goqu.SelectDataset, error) {
 	alias := query.ItemParentCacheAlias
 	aliasTable := goqu.T(alias)
 
@@ -3893,8 +4226,14 @@ func (s *Repository) LinksSelect(options *query.LinkListOptions) (*goqu.SelectDa
 	}
 
 	sqSelect = sqSelect.Select(
-		aliasTable.Col(schema.ItemLinkTableIDColName), aliasTable.Col(schema.ItemLinkTableNameColName),
-		aliasTable.Col(schema.ItemLinkTableURLColName), aliasTable.Col(schema.ItemLinkTableTypeColName),
+		aliasTable.Col(
+			schema.ItemLinkTableIDColName,
+		),
+		aliasTable.Col(schema.ItemLinkTableNameColName),
+		aliasTable.Col(
+			schema.ItemLinkTableURLColName,
+		),
+		aliasTable.Col(schema.ItemLinkTableTypeColName),
 		aliasTable.Col(schema.ItemLinkTableItemIDColName),
 	)
 
@@ -3905,7 +4244,10 @@ func (s *Repository) LinksSelect(options *query.LinkListOptions) (*goqu.SelectDa
 	return sqSelect, nil
 }
 
-func (s *Repository) LinksCount(ctx context.Context, options *query.LinkListOptions) (int32, error) {
+func (s *Repository) LinksCount(
+	ctx context.Context,
+	options *query.LinkListOptions,
+) (int32, error) {
 	var count int
 
 	sqSelect, err := options.CountSelect(s.db, query.LinkAlias)
@@ -3925,7 +4267,10 @@ func (s *Repository) LinksCount(ctx context.Context, options *query.LinkListOpti
 	return int32(count), nil //nolint: gosec
 }
 
-func (s *Repository) Links(ctx context.Context, options *query.LinkListOptions) ([]*schema.LinkRow, error) {
+func (s *Repository) Links(
+	ctx context.Context,
+	options *query.LinkListOptions,
+) ([]*schema.LinkRow, error) {
 	var rows []*schema.LinkRow
 
 	sqSelect, err := s.LinksSelect(options)
@@ -3941,7 +4286,10 @@ func (s *Repository) Links(ctx context.Context, options *query.LinkListOptions) 
 	return rows, nil
 }
 
-func (s *Repository) Link(ctx context.Context, options *query.LinkListOptions) (*schema.LinkRow, error) {
+func (s *Repository) Link(
+	ctx context.Context,
+	options *query.LinkListOptions,
+) (*schema.LinkRow, error) {
 	var row schema.LinkRow
 
 	sqSelect, err := s.LinksSelect(options)
@@ -4007,7 +4355,10 @@ func (s *Repository) AncestorsID(
 	return res, err
 }
 
-func (s *Repository) RelatedCarGroups(ctx context.Context, itemID int64) (map[int64][]int64, error) {
+func (s *Repository) RelatedCarGroups(
+	ctx context.Context,
+	itemID int64,
+) (map[int64][]int64, error) {
 	type Vector struct {
 		Parents []int64
 		Childs  []int64
@@ -4318,7 +4669,11 @@ func (s *Repository) FirstCharacters(ctx context.Context) ([]string, error) {
 	return res, err
 }
 
-func (s *Repository) CreateItem(ctx context.Context, row schema.ItemRow, userID int64) (int64, error) {
+func (s *Repository) CreateItem(
+	ctx context.Context,
+	row schema.ItemRow,
+	userID int64,
+) (int64, error) {
 	res, err := s.db.Insert(schema.ItemTable).Rows(row).Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
@@ -4375,7 +4730,12 @@ func (s *Repository) SpecExists(ctx context.Context, specID int32) (bool, error)
 	return success && exists, err
 }
 
-func (s *Repository) UpdateItem(ctx context.Context, row schema.ItemRow, mask []string, userID int64) error {
+func (s *Repository) UpdateItem(
+	ctx context.Context,
+	row schema.ItemRow,
+	mask []string,
+	userID int64,
+) error {
 	set := goqu.Record{}
 	subscribe := false
 
@@ -4534,7 +4894,12 @@ func (s *Repository) UpdateItem(ctx context.Context, row schema.ItemRow, mask []
 	return nil
 }
 
-func (s *Repository) setItemLanguageName(ctx context.Context, itemID int64, lang string, name string) error {
+func (s *Repository) setItemLanguageName(
+	ctx context.Context,
+	itemID int64,
+	lang string,
+	name string,
+) error {
 	if itemID == 0 {
 		return ErrItemNotFound
 	}
@@ -4549,7 +4914,10 @@ func (s *Repository) setItemLanguageName(ctx context.Context, itemID int64, lang
 	}).OnConflict(goqu.DoUpdate(
 		schema.ItemLanguageTableItemIDColName+","+schema.ItemLanguageTableLanguageColName,
 		goqu.Record{
-			schema.ItemLanguageTableNameColName: goqu.Func("VALUES", goqu.C(schema.ItemLanguageTableNameColName)),
+			schema.ItemLanguageTableNameColName: goqu.Func(
+				"VALUES",
+				goqu.C(schema.ItemLanguageTableNameColName),
+			),
 		},
 	)).Executor().ExecContext(ctx)
 

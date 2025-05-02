@@ -72,8 +72,11 @@ type Storage struct {
 }
 
 type FlushOptions struct {
-	Image  int
-	Format string
+	Image    int
+	Format   string
+	Ext      string
+	Recreate bool
+	Limit    uint
 }
 
 func NewStorage(db *goqu.Database, config config.ImageStorageConfig) (*Storage, error) {
@@ -258,7 +261,9 @@ func (s *Storage) s3Client() *s3.S3 {
 		Region:           &s.config.S3.Region,
 		Endpoint:         &s.config.S3.Endpoint,
 		S3ForcePathStyle: &s.config.S3.UsePathStyleEndpoint,
-		Credentials:      credentials.NewStaticCredentials(s.config.S3.Credentials.Key, s.config.S3.Credentials.Secret, ""),
+		Credentials: credentials.NewStaticCredentials(
+			s.config.S3.Credentials.Key, s.config.S3.Credentials.Secret, "",
+		),
 	}))
 	svc := s3.New(sess)
 
@@ -289,7 +294,11 @@ func fileNameWithoutExtension(fileName string) string {
 	return fileName
 }
 
-func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName string) (int, error) {
+func (s *Storage) doFormatImage( //nolint: maintidx
+	ctx context.Context,
+	imageID int,
+	formatName string,
+) (int, error) {
 	// find source image
 	var iRow schema.ImageRow
 
@@ -408,7 +417,12 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 		}
 
 		if !fiRow.FormattedImageID.Valid {
-			return 0, fmt.Errorf("doFormatImage(%d, %s): %w", imageID, formatName, errFailedToFormatImage)
+			return 0, fmt.Errorf(
+				"doFormatImage(%d, %s): %w",
+				imageID,
+				formatName,
+				errFailedToFormatImage,
+			)
 		}
 
 		return int(fiRow.FormattedImageID.Int32), nil
@@ -460,7 +474,11 @@ func (s *Storage) doFormatImage(ctx context.Context, imageID int, formatName str
 		s.formattedImageDirName,
 		GenerateOptions{
 			Extension: extension,
-			Pattern:   filepath.Dir(newPath) + "/" + fileNameWithoutExtension(filepath.Base(newPath)) + cropSuffix,
+			Pattern: filepath.Dir(
+				newPath,
+			) + "/" + fileNameWithoutExtension(
+				filepath.Base(newPath),
+			) + cropSuffix,
 		},
 	)
 	if err != nil {
@@ -716,7 +734,11 @@ func indexByAttempt(attempt int) int {
 	return random.Intn(maxVal-minVal+1) + minVal
 }
 
-func (s *Storage) createImagePath(ctx context.Context, dirName string, options GenerateOptions) (string, error) {
+func (s *Storage) createImagePath(
+	ctx context.Context,
+	dirName string,
+	options GenerateOptions,
+) (string, error) {
 	dir := s.dir(dirName)
 	if dir == nil {
 		return "", fmt.Errorf("%w: `%s`", errDirNotFound, dirName)
@@ -753,6 +775,8 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 		return sql.ErrNoRows
 	}
 
+	logrus.Infof("removing image `%s/%s`", row.Dir, row.Filepath)
+
 	ctx = context.WithoutCancel(ctx)
 
 	err = s.Flush(ctx, FlushOptions{
@@ -771,7 +795,10 @@ func (s *Storage) RemoveImage(ctx context.Context, imageID int) error {
 	}
 
 	// important to delete row first
-	_, err = s.db.Delete(schema.ImageTable).Where(schema.ImageTableIDCol.Eq(row.ID)).Executor().ExecContext(ctx)
+	_, err = s.db.Delete(schema.ImageTable).
+		Where(schema.ImageTableIDCol.Eq(row.ID)).
+		Executor().
+		ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -810,34 +837,33 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 		sqSelect = sqSelect.Where(schema.FormattedImageTableImageIDCol.Eq(options.Image))
 	}
 
-	rows, err := sqSelect.Executor().QueryContext(ctx) //nolint:sqlclosecheck
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
+	if len(options.Ext) > 0 {
+		sqSelect = sqSelect.
+			Join(
+				schema.ImageTable,
+				goqu.On(schema.FormattedImageTableFormattedImageIDCol.Eq(schema.ImageTableIDCol)),
+			).
+			Where(schema.ImageTableFilepathCol.ILike("%." + options.Ext))
 	}
 
+	if options.Limit > 0 {
+		sqSelect = sqSelect.Limit(options.Limit)
+	}
+
+	var rows []schema.FormattedImageRow
+
+	err := sqSelect.ScanStructsContext(ctx, &rows)
 	if err != nil {
 		return err
 	}
 
-	defer util.Close(rows)
-
 	ctx = context.WithoutCancel(ctx)
 
-	for rows.Next() {
-		var (
-			iID    int
-			format string
-			fiID   sql.NullInt32
-		)
+	for _, row := range rows {
+		logrus.Infof("flushing image `%d/%s`", row.ImageID, row.Format)
 
-		err = rows.Scan(&iID, &format, &fiID)
-		if err != nil {
-			return err
-		}
-
-		if fiID.Valid && fiID.Int32 > 0 {
-			err = s.RemoveImage(ctx, int(fiID.Int32))
+		if row.FormattedImageID.Valid && row.FormattedImageID.Int32 > 0 {
+			err = s.RemoveImage(ctx, int(row.FormattedImageID.Int32))
 			if err != nil {
 				return err
 			}
@@ -845,16 +871,23 @@ func (s *Storage) Flush(ctx context.Context, options FlushOptions) error {
 
 		_, err = s.db.Delete(schema.FormattedImageTable).
 			Where(
-				schema.FormattedImageTableImageIDCol.Eq(iID),
-				schema.FormattedImageTableFormatCol.Eq(format),
+				schema.FormattedImageTableImageIDCol.Eq(row.ImageID),
+				schema.FormattedImageTableFormatCol.Eq(row.Format),
 			).
 			Executor().ExecContext(ctx)
 		if err != nil {
 			return err
 		}
+
+		if options.Recreate {
+			_, err = s.FormattedImage(ctx, row.ImageID, row.Format)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	return rows.Err()
+	return nil
 }
 
 func (s *Storage) ChangeImageName(ctx context.Context, imageID int, options GenerateOptions) error {
@@ -961,7 +994,12 @@ func (s *Storage) AddImageFromReader(
 	}
 
 	if imageInfo.Width <= 0 || imageInfo.Height <= 0 {
-		return 0, fmt.Errorf("%w: (%v x %v)", errFailedToGetImageSize, imageInfo.Width, imageInfo.Height)
+		return 0, fmt.Errorf(
+			"%w: (%v x %v)",
+			errFailedToGetImageSize,
+			imageInfo.Width,
+			imageInfo.Height,
+		)
 	}
 
 	if len(options.Extension) == 0 {
@@ -1068,7 +1106,11 @@ func (s *Storage) AddImageFromBlob(
 	return id, nil
 }
 
-func (s *Storage) doImagickOperation(ctx context.Context, imageID int, callback func(*imagick.MagickWand) error) error {
+func (s *Storage) doImagickOperation(
+	ctx context.Context,
+	imageID int,
+	callback func(*imagick.MagickWand) error,
+) error {
 	var img schema.ImageRow
 
 	success, err := s.db.Select(schema.ImageTableDirCol, schema.ImageTableFilepathCol).
@@ -1291,10 +1333,19 @@ func (s *Storage) images(ctx context.Context, imageIDs []int) (map[int]Image, er
 	return result, nil
 }
 
-func (s *Storage) FormattedImages(ctx context.Context, imageIDs []int, formatName string) (map[int]Image, error) {
+func (s *Storage) FormattedImages(
+	ctx context.Context,
+	imageIDs []int,
+	formatName string,
+) (map[int]Image, error) {
 	sqSelect := s.db.Select(
-		schema.ImageTableIDCol, schema.ImageTableWidthCol, schema.ImageTableHeightCol, schema.ImageTableFilesizeCol,
-		schema.ImageTableFilepathCol, schema.ImageTableDirCol, schema.FormattedImageTableImageIDCol,
+		schema.ImageTableIDCol,
+		schema.ImageTableWidthCol,
+		schema.ImageTableHeightCol,
+		schema.ImageTableFilesizeCol,
+		schema.ImageTableFilepathCol,
+		schema.ImageTableDirCol,
+		schema.FormattedImageTableImageIDCol,
 	).
 		From(schema.ImageTable).
 		Join(
@@ -1325,7 +1376,15 @@ func (s *Storage) FormattedImages(ctx context.Context, imageIDs []int, formatNam
 			srcImageID int
 		)
 
-		err = rows.Scan(&img.id, &img.width, &img.height, &img.filesize, &img.filepath, &img.dir, &srcImageID)
+		err = rows.Scan(
+			&img.id,
+			&img.width,
+			&img.height,
+			&img.filesize,
+			&img.filepath,
+			&img.dir,
+			&srcImageID,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -1371,7 +1430,11 @@ func (s *Storage) ListBrokenImages(ctx context.Context, dirName string, lastKey 
 	var isLastPage bool
 
 	for !isLastPage {
-		fmt.Printf("Fetch next `%d` from `%s`\n", listBrokenImagesPerPage, lastKey) //nolint:forbidigo
+		fmt.Printf( //nolint:forbidigo
+			"Fetch next `%d` from `%s`\n",
+			listBrokenImagesPerPage,
+			lastKey,
+		)
 
 		var sts []struct {
 			Filepath string `db:"filepath"`
@@ -1622,7 +1685,12 @@ func (s *Storage) ListUnlinkedObjects(
 	return err
 }
 
-func (s *Storage) moveWithPrefix(ctx context.Context, bucket string, key string, prefix string) error {
+func (s *Storage) moveWithPrefix(
+	ctx context.Context,
+	bucket string,
+	key string,
+	prefix string,
+) error {
 	copySource := bucket + "/" + key
 	dest := prefix + key
 
@@ -1651,7 +1719,10 @@ func (s *Storage) moveWithPrefix(ctx context.Context, bucket string, key string,
 	return nil
 }
 
-func (s *Storage) ImageEXIF(ctx context.Context, id int) (map[string]map[string]interface{}, error) {
+func (s *Storage) ImageEXIF(
+	ctx context.Context,
+	id int,
+) (map[string]map[string]interface{}, error) {
 	var exifStr sql.NullString
 
 	success, err := s.db.Select(schema.ImageTableEXIFCol).
