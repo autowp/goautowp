@@ -187,7 +187,7 @@ func (s *Monitoring) ClearIP(ctx context.Context, ip net.IP) error {
 // ListOfTop ListOfTop.
 func (s *Monitoring) ListOfTop(ctx context.Context, limit uint) ([]ListOfTopItem, error) {
 	var rows []struct {
-		ip    pgtype.Inet `db:"ip"`
+		IP    pgtype.Inet `db:"ip"`
 		Count int         `db:"c"`
 	}
 
@@ -209,8 +209,8 @@ func (s *Monitoring) ListOfTop(ctx context.Context, limit uint) ([]ListOfTopItem
 			Count: row.Count,
 		}
 
-		if row.ip.IPNet != nil {
-			item.IP = row.ip.IPNet.IP
+		if row.IP.IPNet != nil {
+			item.IP = row.IP.IPNet.IP
 		}
 
 		result = append(result, item)
@@ -230,7 +230,7 @@ func (s *Monitoring) ListByBanProfile(
 
 	var rows []pgtype.Inet
 
-	err := s.db.Select(schema.IPMonitoringTableIPCol, goqu.SUM(schema.IPMonitoringTableCountCol).As("c")).
+	err := s.db.Select(schema.IPMonitoringTableIPCol).
 		From(schema.IPMonitoringTable).
 		Where(schema.IPMonitoringTableDayDateCol.Eq(goqu.L("CURRENT_DATE"))).
 		GroupBy(group...).
