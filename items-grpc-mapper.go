@@ -133,7 +133,7 @@ func convertItemParentListOptions(in *ItemParentListOptions) (*query.ItemParentL
 		return nil, err
 	}
 
-	result.ItemParentCacheAncestorByChildID, err = convertItemParentCacheListOptions(
+	result.ItemParentCacheDescendantByChildID, err = convertItemParentCacheListOptions(
 		in.GetItemParentCacheItemByChild(),
 	)
 	if err != nil {

@@ -15,24 +15,25 @@ func AppendItemParentAlias(alias string, suffix string) string {
 }
 
 type ItemParentListOptions struct {
-	ItemID                            int64
-	ParentID                          int64
-	ParentIDs                         []int64
-	Type                              schema.ItemParentType
-	StrictType                        bool
-	ParentIDExpr                      exp.Expression
-	ItemIDExpr                        exp.Expression
-	LinkedInDays                      int
-	ParentItems                       *ItemListOptions
-	ChildItems                        *ItemListOptions
-	ItemParentParentByChildID         *ItemParentListOptions
-	ItemParentCacheAncestorByParentID *ItemParentCacheListOptions
-	ItemParentCacheAncestorByChildID  *ItemParentCacheListOptions
-	Language                          string
-	Limit                             uint32
-	Page                              uint32
-	Catname                           string
-	NotManualCatname                  bool
+	ItemID                             int64
+	ParentID                           int64
+	ParentIDs                          []int64
+	Type                               schema.ItemParentType
+	StrictType                         bool
+	ParentIDExpr                       exp.Expression
+	ItemIDExpr                         exp.Expression
+	LinkedInDays                       int
+	ParentItems                        *ItemListOptions
+	ChildItems                         *ItemListOptions
+	ItemParentParentByChildID          *ItemParentListOptions
+	ItemParentCacheAncestorByParentID  *ItemParentCacheListOptions
+	ItemParentCacheAncestorByChildID   *ItemParentCacheListOptions
+	ItemParentCacheDescendantByChildID *ItemParentCacheListOptions
+	Language                           string
+	Limit                              uint32
+	Page                               uint32
+	Catname                            string
+	NotManualCatname                   bool
 }
 
 func (s *ItemParentListOptions) Clone() *ItemParentListOptions {
@@ -47,6 +48,7 @@ func (s *ItemParentListOptions) Clone() *ItemParentListOptions {
 	clone.ItemParentParentByChildID = s.ItemParentParentByChildID.Clone()
 	clone.ItemParentCacheAncestorByParentID = s.ItemParentCacheAncestorByParentID.Clone()
 	clone.ItemParentCacheAncestorByChildID = s.ItemParentCacheAncestorByChildID.Clone()
+	clone.ItemParentCacheDescendantByChildID = s.ItemParentCacheDescendantByChildID.Clone()
 
 	return &clone
 }
@@ -209,6 +211,19 @@ func (s *ItemParentListOptions) apply(
 		sqSelect, err = s.ItemParentCacheAncestorByChildID.JoinToItemIDAndApply(
 			itemIDCol,
 			AppendItemParentCacheAlias(alias, "ac"),
+			sqSelect,
+		)
+		if err != nil {
+			return nil, false, err
+		}
+
+		groupBy = true
+	}
+
+	if s.ItemParentCacheDescendantByChildID != nil {
+		sqSelect, err = s.ItemParentCacheDescendantByChildID.JoinToParentIDAndApply(
+			itemIDCol,
+			AppendItemParentCacheAlias(alias, "dc"),
 			sqSelect,
 		)
 		if err != nil {
