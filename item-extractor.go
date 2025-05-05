@@ -1294,8 +1294,8 @@ func (s *ItemExtractor) extractCategories(
 					schema.ItemTableItemTypeIDVehicle,
 					schema.ItemTableItemTypeIDEngine,
 				},
+				ItemParentCacheDescendant: &query.ItemParentCacheListOptions{ItemID: row.ID},
 			},
-			ItemParentCacheAncestorByChildID: &query.ItemParentCacheListOptions{ItemID: row.ID},
 		},
 		TypeID: []schema.ItemTableItemTypeID{schema.ItemTableItemTypeIDCategory},
 	}
