@@ -43,11 +43,11 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v3 v3.3.2
-	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
-	golang.org/x/image v0.26.0
-	golang.org/x/text v0.24.0
-	google.golang.org/genproto v0.0.0-20250428153025-10db94c68c34
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34
+	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
+	golang.org/x/image v0.27.0
+	golang.org/x/text v0.25.0
+	google.golang.org/genproto v0.0.0-20250505200425-f936aa4a68b2
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250505200425-f936aa4a68b2
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/gographics/imagick.v3 v3.7.2
@@ -81,7 +81,7 @@ require (
 	github.com/go-xmlfmt/xmlfmt v1.1.3 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
-	github.com/golang/geo v0.0.0-20250505105254-3639c24687f0 // indirect
+	github.com/golang/geo v0.0.0-20250505201543-5b58c72585db // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -118,8 +118,8 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/arch v0.17.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

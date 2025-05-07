@@ -12,6 +12,7 @@ import (
 	_ "image/png"  // PNG support
 	"io"
 	"maps"
+	"math"
 	"math/rand/v2"
 	"slices"
 	"strconv"
@@ -2677,11 +2678,12 @@ func (s *Repository) processEXIF(
 	}
 
 	if extractedEXIF.gpsInfo != nil {
-		set[schema.PictureTablePointColName] = goqu.Func(
-			"Point",
-			extractedEXIF.gpsInfo.Longitude.Decimal(),
-			extractedEXIF.gpsInfo.Latitude.Decimal(),
-		)
+		lat := extractedEXIF.gpsInfo.Longitude.Decimal()
+		lng := extractedEXIF.gpsInfo.Latitude.Decimal()
+
+		if !math.IsNaN(lat) && !math.IsNaN(lng) {
+			set[schema.PictureTablePointColName] = goqu.Func("Point", lng, lat)
+		}
 	}
 
 	if !extractedEXIF.dateTimeTake.IsZero() {
