@@ -2678,8 +2678,8 @@ func (s *Repository) processEXIF(
 	}
 
 	if extractedEXIF.gpsInfo != nil {
-		lat := extractedEXIF.gpsInfo.Longitude.Decimal()
-		lng := extractedEXIF.gpsInfo.Latitude.Decimal()
+		lng := extractedEXIF.gpsInfo.Longitude.Decimal()
+		lat := extractedEXIF.gpsInfo.Latitude.Decimal()
 
 		if !math.IsNaN(lat) && !math.IsNaN(lng) {
 			set[schema.PictureTablePointColName] = goqu.Func("Point", lng, lat)
