@@ -177,7 +177,7 @@ func (s *Container) AutowpDB() (*sql.DB, error) {
 			return nil, err
 		}
 
-		logrus.Info(".")
+		logrus.Infof(". %s", err.Error())
 		time.Sleep(reconnectDelay)
 	}
 
