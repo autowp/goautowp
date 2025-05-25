@@ -234,7 +234,7 @@ func TestImageBlackEdgeCrop(t *testing.T) {
 
 	defer color.Destroy()
 
-	require.InEpsilon(t, 0, color.GetRed(), 0.01)
-	require.InEpsilon(t, 0, color.GetBlue(), 0.01)
-	require.InEpsilon(t, 0, color.GetGreen(), 0.01)
+	require.InDelta(t, 0, color.GetRed(), 0.01)
+	require.InDelta(t, 0, color.GetBlue(), 0.01)
+	require.InDelta(t, 0, color.GetGreen(), 0.01)
 }
