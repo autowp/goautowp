@@ -369,7 +369,10 @@ func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 				float64(topHeight),
 			)
 
-			return mw.DrawImage(draw)
+			err = mw.DrawImage(draw)
+			if err != nil {
+				return err
+			}
 		}
 
 		if bottomColor != nil {
@@ -384,7 +387,10 @@ func (s Sampler) extendVertical(mw *imagick.MagickWand, format Format) error {
 				float64(mw.GetImageHeight()),
 			)
 
-			return mw.DrawImage(draw)
+			err = mw.DrawImage(draw)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

@@ -294,6 +294,44 @@ func fileNameWithoutExtension(fileName string) string {
 	return fileName
 }
 
+func (s *Storage) ImageBlob(ctx context.Context, imageID int) (io.ReadCloser, error) {
+	// find source image
+	var iRow schema.ImageRow
+
+	success, err := s.db.Select(
+		schema.ImageTableIDCol,
+		schema.ImageTableFilepathCol,
+		schema.ImageTableDirCol,
+	).
+		From(schema.ImageTable).
+		Where(schema.ImageTableIDCol.Eq(imageID)).
+		ScanStructContext(ctx, &iRow)
+	if err != nil {
+		return nil, err
+	}
+
+	if !success {
+		return nil, sql.ErrNoRows
+	}
+
+	dir := s.dir(iRow.Dir)
+	if dir == nil {
+		return nil, fmt.Errorf("%w: `%s`", errDirNotFound, iRow.Dir)
+	}
+
+	bucket := dir.Bucket()
+
+	object, err := s.s3Client().GetObjectWithContext(ctx, &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &iRow.Filepath,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("s3Client.GetObject(%s, %s): %w", bucket, iRow.Filepath, err)
+	}
+
+	return object.Body, nil
+}
+
 func (s *Storage) doFormatImage( //nolint: maintidx
 	ctx context.Context,
 	imageID int,

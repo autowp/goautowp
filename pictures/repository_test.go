@@ -3,6 +3,7 @@ package pictures
 import (
 	"context"
 	"database/sql"
+	"io"
 	"math/rand"
 	"os"
 	"strconv"
@@ -25,6 +26,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 func createRandomUser(t *testing.T, db *goqu.Database) int64 {
@@ -182,4 +184,57 @@ func TestImageExifGPS(t *testing.T) {
 	require.True(t, picture.Point.Valid)
 	require.InDelta(t, 43.464455, picture.Point.Point.Lat(), 0.001)
 	require.InDelta(t, 11.881478333333334, picture.Point.Point.Lng(), 0.001)
+}
+
+func TestImageBlackEdgeCrop(t *testing.T) {
+	t.Parallel()
+
+	goquDB, repo := repository(t)
+	ctx := t.Context()
+
+	userID := createRandomUser(t, goquDB)
+
+	handle, err := os.OpenFile("../test/black-edge.jpeg", os.O_RDONLY, 0)
+	require.NoError(t, err)
+	defer util.Close(handle)
+
+	pictureID, err := repo.AddPictureFromReader(ctx, handle, userID, "127.0.0.1", 0, 0, 0)
+	require.NoError(t, err)
+
+	cfg := config.LoadConfig("../")
+
+	picture, err := repo.Picture(
+		ctx,
+		&query.PictureListOptions{ID: pictureID},
+		&PictureFields{},
+		OrderByNone,
+	)
+	require.NoError(t, err)
+
+	imageStorage, err := storage.NewStorage(goquDB, cfg.ImageStorage)
+	require.NoError(t, err)
+
+	image, err := imageStorage.FormattedImage(ctx, int(picture.ImageID.Int64), "picture-thumb-large")
+	require.NoError(t, err)
+
+	imageBlob, err := imageStorage.ImageBlob(ctx, image.ID())
+	require.NoError(t, err)
+
+	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+
+	imgBytes, err := io.ReadAll(imageBlob)
+	require.NoError(t, err)
+
+	err = mw.ReadImageBlob(imgBytes)
+	require.NoError(t, err)
+
+	color, err := mw.GetImagePixelColor(0, 2730)
+	require.NoError(t, err)
+
+	defer color.Destroy()
+
+	require.InEpsilon(t, 0, color.GetRed(), 0.01)
+	require.InEpsilon(t, 0, color.GetBlue(), 0.01)
+	require.InEpsilon(t, 0, color.GetGreen(), 0.01)
 }
