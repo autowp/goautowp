@@ -127,7 +127,7 @@ services:
           memory: 16M
 
   createbuckets:
-    image: minio/mc
+    image: minio/mc:RELEASE.2025-04-08T15-39-49Z
     container_name: autowp_test_createbuckets
     depends_on:
       - minio
