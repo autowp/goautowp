@@ -106,7 +106,7 @@ func extractFromEXIF(
 					}
 
 					if err != nil {
-						return exifExtractedValues{}, err
+						dateTimeTake = time.Time{}
 					}
 				}
 			}
