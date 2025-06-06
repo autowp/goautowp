@@ -18,6 +18,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	_ "github.com/gen2brain/avif" // AVIF support
 	"github.com/gin-gonic/gin"
+	_ "golang.org/x/image/bmp"  // BMP support
 	_ "golang.org/x/image/webp" // WEBP support
 )
 

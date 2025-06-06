@@ -21,6 +21,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/gen2brain/avif" // AVIF support
 	"github.com/sirupsen/logrus"
+	_ "golang.org/x/image/bmp"  // BMP support
 	_ "golang.org/x/image/webp" // WEBP support
 )
 

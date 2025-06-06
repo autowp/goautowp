@@ -32,6 +32,7 @@ import (
 	_ "github.com/gen2brain/avif" // AVIF support
 	my "github.com/go-mysql/errors"
 	"github.com/sirupsen/logrus"
+	_ "golang.org/x/image/bmp"  // BMP support
 	_ "golang.org/x/image/webp" // WEBP support
 	"gopkg.in/gographics/imagick.v3/imagick"
 )

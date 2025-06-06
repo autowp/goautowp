@@ -36,6 +36,7 @@ import (
 	"github.com/paulmach/orb"
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
+	_ "golang.org/x/image/bmp"  // BMP support
 	_ "golang.org/x/image/webp" // WEBP support
 )
 
