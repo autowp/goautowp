@@ -714,8 +714,7 @@ func (s *Repository) orderBy( //nolint: maintidx
 			piAlias                 = options.PictureItemAlias(alias, 0)
 			ipcaAlias               = options.PictureItem.ItemParentCacheAncestorAlias(piAlias)
 			pgpAlias                = query.AppendPerspectiveGroupPerspectiveAlias(piAlias)
-			col       exp.Orderable = goqu.T(pgpAlias).
-					Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
+			col       exp.Orderable = goqu.T(pgpAlias).Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
 		)
 
 		if !options.IsIDUnique() {
@@ -769,8 +768,7 @@ func (s *Repository) orderBy( //nolint: maintidx
 		if options.PictureItem.PerspectiveGroupPerspective != nil {
 			var (
 				pgpAlias               = query.AppendPerspectiveGroupPerspectiveAlias(piAlias)
-				col      exp.Orderable = goqu.T(pgpAlias).
-						Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
+				col      exp.Orderable = goqu.T(pgpAlias).Col(schema.PerspectivesGroupsPerspectivesTablePositionColName)
 			)
 
 			if !options.IsIDUnique() {
@@ -1993,6 +1991,21 @@ func (s *Repository) DfIndex(ctx context.Context) error {
 		return err
 	}
 
+	rabbitMQ, err := util.ConnectRabbitMQ(s.dfConfig.RabbitMQ)
+	if err != nil {
+		logrus.Error(err)
+
+		return err
+	}
+
+	defer util.Close(rabbitMQ)
+
+	ch, err := rabbitMQ.Channel()
+	if err != nil {
+		return err
+	}
+	defer util.Close(ch)
+
 	for _, st := range sts {
 		logrus.Infof("%d / %d", st.ID, st.ImageID)
 
@@ -2001,7 +2014,7 @@ func (s *Repository) DfIndex(ctx context.Context) error {
 			return err
 		}
 
-		err = s.queueIndexImage(ctx, st.ID, img.Src())
+		err = s.doQueueIndexImage(ctx, ch, st.ID, img.Src())
 		if err != nil {
 			return err
 		}
@@ -2018,12 +2031,18 @@ func (s *Repository) queueIndexImage(ctx context.Context, id int64, url string) 
 		return err
 	}
 
+	defer util.Close(rabbitMQ)
+
 	ch, err := rabbitMQ.Channel()
 	if err != nil {
 		return err
 	}
 	defer util.Close(ch)
 
+	return s.doQueueIndexImage(ctx, ch, id, url)
+}
+
+func (s *Repository) doQueueIndexImage(ctx context.Context, ch *amqp091.Channel, id int64, url string) error {
 	msg := DuplicateFinderInputMessage{
 		PictureID: id,
 		URL:       url,
