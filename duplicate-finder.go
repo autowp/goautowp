@@ -117,7 +117,7 @@ func (s *DuplicateFinder) ListenAMQP(ctx context.Context, quitChan chan bool) er
 
 			err = s.Index(ctx, message.PictureID, message.URL)
 			if err != nil {
-				logrus.Error(err)
+				logrus.Errorf("error indexing image `%d`/`%s`: %v", message.PictureID, message.URL, err)
 			}
 		}
 	}
