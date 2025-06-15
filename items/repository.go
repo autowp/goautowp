@@ -163,6 +163,7 @@ const (
 	ItemParentOrderByAuto
 	ItemParentOrderByCategoriesFirst
 	ItemParentOrderByStockFirst
+	ItemParentOrderByName
 )
 
 var catnameBlacklist = []string{"sport", "tuning", "related", "pictures", "specifications"}
@@ -3407,35 +3408,9 @@ func (s *Repository) ItemParentSelect(
 		aliasTable.Col(schema.ItemParentTableManualCatnameColName),
 	)
 
-	if fields.Name {
-		orderExpr, err := langPriorityOrderExpr(
-			schema.ItemParentLanguageTableLanguageCol,
-			listOptions.Language,
-		)
-		if err != nil {
-			return nil, err
-		}
+	const itemParentLangNameAlias = "name"
 
-		sqSelect = sqSelect.SelectAppend(
-			goqu.Func(
-				"IFNULL",
-				s.db.Select(schema.ItemParentLanguageTableNameCol).
-					From(schema.ItemParentLanguageTable).
-					Where(
-						schema.ItemParentLanguageTableItemIDCol.Eq(aliasTable.Col(schema.ItemParentTableItemIDColName)),
-						schema.ItemParentLanguageTableParentIDCol.Eq(aliasTable.Col(schema.ItemParentTableParentIDColName)),
-						goqu.Func("LENGTH", schema.ItemParentLanguageTableNameCol).Gt(0),
-					).
-					Order(orderExpr).
-					Limit(1),
-				// fallback
-				s.db.Select(schema.ItemTableNameCol).
-					From(schema.ItemTable).
-					Where(schema.ItemTableIDCol.Eq(aliasTable.Col(schema.ItemParentTableItemIDColName))),
-			).As("name"),
-		)
-	}
-
+	fetchItemParentLangName := fields.Name
 	itemOrderAlias := "io"
 	itemOrderAliasTable := goqu.T(itemOrderAlias)
 
@@ -3473,6 +3448,38 @@ func (s *Repository) ItemParentSelect(
 			goqu.L("?",
 				aliasTable.Col(schema.ItemParentTableTypeColName).Eq(schema.ItemParentTypeDefault),
 			).Desc(),
+		)
+	case ItemParentOrderByName:
+		fetchItemParentLangName = true
+		sqSelect = sqSelect.Order(goqu.C(itemParentLangNameAlias).Asc())
+	}
+
+	if fetchItemParentLangName {
+		orderExpr, err := langPriorityOrderExpr(
+			schema.ItemParentLanguageTableLanguageCol,
+			listOptions.Language,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		sqSelect = sqSelect.SelectAppend(
+			goqu.Func(
+				"IFNULL",
+				s.db.Select(schema.ItemParentLanguageTableNameCol).
+					From(schema.ItemParentLanguageTable).
+					Where(
+						schema.ItemParentLanguageTableItemIDCol.Eq(aliasTable.Col(schema.ItemParentTableItemIDColName)),
+						schema.ItemParentLanguageTableParentIDCol.Eq(aliasTable.Col(schema.ItemParentTableParentIDColName)),
+						goqu.Func("LENGTH", schema.ItemParentLanguageTableNameCol).Gt(0),
+					).
+					Order(orderExpr).
+					Limit(1),
+				// fallback
+				s.db.Select(schema.ItemTableNameCol).
+					From(schema.ItemTable).
+					Where(schema.ItemTableIDCol.Eq(aliasTable.Col(schema.ItemParentTableItemIDColName))),
+			).As(itemParentLangNameAlias),
 		)
 	}
 

@@ -2280,10 +2280,6 @@ func (s *ItemsGRPCServer) carSections(
 			return nil, fmt.Errorf("carSectionGroups(): %w", err)
 		}
 
-		slices.SortFunc(sectionGroups, func(a, b *APIBrandSection) int {
-			return strings.Compare(a.GetName(), b.GetName())
-		})
-
 		sections = append(sections, &APIBrandSection{
 			Name:       sectionsPreset.Name,
 			RouterLink: sectionsPreset.RouterLink,
@@ -2315,7 +2311,7 @@ func (s *ItemsGRPCServer) carSectionGroups(
 				VehicleTypeAncestorID: section.CarTypeID,
 			},
 			Language: lang,
-		}, items.ItemParentFields{Name: true}, items.ItemParentOrderByAuto)
+		}, items.ItemParentFields{Name: true}, items.ItemParentOrderByName)
 		if err != nil {
 			return nil, fmt.Errorf("ItemParents(): %w", err)
 		}
@@ -2330,7 +2326,7 @@ func (s *ItemsGRPCServer) carSectionGroups(
 				},
 			},
 			Language: lang,
-		}, items.ItemParentFields{Name: true}, items.ItemParentOrderByAuto)
+		}, items.ItemParentFields{Name: true}, items.ItemParentOrderByName)
 		if err != nil {
 			return nil, fmt.Errorf("ItemParents(): %w", err)
 		}
