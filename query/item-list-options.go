@@ -59,7 +59,6 @@ type ItemListOptions struct {
 	CreatedInDays                int
 	VehicleTypeAncestorID        int64
 	ExcludeVehicleTypeAncestorID []int64
-	VehicleTypeIsNull            bool
 	ParentTypesOf                schema.ItemTableItemTypeID
 	IsGroup                      bool
 	ExcludeSelfAndChilds         int64
@@ -388,18 +387,6 @@ func (s *ItemListOptions) applyJoins(
 	sqSelect, subGroupBy = s.applyExcludeVehicleTypeAncestorID(alias, sqSelect)
 	if subGroupBy {
 		groupBy = true
-	}
-
-	if s.VehicleTypeIsNull {
-		sqSelect = sqSelect.
-			LeftJoin(
-				schema.ItemVehicleTypeTable,
-				goqu.On(
-					aliasTable.Col(schema.ItemTableIDColName).
-						Eq(schema.ItemVehicleTypeTableItemIDCol),
-				),
-			).
-			Where(schema.ItemVehicleTypeTableItemIDCol.IsNull())
 	}
 
 	if s.ItemParentChild != nil {
@@ -739,15 +726,16 @@ func (s *ItemListOptions) applyExcludeVehicleTypeAncestorID(
 		Where(schema.VehicleTypeParentTableParentIDCol.In(s.ExcludeVehicleTypeAncestorID))
 
 	return sqSelect.
-			Join(
+			LeftJoin(
 				schema.ItemVehicleTypeTable,
 				goqu.On(aliasTable.Col(schema.ItemTableIDColName).Eq(schema.ItemVehicleTypeTableItemIDCol)),
 			).
-			Join(
-				schema.VehicleTypeParentTable,
-				goqu.On(schema.ItemVehicleTypeTableVehicleTypeIDCol.Eq(schema.VehicleTypeParentTableIDCol)),
-			).
-			Where(schema.ItemVehicleTypeTableVehicleTypeIDCol.NotIn(subSelect)),
+			Where(
+				goqu.Or(
+					schema.ItemVehicleTypeTableVehicleTypeIDCol.NotIn(subSelect),
+					schema.ItemVehicleTypeTableVehicleTypeIDCol.IsNull(),
+				),
+			),
 		true
 }
 

@@ -2330,21 +2330,6 @@ func (s *ItemsGRPCServer) carSectionGroups(
 		if err != nil {
 			return nil, fmt.Errorf("ItemParents(): %w", err)
 		}
-
-		rows2, _, err := s.repository.ItemParents(ctx, &query.ItemParentListOptions{
-			ParentID: brandID,
-			ChildItems: &query.ItemListOptions{
-				TypeID:            section.ItemTypeID,
-				IsNotConcept:      true,
-				VehicleTypeIsNull: true,
-			},
-			Language: lang,
-		}, items.ItemParentFields{Name: true}, items.ItemParentOrderByAuto)
-		if err != nil {
-			return nil, fmt.Errorf("ItemParents(): %w", err)
-		}
-
-		rows = append(rows, rows2...)
 	}
 
 	groups := make([]*APIBrandSection, 0, len(rows))
