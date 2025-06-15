@@ -23,7 +23,7 @@ require (
 	github.com/gin-contrib/cors v1.7.5
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-mysql/errors v0.0.0-20180603193453-03314bea68e0
-	github.com/go-sql-driver/mysql v1.9.2
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/google/uuid v1.6.0
@@ -42,7 +42,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
-	github.com/urfave/cli/v3 v3.3.2
+	github.com/urfave/cli/v3 v3.3.8
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
 	golang.org/x/image v0.28.0
 	golang.org/x/text v0.26.0
@@ -81,7 +81,7 @@ require (
 	github.com/go-xmlfmt/xmlfmt v1.1.3 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
-	github.com/golang/geo v0.0.0-20250606134707-e8fe6a72b492 // indirect
+	github.com/golang/geo v0.0.0-20250613135800-9e8e59d779cc // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -113,7 +113,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
-	github.com/ugorji/go/codec v1.2.14 // indirect
+	github.com/ugorji/go/codec v1.3.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
